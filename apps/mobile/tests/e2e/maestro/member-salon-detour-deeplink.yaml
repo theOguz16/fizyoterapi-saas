@@ -1,0 +1,19 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "clinerva://e2e-reset"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- openLink: "clinerva://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# Sayfanın gerçek görünen başlığına göre daha stabil kontrol.
+- assertVisible:
+    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon"

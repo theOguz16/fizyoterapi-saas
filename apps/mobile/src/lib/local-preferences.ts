@@ -1,0 +1,175 @@
+// Bu helper modulu mobil tarafta local preferences ile ilgili veri donusumu, is kurali veya API erisimini toplar.
+// Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
+import * as SecureStore from "expo-secure-store";
+import type { SignupOnboardingProfile, SignupOnboardingRole } from "./signup-onboarding";
+
+const PREF_KEY = "clinerva.notification_preferences.v2";
+const PERMISSION_PROMPT_KEY = "clinerva.notification_permission_prompt.v1";
+const SIGNUP_ONBOARDING_KEY = "clinerva.signup_onboarding_seen.v1";
+const SIGNUP_ONBOARDING_PROFILE_KEY = "clinerva.signup_onboarding_profile.v1";
+const SIGNUP_ONBOARDING_ROLE_KEY = "clinerva.signup_onboarding_role.v1";
+const PENDING_SALON_JOIN_KEY = "clinerva.pending_salon_join_slug.v1";
+export const LOCAL_GROUP_CLASSES_KEY = "clinerva.local_group_classes.v1";
+const RESETTABLE_KEYS = [
+  PREF_KEY,
+  PERMISSION_PROMPT_KEY,
+  SIGNUP_ONBOARDING_KEY,
+  SIGNUP_ONBOARDING_PROFILE_KEY,
+  SIGNUP_ONBOARDING_ROLE_KEY,
+  PENDING_SALON_JOIN_KEY,
+  LOCAL_GROUP_CLASSES_KEY,
+  "clinerva.selected_city.v1",
+  "clinerva.schedule_change_requests.v1",
+];
+
+export type NotificationPreferences = {
+  classReminderThreeHours: boolean;
+  classReminderOneHour: boolean;
+  campaignAlerts: boolean;
+  weeklySummary: boolean;
+  packageEndingAlerts: boolean;
+  measurementReminders: boolean;
+};
+
+export type NotificationPermissionPromptState = {
+  hasSeenPrompt: boolean;
+  lastKnownStatus: "granted" | "denied" | "undetermined";
+  updatedAt: string | null;
+};
+
+const DEFAULTS: NotificationPreferences = {
+  classReminderThreeHours: true,
+  classReminderOneHour: true,
+  campaignAlerts: true,
+  weeklySummary: true,
+  packageEndingAlerts: true,
+  measurementReminders: true,
+};
+
+const DEFAULT_PERMISSION_PROMPT_STATE: NotificationPermissionPromptState = {
+  hasSeenPrompt: false,
+  lastKnownStatus: "undetermined",
+  updatedAt: null,
+};
+
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
+  try {
+    const raw = await SecureStore.getItemAsync(PREF_KEY);
+    if (!raw) return DEFAULTS;
+    const parsed = JSON.parse(raw) as Partial<NotificationPreferences>;
+    return {
+      classReminderThreeHours: parsed.classReminderThreeHours ?? DEFAULTS.classReminderThreeHours,
+      classReminderOneHour: parsed.classReminderOneHour ?? DEFAULTS.classReminderOneHour,
+      campaignAlerts: parsed.campaignAlerts ?? DEFAULTS.campaignAlerts,
+      weeklySummary: parsed.weeklySummary ?? DEFAULTS.weeklySummary,
+      packageEndingAlerts: parsed.packageEndingAlerts ?? DEFAULTS.packageEndingAlerts,
+      measurementReminders: parsed.measurementReminders ?? DEFAULTS.measurementReminders,
+    };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
+export async function setNotificationPreferences(next: NotificationPreferences) {
+  await SecureStore.setItemAsync(PREF_KEY, JSON.stringify(next));
+  return next;
+}
+
+export async function getNotificationPermissionPromptState(): Promise<NotificationPermissionPromptState> {
+  try {
+    const raw = await SecureStore.getItemAsync(PERMISSION_PROMPT_KEY);
+    if (!raw) return DEFAULT_PERMISSION_PROMPT_STATE;
+    const parsed = JSON.parse(raw) as Partial<NotificationPermissionPromptState>;
+    return {
+      hasSeenPrompt: parsed.hasSeenPrompt ?? DEFAULT_PERMISSION_PROMPT_STATE.hasSeenPrompt,
+      lastKnownStatus: parsed.lastKnownStatus ?? DEFAULT_PERMISSION_PROMPT_STATE.lastKnownStatus,
+      updatedAt: parsed.updatedAt ?? DEFAULT_PERMISSION_PROMPT_STATE.updatedAt,
+    };
+  } catch {
+    return DEFAULT_PERMISSION_PROMPT_STATE;
+  }
+}
+
+export async function setNotificationPermissionPromptState(next: NotificationPermissionPromptState) {
+  await SecureStore.setItemAsync(PERMISSION_PROMPT_KEY, JSON.stringify(next));
+  return next;
+}
+
+export async function hasCompletedSignupOnboarding(): Promise<boolean> {
+  try {
+    const raw = await SecureStore.getItemAsync(SIGNUP_ONBOARDING_KEY);
+    return raw === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setSignupOnboardingCompleted(completed: boolean) {
+  await SecureStore.setItemAsync(SIGNUP_ONBOARDING_KEY, completed ? "true" : "false");
+  return completed;
+}
+
+export async function getSignupOnboardingRole(): Promise<SignupOnboardingRole | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(SIGNUP_ONBOARDING_ROLE_KEY);
+    return raw === "MEMBER" || raw === "TRAINER" || raw === "ADMIN" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setSignupOnboardingRole(role: SignupOnboardingRole) {
+  await SecureStore.setItemAsync(SIGNUP_ONBOARDING_ROLE_KEY, role);
+  return role;
+}
+
+export async function getStoredSignupOnboardingProfile(role: SignupOnboardingRole): Promise<SignupOnboardingProfile | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(SIGNUP_ONBOARDING_PROFILE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Record<SignupOnboardingRole, SignupOnboardingProfile>>;
+    return parsed[role] || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setStoredSignupOnboardingProfile(role: SignupOnboardingRole, profile: SignupOnboardingProfile) {
+  const raw = await SecureStore.getItemAsync(SIGNUP_ONBOARDING_PROFILE_KEY);
+  const parsed = raw ? ((JSON.parse(raw) as Partial<Record<SignupOnboardingRole, SignupOnboardingProfile>>) || {}) : {};
+  parsed[role] = profile;
+  await SecureStore.setItemAsync(SIGNUP_ONBOARDING_PROFILE_KEY, JSON.stringify(parsed));
+  return profile;
+}
+
+export async function getPendingSalonJoinSlug(): Promise<string | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(PENDING_SALON_JOIN_KEY);
+    const value = String(raw || "").trim();
+    return value || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setPendingSalonJoinSlug(slug: string) {
+  const normalized = String(slug || "").trim();
+  if (!normalized) {
+    await SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY);
+    return null;
+  }
+  await SecureStore.setItemAsync(PENDING_SALON_JOIN_KEY, normalized);
+  return normalized;
+}
+
+export async function clearPendingSalonJoinSlug() {
+  await SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY);
+}
+
+export async function resetLocalPreferencesForE2E() {
+  await Promise.all(RESETTABLE_KEYS.map((key) => SecureStore.deleteItemAsync(key)));
+}
+
+export type NotifıcationPreferences = NotificationPreferences;
+export const getNotifıcationPreferences = getNotificationPreferences;
+export const setNotifıcationPreferences = setNotificationPreferences;

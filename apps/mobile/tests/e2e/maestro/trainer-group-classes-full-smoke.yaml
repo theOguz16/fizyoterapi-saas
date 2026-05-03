@@ -1,0 +1,198 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: false
+    clearKeychain: false
+- assertVisible: "Clinerva"
+- runFlow:
+    when:
+      visible:
+        id: "welcome-login-button"
+    commands:
+      - tapOn:
+          id: "welcome-login-button"
+          retryTapIfNoChange: true
+      - assertVisible: "Hesabına giriş yap"
+      - tapOn:
+          id: "login-identity-input"
+          retryTapIfNoChange: true
+      - inputText: "elisauyar@gmail.com"
+      - tapOn: "Clinerva hesabınla devam et"
+      - tapOn:
+          id: "login-password-input"
+          retryTapIfNoChange: true
+      - inputText: "trainer123"
+      - tapOn: "Clinerva hesabınla devam et"
+      - tapOn:
+          id: "login-submit-button"
+- assertVisible: "Bugün"
+- openLink: "clinerva://(trainer)/group-classes"
+- assertVisible: "Grup dersleri"
+
+# Cleanup previous E2E rows if they exist
+- swipe:
+    start: 50%, 82%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-aksam-pilates"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-davetli-grup"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-davetli-grup-guncel"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+
+# Special + public create
+- swipe:
+    start: 50%, 82%
+    end: 50%, 58%
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates"
+- hideKeyboard
+- swipe:
+    start: 50%, 78%
+    end: 50%, 52%
+- tapOn:
+    id: "trainer-group-classes-date-picker"
+- tapOn:
+    id: "trainer-group-classes-date-option-5"
+- tapOn:
+    id: "trainer-group-classes-time-picker"
+- tapOn:
+    id: "trainer-group-classes-time-option-7"
+- swipe:
+    start: 50%, 78%
+    end: 50%, 22%
+- tapOn:
+    id: "trainer-group-classes-submit"
+- assertVisible: "Grup dersi oluşturuldu"
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 78%
+    end: 50%, 24%
+- assertVisible: "E2E Aksam Pilates"
+
+# Recurring + invited create
+- openLink: "clinerva://(trainer)/group-classes"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 58%
+- assertVisible:
+    id: "trainer-group-classes-name-input"
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Davetli Grup"
+- hideKeyboard
+- swipe:
+    start: 50%, 78%
+    end: 50%, 52%
+- tapOn:
+    id: "trainer-group-classes-schedule-mode-recurring"
+- tapOn:
+    id: "trainer-group-classes-audience-invited_members"
+- tapOn:
+    id: "trainer-group-classes-time-picker"
+- tapOn:
+    id: "trainer-group-classes-time-option-6"
+- tapOn:
+    id: "trainer-group-classes-member-search"
+- inputText: "member@gmail.com"
+- tapOn:
+    id: "trainer-group-classes-member-toggle-member-gmail-com"
+- assertVisible: "Seçili davetli: 1 /"
+- swipe:
+    start: 50%, 78%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-submit"
+- assertVisible: "Grup dersi oluşturuldu"
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 78%
+    end: 50%, 24%
+- assertVisible: "E2E Davetli Grup"
+
+# Edit existing class
+- openLink: "clinerva://(trainer)/group-classes"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-edit-e2e-aksam-pilates"
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+- assertVisible:
+    id: "trainer-group-classes-name-input"
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates Guncel"
+- hideKeyboard
+- swipe:
+    start: 50%, 78%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-submit"
+- assertVisible: "Grup dersi güncellendi"
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 78%
+    end: 50%, 24%
+- assertVisible: "E2E Aksam Pilates Guncel"
+
+# Delete recurring invited class
+- openLink: "clinerva://(trainer)/group-classes"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-davetli-grup"
+- assertVisible: "Grup dersi silindi"
+- tapOn:
+    text: "OK"
+    optional: true
+- assertVisible: "E2E Aksam Pilates Guncel"
+
+# Logout to leave clean state for admin flow
+- openLink: "clinerva://(trainer)/profile"
+- assertVisible:
+    id: "trainer-profile-logout"
+- tapOn:
+    id: "trainer-profile-logout"
+- assertVisible:
+    id: "welcome-login-button"

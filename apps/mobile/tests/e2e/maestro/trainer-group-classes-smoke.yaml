@@ -1,0 +1,81 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- assertVisible: "Hesabına giriş yap"
+- assertVisible:
+    id: "login-identity-input"
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "elisauyar@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- assertVisible:
+    id: "login-password-input"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "trainer123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd
+- openLink: "clinerva://(trainer)/group-classes"
+- waitForAnimationToEnd
+- assertVisible: "Grup dersleri"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 18%
+- swipe:
+    start: 50%, 82%
+    end: 50%, 18%
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-aksam-pilates"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+- swipe:
+    start: 50%, 24%
+    end: 50%, 82%
+- assertVisible:
+    id: "trainer-group-classes-name-input"
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates"
+- hideKeyboard
+- swipe:
+    start: 50%, 78%
+    end: 50%, 52%
+- tapOn:
+    id: "trainer-group-classes-date-picker"
+- tapOn:
+    id: "trainer-group-classes-date-option-5"
+- tapOn:
+    id: "trainer-group-classes-time-picker"
+- tapOn:
+    id: "trainer-group-classes-time-option-5"
+- swipe:
+    start: 50%, 78%
+    end: 50%, 22%
+- tapOn:
+    id: "trainer-group-classes-submit"
+- tapOn:
+    text: "OK"
+    optional: true
+- swipe:
+    start: 50%, 78%
+    end: 50%, 24%
+- assertVisible: "E2E Aksam Pilates"

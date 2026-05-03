@@ -1,0 +1,25 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "clinerva://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- assertVisible: "Bugün"
+- tapOn:
+    id: "trainer-home-qr-button"
+- waitForAnimationToEnd
+- assertVisible: "QR ile ders girişi"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 36%
+- tapOn: "Manuel kod ekranı"
+- assertVisible: "Kod gir"
+- tapOn:
+    id: "trainer-manual-code-input"
+- inputText: "member@gmail.com"
+- hideKeyboard
+- tapOn:
+    id: "trainer-manual-code-submit"
+- assertVisible:
+    id: "trainer-manual-code-result"
+- assertVisible: "Onaylandı"

@@ -1,0 +1,26 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-signup-button"
+    retryTapIfNoChange: true
+- assertVisible: "Clinerva’yı hangi rolde kullanacaksın?"
+- tapOn: "Üye"
+- assertVisible: "Başlangıçta en çok hangi hedefe odaklanıyorsun?"
+- tapOn:
+    id: "role-step-primarygoal-fitness"
+- assertVisible: "Haftalık tempon hangisine daha yakın?"
+- tapOn:
+    id: "role-step-rhythm-steady"
+- assertVisible: "Başlangıçta nasıl bir deneyim beklersin?"
+- tapOn:
+    id: "role-step-supportstyle-guided"
+- assertVisible: "Hesabını oluştur"
+- assertVisible:
+    id: "register-email-input"

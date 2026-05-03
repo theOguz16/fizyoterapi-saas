@@ -1,0 +1,45 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "clinerva://e2e-reset"
+
+- assertVisible:
+    id: "welcome-login-button"
+
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+
+- assertVisible: "Hesabına giriş yap"
+
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "member@gmail.com"
+
+- tapOn: "Clinerva hesabınla devam et"
+
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "member123"
+
+- tapOn: "Clinerva hesabınla devam et"
+
+- tapOn:
+    id: "login-submit-button"
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Member aktif demo-salon'a bağlıyken farklı salon QR simülasyonu.
+- openLink: "clinerva://join/baska-salon?salon_slug=baska-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fbaska-salon&source=salon_qr&channel=qr"
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Yeni salon onboarding açılmamalı, member ana akışta kalmalı.
+- assertVisible: "Merhaba Demo"

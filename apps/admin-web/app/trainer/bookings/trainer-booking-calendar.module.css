@@ -1,0 +1,201 @@
+.calendarCard :global(.fc .fc-timegrid-slot) {
+  height: auto;
+  min-height: 1.9rem;
+}
+
+.calendarCard :global(.fc) {
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.calendarCard :global(.fc .fc-timegrid-slot-lane) {
+  transition: background-color 0.12s ease;
+}
+
+.calendarCard :global(.fc .fc-timegrid-slot-lane:hover) {
+  background-color: rgba(14, 165, 233, 0.08);
+}
+
+.calendarCard :global(.fc .fc-highlight) {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.calendarCard :global(.fc .fc-timegrid-axis) {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.slotLabelWrap {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.slotLunchBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.calendarCard :global(.fc .fc-col-header-cell-cushion) {
+  padding: 6px 4px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.dayHeaderContent {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.dayHeaderBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  background: rgba(226, 232, 240, 0.95);
+  color: #475569;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.dayHeaderClosed {
+  background: linear-gradient(180deg, rgba(241, 245, 249, 0.96), rgba(226, 232, 240, 0.88));
+}
+
+.dayColumnClosed {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.92));
+}
+
+.dayColumnOpen {
+  cursor: default;
+}
+
+.calendarCard :global(.fc .fc-event) {
+  border-radius: 10px;
+  border: none;
+  padding: 3px 5px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+}
+
+.calendarCard :global(.fc .fc-event-main) {
+  min-width: 0;
+}
+
+.calendarCard :global(.fc .fc-scrollgrid) {
+  border-radius: 14px;
+  overflow: hidden;
+  border-color: #dbeafe;
+  height: 100%;
+}
+
+.calendarCard :global(.fc .fc-view-harness) {
+  min-height: 100%;
+  height: 100% !important;
+}
+
+.slotLaneOpen {
+  cursor: default;
+}
+
+.slotLaneClosed {
+  background: rgba(241, 245, 249, 0.86);
+  cursor: default;
+}
+
+.slotLaneLunch {
+  background: linear-gradient(180deg, rgba(254, 243, 199, 0.78), rgba(253, 230, 138, 0.56));
+  cursor: default;
+}
+
+.calendarCard :global(.fc .fc-timegrid-col.fc-day-today) {
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.05));
+}
+
+.calendarCard :global(.fc .fc-event-mirror),
+.calendarCard :global(.fc .drag-ghost-preview) {
+  border: 1px dashed rgba(14, 165, 233, 0.8) !important;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.9), rgba(16, 185, 129, 0.9)) !important;
+  opacity: 0.9 !important;
+  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.18) !important;
+}
+
+.calendarCard :global(.fc .fc-event.fc-event-dragging) {
+  transform: scale(1.02);
+  box-shadow: 0 18px 32px rgba(14, 165, 233, 0.26) !important;
+}
+
+.calendarCard :global(.fc-event-content-modern) {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.calendarCard :global(.fc-event-meta-modern) {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendarCard :global(.fc-event-title-modern) {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarCard :global(.fc-event-time-modern) {
+  font-size: 10px;
+  line-height: 1.2;
+  margin: 0;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendarCard :global(.fc-event-dot) {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.calendarCard :global(.fc-event-dot-success) {
+  background: #dcfce7;
+}
+
+.calendarCard :global(.fc-event-dot-info) {
+  background: #dbeafe;
+}
+
+.calendarCard :global(.fc-event-dot-pending) {
+  background: #fef3c7;
+}
+
+.calendarCard :global(.fc-event-dot-muted) {
+  background: #e2e8f0;
+}
+
+.draggableAvailability {
+  cursor: grab;
+}
+
+.draggableAvailability:active {
+  cursor: grabbing;
+}

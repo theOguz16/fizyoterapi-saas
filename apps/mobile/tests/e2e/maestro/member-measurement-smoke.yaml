@@ -1,0 +1,58 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- assertVisible: "Hesabına giriş yap"
+- assertVisible:
+    id: "login-identity-input"
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "member@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- assertVisible:
+    id: "login-password-input"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "member123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- assertVisible: "Kalan hak"
+- tapOn:
+    id: "member-home-measurements"
+- assertVisible: "Ölçümlerim"
+- tapOn:
+    id: "member-measurements-add"
+- assertVisible: "Yeni Ölçüm Ekle"
+- tapOn:
+    id: "measurement-height-input"
+- inputText: "178"
+- tapOn:
+    id: "measurement-weight-input"
+- inputText: "74"
+- tapOn:
+    id: "measurement-fat-input"
+- inputText: "18"
+- tapOn:
+    id: "measurement-muscle-input"
+- inputText: "31"
+- tapOn:
+    id: "measurement-note-input"
+- inputText: "Smoke test measurement"
+- tapOn:
+    id: "measurement-save-button"
+- assertVisible: "Ölçümlerim"
+- assertVisible: "Gelişim Grafiği"
+- tapOn:
+    id: "member-measurements-tab-HISTORY"
+- assertVisible: "Geçmiş Ölçümler"

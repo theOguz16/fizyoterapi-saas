@@ -1,0 +1,36 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- assertVisible: "Hesabına giriş yap"
+- assertVisible:
+    id: "login-identity-input"
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "oguzhanuyar531@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- assertVisible:
+    id: "login-password-input"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "admin123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- assertVisible: "Yönetim merkezi"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 34%
+- tapOn:
+    id: "admin-dashboard-calendar"
+- assertVisible: "Salon Takvimi"

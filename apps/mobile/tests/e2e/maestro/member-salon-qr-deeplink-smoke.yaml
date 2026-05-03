@@ -1,0 +1,7 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "clinerva://join/demo-salon?code=CLN-DEMO-SALON-001"
+- assertVisible: "Salon detayı"

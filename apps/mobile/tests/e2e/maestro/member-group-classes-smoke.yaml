@@ -1,0 +1,34 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- assertVisible: "Hesabına giriş yap"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-password-input"
+- inputText: "member123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd
+- openLink: "clinerva://(member)/group-classes"
+- waitForAnimationToEnd
+- assertVisible: "Grup dersleri"
+- assertVisible:
+    id: "member-group-class-action-0"
+- tapOn:
+    id: "member-group-class-action-0"
+- waitForAnimationToEnd
+- assertVisible: "Onay bekliyor"
+

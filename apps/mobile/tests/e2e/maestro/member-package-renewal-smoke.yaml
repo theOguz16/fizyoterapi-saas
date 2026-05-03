@@ -1,0 +1,55 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "Clinerva"
+- openLink: "clinerva://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- assertVisible: "Hesabına giriş yap"
+- assertVisible:
+    id: "login-identity-input"
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "member@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- assertVisible:
+    id: "login-password-input"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "member123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd
+- openLink: "clinerva://(member)/package"
+- assertVisible: "Paket ve Geçmiş"
+- assertVisible: "Yeni paket alabilir veya aktif paketi yenileyebilirsin"
+- swipe:
+    start: 50%, 80%
+    end: 50%, 28%
+- assertVisible: "Bu paketi ₺200 ile yenile"
+- tapOn: "Bu paketi ₺200 ile yenile"
+- assertVisible: "Grup Dersi (8 Kişi)"
+- assertVisible: "200.00"
+- swipe:
+    start: 50%, 80%
+    end: 50%, 26%
+- tapOn: "Saat seçimine geç"
+- assertVisible: "Uygun saatlerini seç"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 34%
+- tapOn: "Bu saati seç"
+- tapOn: "Özete geç"
+- assertVisible: "Başvurunu gözden geçir"
+- assertVisible: "Grup Dersi (8 Kişi)"
+- tapOn: "Onaya gönder"
+- assertVisible: "Başvurun alındı"
+- assertVisible: "Onay bekleniyor"

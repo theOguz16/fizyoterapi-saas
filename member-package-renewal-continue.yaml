@@ -1,0 +1,16 @@
+appId: com.clinerva.mobile
+---
+- assertVisible: "Uygun saatlerini seç"
+- tapOn:
+    point: "94%,95%"
+- tapOn:
+    point: "50%,90%"
+- extendedWaitUntil:
+    visible: "Başvurunu gözden geçir"
+    timeout: 10000
+- assertVisible: "Grup Dersi (8 Kişi)"
+- tapOn: "Onaya gönder"
+- extendedWaitUntil:
+    visible: "Başvurun alındı"
+    timeout: 10000
+- assertVisible: "Onay bekleniyor"
