@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { buildSlotStartMinutes, resolveBusinessHours } from "@/lib/business-hours";
+import { buildSlotStartMinutes, resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import {
@@ -46,6 +46,7 @@ type BusinessHours = {
   lunch_break_start?: string | null;
   lunch_break_end?: string | null;
   slot_minutes?: number | null;
+  break_duration_minutes?: number | null;
   working_days?: number[] | null;
 };
 
@@ -60,24 +61,46 @@ type AvailableSlot = {
 
 function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
   if (!startsAt) return "-";
+
   const start = new Date(startsAt);
   const end = endsAt ? new Date(endsAt) : null;
+
   const day = start.toLocaleDateString("tr-TR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
   });
+
   const startTime = start.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
   });
+
   const endTime = end
     ? end.toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
       })
     : "--:--";
+
   return `${day} • ${startTime} - ${endTime}`;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleString("tr-TR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatEmpty(value: unknown) {
+  if (value === null || value === undefined || value === "") return "-";
+  return String(value);
 }
 
 function isOutsideMinimumLeadTime(startsAt: string, minHours: number, now = new Date()) {
@@ -89,12 +112,17 @@ function toDateKey(value: Date | string) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 }
 
 function timeToMinutes(value?: string | null, fallback = 0) {
   if (!value) return fallback;
-  const [hour, minute] = String(value).split(":").map((piece) => Number(piece || 0));
+
+  const [hour, minute] = String(value)
+    .split(":")
+    .map((piece) => Number(piece || 0));
+
   return hour * 60 + minute;
 }
 
@@ -112,14 +140,17 @@ function buildTrainerRequests(rows: TrainerAvailabilityEntry[]) {
 
   for (const row of rows) {
     if (!row.starts_at) continue;
+
     const dayKey = String(row.starts_at).slice(0, 10);
     const groupKey = `${row.member_id || row.member_full_name}-${dayKey}-${row.package_id || row.package_title || "paket"}`;
     const current = groups.get(groupKey);
 
     if (current) {
       if (!current.note && row.note) current.note = row.note;
+
       if (row.starts_at) {
         const exists = current.assignable_slots.some((slot) => slot.starts_at === row.starts_at);
+
         if (!exists) {
           current.assignable_slots.push({
             starts_at: row.starts_at,
@@ -127,6 +158,7 @@ function buildTrainerRequests(rows: TrainerAvailabilityEntry[]) {
           });
         }
       }
+
       continue;
     }
 
@@ -153,14 +185,18 @@ function buildTrainerRequests(rows: TrainerAvailabilityEntry[]) {
   }
 
   return Array.from(groups.values()).sort(
-    (first, second) => new Date(`${first.request_date_key}T00:00:00`).getTime() - new Date(`${second.request_date_key}T00:00:00`).getTime()
+    (first, second) =>
+      new Date(`${first.request_date_key}T00:00:00`).getTime() -
+      new Date(`${second.request_date_key}T00:00:00`).getTime()
   );
 }
 
 function rangesOverlap(startA: Date, endA: Date, startB?: string | null, endB?: string | null) {
   if (!startB) return false;
+
   const rangeStartB = new Date(startB);
   const rangeEndB = endB ? new Date(endB) : addMinutes(rangeStartB, 60);
+
   return startA < rangeEndB && endA > rangeStartB;
 }
 
@@ -170,27 +206,31 @@ function buildAvailableSlots(
   bookings: TrainerScheduleEntry[],
   minHoursBeforeStart: number
 ) {
-  if (!businessHours) return [] as AvailableSlot[];
+  if (!businessHours?.start_time || !businessHours?.end_time) return [] as AvailableSlot[];
 
   const workingDays =
     Array.isArray(businessHours.working_days) && businessHours.working_days.length
       ? businessHours.working_days
-      : [1, 2, 3, 4, 5, 6, 7];
+      : [];
+
   const dayDate = new Date(`${dateKey}T00:00:00`);
+
   if (!workingDays.includes(isoDayNumber(dayDate))) return [] as AvailableSlot[];
 
-  const startMinutes = timeToMinutes(businessHours.start_time, 9 * 60);
-  const endMinutes = timeToMinutes(businessHours.end_time, 21 * 60);
+  const startMinutes = timeToMinutes(businessHours.start_time);
+  const endMinutes = timeToMinutes(businessHours.end_time);
   const slotMinutes = Math.max(30, Number(businessHours.slot_minutes || 60));
-  const breakMinutes = Math.max(0, Number((businessHours as any).break_duration_minutes || 0));
+  const breakMinutes = Math.max(0, Number(businessHours.break_duration_minutes || 0));
   const lunchStartMinutes = timeToMinutes(businessHours.lunch_break_start, -1);
   const lunchEndMinutes = timeToMinutes(businessHours.lunch_break_end, -1);
+
   const dayBookings = bookings.filter((booking) => toDateKey(booking.starts_at) === dateKey);
   const slots: AvailableSlot[] = [];
 
   for (const minute of buildSlotStartMinutes(startMinutes, endMinutes, slotMinutes, breakMinutes)) {
     const slotStartMinutes = minute;
     const slotEndMinutes = minute + slotMinutes;
+
     const isLunchBreak =
       lunchStartMinutes >= 0 &&
       lunchEndMinutes >= 0 &&
@@ -201,6 +241,7 @@ function buildAvailableSlots(
 
     const slotStart = new Date(`${dateKey}T00:00:00`);
     slotStart.setHours(Math.floor(slotStartMinutes / 60), slotStartMinutes % 60, 0, 0);
+
     const slotEnd = addMinutes(slotStart, slotMinutes);
     const overlapsBooking = dayBookings.some((booking) =>
       rangesOverlap(slotStart, slotEnd, booking.starts_at, booking.ends_at)
@@ -212,7 +253,10 @@ function buildAvailableSlots(
       key: `${dateKey}-${slotStart.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
       startsAt: slotStart.toISOString(),
       endsAt: slotEnd.toISOString(),
-      label: `${slotStart.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} - ${slotEnd.toLocaleTimeString("tr-TR", {
+      label: `${slotStart.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${slotEnd.toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
       })}`,
@@ -229,24 +273,28 @@ function buildAvailableSlots(
 }
 
 function slotFitsBusinessHours(slot: { starts_at: string; ends_at?: string | null }, businessHours: BusinessHours | null) {
-  if (!businessHours) return true;
+  if (!businessHours?.start_time || !businessHours?.end_time) return false;
 
   const start = new Date(slot.starts_at);
   const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours.slot_minutes || 60)).toISOString());
+
   const workingDays =
     Array.isArray(businessHours.working_days) && businessHours.working_days.length
       ? businessHours.working_days
-      : [1, 2, 3, 4, 5, 6, 7];
+      : [];
+
   if (!workingDays.includes(isoDayNumber(start))) return false;
 
-  const businessStart = timeToMinutes(businessHours.start_time, 9 * 60);
-  const businessEnd = timeToMinutes(businessHours.end_time, 21 * 60);
+  const businessStart = timeToMinutes(businessHours.start_time);
+  const businessEnd = timeToMinutes(businessHours.end_time);
   const slotStart = start.getHours() * 60 + start.getMinutes();
   const slotEnd = end.getHours() * 60 + end.getMinutes();
+
   if (slotStart < businessStart || slotEnd > businessEnd) return false;
 
   const lunchStart = timeToMinutes(businessHours.lunch_break_start, -1);
   const lunchEnd = timeToMinutes(businessHours.lunch_break_end, -1);
+
   if (lunchStart >= 0 && lunchEnd >= 0 && slotStart < lunchEnd && slotEnd > lunchStart) {
     return false;
   }
@@ -270,16 +318,24 @@ function buildRequestPlacementSlots(
     .filter((slot) => {
       const start = new Date(slot.starts_at);
       const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
+
       return !dayBookings.some((booking) => rangesOverlap(start, end, booking.starts_at, booking.ends_at));
     })
     .map((slot) => {
       const start = new Date(slot.starts_at);
       const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
+
       return {
-        key: `${request.request_date_key}-${start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
+        key: `${request.request_date_key}-${start.toLocaleTimeString("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
         startsAt: slot.starts_at,
         endsAt: end.toISOString(),
-        label: `${start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} - ${end.toLocaleTimeString("tr-TR", {
+        label: `${start.toLocaleTimeString("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} - ${end.toLocaleTimeString("tr-TR", {
           hour: "2-digit",
           minute: "2-digit",
         })}`,
@@ -295,15 +351,23 @@ function groupSlotsByDay(slots: Array<{ starts_at: string; ends_at?: string | nu
 
   for (const slot of slots) {
     if (!slot.starts_at) continue;
+
     const dateKey = String(slot.starts_at).slice(0, 10);
     const dayDate = new Date(`${dateKey}T00:00:00`);
+    const start = new Date(slot.starts_at);
+    const end = new Date(slot.ends_at || addMinutes(start, 60).toISOString());
+
     const entry: AvailableSlot = {
-      key: `${dateKey}-${new Date(slot.starts_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
+      key: `${dateKey}-${start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
       startsAt: slot.starts_at,
-      endsAt: slot.ends_at || addMinutes(new Date(slot.starts_at), 60).toISOString(),
-      label: `${new Date(slot.starts_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} - ${new Date(
-        slot.ends_at || addMinutes(new Date(slot.starts_at), 60).toISOString()
-      ).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
+      endsAt: slot.ends_at || addMinutes(start, 60).toISOString(),
+      label: `${start.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${end.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`,
       dayKey: dateKey,
       dayLabel: dayDate.toLocaleDateString("tr-TR", {
         weekday: "long",
@@ -311,6 +375,7 @@ function groupSlotsByDay(slots: Array<{ starts_at: string; ends_at?: string | nu
         month: "long",
       }),
     };
+
     groups.set(dateKey, [...(groups.get(dateKey) || []), entry]);
   }
 
@@ -340,21 +405,45 @@ function RequestCard({
         <Text style={styles.requestTitle}>{request.member_full_name}</Text>
         <StatusBadge label="Talep" tone="warning" />
       </View>
+
       <Text style={styles.requestText}>{request.package_title}</Text>
+
       {request.note ? <Text style={styles.requestText}>{request.note}</Text> : null}
+
       <Text style={styles.requestMeta}>Talep günü: {request.request_date_label}</Text>
+
       <ActionButton label="Takvime ekle" icon="calendar" onPress={onAdd} loading={adding} />
     </Pressable>
   );
 }
 
+function DetailRow({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{formatEmpty(value)}</Text>
+    </View>
+  );
+}
+
+function DetailStat({ label, value }: { label: string; value: string | number | null | undefined }) {
+  return (
+    <View style={styles.detailStatBox}>
+      <Text style={styles.detailStatValue}>{formatEmpty(value)}</Text>
+      <Text style={styles.detailStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function TrainerCalendarScreen() {
   const router = useRouter();
+
   const todayAnchor = useMemo(() => {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
     return today.toISOString();
   }, []);
+
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -365,18 +454,24 @@ export default function TrainerCalendarScreen() {
     queryKey: ["trainer-bookings-calendar"],
     queryFn: getTrainerBookingsApi,
   });
+
   const availabilityQuery = useQuery({
     queryKey: ["trainer-availabilities-calendar"],
     queryFn: getTrainerAvailabilitiesApi,
   });
+
   const todayQuery = useQuery({
     queryKey: ["trainer-today-calendar"],
     queryFn: getTrainerTodayApi,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
   const groupClassesQuery = useQuery({
     queryKey: ["trainer-group-classes"],
     queryFn: getTrainerGroupClassesApi,
   });
+
   const membersQuery = useQuery({
     queryKey: ["trainer-members-calendar"],
     queryFn: getTrainerMembersApi,
@@ -392,16 +487,11 @@ export default function TrainerCalendarScreen() {
         ...liveBookings,
       ]
         .filter((row, index, all) => all.findIndex((item) => String(item.id) === String(row.id)) === index)
-        .filter(
-          (row) => !["CANCELED", "CANCELLED"].includes(String(row?.status || "").toUpperCase())
-        ),
+        .filter((row) => !["CANCELED", "CANCELLED"].includes(String(row?.status || "").toUpperCase())),
     [groupClassesQuery.data, liveBookings]
   );
 
-  const rawRequests = useMemo(() => {
-    const liveRequests = buildTrainerRequests(liveAvailabilities);
-    return liveRequests;
-  }, [liveAvailabilities]);
+  const rawRequests = useMemo(() => buildTrainerRequests(liveAvailabilities), [liveAvailabilities]);
 
   const plannedRequestKeys = useMemo(() => {
     return new Set(
@@ -416,10 +506,14 @@ export default function TrainerCalendarScreen() {
     [plannedRequestKeys, rawRequests]
   );
 
-  const businessHours = useMemo(
-    () => resolveBusinessHours(todayQuery.data?.calendar?.business_hours),
-    [todayQuery.data?.calendar?.business_hours]
-  );
+  const businessHours = useMemo(() => {
+    const calendar = (todayQuery.data?.calendar || {}) as any;
+
+    return resolveBusinessHours([calendar.business_hours], {
+      locationTimezone: calendar.timezone,
+    });
+  }, [todayQuery.data?.calendar]);
+
   const minimumAdvanceHours = useMemo(
     () => Math.max(1, Number(todayQuery.data?.calendar?.booking_policy?.min_hours_before_start || 3)),
     [todayQuery.data?.calendar?.booking_policy?.min_hours_before_start]
@@ -452,7 +546,9 @@ export default function TrainerCalendarScreen() {
         title: row.is_group_class ? row.lesson_name || row.session_title || "Grup dersi" : row.member_full_name || "Danışan",
         subtitle: row.is_group_class
           ? `${row.recurrence_label || "Özel tarih"} • ${Number(row.joined_member_count || 0)} katılım`
-          : `${row.lesson_category_label || row.package_name || row.package_title || "Seans"} • ${row.package_title || row.package_name || "Paket"}`,
+          : `${row.lesson_category_label || row.package_name || row.package_title || "Seans"} • ${
+              row.package_title || row.package_name || "Paket"
+            }`,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
         badgeLabel: row.pending_schedule_change ? "Üye Onayı Bekliyor" : formatStatusLabel(row.status) || undefined,
@@ -473,23 +569,28 @@ export default function TrainerCalendarScreen() {
     queryFn: () => getTrainerMemberDetailApi(String(selectedBooking?.member_id)),
     enabled: Boolean(selectedBooking?.member_id),
   });
+
   const memberMeasurementsQuery = useQuery({
     queryKey: ["trainer-calendar-member-measurements", selectedBooking?.member_id],
     queryFn: () => getTrainerMemberMeasurementsApi(String(selectedBooking?.member_id)),
     enabled: Boolean(selectedBooking?.member_id),
   });
+
   const memberNotesQuery = useQuery({
     queryKey: ["trainer-calendar-member-notes", selectedBooking?.member_id],
     queryFn: () => getTrainerMemberNotesApi(String(selectedBooking?.member_id)),
     enabled: Boolean(selectedBooking?.member_id),
   });
+
   const memberAttendanceQuery = useQuery({
     queryKey: ["trainer-calendar-member-attendance", selectedBooking?.member_id],
     queryFn: () => getTrainerMemberAttendanceApi(String(selectedBooking?.member_id)),
     enabled: Boolean(selectedBooking?.member_id),
   });
+
   const groupMemberNameMap = useMemo(() => {
     const rows = Array.isArray(membersQuery.data) ? membersQuery.data : [];
+
     return new Map(
       rows.map((row: any) => [
         String(row.id || ""),
@@ -498,154 +599,144 @@ export default function TrainerCalendarScreen() {
     );
   }, [membersQuery.data]);
 
- const createBookingMutation = useMutation({
-  mutationFn: (payload: { request: CalendarRequest; slot: AvailableSlot }) =>
-    createTrainerBookingApi({
-      member_id: payload.request.member_id,
-      starts_at: payload.slot.startsAt,
-      ends_at: payload.slot.endsAt,
-      status: "APPROVED",
-      meta: {
-        package_id: payload.request.package_id || payload.request.id,
-        package_title: payload.request.package_title,
-        note: payload.request.note || undefined,
-      },
-    }),
+  const createBookingMutation = useMutation({
+    mutationFn: (payload: { request: CalendarRequest; slot: AvailableSlot }) =>
+      createTrainerBookingApi({
+        member_id: payload.request.member_id,
+        starts_at: payload.slot.startsAt,
+        ends_at: payload.slot.endsAt,
+        status: "APPROVED",
+        meta: {
+          package_id: payload.request.package_id || payload.request.id,
+          package_title: payload.request.package_title,
+          note: payload.request.note || undefined,
+        },
+      }),
 
-  meta: {
-    invalidates: [
-      ["trainer-bookings"],
-      ["trainer-today"],
-      ["trainer-today-calendar"],
-      ["trainer-availabilities"],
+    meta: {
+      invalidates: [
+        ["trainer-bookings"],
+        ["trainer-today"],
+        ["trainer-today-calendar"],
+        ["trainer-availabilities"],
+        ["member-bookings"],
+        ["member-bookings-calendar"],
+        ["member-home"],
+        ["member-home-v2"],
+        ["admin-bookings"],
+        ["admin-bookings-calendar"],
+        ["admin-dashboard"],
+        ["admin-dashboard-v2"],
+        ["admin-settings-calendar"],
+      ],
+    },
 
-      ["member-bookings"],
-      ["member-bookings-calendar"],
-      ["member-home"],
-      ["member-home-v2"],
+    onSuccess: () => {
+      setPlacementRequestId(null);
+      setSelectedRequestId(null);
+    },
 
-      ["admin-bookings"],
-      ["admin-bookings-calendar"],
-      ["admin-dashboard"],
-      ["admin-dashboard-v2"],
-      ["admin-settings-calendar"],
-    ],
-  },
+    onError: (error: any) => {
+      showErrorAlert("Ders planlanamadı", error, "Seçilen saat için ders planı oluşturulamadı.");
+    },
+  });
 
-  onSuccess: () => {
-    setPlacementRequestId(null);
-    setSelectedRequestId(null);
-  },
+  const cancelBookingMutation = useMutation({
+    mutationFn: (bookingId: string) => patchTrainerBookingStatusApi(bookingId, { status: "CANCELED" }),
 
-  onError: (error: any) => {
-    showErrorAlert(
-      "Ders planlanamadı",
-      error,
-      "Seçilen saat için ders planı oluşturulamadı."
-    );
-  },
-});
+    meta: {
+      invalidates: [
+        ["trainer-bookings"],
+        ["trainer-today"],
+        ["trainer-today-calendar"],
+        ["trainer-availabilities"],
+        ["member-bookings"],
+        ["member-bookings-calendar"],
+        ["member-home"],
+        ["member-home-v2"],
+        ["admin-bookings"],
+        ["admin-bookings-calendar"],
+        ["admin-dashboard"],
+        ["admin-dashboard-v2"],
+        ["admin-settings-calendar"],
+      ],
+    },
 
-const cancelBookingMutation = useMutation({
-  mutationFn: (bookingId: string) =>
-    patchTrainerBookingStatusApi(bookingId, { status: "CANCELED" }),
+    onSuccess: () => {
+      setSelectedBookingId(null);
+    },
 
-  meta: {
-    invalidates: [
-      ["trainer-bookings"],
-      ["trainer-today"],
-      ["trainer-today-calendar"],
-      ["trainer-availabilities"],
+    onError: (error: any) => {
+      showErrorAlert("Ders kaldırılamadı", error, "Ders takvimden çıkarılamadı. Lütfen tekrar deneyin.");
+    },
+  });
 
-      ["member-bookings"],
-      ["member-bookings-calendar"],
-      ["member-home"],
-      ["member-home-v2"],
+  const scheduleChangeMutation = useMutation({
+    mutationFn: (payload: {
+      bookingId: string;
+      starts_at: string;
+      ends_at: string;
+      member_id: string;
+    }) => createTrainerScheduleChangeRequestApi(payload.bookingId, payload),
 
-      ["admin-bookings"],
-      ["admin-bookings-calendar"],
-      ["admin-dashboard"],
-      ["admin-dashboard-v2"],
-      ["admin-settings-calendar"],
-    ],
-  },
+    meta: {
+      invalidates: [
+        ["trainer-bookings"],
+        ["trainer-today"],
+        ["trainer-today-calendar"],
+        ["member-schedule-change-requests"],
+        ["member-bookings"],
+        ["member-bookings-calendar"],
+        ["member-home"],
+        ["member-home-v2"],
+        ["admin-bookings"],
+        ["admin-bookings-calendar"],
+        ["admin-dashboard"],
+        ["admin-dashboard-v2"],
+      ],
+    },
 
-  onSuccess: () => {
-    setSelectedBookingId(null);
-  },
+    onSuccess: () => {
+      showInfoAlert(
+        "Saat değişikliği gönderildi",
+        "Yeni saat önerisi üyeye iletildi. Onay sonrası takvim güncellenecek."
+      );
+    },
 
-  onError: (error: any) => {
-    showErrorAlert(
-      "Ders kaldırılamadı",
-      error,
-      "Ders takvimden çıkarılamadı. Lütfen tekrar deneyin."
-    );
-  },
-});
-
- const scheduleChangeMutation = useMutation({
-  mutationFn: (payload: {
-    bookingId: string;
-    starts_at: string;
-    ends_at: string;
-    member_id: string;
-  }) => createTrainerScheduleChangeRequestApi(payload.bookingId, payload),
-
-  meta: {
-    invalidates: [
-      ["trainer-bookings"],
-      ["trainer-today"],
-      ["trainer-today-calendar"],
-
-      ["member-schedule-change-requests"],
-      ["member-bookings"],
-      ["member-bookings-calendar"],
-      ["member-home"],
-      ["member-home-v2"],
-
-      ["admin-bookings"],
-      ["admin-bookings-calendar"],
-      ["admin-dashboard"],
-      ["admin-dashboard-v2"],
-    ],
-  },
-
-  onSuccess: () => {
-    showInfoAlert(
-      "Saat değişikliği gönderildi",
-      "Yeni saat önerisi üyeye iletildi. Onay sonrası takvim güncellenecek."
-    );
-  },
-
-  onError: (error: any) => {
-    showErrorAlert(
-      "Saat değişikliği gönderilemedi",
-      error,
-      "Yeni saat önerisi oluşturulamadı. Lütfen tekrar deneyin."
-    );
-  },
-});
+    onError: (error: any) => {
+      showErrorAlert("Saat değişikliği gönderilemedi", error, "Yeni saat önerisi oluşturulamadı. Lütfen tekrar deneyin.");
+    },
+  });
 
   const latestMeasurement = Array.isArray(memberMeasurementsQuery.data) ? memberMeasurementsQuery.data[0] : null;
   const latestAttendance = Array.isArray(memberAttendanceQuery.data) ? memberAttendanceQuery.data[0] : null;
+
   const recentNotes = Array.isArray(memberNotesQuery.data?.data)
     ? memberNotesQuery.data.data.slice(0, 2)
     : Array.isArray(memberNotesQuery.data)
       ? memberNotesQuery.data.slice(0, 2)
       : [];
+
   const memberStats = memberDetailQuery.data?.stats || {};
-  const packageSummary = Array.isArray(memberDetailQuery.data?.package_summary) ? memberDetailQuery.data.package_summary[0] : null;
+  const packageSummary = Array.isArray(memberDetailQuery.data?.package_summary)
+    ? memberDetailQuery.data.package_summary[0]
+    : null;
+
   const selectedGroupMembers = useMemo(() => {
     if (!selectedBooking?.is_group_class) return [];
+
     const invitedIds = Array.isArray(selectedBooking.invited_member_ids) ? selectedBooking.invited_member_ids : [];
+
     return invitedIds
       .map((id: string) => groupMemberNameMap.get(String(id)) || null)
       .filter((item: string | null): item is string => Boolean(item));
   }, [groupMemberNameMap, selectedBooking]);
+
   const rescheduleDayGroups = useMemo(
     () => groupSlotsByDay(Array.isArray(selectedBooking?.assignable_slots) ? selectedBooking.assignable_slots : []),
     [selectedBooking?.assignable_slots]
   );
+
   const selectedRescheduleDay = useMemo(
     () => rescheduleDayGroups.find((item) => item.dayKey === selectedRescheduleDayKey) || rescheduleDayGroups[0] || null,
     [rescheduleDayGroups, selectedRescheduleDayKey]
@@ -681,9 +772,9 @@ const cancelBookingMutation = useMutation({
       title="Takvimim"
       subtitle="Ders programını yönet, talepleri planla ve değişiklik yap."
       icon="calendar"
-      refreshing={bookingQuery.isRefetching || availabilityQuery.isRefetching || todayQuery.isRefetching || groupClassesQuery.isRefetching}
+      refreshing={todayQuery.isRefetching}
       onRefresh={() => {
-        void Promise.all([bookingQuery.refetch(), availabilityQuery.refetch(), todayQuery.refetch(), groupClassesQuery.refetch()]);
+        void todayQuery.refetch();
       }}
     >
       <WeeklyScheduler
@@ -702,7 +793,10 @@ const cancelBookingMutation = useMutation({
 
       <SurfaceCard>
         <Text style={styles.boardTitle}>Ders Talepleri</Text>
-        <Text style={styles.detailText}>Seçili güne ait talepler listelenir. Takvime ekleme sırasında yalnızca uygun saatler sunulur.</Text>
+        <Text style={styles.detailText}>
+          Seçili güne ait talepler listelenir. Takvime ekleme sırasında yalnızca uygun saatler sunulur.
+        </Text>
+
         <View style={styles.requestGrid}>
           {selectedDayRequests.length === 0 ? (
             <EmptyState title="Talep bulunmuyor" description="Seçili gün için bekleyen ders talebi yok." icon="request" />
@@ -729,13 +823,13 @@ const cancelBookingMutation = useMutation({
         <SurfaceCard tone="warning">
           <Text style={styles.detailTitle}>Talep bilgisi</Text>
           <Text style={styles.detailText}>{selectedRequest?.request_date_label || "-"}</Text>
+
           {selectedRequest?.note ? <Text style={styles.detailText}>Not: {selectedRequest.note}</Text> : null}
+
           {selectedRequest?.assignable_slots?.length ? (
             <Text style={styles.detailText}>
               Seçilen saatler:{" "}
-              {selectedRequest.assignable_slots
-                .map((slot) => formatDateTimeRange(slot.starts_at, slot.ends_at))
-                .join(" • ")}
+              {selectedRequest.assignable_slots.map((slot) => formatDateTimeRange(slot.starts_at, slot.ends_at)).join(" • ")}
             </Text>
           ) : null}
         </SurfaceCard>
@@ -781,43 +875,118 @@ const cancelBookingMutation = useMutation({
       <DetailSheet
         visible={Boolean(selectedBooking)}
         onClose={() => setSelectedBookingId(null)}
-        title={selectedBooking?.member_full_name || "Ders detayı"}
-        subtitle={selectedBooking?.lesson_category_label || selectedBooking?.package_title || "Ders detayı"}
+        title={selectedBooking?.is_group_class ? selectedBooking?.lesson_name || "Grup dersi" : selectedBooking?.member_full_name || "Ders detayı"}
+        subtitle={formatStatusLabel(selectedBooking?.status) || "Ders detayı"}
       >
         <SurfaceCard tone="primary">
-          <Text style={styles.detailTitle}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)}</Text>
-          {selectedBooking?.is_group_class ? <Text style={styles.detailText}>Grup dersi: {selectedBooking?.lesson_name || selectedBooking?.session_title || "-"}</Text> : null}
-          <Text style={styles.detailText}>Paket: {selectedBooking?.package_title || selectedBooking?.package_name || "-"}</Text>
-          {selectedBooking?.is_group_class ? <Text style={styles.detailText}>Bildirim: {getGroupClassAudienceLabel(selectedBooking?.notification_scope)}</Text> : null}
-          {selectedBooking?.is_group_class ? <Text style={styles.detailText}>Ücret: {formatGroupClassPrice(selectedBooking?.price)}</Text> : null}
-          {selectedBooking?.is_group_class ? <Text style={styles.detailText}>Katılım: {Number(selectedBooking?.joined_member_count || 0)} • Davet: {Number(selectedBooking?.invited_member_count || 0)}</Text> : null}
-          {selectedBooking?.is_group_class && selectedGroupMembers.length > 0 ? (
-            <Text style={styles.detailText}>Katılacak üyeler: {selectedGroupMembers.join(", ")}</Text>
-          ) : null}
-          <Text style={styles.detailText}>Kalan hak: {packageSummary?.remaining_credits ?? "-"}</Text>
-          <Text style={styles.detailText}>Toplam ders: {memberStats.booking_count ?? "-"}</Text>
-          <Text style={styles.detailText}>Katılım sayısı: {memberStats.checkin_count ?? "-"}</Text>
-          <Text style={styles.detailText}>Son katılım: {latestAttendance?.created_at ? new Date(latestAttendance.created_at).toLocaleString("tr-TR") : "-"}</Text>
-          <Text style={styles.detailText}>
-            Son ölçüm: {latestMeasurement ? `${latestMeasurement.weight_kg ?? "-"} kg • Yağ ${latestMeasurement.fat_percent ?? "-"} • Kas ${latestMeasurement.muscle_kg ?? latestMeasurement.muscle_percent ?? "-"}` : "Kayıt yok"}
-          </Text>
-          {selectedBooking?.pending_schedule_change ? (
-            <Text style={styles.detailText}>
-              Bekleyen yeni saat: {formatDateTimeRange(selectedBooking.pending_schedule_change.proposed_starts_at, selectedBooking.pending_schedule_change.proposed_ends_at)}
-            </Text>
-          ) : null}
+          <View style={styles.detailHeaderRow}>
+            <View style={styles.detailHeaderText}>
+              <Text style={styles.detailTitle}>Ders özeti</Text>
+              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)}</Text>
+            </View>
+
+            {selectedBooking?.status ? (
+              <StatusBadge label={formatStatusLabel(selectedBooking.status)} tone={getStatusTone(selectedBooking.status)} />
+            ) : null}
+          </View>
+
+          <View style={styles.detailGrid}>
+            <DetailRow
+              label="Ders türü"
+              value={
+                selectedBooking?.is_group_class
+                  ? "Grup dersi"
+                  : selectedBooking?.lesson_category_label || selectedBooking?.lesson_category || "Bireysel seans"
+              }
+            />
+            <DetailRow label="Paket" value={selectedBooking?.package_title || selectedBooking?.package_name} />
+            <DetailRow
+              label="Danışan"
+              value={selectedBooking?.is_group_class ? "Grup dersi katılımcıları" : selectedBooking?.member_full_name}
+            />
+            <DetailRow label="Planlanan saat" value={formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)} />
+          </View>
         </SurfaceCard>
+
+        {selectedBooking?.is_group_class ? (
+          <SurfaceCard>
+            <Text style={styles.detailTitle}>Grup dersi bilgileri</Text>
+
+            <View style={styles.detailStatGrid}>
+              <DetailStat label="Katılım" value={Number(selectedBooking?.joined_member_count || 0)} />
+              <DetailStat label="Davet" value={Number(selectedBooking?.invited_member_count || 0)} />
+              <DetailStat label="Ücret" value={formatGroupClassPrice(selectedBooking?.price)} />
+            </View>
+
+            <View style={styles.detailGrid}>
+              <DetailRow label="Ders adı" value={selectedBooking?.lesson_name || selectedBooking?.session_title} />
+              <DetailRow label="Bildirim kapsamı" value={getGroupClassAudienceLabel(selectedBooking?.notification_scope)} />
+              <DetailRow label="Tekrar bilgisi" value={selectedBooking?.recurrence_label || "Özel tarih"} />
+            </View>
+
+            {selectedGroupMembers.length > 0 ? (
+              <View style={styles.memberListBox}>
+                <Text style={styles.detailLabel}>Katılacak üyeler</Text>
+                <Text style={styles.detailText}>{selectedGroupMembers.join(", ")}</Text>
+              </View>
+            ) : null}
+          </SurfaceCard>
+        ) : (
+          <SurfaceCard>
+            <Text style={styles.detailTitle}>Danışan durumu</Text>
+
+            <View style={styles.detailStatGrid}>
+              <DetailStat label="Kalan hak" value={packageSummary?.remaining_credits} />
+              <DetailStat label="Toplam ders" value={memberStats.booking_count} />
+              <DetailStat label="Katılım" value={memberStats.checkin_count} />
+            </View>
+
+            <View style={styles.detailGrid}>
+              <DetailRow label="Son katılım" value={latestAttendance?.created_at ? formatDateTime(latestAttendance.created_at) : "Kayıt yok"} />
+              <DetailRow
+                label="Son ölçüm"
+                value={
+                  latestMeasurement
+                    ? `${latestMeasurement.weight_kg ?? "-"} kg • Yağ ${latestMeasurement.fat_percent ?? "-"} • Kas ${
+                        latestMeasurement.muscle_kg ?? latestMeasurement.muscle_percent ?? "-"
+                      }`
+                    : "Kayıt yok"
+                }
+              />
+            </View>
+          </SurfaceCard>
+        )}
+
+        {selectedBooking?.pending_schedule_change ? (
+          <SurfaceCard tone="warning">
+            <Text style={styles.detailTitle}>Bekleyen saat değişikliği</Text>
+            <Text style={styles.detailText}>
+              Üyeye yeni saat önerisi gönderildi. Üye onayladığında takvim otomatik güncellenecek.
+            </Text>
+            <View style={styles.pendingBox}>
+              <DetailRow
+                label="Önerilen yeni saat"
+                value={formatDateTimeRange(
+                  selectedBooking.pending_schedule_change.proposed_starts_at,
+                  selectedBooking.pending_schedule_change.proposed_ends_at
+                )}
+              />
+            </View>
+          </SurfaceCard>
+        ) : null}
 
         <SurfaceCard>
           <Text style={styles.detailTitle}>Eğitmen notları</Text>
+
           {recentNotes.length === 0 ? (
-            <Text style={styles.detailText}>Kayıtlı not yok.</Text>
+            <Text style={styles.detailText}>Bu danışan için kayıtlı not yok.</Text>
           ) : (
             <ScrollPanel maxHeight={160}>
               {recentNotes.map((note: any) => (
-                <Text key={note.id || note.created_at} style={styles.detailText}>
-                  • {note.title || note.category || "Not"}: {note.body || note.note}
-                </Text>
+                <View key={note.id || note.created_at} style={styles.noteItem}>
+                  <Text style={styles.noteTitle}>{note.title || note.category || "Not"}</Text>
+                  <Text style={styles.detailText}>{note.body || note.note || "-"}</Text>
+                </View>
               ))}
             </ScrollPanel>
           )}
@@ -837,6 +1006,7 @@ const cancelBookingMutation = useMutation({
                 {rescheduleDayGroups.map((group) => {
                   const active = group.dayKey === selectedRescheduleDay?.dayKey;
                   const dayDate = new Date(`${group.dayKey}T00:00:00`);
+
                   return (
                     <Pressable
                       key={group.dayKey}
@@ -864,6 +1034,7 @@ const cancelBookingMutation = useMutation({
                     style={styles.slotOption}
                     onPress={() => {
                       if (!selectedBooking?.id || !selectedBooking?.member_id) return;
+
                       scheduleChangeMutation.mutate({
                         bookingId: String(selectedBooking.id),
                         starts_at: slot.startsAt,
@@ -885,6 +1056,7 @@ const cancelBookingMutation = useMutation({
           variant="danger"
           onPress={() => {
             if (!selectedBooking?.id) return;
+
             Alert.alert("Dersi kaldır", "Bu dersi takvimden kaldırıp planlama listesine geri almak istiyor musun?", [
               { text: "Vazgeç", style: "cancel" },
               {
@@ -905,6 +1077,7 @@ const cancelBookingMutation = useMutation({
           variant="ghost"
           onPress={() => {
             if (!selectedBooking?.member_id) return;
+
             setSelectedBookingId(null);
             router.push(`/(trainer)/members/${selectedBooking.member_id}` as never);
           }}
@@ -956,6 +1129,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: tokens.fontFamily.medium,
   },
+  detailHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+  },
+  detailHeaderText: {
+    flex: 1,
+    gap: 4,
+  },
   detailTitle: {
     color: tokens.colors.text,
     fontSize: tokens.font.md,
@@ -966,6 +1149,81 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     lineHeight: 20,
     fontFamily: tokens.fontFamily.regular,
+  },
+  detailGrid: {
+    marginTop: tokens.spacing.sm,
+    gap: tokens.spacing.xs,
+  },
+  detailRow: {
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  detailLabel: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  detailValue: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    lineHeight: 20,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  detailStatGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.spacing.sm,
+    marginTop: tokens.spacing.sm,
+  },
+  detailStatBox: {
+    flexGrow: 1,
+    minWidth: 92,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  detailStatValue: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.lg,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  detailStatLabel: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  memberListBox: {
+    marginTop: tokens.spacing.sm,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.sm,
+    gap: 4,
+  },
+  pendingBox: {
+    marginTop: tokens.spacing.sm,
+  },
+  noteItem: {
+    borderRadius: tokens.radius.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.sm,
+    gap: 4,
+    marginBottom: tokens.spacing.xs,
+  },
+  noteTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
   },
   slotList: {
     gap: tokens.spacing.sm,

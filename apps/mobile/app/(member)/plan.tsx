@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/business-hours";
+import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getMemberAvailabilityApi, getMemberHomeApi, patchMemberWeeklyTarget, saveMemberAvailabilityApi } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -46,10 +46,16 @@ function buildWeekSlots(businessHours: any, anchorDate: Date) {
     return hour * 60 + minute;
   };
 
+  if (!startTime || !endTime) {
+  return [];
+}
+
   const startMinutes = toMinutes(startTime);
   const endMinutes = toMinutes(endTime);
-  const lunchStartMinutes = toMinutes(lunchStart);
-  const lunchEndMinutes = toMinutes(lunchEnd);
+
+  const hasLunchBreak = Boolean(lunchStart && lunchEnd);
+  const lunchStartMinutes = hasLunchBreak ? toMinutes(lunchStart!) : -1;
+  const lunchEndMinutes = hasLunchBreak ? toMinutes(lunchEnd!) : -1;
 
   const slots: Slot[] = [];
   for (let day = 0; day < 7; day += 1) {

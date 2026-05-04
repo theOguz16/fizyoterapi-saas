@@ -25,7 +25,7 @@ describe("schedule change request storage", () => {
       createScheduleChangeRequest,
       findPendingScheduleChangeForBooking,
       listPendingScheduleChangeRequestsForMember,
-    } = await import("@/lib/schedule-change-requests");
+    } = await import("../../src/lib/schedule-change-requests");
 
     const createdRows = await createScheduleChangeRequest({
       bookingId: "booking-1",
@@ -77,7 +77,7 @@ describe("schedule change request storage", () => {
   });
 
   it("returns empty arrays when storage is missing or member id is absent", async () => {
-    const { listPendingScheduleChangeRequestsForMember, listScheduleChangeRequests } = await import("@/lib/schedule-change-requests");
+    const { listPendingScheduleChangeRequestsForMember, listScheduleChangeRequests } = await import("../../src/lib/schedule-change-requests");
 
     await expect(listScheduleChangeRequests()).resolves.toEqual([]);
     await expect(listPendingScheduleChangeRequestsForMember(null)).resolves.toEqual([]);

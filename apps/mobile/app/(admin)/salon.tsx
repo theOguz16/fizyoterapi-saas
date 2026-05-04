@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
-import { resolveBusinessHours } from "@/lib/business-hours";
+import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getAdminSettingsApi } from "@/lib/mobile-api";
 import { useSession } from "@/providers/auth-session";
 import { showInfoAlert } from "@/lib/user-feedback";
@@ -26,8 +26,13 @@ export default function AdminSalonScreen() {
   const settings = query.data || {};
   const profile = settings.profile || settings;
   const location = profile.location || {};
-  const businessHours = resolveBusinessHours(profile.business_hours, location.business_hours);
-  const hasBusinessHours = hasConfiguredBusinessHours(profile.business_hours) || hasConfiguredBusinessHours(location.business_hours);
+  const businessHours = resolveBusinessHours(
+  [profile.business_hours, location.business_hours],
+  {
+    locationTimezone: location.timezone,
+  }
+);
+  const hasBusinessHours = businessHours.is_configured;
 
   return (
     <AppShell
@@ -48,8 +53,19 @@ export default function AdminSalonScreen() {
       </SurfaceCard>
 
       <View style={styles.metricsRow}>
-        <MetricCard label="Acilis" value={hasBusinessHours ? businessHours.start_time : "Belirlenmedi"} hint="Gun baslangici" icon="clock" />
-        <MetricCard label="Kapanis" value={hasBusinessHours ? businessHours.end_time : "Belirlenmedi"} hint="Gun sonu" icon="calendar" />
+        <MetricCard
+          label="Açılış"
+          value={hasBusinessHours ? businessHours.start_time || "-" : "Belirlenmedi"}
+          hint="Gün başlangıcı"
+          icon="clock"
+        />
+
+        <MetricCard
+          label="Kapanış"
+          value={hasBusinessHours ? businessHours.end_time || "-" : "Belirlenmedi"}
+          hint="Gün sonu"
+          icon="calendar"
+        />
       </View>
 
       <SurfaceCard>

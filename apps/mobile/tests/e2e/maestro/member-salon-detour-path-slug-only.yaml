@@ -1,0 +1,20 @@
+appId: com.clinerva.mobile
+name: member-salon-detour-path-slug-only
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "clinerva://e2e-reset"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# salon_slug parametresi yok. Slug path'ten yakalanmalı.
+- openLink: "clinerva://join/demo-salon?source=salon_qr&channel=qr"
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+- assertVisible:
+    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon"

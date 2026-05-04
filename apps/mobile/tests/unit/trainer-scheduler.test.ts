@@ -5,7 +5,7 @@ import {
   isSlotAllowed,
   rebuildRequestFromCancelledBooking,
   toSlotKey,
-} from "@/lib/trainer-scheduler";
+} from "../../src/lib/trainer-scheduler";
 
 describe("trainer scheduler helpers", () => {
   it("groups assignable requests by day and resolves slot keys", () => {

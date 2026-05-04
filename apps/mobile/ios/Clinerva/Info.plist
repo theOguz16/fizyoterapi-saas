@@ -57,6 +57,10 @@
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Clinerva, salon QR görsellerini galeriye kaydetmek için izin ister.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Clinerva, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

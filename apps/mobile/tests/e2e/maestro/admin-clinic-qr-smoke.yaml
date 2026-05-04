@@ -9,31 +9,33 @@ appId: com.clinerva.mobile
 - openLink: "clinerva://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
 
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 8000
 
-- assertVisible: "Yönetim merkezi"
+# Dashboard başlığı yerine doğrudan QR kartını bekliyoruz.
+- scrollUntilVisible:
+    element:
+      id: "admin-dashboard-clinic-qr"
+    direction: DOWN
+    timeout: 30000
+    speed: 40
+    visibilityPercentage: 30
+    centerElement: false
 
-- swipe:
-    start: 50%, 82%
-    end: 50%, 28%
-
-- swipe:
-    start: 50%, 82%
-    end: 50%, 24%
-
-- tapOn: "Salon QR"
+- tapOn:
+    id: "admin-dashboard-clinic-qr"
+    retryTapIfNoChange: true
 
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 7000
 
 - assertVisible: "Salon QR kodu"
-- assertVisible: "Detour aktif"
-- assertVisible: "Onboarding QR"
+- assertVisible: "Yönlendirme hazır|Paylaşım hazır|Kurulum bekliyor"
+- assertVisible: "Salon QR"
 
 - swipe:
     start: 50%, 82%
     end: 50%, 26%
 
-- assertVisible: "QR yönlendirme durumu"
-- assertVisible: "Detour link"
-- assertVisible: "QR görselini indir / paylaş"
+- assertVisible: "QR nasıl çalışır?"
+- assertVisible: "Akıllı yönlendirme|Salon bağlantısı|Salon kodu"
+- assertVisible: "QR’ı galeriye kaydet"

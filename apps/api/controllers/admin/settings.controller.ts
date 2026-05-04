@@ -191,62 +191,80 @@ export class AdminSettingsController {
   }
 
   private static normalizeBusinessHours(value: unknown): SalonProfile["business_hours"] {
-    const defaults: SalonProfile["business_hours"] = {
-      timezone: "Europe/Istanbul",
-      working_days: [1, 2, 3, 4, 5, 6, 7],
-      start_time: "09:00",
-      end_time: "18:00",
-      lunch_break_start: "12:00",
-      lunch_break_end: "13:00",
-      slot_minutes: 60,
-      break_duration_minutes: 0,
-    };
+  const defaults: SalonProfile["business_hours"] = {
+    timezone: "Europe/Istanbul",
+    working_days: [1, 2, 3, 4, 5, 6, 7],
+    start_time: "09:00",
+    end_time: "18:00",
+    slot_minutes: 60,
+    break_duration_minutes: 0,
+  };
 
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return defaults;
-    }
-
-    const raw = value as Record<string, unknown>;
-    const parseTime = (input: unknown, fallback: string) => {
-      if (typeof input !== "string") return fallback;
-      const trimmed = input.trim();
-      return /^\d{2}:\d{2}$/.test(trimmed) ? trimmed : fallback;
-    };
-
-    const fallbackWorkingDays = defaults.working_days || [1, 2, 3, 4, 5];
-    const workingDaysRaw = Array.isArray(raw.working_days) ? raw.working_days : fallbackWorkingDays;
-    const workingDays = Array.from(
-      new Set(
-        workingDaysRaw
-          .map((item) => Number(item))
-          .map((item) => {
-            if (!Number.isInteger(item)) return null;
-            if (item === 0) return 7;
-            if (item >= 1 && item <= 7) return item;
-            return null;
-          })
-          .filter((item): item is number => item !== null)
-      )
-    ).sort((a, b) => a - b);
-
-    const slotMinutesRaw = Number(raw.slot_minutes);
-    const slotMinutes = Number.isFinite(slotMinutesRaw) ? Math.min(Math.max(Math.floor(slotMinutesRaw), 15), 180) : 60;
-    const breakDurationRaw = Number(raw.break_duration_minutes);
-    const breakDurationMinutes = Number.isFinite(breakDurationRaw)
-      ? Math.min(Math.max(Math.floor(breakDurationRaw), 0), 60)
-      : Number(defaults.break_duration_minutes || 0);
-
-    return {
-      timezone: typeof raw.timezone === "string" ? raw.timezone : defaults.timezone,
-      working_days: workingDays.length > 0 ? workingDays : defaults.working_days,
-      start_time: parseTime(raw.start_time, defaults.start_time || "09:00"),
-      end_time: parseTime(raw.end_time, defaults.end_time || "18:00"),
-      lunch_break_start: parseTime(raw.lunch_break_start, defaults.lunch_break_start || "12:00"),
-      lunch_break_end: parseTime(raw.lunch_break_end, defaults.lunch_break_end || "13:00"),
-      slot_minutes: slotMinutes,
-      break_duration_minutes: breakDurationMinutes,
-    };
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return defaults;
   }
+
+  const raw = value as Record<string, unknown>;
+
+  const parseRequiredTime = (input: unknown, fallback: string) => {
+    if (typeof input !== "string") return fallback;
+    const trimmed = input.trim();
+    return /^\d{2}:\d{2}$/.test(trimmed) ? trimmed : fallback;
+  };
+
+  const parseOptionalTime = (input: unknown): string | undefined => {
+    if (input === null || input === undefined || input === "") return undefined;
+    if (typeof input !== "string") return undefined;
+    const trimmed = input.trim();
+    return /^\d{2}:\d{2}$/.test(trimmed) ? trimmed : undefined;
+  };
+
+  const fallbackWorkingDays = defaults.working_days || [1, 2, 3, 4, 5];
+  const workingDaysRaw = Array.isArray(raw.working_days) ? raw.working_days : fallbackWorkingDays;
+
+  const workingDays = Array.from(
+    new Set(
+      workingDaysRaw
+        .map((item) => Number(item))
+        .map((item) => {
+          if (!Number.isInteger(item)) return null;
+          if (item === 0) return 7;
+          if (item >= 1 && item <= 7) return item;
+          return null;
+        })
+        .filter((item): item is number => item !== null)
+    )
+  ).sort((a, b) => a - b);
+
+  const slotMinutesRaw = Number(raw.slot_minutes);
+  const slotMinutes = Number.isFinite(slotMinutesRaw)
+    ? Math.min(Math.max(Math.floor(slotMinutesRaw), 15), 180)
+    : 60;
+
+  const breakDurationRaw = Number(raw.break_duration_minutes);
+  const breakDurationMinutes = Number.isFinite(breakDurationRaw)
+    ? Math.min(Math.max(Math.floor(breakDurationRaw), 0), 60)
+    : Number(defaults.break_duration_minutes || 0);
+
+  const normalized: SalonProfile["business_hours"] = {
+    timezone: typeof raw.timezone === "string" && raw.timezone.trim() ? raw.timezone : defaults.timezone,
+    working_days: workingDays.length > 0 ? workingDays : defaults.working_days,
+    start_time: parseRequiredTime(raw.start_time, defaults.start_time || "09:00"),
+    end_time: parseRequiredTime(raw.end_time, defaults.end_time || "18:00"),
+    slot_minutes: slotMinutes,
+    break_duration_minutes: breakDurationMinutes,
+  };
+
+  const lunchBreakStart = parseOptionalTime(raw.lunch_break_start);
+  const lunchBreakEnd = parseOptionalTime(raw.lunch_break_end);
+
+  if (lunchBreakStart && lunchBreakEnd) {
+    normalized.lunch_break_start = lunchBreakStart;
+    normalized.lunch_break_end = lunchBreakEnd;
+  }
+
+  return normalized;
+}
 
   private static validateTemplateType(type: unknown): asserts type is NotificationType {
     if (typeof type !== "string" || !Object.values(NotificationType).includes(type as NotificationType)) {
@@ -437,7 +455,9 @@ export class AdminSettingsController {
         if (profileInput.theme !== undefined) profile.theme = String(profileInput.theme);
         if (profileInput.primary_color !== undefined) profile.primary_color = String(profileInput.primary_color);
         if (profileInput.business_hours !== undefined) {
-          profile.business_hours = AdminSettingsController.normalizeBusinessHours(profileInput.business_hours);
+          const normalizedBusinessHours = AdminSettingsController.normalizeBusinessHours(profileInput.business_hours);
+
+          profile.business_hours = normalizedBusinessHours;
         }
         if (profileInput.is_published !== undefined) profile.is_published = Boolean(profileInput.is_published);
         if (profileInput.location !== undefined && typeof profileInput.location === "object" && !Array.isArray(profileInput.location)) {

@@ -228,8 +228,8 @@ export class TrainerTodayController {
           .getRawMany<{ member_id: string }>(),
         AppDataSource.getRepository(SalonProfile).findOne({
           where: { tenant_id: tenantId },
-          order: { created_at: "DESC" },
-          select: ["id", "business_hours", "location"],
+          order: { updated_at: "DESC", created_at: "DESC" },
+          select: ["id", "business_hours", "location", "updated_at", "created_at"],
         }),
         getIncomeTotalForRange(dayStart, dayEnd),
         getIncomeTotalForRange(weekStart, weekEnd),
@@ -356,15 +356,7 @@ export class TrainerTodayController {
           })),
           sessions: todaySessions,
           calendar: {
-            business_hours: profile?.business_hours ?? {
-              timezone: "Europe/Istanbul",
-              working_days: [1, 2, 3, 4, 5, 6, 7],
-              start_time: "09:00",
-              end_time: "18:00",
-              lunch_break_start: "12:00",
-              lunch_break_end: "13:00",
-              slot_minutes: 60,
-            },
+            business_hours: profile?.business_hours ?? null,
             booking_policy: {
               min_hours_before_start: resolveMinimumAdvanceHours(
                 profile?.location?.campaigns?.cancellation_policy?.min_hours_before_start,

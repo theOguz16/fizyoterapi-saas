@@ -30,22 +30,23 @@ export default function TrainerHomeScreen() {
   ];
 
   return (
-    <AppShell
-      title="Bugün"
-      subtitle="Bugünkü derslerini, danışan akışını ve check-in işlemlerini tek ekrandan yönet."
-      icon="trainer"
-      refreshing={query.isRefetching}
-      onRefresh={() => void query.refetch()}
-      rightAction={
-        <ActionButton
-          testID="trainer-home-qr-button"
-          label="QR okut"
-          icon="qr"
-          fullWidth={false}
-          onPress={() => router.push("/(trainer)/checkin" as never)}
-        />
-      }
-    >
+  <AppShell
+    title="Bugün"
+    subtitle="Bugünkü derslerini, danışan akışını ve check-in işlemlerini tek ekrandan yönet."
+    icon="trainer"
+    refreshing={query.isRefetching}
+    onRefresh={() => void query.refetch()}
+    rightAction={
+      <ActionButton
+        testID="trainer-home-qr-button"
+        label="QR okut"
+        icon="qr"
+        fullWidth={false}
+        onPress={() => router.push("/(trainer)/checkin" as never)}
+      />
+    }
+  >
+    <View testID="trainer-home-screen" style={styles.homeContent}>
       <View style={styles.metricsRow}>
         <MetricCard label="Bugünkü ders" value={todayRows.length} hint="Takvimde planlanan akış" icon="calendar" />
         <MetricCard label="Aylık gelir" value={`${monthIncome} TL`} hint="Bu ayki kazanç özeti" icon="earnings" />
@@ -81,8 +82,9 @@ export default function TrainerHomeScreen() {
           <QuickAction testID="trainer-home-group-classes" title="Grup Dersleri" icon="dumbbell" onPress={() => router.push("/(trainer)/group-classes" as never)} />
         </View>
       </SurfaceCard>
-    </AppShell>
-  );
+    </View>
+  </AppShell>
+);
 }
 
 function QuickAction({ title, icon, onPress, testID }: { title: string; icon: AppIconName; onPress: () => void; testID?: string }) {
@@ -189,4 +191,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: tokens.fontFamily.semibold,
   },
+  homeContent: {
+  gap: tokens.spacing.md,
+},
 });

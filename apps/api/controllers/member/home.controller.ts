@@ -97,8 +97,8 @@ export class MemberHomeController {
         MemberCreditWalletService.getCredits(tenantId, memberId),
         AppDataSource.getRepository(SalonProfile).findOne({
           where: { tenant_id: tenantId },
-          order: { created_at: "DESC" },
-          select: ["id", "business_hours", "location"],
+          order: { updated_at: "DESC", created_at: "DESC" },
+          select: ["id", "business_hours", "location", "updated_at", "created_at"],
         }),
         AppDataSource.getRepository(Attendance)
           .createQueryBuilder("a")
@@ -259,17 +259,8 @@ export class MemberHomeController {
               refund_policy: String(cancellationPolicy.refund_policy ?? "NO_REFUND"),
             },
           },
-          calendar: {
-            business_hours:
-              profile?.business_hours ?? {
-                timezone: "Europe/Istanbul",
-                working_days: [1, 2, 3, 4, 5, 6, 7],
-                start_time: "09:00",
-                end_time: "18:00",
-                lunch_break_start: "12:00",
-                lunch_break_end: "13:00",
-                slot_minutes: 60,
-              },
+         calendar: {
+          business_hours: profile?.business_hours ?? null,
           },
         },
       });

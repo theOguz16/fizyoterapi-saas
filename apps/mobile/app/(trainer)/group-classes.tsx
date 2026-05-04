@@ -10,7 +10,7 @@ import {
   type GroupClassSession,
   type TrainerAssignedPackage,
 } from "@/lib/mobile-api";
-import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/business-hours";
+import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
@@ -86,6 +86,11 @@ function formatIsoDateLabel(value: string) {
   });
 }
 
+function toMinutes(value: string) {
+  const [hour, minute] = value.split(":").map((item) => Number(item || 0));
+  return hour * 60 + minute;
+}
+
 function toIsoDate(date: string, time: string, minutes: number) {
   const [hour, minute] = time.split(":").map((part) => Number(part || 0));
   const start = new Date(`${date}T00:00:00`);
@@ -124,12 +129,16 @@ function formatCurrencyValue(value: number | null) {
 }
 
 function buildTimeOptions(businessHours: ReturnType<typeof normalizeBusinessHours>) {
-  const startMinutes = Number(businessHours.start_time.split(":")[0]) * 60 + Number(businessHours.start_time.split(":")[1]);
-  const endMinutes = Number(businessHours.end_time.split(":")[0]) * 60 + Number(businessHours.end_time.split(":")[1]);
-  const lunchStartMinutes =
-    Number(businessHours.lunch_break_start.split(":")[0]) * 60 + Number(businessHours.lunch_break_start.split(":")[1]);
-  const lunchEndMinutes =
-    Number(businessHours.lunch_break_end.split(":")[0]) * 60 + Number(businessHours.lunch_break_end.split(":")[1]);
+  if (!businessHours.start_time || !businessHours.end_time) {
+  return [];
+}
+
+  const startMinutes = toMinutes(businessHours.start_time);
+  const endMinutes = toMinutes(businessHours.end_time);
+
+  const hasLunchBreak = Boolean(businessHours.lunch_break_start && businessHours.lunch_break_end);
+  const lunchStartMinutes = hasLunchBreak ? toMinutes(businessHours.lunch_break_start!) : -1;
+  const lunchEndMinutes = hasLunchBreak ? toMinutes(businessHours.lunch_break_end!) : -1;
   const slots = buildSlotStartMinutes(
     startMinutes,
     endMinutes,

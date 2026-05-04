@@ -1,0 +1,29 @@
+appId: com.clinerva.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "clinerva://e2e-reset"
+
+- openLink: "clinerva://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
+
+- waitForAnimationToEnd:
+    timeout: 8000
+
+- extendedWaitUntil:
+    visible: "Takvimim"
+    timeout: 15000
+
+- assertVisible:
+    text: "Ders programını yönet, talepleri planla ve değişiklik yap."
+
+- swipe:
+    start: 50%, 35%
+    end: 50%, 85%
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible:
+    text: "Takvimim"

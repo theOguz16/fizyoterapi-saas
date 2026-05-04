@@ -14,7 +14,7 @@ import { AppIcon } from "./app-icon";
 import { EmptyState } from "./empty-state";
 import { StatusBadge } from "./status-badge";
 import { SurfaceCard } from "./surface-card";
-import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/business-hours";
+import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { tokens } from "../tokens";
 import type { CalendarAgendaItem } from "./calendar-agenda";
 
@@ -360,8 +360,17 @@ export function WeeklyScheduler({
   const effectiveSlotMinutes = Math.max(30, Number(normalizedBusinessHours.slot_minutes || slotMinutes));
   const effectiveBreakMinutes = Math.max(0, Number((normalizedBusinessHours as any).break_duration_minutes || 0));
   const effectiveCycleMinutes = effectiveSlotMinutes + effectiveBreakMinutes;
-  const lunchStartMinutes = timeToMinutes(normalizedBusinessHours.lunch_break_start, -1);
-  const lunchEndMinutes = timeToMinutes(normalizedBusinessHours.lunch_break_end, -1);
+  const hasLunchBreak =
+  Boolean(normalizedBusinessHours.has_lunch_break) &&
+  Boolean(normalizedBusinessHours.lunch_break_start && normalizedBusinessHours.lunch_break_end);
+
+  const lunchStartMinutes = hasLunchBreak
+    ? timeToMinutes(normalizedBusinessHours.lunch_break_start, -1)
+    : -1;
+
+  const lunchEndMinutes = hasLunchBreak
+    ? timeToMinutes(normalizedBusinessHours.lunch_break_end, -1)
+    : -1;
   const workingDays = normalizedBusinessHours.working_days;
 
   const weekDays = useMemo(() => buildWeekDays(weekStart), [weekStart]);
