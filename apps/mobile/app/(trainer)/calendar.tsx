@@ -58,6 +58,11 @@ type AvailableSlot = {
   dayKey: string;
   dayLabel: string;
 };
+type SelectedGroupMember = {
+  id: string;
+  name: string;
+  status: string;
+};
 
 function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
   if (!startsAt) return "-";
@@ -722,15 +727,38 @@ export default function TrainerCalendarScreen() {
     ? memberDetailQuery.data.package_summary[0]
     : null;
 
-  const selectedGroupMembers = useMemo(() => {
-    if (!selectedBooking?.is_group_class) return [];
+  const selectedGroupMembers = useMemo<SelectedGroupMember[]>(() => {
+  if (!selectedBooking?.is_group_class) return [];
 
-    const invitedIds = Array.isArray(selectedBooking.invited_member_ids) ? selectedBooking.invited_member_ids : [];
+  const participants = Array.isArray(selectedBooking.participants)
+    ? selectedBooking.participants
+    : [];
 
-    return invitedIds
-      .map((id: string) => groupMemberNameMap.get(String(id)) || null)
-      .filter((item: string | null): item is string => Boolean(item));
-  }, [groupMemberNameMap, selectedBooking]);
+  if (participants.length > 0) {
+    return participants.map((participant: any) => ({
+      id: String(participant.member_id || participant.id || ""),
+      name: String(participant.full_name || participant.email || participant.phone || "Salon üyesi"),
+      status: String(participant.status || "").toUpperCase(),
+    }));
+  }
+
+  const invitedIds = Array.isArray(selectedBooking.invited_member_ids)
+    ? selectedBooking.invited_member_ids
+    : [];
+
+  return invitedIds
+    .map((id: string) => {
+      const name = groupMemberNameMap.get(String(id));
+      if (!name) return null;
+
+      return {
+        id: String(id),
+        name,
+        status: "INVITED",
+      };
+    })
+    .filter((item: SelectedGroupMember | null): item is SelectedGroupMember => Boolean(item));
+}, [groupMemberNameMap, selectedBooking]);
 
   const rescheduleDayGroups = useMemo(
     () => groupSlotsByDay(Array.isArray(selectedBooking?.assignable_slots) ? selectedBooking.assignable_slots : []),
@@ -924,12 +952,32 @@ export default function TrainerCalendarScreen() {
               <DetailRow label="Tekrar bilgisi" value={selectedBooking?.recurrence_label || "Özel tarih"} />
             </View>
 
-            {selectedGroupMembers.length > 0 ? (
-              <View style={styles.memberListBox}>
-                <Text style={styles.detailLabel}>Katılacak üyeler</Text>
-                <Text style={styles.detailText}>{selectedGroupMembers.join(", ")}</Text>
-              </View>
-            ) : null}
+           {selectedGroupMembers.length > 0 ? (
+          <View style={styles.memberListBox}>
+            <Text style={styles.detailLabel}>Derse katılan üyeler</Text>
+
+    {selectedGroupMembers.map((member) => {
+      const isPending = member.status === "PENDING";
+      const isInvited = member.status === "INVITED";
+
+      return (
+        <View key={member.id || member.name} style={styles.groupMemberRow}>
+          <Text style={styles.groupMemberName}>{member.name}</Text>
+
+          <StatusBadge
+            label={isInvited ? "Davetli" : isPending ? "Bekliyor" : "Onaylı"}
+            tone={isPending || isInvited ? "warning" : "success"}
+          />
+        </View>
+      );
+     })}
+      </View>
+    ) : (
+      <View style={styles.memberListBox}>
+        <Text style={styles.detailLabel}>Derse katılan üyeler</Text>
+        <Text style={styles.detailText}>Henüz kayıtlı üye görünmüyor.</Text>
+      </View>
+    )}
           </SurfaceCard>
         ) : (
           <SurfaceCard>
@@ -1291,4 +1339,17 @@ const styles = StyleSheet.create({
   dayCardMonthActive: {
     color: tokens.colors.primaryStrong,
   },
-});
+  groupMemberRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: tokens.spacing.sm,
+  paddingVertical: tokens.spacing.xs,
+  },
+  groupMemberName: {
+    flex: 1,
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  });

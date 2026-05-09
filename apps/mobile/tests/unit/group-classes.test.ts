@@ -31,6 +31,22 @@ describe("group classes helpers", () => {
     ).toEqual(["1", "3"]);
   });
 
+  it("does not include non-group slots when filtering group lessons", () => {
+    const rows = [
+      { id: "1", lesson_name: "Pilates", is_group_class: true },
+      { id: "2", lesson_name: "Pilates", is_group_class: false },
+      { id: "3", lesson_name: "Yoga", is_group_class: true },
+    ];
+
+    expect(
+      filterGroupClassSlotsForSelection(rows, {
+        lessonMode: "GROUP",
+        allowDropInBooking: true,
+        selectedSubLesson: "Pilates",
+      }).map((row: any) => row.id)
+    ).toEqual(["1"]);
+  });
+
   it("builds display labels for scheduling, audience, capacity and price", () => {
     expect(getGroupClassScheduleLabel({ recurrence_label: "Her Salı, Perşembe" })).toBe("Her Salı, Perşembe");
     expect(getGroupClassAudienceLabel("INVITED_MEMBERS")).toBe("Sadece davetliler");

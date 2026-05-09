@@ -18,6 +18,13 @@ type GroupSessionWithCounts = ClassSession & {
   trainer_commission_rate?: number | null;
   planned_total_revenue?: number | null;
   trainer_planned_earning?: number | null;
+  participants?: Array<{
+  member_id: string;
+  full_name: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status: string;
+}>;
 };
 
 export class GroupClassService {
@@ -82,6 +89,7 @@ export class GroupClassService {
       requires_admin_approval: session.requires_admin_approval ?? true,
       recurrence_label: session.recurrence_label ?? null,
       special_date: session.special_date ?? null,
+      participants: Array.isArray(session.participants) ? session.participants : [],
     };
   }
 
@@ -92,20 +100,49 @@ export class GroupClassService {
     );
     const trainerIds = Array.from(new Set(sessions.map((session) => session.trainer_id).filter(Boolean))) as string[];
     const packageIds = Array.from(new Set(sessions.map((session) => session.related_package_id).filter(Boolean))) as string[];
-    const [trainers, packages] = await Promise.all([
-      trainerIds.length
-        ? AppDataSource.getRepository(User).find({
-            where: trainerIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.TRAINER })) as any,
-            select: ["id", "first_name", "last_name"],
-          })
-        : Promise.resolve([]),
-      packageIds.length
-        ? AppDataSource.getRepository(Package).find({
-            where: packageIds.map((id) => ({ tenant_id: tenantId, id })) as any,
-            select: ["id", "title", "rules"],
-          })
-        : Promise.resolve([]),
-    ]);
+    const sessionIds = sessions.map((session) => session.id).filter(Boolean);
+    const [trainers, packages, bookingRows] = await Promise.all([
+  trainerIds.length
+    ? AppDataSource.getRepository(User).find({
+        where: trainerIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.TRAINER })) as any,
+        select: ["id", "first_name", "last_name"],
+      })
+    : Promise.resolve([]),
+
+  packageIds.length
+    ? AppDataSource.getRepository(Package).find({
+        where: packageIds.map((id) => ({ tenant_id: tenantId, id })) as any,
+        select: ["id", "title", "rules"],
+      })
+    : Promise.resolve([]),
+
+  sessionIds.length
+    ? AppDataSource.getRepository(Booking)
+        .createQueryBuilder("booking")
+        .leftJoin(User, "member", "member.id = booking.member_id AND member.tenant_id = booking.tenant_id")
+        .select("booking.session_id", "session_id")
+        .addSelect("booking.member_id", "member_id")
+        .addSelect("booking.status", "status")
+        .addSelect("member.first_name", "first_name")
+        .addSelect("member.last_name", "last_name")
+        .addSelect("member.email", "email")
+        .addSelect("member.phone", "phone")
+        .where("booking.tenant_id = :tenantId", { tenantId })
+        .andWhere("booking.session_id IN (:...sessionIds)", { sessionIds })
+        .andWhere("booking.status IN (:...statuses)", { statuses: ACTIVE_BOOKING_STATUSES })
+        .orderBy("member.first_name", "ASC")
+        .addOrderBy("member.last_name", "ASC")
+        .getRawMany<{
+          session_id: string;
+          member_id: string;
+          status: string;
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          phone: string | null;
+        }>()
+    : Promise.resolve([]),
+]);
     const trainerMap = new Map(trainers.map((row) => [row.id, `${row.first_name} ${row.last_name}`.trim()]));
     const packageMap = new Map(packages.map((row) => [row.id, row.title]));
     const packageCommissionMap = new Map(
@@ -118,6 +155,28 @@ export class GroupClassService {
         return [row.id, Number.isFinite(commissionRateValue) ? commissionRateValue : 25];
       })
     );
+    const participantsBySessionId = new Map<string, Array<{
+  member_id: string;
+  full_name: string | null;
+  email?: string | null;
+  phone?: string | null;
+  status: string;
+}>>();
+
+for (const row of bookingRows) {
+  const fullName = `${row.first_name || ""} ${row.last_name || ""}`.trim();
+
+  participantsBySessionId.set(String(row.session_id), [
+    ...(participantsBySessionId.get(String(row.session_id)) || []),
+    {
+      member_id: row.member_id,
+      full_name: fullName || row.email || row.phone || "Salon üyesi",
+      email: row.email || null,
+      phone: row.phone || null,
+      status: row.status,
+    },
+  ]);
+}
 
     return sessions.map((session) => {
       const counts = countMap.get(session.id);
@@ -130,6 +189,7 @@ export class GroupClassService {
         : 25;
       return GroupClassService.serialize({
         ...session,
+        participants: participantsBySessionId.get(session.id) || [],
         joined_member_count: counts?.joined || 0,
         approved_member_count: counts?.approved || 0,
         planned_total_revenue: plannedTotalRevenue,

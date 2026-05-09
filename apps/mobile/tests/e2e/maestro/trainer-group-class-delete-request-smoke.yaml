@@ -17,7 +17,7 @@ appId: com.clinerva.mobile
     id: "login-identity-input"
     retryTapIfNoChange: true
 
-- inputText: "member@gmail.com"
+- inputText: "elisauyar@gmail.com"
 
 - tapOn: "Clinerva hesabınla devam et"
 
@@ -25,7 +25,7 @@ appId: com.clinerva.mobile
     id: "login-password-input"
     retryTapIfNoChange: true
 
-- inputText: "member123"
+- inputText: "trainer123"
 
 - tapOn: "Clinerva hesabınla devam et"
 
@@ -35,36 +35,31 @@ appId: com.clinerva.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 
-- openLink: "clinerva://(member)/group-classes"
+- openLink: "clinerva://(trainer)/group-classes"
 
 - waitForAnimationToEnd:
     timeout: 5000
 
 - assertVisible: "Grup dersleri"
 
-- extendedWaitUntil:
-    visible:
-      id: "member-group-class-action-0"
+- scrollUntilVisible:
+    element: "E2E Aksam Pilates"
+    direction: DOWN
     timeout: 20000
+    speed: 40
+    visibilityPercentage: 30
+    waitToSettleTimeoutMs: 500
 
-- tapOn:
-    id: "member-group-class-action-0"
+- assertVisible: "E2E Aksam Pilates"
 
-- waitForAnimationToEnd:
-    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-delete-e2e-aksam-pilates"
+    direction: DOWN
+    timeout: 12000
+    speed: 40
+    visibilityPercentage: 30
+    waitToSettleTimeoutMs: 500
 
 - assertVisible:
-    text: "Onay bekliyor"
-    optional: true
-
-- assertVisible:
-    text: "Katılım talebi"
-    optional: true
-
-- tapOn:
-    text: "Tamam"
-    optional: true
-
-- tapOn:
-    text: "OK"
-    optional: true
+    id: "trainer-group-classes-delete-e2e-aksam-pilates"

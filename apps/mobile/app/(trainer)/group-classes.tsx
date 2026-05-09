@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   createTrainerGroupClassApi,
   deleteTrainerGroupClassApi,
@@ -446,10 +446,10 @@ export default function TrainerGroupClassesScreen() {
     setMemberQuery("");
 
     showInfoAlert(
-      form.id ? "Güncelleme onaya gönderildi" : "Grup dersi oluşturuldu",
+      form.id ? "Güncelleme onaya gönderildi" : "Grup dersi onaya gönderildi",
       form.id
         ? "Değişiklikler admin onayından sonra takvime yansıyacak."
-        : "Ders, toplam ücret ve eğitmen payı bilgileriyle kaydedildi."
+        : "Yeni grup dersi admin onayından sonra takvime yansıyacak."
     );
   },
 
@@ -480,6 +480,7 @@ export default function TrainerGroupClassesScreen() {
       ["member-bookings-calendar"],
       ["member-home"],
       ["member-home-v2"],
+      ["member-my-packages-list"],
 
       ["admin-sessions"],
       ["admin-bookings"],
@@ -492,8 +493,8 @@ export default function TrainerGroupClassesScreen() {
 
   onSuccess: () => {
     showInfoAlert(
-      "İptal talebi gönderildi",
-      "Dersin iptali için admin onayı bekleniyor. Onaylanana kadar ders geçici olarak takvimden kaldırıldı."
+      "Silme talebi gönderildi",
+      "Eğitmen silmek istiyor talebi admin onayına gönderildi. Admin onaylayana kadar ders aktif kalır."
     );
   },
 
@@ -535,6 +536,31 @@ export default function TrainerGroupClassesScreen() {
       invited_member_ids: Array.isArray(row.invited_member_ids) ? row.invited_member_ids : [],
     });
   }
+
+function confirmDelete(row: GroupClassSession) {
+  const lessonName = row.lesson_name || row.title || "bu grup dersi";
+
+  if (process.env.EXPO_PUBLIC_E2E_MODE === "1") {
+    deleteMutation.mutate(String(row.id));
+    return;
+  }
+
+  Alert.alert(
+    "Grup dersini silmek istiyor musun?",
+    `${lessonName} için silme talebi admin onayına gönderilecek. Onaylanmadan ders kalıcı olarak kaldırılmaz.`,
+    [
+      {
+        text: "Vazgeç",
+        style: "cancel",
+      },
+      {
+        text: "Silme talebi gönder",
+        style: "destructive",
+        onPress: () => deleteMutation.mutate(String(row.id)),
+      },
+    ]
+  );
+}
 
   function toggleInvitedMember(memberId: string) {
     setForm((prev) => ({
@@ -860,7 +886,7 @@ export default function TrainerGroupClassesScreen() {
                       label="Sil"
                       icon="risk"
                       variant="danger"
-                      onPress={() => deleteMutation.mutate(String(row.id))}
+                      onPress={() => confirmDelete(row)}
                       loading={deleteMutation.isPending}
                     />
                   </View>

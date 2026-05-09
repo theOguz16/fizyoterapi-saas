@@ -528,6 +528,9 @@ export default function MemberPackageScreen() {
                 {allPurchasedPackages.map((pkg) => {
                   const meta = statusMeta(pkg);
                   const remaining = toNumber(pkg.remaining_credits);
+                  const linkedGroupClasses = Array.isArray(pkg.linked_group_classes)
+                    ? pkg.linked_group_classes
+                    : [];
 
                   return (
                     <View key={pkg.id} style={styles.listCard}>
@@ -564,6 +567,37 @@ export default function MemberPackageScreen() {
                           <Text style={styles.hint}>{meta.helper}</Text>
                         </View>
                       </View>
+
+                      {linkedGroupClasses.length > 0 ? (
+                        <View style={styles.linkedGroupBox}>
+                          <Text style={styles.linkedGroupTitle}>Bağlı grup dersleri</Text>
+
+                          {linkedGroupClasses.slice(0, 3).map((item) => {
+                            const itemStatus = normalizeStatus(item.status);
+                            const isPending = itemStatus === "PENDING";
+
+                            return (
+                              <View key={String(item.id || item.session_id)} style={styles.linkedGroupRow}>
+                                <View style={styles.grow}>
+                                  <Text style={styles.linkedGroupName}>{String(item.title || "Grup dersi")}</Text>
+                                  <Text style={styles.linkedGroupMeta}>
+                                    {formatDateTime(item.starts_at)} • {isPending ? "Onay bekliyor" : "Onaylandı"}
+                                  </Text>
+                                </View>
+
+                                <StatusBadge
+                                  label={isPending ? "Bekliyor" : "Aktif"}
+                                  tone={isPending ? "warning" : "success"}
+                                />
+                              </View>
+                            );
+                          })}
+
+                          {linkedGroupClasses.length > 3 ? (
+                            <Text style={styles.linkedGroupMore}>+{linkedGroupClasses.length - 3} ders daha</Text>
+                          ) : null}
+                        </View>
+                      ) : null}
 
                       {pkg.package_id ? (
                         <ActionButton
@@ -837,6 +871,41 @@ const styles = StyleSheet.create({
     borderColor: tokens.colors.border,
   },
   hint: {
+    fontSize: tokens.font.xs,
+    color: tokens.colors.textMuted,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  linkedGroupBox: {
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.sm,
+    gap: tokens.spacing.xs,
+  },
+  linkedGroupTitle: {
+    fontSize: tokens.font.xs,
+    color: tokens.colors.text,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  linkedGroupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+  },
+  linkedGroupName: {
+    fontSize: tokens.font.sm,
+    color: tokens.colors.text,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  linkedGroupMeta: {
+    fontSize: tokens.font.xs,
+    color: tokens.colors.textMuted,
+    fontFamily: tokens.fontFamily.regular,
+  },
+  linkedGroupMore: {
     fontSize: tokens.font.xs,
     color: tokens.colors.textMuted,
     fontFamily: tokens.fontFamily.medium,

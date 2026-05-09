@@ -6,6 +6,17 @@ import { AppError } from "../../errors/AppError";
 import { Package } from "../../entities/package.entity";
 import { UserPackage } from "../../entities/user-package.entity"; 
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
+import { Booking, BookingStatus } from "../../entities/booking.entity";
+import { ClassSession } from "../../entities/class-session.entity";
+import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
+
+const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
+
+const ACTIVE_BOOKING_STATUSES = [
+  BookingStatus.PENDING,
+  BookingStatus.APPROVED,
+  BookingStatus.RESCHEDULED,
+];
 
 function pricesDiffer(previous: unknown, current: unknown) {
   if (previous === null || previous === undefined) return false;
@@ -59,6 +70,7 @@ export class MemberPackagesController {
     try {
       const tenantId = req.tenantId;
       const userId = req.auth?.linkedUserId || req.auth?.sub; 
+      const eventOwnerId = req.auth?.linkedUserId || req.auth?.accountId || req.auth?.sub || userId;
 
       if (!tenantId || !userId) {
         throw new AppError("BAD_REQUEST", 400, "Tenant veya üye bilgisi eksik");
@@ -79,6 +91,105 @@ export class MemberPackagesController {
 
       const now = new Date();
 
+      const packageIds = rows.map((row) => String(row.package_id)).filter(Boolean);
+
+const activeBookings = packageIds.length
+  ? await AppDataSource.getRepository(Booking)
+      .createQueryBuilder("booking")
+      .leftJoinAndMapOne(
+        "booking.sessionDetails",
+        ClassSession,
+        "session",
+        "booking.session_id = session.id"
+      )
+      .where("booking.tenant_id = :tenantId", { tenantId })
+      .andWhere("booking.member_id = :userId", { userId })
+      .andWhere("booking.status IN (:...statuses)", {
+        statuses: ACTIVE_BOOKING_STATUSES,
+      })
+      .andWhere("booking.meta ->> 'is_group_class' = :isGroupClass", {
+        isGroupClass: "true",
+      })
+      .andWhere("booking.meta ->> 'package_id' IN (:...packageIds)", {
+        packageIds,
+      })
+      .orderBy("booking.starts_at", "ASC")
+      .getMany()
+  : [];
+
+const pendingGroupEvents = packageIds.length
+  ? await AppDataSource.getRepository(NotificationEvent)
+      .createQueryBuilder("event")
+      .where("event.tenant_id = :tenantId", { tenantId })
+      .andWhere("event.member_id = :eventOwnerId", { eventOwnerId })
+      .andWhere("event.type = :type", { type: MEMBER_PAYMENT_REQUEST })
+      .andWhere("event.status = :status", {
+        status: NotificationEventStatus.QUEUED,
+      })
+      .andWhere("event.payload ->> 'request_type' = :requestType", {
+        requestType: "GROUP_CLASS_JOIN",
+      })
+      .andWhere("event.payload ->> 'package_id' IN (:...packageIds)", {
+        packageIds,
+      })
+      .orderBy("event.created_at", "DESC")
+      .getMany()
+  : [];
+
+const groupClassesByPackageId = new Map<string, any[]>();
+
+for (const booking of activeBookings as any[]) {
+  const packageId = String(booking.meta?.package_id || "");
+  if (!packageId) continue;
+
+  groupClassesByPackageId.set(packageId, [
+    ...(groupClassesByPackageId.get(packageId) || []),
+    {
+      id: booking.id,
+      booking_id: booking.id,
+      session_id: booking.session_id || null,
+      title:
+        booking.sessionDetails?.title ||
+        booking.meta?.selected_sub_lesson ||
+        booking.meta?.lesson_name ||
+        "Grup dersi",
+      starts_at: booking.starts_at,
+      ends_at: booking.ends_at,
+      status: booking.status,
+      source: "BOOKING",
+    },
+  ]);
+}
+
+  for (const event of pendingGroupEvents) {
+    const payload = event.payload || {};
+    const packageId = String(payload.package_id || "");
+    const selectedDays = Array.isArray(payload.selected_days)
+    ? payload.selected_days
+      : [];
+    const firstDay = selectedDays[0] as any;
+
+    if (!packageId) continue;
+
+    groupClassesByPackageId.set(packageId, [
+      ...(groupClassesByPackageId.get(packageId) || []),
+      {
+        id: event.id,
+        request_id: event.id,
+        session_id: firstDay?.group_class_id || null,
+        title:
+          firstDay?.lesson_name ||
+          firstDay?.group_title ||
+          payload.selected_sub_lesson ||
+          "Grup dersi",
+        starts_at: firstDay?.starts_at || null,
+        ends_at: firstDay?.ends_at || null,
+        status: "PENDING",
+        source: "NOTIFICATION_EVENT",
+      },
+    ]);
+  }
+
       return res.json({
         data: rows.map((row: any) => {
           const startsAt = row.starts_at || row.created_at || null;
@@ -88,6 +199,7 @@ export class MemberPackagesController {
           const status = isUpcoming ? "UPCOMING" : row.is_active && !isExpired ? "ACTIVE" : "EXPIRED";
 
           return {
+
             id: row.id,
             package_id: row.package_id,
             package_title: row.packageDetails?.title || "İsimsiz Paket",
@@ -108,6 +220,17 @@ export class MemberPackagesController {
             created_at: row.created_at,
             source_request_id: row.source_request_id || null,
             package_snapshot: row.package_snapshot || {},
+
+            linked_group_classes: groupClassesByPackageId.get(String(row.package_id)) || [],
+
+            linked_group_class_ids: (groupClassesByPackageId.get(String(row.package_id)) || [])
+              .map((item: any) => item.session_id)
+              .filter(Boolean),
+
+            linked_group_class_titles: (groupClassesByPackageId.get(String(row.package_id)) || [])
+              .map((item: any) => item.title)
+              .filter(Boolean),
+
           };
         }),
       });

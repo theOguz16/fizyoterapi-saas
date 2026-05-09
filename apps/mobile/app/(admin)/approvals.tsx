@@ -192,7 +192,9 @@ export default function AdminApprovalsScreen() {
               ) : null}
               <Text style={styles.hint}>{getOperationalHint(item)}</Text>
               <ActionButton
-                testID={`admin-approval-review-${item.id}`}
+                testID={`admin-approval-open-${String(item.request_type || item.type || "approval")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")}`}
                 label="Detayı aç"
                 icon="approvals"
                 onPress={() =>

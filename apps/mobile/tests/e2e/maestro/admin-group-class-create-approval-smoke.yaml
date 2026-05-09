@@ -17,7 +17,7 @@ appId: com.clinerva.mobile
     id: "login-identity-input"
     retryTapIfNoChange: true
 
-- inputText: "member@gmail.com"
+- inputText: "oguzhanuyar531@gmail.com"
 
 - tapOn: "Clinerva hesabınla devam et"
 
@@ -25,7 +25,7 @@ appId: com.clinerva.mobile
     id: "login-password-input"
     retryTapIfNoChange: true
 
-- inputText: "member123"
+- inputText: "admin123"
 
 - tapOn: "Clinerva hesabınla devam et"
 
@@ -35,31 +35,42 @@ appId: com.clinerva.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 
-- openLink: "clinerva://(member)/group-classes"
+- openLink: "clinerva://(admin)/approvals"
 
 - waitForAnimationToEnd:
     timeout: 5000
-
-- assertVisible: "Grup dersleri"
 
 - extendedWaitUntil:
-    visible:
-      id: "member-group-class-action-0"
-    timeout: 20000
+    visible: "Yeni grup dersi onayı"
+    timeout: 15000
+
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-open-group-class-create"
+    direction: DOWN
+    timeout: 12000
+    speed: 40
+    visibilityPercentage: 30
+    waitToSettleTimeoutMs: 500
 
 - tapOn:
-    id: "member-group-class-action-0"
+    id: "admin-approval-open-group-class-create"
 
 - waitForAnimationToEnd:
     timeout: 5000
 
-- assertVisible:
-    text: "Onay bekliyor"
-    optional: true
+- scrollUntilVisible:
+    element: "Onayla"
+    direction: DOWN
+    timeout: 10000
+    speed: 40
+    visibilityPercentage: 30
+    waitToSettleTimeoutMs: 500
 
-- assertVisible:
-    text: "Katılım talebi"
-    optional: true
+- tapOn: "Onayla"
+
+- waitForAnimationToEnd:
+    timeout: 5000
 
 - tapOn:
     text: "Tamam"
@@ -68,3 +79,5 @@ appId: com.clinerva.mobile
 - tapOn:
     text: "OK"
     optional: true
+
+- assertNotVisible: "Yeni grup dersi onayı"

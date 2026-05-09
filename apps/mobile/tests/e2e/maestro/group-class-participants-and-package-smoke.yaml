@@ -1,0 +1,74 @@
+appId: com.clinerva.mobile
+---
+# Bu flow, member katılımı admin tarafından onaylandıktan sonra çalıştırılır.
+# Kontrol ettiği şeyler:
+# 1) Member Paketlerim altında bağlı grup dersi görünüyor mu?
+# 2) Trainer calendar detail sheet içinde derse katılan üye görünüyor mu?
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "member@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "member123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd:
+    timeout: 5000
+- openLink: "clinerva://(member)/package"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Paketlerim"
+- extendedWaitUntil:
+    visible: "Bağlı grup dersleri"
+    timeout: 15000
+- assertVisible: "E2E Aksam Pilates"
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+    retryTapIfNoChange: true
+- tapOn:
+    id: "login-identity-input"
+    retryTapIfNoChange: true
+- inputText: "elisauyar@gmail.com"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: "trainer123"
+- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd:
+    timeout: 5000
+- openLink: "clinerva://(trainer)/calendar"
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element: "E2E Aksam Pilates"
+    direction: DOWN
+    timeout: 15000
+    speed: 40
+    visibilityPercentage: 50
+- tapOn: "E2E Aksam Pilates"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Derse katılan üyeler"
+- assertVisible: "member@gmail.com"

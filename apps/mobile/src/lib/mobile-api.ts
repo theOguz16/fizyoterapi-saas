@@ -468,6 +468,21 @@ export type MemberOwnedPackage = {
   created_at?: string | null;
   source_request_id?: string | null;
   package_snapshot?: Record<string, unknown> | null;
+
+  linked_group_classes?: Array<{
+    id?: string;
+    booking_id?: string | null;
+    request_id?: string | null;
+    session_id?: string | null;
+    title?: string | null;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    status?: string | null;
+    source?: "BOOKING" | "NOTIFICATION_EVENT" | string;
+  }>;
+
+  linked_group_class_ids?: string[];
+  linked_group_class_titles?: string[];
 };
 
 export type MemberAttendanceHistoryItem = {

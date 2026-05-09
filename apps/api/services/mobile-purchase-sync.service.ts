@@ -313,21 +313,27 @@ export class MobilePurchaseSyncService {
       });
 
       if (existingUserPackage) {
-        existingUserPackage.remaining_credits += Math.max(0, Number(packageRow.total_credits || 0));
-        existingUserPackage.starts_at = existingUserPackage.starts_at || startsAt;
-        existingUserPackage.expires_at = expiresAt ?? existingUserPackage.expires_at;
-        existingUserPackage.latest_package_price = packageRow.display_price ?? existingUserPackage.latest_package_price ?? null;
-        existingUserPackage.purchase_price = String(selectedPrice ?? existingUserPackage.purchase_price ?? packageRow.display_price ?? "");
-        existingUserPackage.package_snapshot = {
-          title: packageRow.title,
-          type: packageRow.type,
-          total_credits: packageRow.total_credits,
-          duration_days: packageRow.duration_days,
-          rules: packageRow.rules,
-        };
-        existingUserPackage.source_request_id = requestId || existingUserPackage.source_request_id || null;
-        await userPackageRepo.save(existingUserPackage);
-      } else {
+          const sameRequestAlreadyApplied =
+            Boolean(requestId) && existingUserPackage.source_request_id === requestId;
+
+          if (!sameRequestAlreadyApplied) {
+            existingUserPackage.remaining_credits += Math.max(0, Number(packageRow.total_credits || 0));
+          }
+
+          existingUserPackage.starts_at = existingUserPackage.starts_at || startsAt;
+          existingUserPackage.expires_at = expiresAt ?? existingUserPackage.expires_at;
+          existingUserPackage.latest_package_price = packageRow.display_price ?? existingUserPackage.latest_package_price ?? null;
+          existingUserPackage.purchase_price = String(selectedPrice ?? existingUserPackage.purchase_price ?? packageRow.display_price ?? "");
+          existingUserPackage.package_snapshot = {
+            title: packageRow.title,
+            type: packageRow.type,
+            total_credits: packageRow.total_credits,
+            duration_days: packageRow.duration_days,
+            rules: packageRow.rules,
+          };
+          existingUserPackage.source_request_id = requestId || existingUserPackage.source_request_id || null;
+          await userPackageRepo.save(existingUserPackage);
+        }else {
         await userPackageRepo.save(
           userPackageRepo.create({
             tenant_id: tenantId,

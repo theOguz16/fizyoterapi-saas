@@ -13,6 +13,8 @@ import { User, UserRole } from "../../entities/user.entity";
 import { GroupClassService } from "../../services/group-class.service";
 import { lessonCategoryLabel } from "../../services/presentation-label.service";
 import { SlotValidationContractService } from "../../services/slot-validation-contract.service";
+import { GroupClassCancellationService } from "../../services/group-class-cancellation.service";
+
 
 export class TrainerGroupClassesController {
   private static parseDate(value: unknown, field: string) {
@@ -455,12 +457,76 @@ export class TrainerGroupClassesController {
     if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
 
     const repo = AppDataSource.getRepository(ClassSession);
+    const eventRepo = AppDataSource.getRepository(NotificationEvent);
+
     const session = await repo.findOne({
       where: { id: sessionId, tenant_id: tenantId, trainer_id: trainerId, type: SessionType.GROUP },
     });
     if (!session) throw new AppError("SESSION_NOT_FOUND", 404, "Grup dersi bulunamadi");
 
-    await repo.remove(session);
-    return res.json({ message: "Grup dersi silindi" });
+    const existingCancelRequest = await eventRepo.findOne({
+      where: {
+        tenant_id: tenantId,
+        member_id: trainerId,
+        type: "MEMBER_CHANGE_REQUEST",
+        status: NotificationEventStatus.QUEUED,
+      } as any,
+      order: { created_at: "DESC" },
+    });
+
+    const existingPayload =
+      existingCancelRequest?.payload && typeof existingCancelRequest.payload === "object"
+        ? existingCancelRequest.payload
+        : null;
+
+    if (
+      existingCancelRequest &&
+      existingPayload?.request_type === "GROUP_CLASS_CANCEL" &&
+      existingPayload?.session_id === session.id
+    ) {
+      return res.json({
+        data: {
+          id: existingCancelRequest.id,
+          session_id: session.id,
+          status: "PENDING",
+          request_type: "GROUP_CLASS_CANCEL",
+        },
+        message: "Bu grup dersi için silme talebi zaten onay bekliyor",
+      });
+    }
+
+    const cancelEvent = eventRepo.create({
+      tenant_id: tenantId,
+      member_id: trainerId,
+      type: "MEMBER_CHANGE_REQUEST",
+      status: NotificationEventStatus.QUEUED,
+      payload: {
+        request_type: "GROUP_CLASS_CANCEL",
+        session_id: session.id,
+        title: "Grup Dersi Silme Onayı",
+        subtitle: `${session.title} dersi için silme onayı bekleniyor.`,
+        amount: session.price ? Number(session.price) : 0,
+        is_group_class: true,
+        lesson_name: session.title,
+        special_date: session.special_date,
+        recurrence_label: session.recurrence_label,
+        notification_scope: session.notification_scope,
+        note: "Eğitmen silmek istiyor.",
+        submitted_at: new Date().toISOString(),
+        status: "PENDING",
+      },
+    });
+
+    await eventRepo.save(cancelEvent);
+
+    return res.status(202).json({
+      data: {
+        id: cancelEvent.id,
+        session_id: session.id,
+        status: "PENDING",
+        request_type: "GROUP_CLASS_CANCEL",
+      },
+      message: "Grup dersi silme talebi admin onayına gönderildi",
+    });
+    }
   }
-}

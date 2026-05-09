@@ -20,18 +20,43 @@ export function isGroupClassBookingFlow(draft: Pick<MemberBookingDraft, "lessonM
   return draft.allowDropInBooking || String(draft.lessonMode || "").toUpperCase() === "GROUP";
 }
 
-export function filterGroupClassSlotsForSelection<T extends GroupClassLike>(
+type GroupClassLikeSlot = {
+  lesson_name?: string | null;
+  group_title?: string | null;
+  is_group_class?: boolean | null;
+};
+
+export function filterGroupClassSlotsForSelection<T extends GroupClassLikeSlot>(
   slots: T[],
-  draft: Pick<MemberBookingDraft, "lessonMode" | "allowDropInBooking" | "selectedSubLesson">
-) {
-  if (!isGroupClassBookingFlow(draft)) return slots;
-  const selectedLesson = String(draft.selectedSubLesson || "").trim().toLocaleLowerCase("tr-TR");
+  input: {
+    lessonMode?: string | null;
+    allowDropInBooking?: boolean | null;
+    selectedSubLesson?: string | null;
+  }
+): T[] {
+  if (
+    !isGroupClassBookingFlow({
+      lessonMode: input.lessonMode || undefined,
+      allowDropInBooking: input.allowDropInBooking ?? undefined,
+    })
+  ) {
+    return slots;
+  }
+
+  const selectedLessonName = String(input.selectedSubLesson || "")
+    .trim()
+    .toLocaleLowerCase("tr-TR");
+
   return slots.filter((slot) => {
-    const lessonName = String(slot.lesson_name || slot.group_title || "").trim().toLocaleLowerCase("tr-TR");
-    if (selectedLesson && lessonName) {
-      return lessonName === selectedLesson;
-    }
-    return slot.is_group_class !== false;
+    if (slot.is_group_class !== true) return false;
+
+    if (!selectedLessonName) return true;
+
+    const lessonName = String(slot.lesson_name || slot.group_title || "")
+      .trim()
+      .toLocaleLowerCase("tr-TR");
+
+    return lessonName === selectedLessonName;
   });
 }
 

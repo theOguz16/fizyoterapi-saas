@@ -9,6 +9,8 @@ import { NotificationEvent, NotificationEventStatus } from "../../entities/notif
 import { Package } from "../../entities/package.entity";
 import { SalonMembership, SalonMembershipStatus } from "../../entities/salon-membership.entity";
 import { GroupClassService } from "../../services/group-class.service";
+import { Attendance, AttendanceResult } from "../../entities/attendance.entity";
+import { UserPackage } from "../../entities/user-package.entity";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 const ACTIVE_BOOKING_STATUSES = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
@@ -343,6 +345,53 @@ export class MemberGroupClassesController {
         return requestType === "GROUP_CLASS_JOIN" && String((selectedDays[0] as any)?.group_class_id || "") === sessionId;
       });
 
+      const refundableAttendances = bookings.length
+      ? await AppDataSource.getRepository(Attendance).find({
+          where: bookings.map((booking) => ({
+            tenant_id: tenantId,
+            member_id: memberId,
+            booking_id: booking.id,
+            result: AttendanceResult.CREDIT_DEDUCTED,
+          })) as any,
+        })
+      : [];
+
+    const refundedAttendanceIds: string[] = [];
+
+    for (const attendance of refundableAttendances) {
+      const creditsDeducted = Number(attendance.credits_deducted || 0);
+      const userPackageId = String(attendance.user_package_id || "");
+
+      if (creditsDeducted <= 0 || !userPackageId) continue;
+      if (attendance.meta?.refund?.refunded_at) continue;
+
+      const userPackage = await AppDataSource.getRepository(UserPackage).findOne({
+        where: {
+          tenant_id: tenantId,
+          id: userPackageId,
+          user_id: memberId,
+        },
+      });
+
+      if (!userPackage) continue;
+
+        userPackage.remaining_credits += creditsDeducted;
+
+        attendance.meta = {
+          ...(attendance.meta || {}),
+          refund: {
+            refunded_at: new Date().toISOString(),
+            reason: "MEMBER_GROUP_CLASS_LEAVE",
+            credits_refunded: creditsDeducted,
+          },
+        };
+
+        await AppDataSource.getRepository(UserPackage).save(userPackage);
+        await AppDataSource.getRepository(Attendance).save(attendance);
+
+        refundedAttendanceIds.push(attendance.id);
+      }
+
       for (const booking of bookings) {
         booking.status = BookingStatus.CANCELED;
         booking.payment_status = BookingPaymentStatus.REJECTED;
@@ -373,11 +422,12 @@ export class MemberGroupClassesController {
       ]);
 
       return res.json({
-        data: {
-          removed: bookings.length > 0 || removableEvents.length > 0,
-          canceled_booking_count: bookings.length,
-          canceled_request_count: removableEvents.length,
-        },
+      data: {
+        removed: bookings.length > 0 || removableEvents.length > 0,
+        canceled_booking_count: bookings.length,
+        canceled_request_count: removableEvents.length,
+        refunded_attendance_count: refundedAttendanceIds.length,
+      }
       });
     } catch (error) {
       if (error instanceof AppError) throw error;

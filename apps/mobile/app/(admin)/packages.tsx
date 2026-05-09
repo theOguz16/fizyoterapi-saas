@@ -324,6 +324,7 @@ export default function AdminPackagesScreen() {
 
     ["member-packages"],
     ["member-my-packages"],
+    ["member-my-packages-list"],
     ["public-salon-packages"],
     ["publıc-salon-packages"],
 
@@ -452,6 +453,7 @@ export default function AdminPackagesScreen() {
 
     ["member-packages"],
     ["member-my-packages"],
+    ["member-my-packages-list"],
     ["public-salon-packages"],
     ["publıc-salon-packages"],
 
