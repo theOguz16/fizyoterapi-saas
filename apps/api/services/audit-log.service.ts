@@ -57,7 +57,7 @@ export function attachAuditError(res: Response, code?: string | null, message?: 
 
 export class AuditLogService {
   static ensureRequestId(req: AuthenticatedRequest) {
-    const existing = sanitizeText(req.headers["x-request-id"], 120);
+    const existing = sanitizeText(req.headers?.["x-request-id"], 120);
     const requestId = existing || randomUUID();
     req.requestId = requestId;
     return requestId;

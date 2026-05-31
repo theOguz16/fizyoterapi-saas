@@ -155,9 +155,9 @@ export default function RegisterScreen() {
       <Animated.View style={[styles.contentStack, { opacity: introOpacity, transform: [{ translateY: introTranslate }] }]}>
         {pendingSalonSlug ? (
           <SurfaceCard tone="primary" padding="compact">
-            <Text style={styles.eyebrow}>QR ile secilen salon</Text>
+            <Text style={styles.eyebrow}>QR ile seçilen salon</Text>
             <Text style={styles.sectionTitle}>{pendingSalonSlug}</Text>
-            <Text style={styles.helper}>Kayit bittiginde bu salonun onboarding akisina devam edeceksin.</Text>
+            <Text style={styles.helper}>Kayıt bittiğinde bu salonun onboarding akışına devam edeceksin.</Text>
           </SurfaceCard>
         ) : null}
         <AnimatedEntrance>

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.clinerva.mobile'
+    namespace 'com.fizyoflow.mobile'
     defaultConfig {
-        applicationId 'com.clinerva.mobile'
+        applicationId 'com.fizyoflow.mobile'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

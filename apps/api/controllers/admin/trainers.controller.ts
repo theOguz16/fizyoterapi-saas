@@ -1,6 +1,6 @@
 // Bu controller admin tarafindaki trainers.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
-import { Request, Response } from "express";
+import { Response } from "express";
 import { AppDataSource } from "../../data-source";
 import { User, UserRole } from "../../entities/user.entity";
 import { AppError } from "../../errors/AppError";
@@ -40,7 +40,7 @@ export class AdminTrainersController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "trainer",
       target_id: input.trainer.id,
       metadata: {
@@ -55,13 +55,13 @@ export class AdminTrainersController {
   }
 
   private static toSafeUser(user: User) {
-    const { password_hash, ...safeUser } = user;
+    const { password_hash: _password_hash, ...safeUser } = user;
     return safeUser;
   }
 
   // Şifre oluşturma
   private static generateRandomPassword(length: number = 12): string {
-    let randomPassword = crypto.randomBytes(length).toString("base64").slice(0, length);
+    const randomPassword = crypto.randomBytes(length).toString("base64").slice(0, length);
     return randomPassword;
   }
 
@@ -161,12 +161,6 @@ export class AdminTrainersController {
       if (!trainer) {
         throw new AppError("TRAINER_NOT_FOUND", 404, "Admin trainer bulunamadı");
       }
-      const oldState = {
-        email: trainer.email,
-        first_name: trainer.first_name,
-        last_name: trainer.last_name,
-        phone: trainer.phone,
-      };
       const membership = await AppDataSource.getRepository(SalonMembership).findOne({
         where: { tenant_id: tenantId, user_id: trainer.id, role: UserRole.TRAINER },
         order: { created_at: "DESC" },
@@ -200,7 +194,6 @@ export class AdminTrainersController {
       const { email, first_name, last_name, phone } = req.body;
 
       const trainerRepo = AppDataSource.getRepository(User);
-      const membershipRepo = AppDataSource.getRepository(SalonMembership);
       const trainer = await trainerRepo.findOne({
         where: { tenant_id: tenantId, id: trainerId, role: UserRole.TRAINER, deleted_at: IsNull() },
       });
@@ -526,7 +519,7 @@ export class AdminTrainersController {
         success: true,
         request_id: req.requestId || null,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "trainer",
         target_id: trainerId,
         metadata: {

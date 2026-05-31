@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   type AdminPackage,
   type AdminPackageAssignment,
@@ -15,12 +16,12 @@ import {
   updateAdminPackageApi,
 } from "@/lib/mobile-api";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { packageTypeLabel } from "@/lib/labels";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
 import { SelectionChip } from "@/theme/components/selection-chip";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
 import { DetailSheet } from "@/theme/components/detail-sheet";
 import { StyleSheet, Text, TextInput, View, Pressable, Alert } from "react-native";
 import { tokens } from "@/theme/tokens";
@@ -76,12 +77,52 @@ function toTestIdSegment(value: string) {
 
 function templateTypeLabel(template?: AdminPackageFormTemplate | null) {
   const type = String(template?.package_type || "").toUpperCase();
-  if (type === "GROUP") return "Grup Dersi";
-  if (type === "PT") return "PT";
-  if (type === "SCOLIOSIS") return "Skolyoz";
-  if (type === "REFORMER") return "Reformer";
-  if (type === "MANUAL") return "Manuel";
-  return "Diğer";
+  if (template?.package_type_label) return String(template.package_type_label);
+  return packageTypeLabel(template?.sub_category_key || template?.service_key || type);
+}
+
+function categoryKeyForTemplate(template: AdminPackageFormTemplate) {
+  return (
+    String(template.category_group || "").trim() ||
+    String(template.package_type || "OTHER").trim() ||
+    "OTHER"
+  );
+}
+
+function categoryLabelFromKey(key: string, explicitLabel?: string | null) {
+  if (explicitLabel && String(explicitLabel).trim()) return String(explicitLabel).trim();
+  return String(key || "OTHER")
+    .replace(/_/g, " ")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/(^|\s)\S/g, (char) => char.toLocaleUpperCase("tr-TR"));
+}
+
+function lessonModeLabel(mode?: string | null) {
+  const normalized = String(mode || "").toUpperCase();
+  if (normalized === "GROUP") return "Grup";
+  if (normalized === "DUO") return "Duo";
+  return "Özel";
+}
+
+function capacityForLessonMode(mode: string, fallback: number) {
+  if (mode === "PRIVATE") return 1;
+  if (mode === "DUO") return 2;
+  return Math.max(3, fallback || 4);
+}
+
+function templateDefaultTitle(template?: AdminPackageFormTemplate | null) {
+  if (!template) return "";
+  return String(template.default_title || (template.service_name ? `${template.service_name} Paketi` : "")).trim();
+}
+
+function templateDisplayName(template: AdminPackageFormTemplate) {
+  return String(template.sub_category_label || template.service_name || template.service_key || "").trim();
+}
+
+function templateLooksLikeTrial(template?: AdminPackageFormTemplate | null) {
+  if (!template) return false;
+  const search = normalizeText(`${template.service_key} ${template.service_name} ${template.starting_price}`);
+  return Number(template.starting_price || 0) === 0 || search.includes("ucretsiz") || search.includes("deneme");
 }
 
 function normalizeText(value: string) {
@@ -142,19 +183,38 @@ function buildVariantDefaults(
     capacity: String(template?.suggested_capacity || (isGroup ? 4 : 1)),
     session_duration_minutes: String(template?.session_duration_minutes || DEFAULT_SESSION_DURATION),
     break_duration_minutes: String(template?.break_duration_minutes || 0),
-    lesson_mode: template?.lesson_mode || (isGroup ? "GROUP" : "SINGLE"),
+    lesson_mode: template?.lesson_mode || (isGroup ? "GROUP" : "PRIVATE"),
   };
 }
 
 export default function AdminPackagesScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; subscriptionBackTo?: string | string[] }>();
   const packagesQuery = useQuery({ queryKey: ["admin-packages"], queryFn: getAdminPackagesApi });
   const templatesQuery = useQuery({ queryKey: ["admin-package-templates"], queryFn: getAdminPackageFormOptionsApi });
   const trainersQuery = useQuery({ queryKey: ["admin-trainers-for-packages"], queryFn: getAdminTrainersApi });
   const assignmentsQuery = useQuery({ queryKey: ["admin-package-assignments"], queryFn: getAdminPackageAssignmentsApi });
 
-  const templates: AdminPackageFormTemplate[] = Array.isArray(templatesQuery.data?.templates) ? templatesQuery.data?.templates || [] : [];
-  const trainers = trainersQuery.data || [];
-  const packages: AdminPackage[] = packagesQuery.data || [];
+  const templates: AdminPackageFormTemplate[] = useMemo(
+    () => (Array.isArray(templatesQuery.data?.templates) ? templatesQuery.data?.templates || [] : []),
+    [templatesQuery.data?.templates]
+  );
+  const templateCategories = useMemo(() => {
+  const map = new Map<string, { key: string; label: string }>();
+
+    for (const template of templates) {
+      const key = categoryKeyForTemplate(template);
+      const label = categoryLabelFromKey(key, template.category_label);
+
+      map.set(key, { key, label });
+    }
+
+    return Array.from(map.values());
+  }, [templates]);
+
+  const effectiveCategories = templateCategories.length > 0 ? templateCategories : LESSON_CATEGORIES;
+  const trainers = useMemo(() => trainersQuery.data || [], [trainersQuery.data]);
+  const packages: AdminPackage[] = useMemo(() => packagesQuery.data || [], [packagesQuery.data]);
   const assignments: AdminPackageAssignment[] = assignmentsQuery.data || [];
 
   const [selectedService, setSelectedService] = useState("");
@@ -164,8 +224,8 @@ export default function AdminPackagesScreen() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "PASSIVE">("ALL");
   const [serviceSheetVisible, setServiceSheetVisible] = useState(false);
   const [trainerSheetVisible, setTrainerSheetVisible] = useState(false);
-  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>(LESSON_CATEGORIES[0]?.key || "PT");
-  const [selectedVariantKey, setSelectedVariantKey] = useState<string>(LESSON_VARIANTS[0]?.key || "PT");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("");
+  const [selectedVariantKey, setSelectedVariantKey] = useState<string>("");
   const [form, setForm] = useState({
     title: "",
     total_credits: "",
@@ -174,12 +234,25 @@ export default function AdminPackagesScreen() {
     trainer_commission_rate: "",
     capacity: "",
     summary: "",
-    sub_lessons: "",
+    lesson_mode: "PRIVATE",
+    is_visible: true,
+    is_public: true,
   });
 
   const selectedTemplate = useMemo(() => templates.find((item: AdminPackageFormTemplate) => item.service_key === selectedService) || null, [selectedService, templates]);
-  const selectedVariant = LESSON_VARIANTS.find((item) => item.key === selectedVariantKey) || LESSON_VARIANTS[0];
-  const isTrialPackage = Boolean(selectedVariant?.isTrial);
+  const selectedVariant = LESSON_VARIANTS.find((item) => item.key === selectedVariantKey) || null;
+  const selectedCategoryLabel = useMemo(() => {
+    if (selectedTemplate) return categoryLabelFromKey(categoryKeyForTemplate(selectedTemplate), selectedTemplate.category_label);
+    if (selectedVariant) return selectedVariant.categoryLabel;
+    return effectiveCategories.find((item) => item.key === selectedCategoryKey)?.label || "Kategori seç";
+  }, [effectiveCategories, selectedCategoryKey, selectedTemplate, selectedVariant]);
+  const isTrialPackage = Boolean(selectedVariant?.isTrial || templateLooksLikeTrial(selectedTemplate));
+  const visibleTemplateVariants = useMemo(() => {
+    return templates.filter((template) => {
+      return categoryKeyForTemplate(template) === selectedCategoryKey;
+    });
+  }, [selectedCategoryKey, templates]);
+
   const visibleVariants = useMemo(
     () => LESSON_VARIANTS.filter((item) => item.categoryKey === selectedCategoryKey),
     [selectedCategoryKey]
@@ -187,8 +260,10 @@ export default function AdminPackagesScreen() {
   const selectedTrainer = useMemo(() => {
     return trainers.find((trainer: any) => String(trainer.id || trainer.user_id || "") === selectedTrainerId) || null;
   }, [selectedTrainerId, trainers]);
-  const selectedServiceLabel = selectedVariant?.label || selectedTemplate?.service_name || "Ders seç";
+  const selectedServiceLabel = selectedTemplate ? templateDisplayName(selectedTemplate) : selectedVariant?.label || "Ders seç";
   const weeklyRuleSummary = useMemo(() => deriveWeeklyRuleSummary(form.total_credits), [form.total_credits]);
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const subscriptionBackTo = Array.isArray(params.subscriptionBackTo) ? params.subscriptionBackTo[0] : params.subscriptionBackTo;
   const filteredPackages = useMemo(
     () =>
       packages.filter((pkg) => {
@@ -204,19 +279,50 @@ export default function AdminPackagesScreen() {
   );
 
   useEffect(() => {
+    if (!selectedCategoryKey && effectiveCategories.length > 0) {
+      setSelectedCategoryKey(effectiveCategories[0].key);
+      return;
+    }
+    if (selectedCategoryKey && effectiveCategories.length > 0 && !effectiveCategories.some((item) => item.key === selectedCategoryKey)) {
+      setSelectedCategoryKey(effectiveCategories[0].key);
+      return;
+    }
     if (!selectedTemplate && templates.length > 0) {
       const fallback = findBestTemplateForVariant(selectedVariantKey, templates);
       if (fallback) {
         setSelectedService(fallback.service_key);
+        setSelectedVariantKey(fallback.service_key);
+        setSelectedCategoryKey(categoryKeyForTemplate(fallback));
       }
     }
-  }, [selectedTemplate, selectedVariantKey, templates]);
+  }, [effectiveCategories, selectedCategoryKey, selectedTemplate, selectedVariantKey, templates]);
+
+  useEffect(() => {
+    if (!selectedTemplate || editingPackageId) return;
+
+    setForm((prev) => {
+      const lessonMode = String(selectedTemplate.lesson_mode || "PRIVATE").toUpperCase();
+      const capacity = String(capacityForLessonMode(lessonMode, Number(selectedTemplate.suggested_capacity || 1)));
+      const next = {
+        ...prev,
+        total_credits: prev.total_credits || (lessonMode === "GROUP" ? "8" : "4"),
+        duration_days: prev.duration_days || "30",
+        display_price: prev.display_price || sanitizeDecimalInput(String(selectedTemplate.starting_price || "0")),
+        trainer_commission_rate:
+          prev.trainer_commission_rate || sanitizeDecimalInput(String(selectedTemplate.trainer_commission_rate || "25")),
+        capacity: prev.capacity || capacity,
+        lesson_mode: prev.lesson_mode || lessonMode,
+      };
+
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+  }, [editingPackageId, selectedTemplate]);
 
   function resetForm() {
     setEditingPackageId(null);
     setSelectedTrainerId("");
-    setSelectedCategoryKey(LESSON_CATEGORIES[0]?.key || "PT");
-    setSelectedVariantKey(LESSON_VARIANTS[0]?.key || "PT");
+    setSelectedCategoryKey(effectiveCategories[0]?.key || LESSON_CATEGORIES[0]?.key || "PT");
+    setSelectedVariantKey("");
     setForm({
       title: "",
       total_credits: "",
@@ -225,21 +331,45 @@ export default function AdminPackagesScreen() {
       trainer_commission_rate: "",
       capacity: "",
       summary: "",
-      sub_lessons: "",
+      lesson_mode: "PRIVATE",
+      is_visible: true,
+      is_public: true,
     });
+  }
+
+  function applyTemplateSelection(template: AdminPackageFormTemplate) {
+    const lessonMode = String(template.lesson_mode || "PRIVATE").toUpperCase();
+    const capacity = capacityForLessonMode(lessonMode, Number(template.suggested_capacity || 1));
+
+    setSelectedService(template.service_key);
+    setSelectedVariantKey(template.service_key);
+    setSelectedCategoryKey(categoryKeyForTemplate(template));
+    setForm((prev) => ({
+      ...prev,
+      title: templateDefaultTitle(template) || prev.title,
+      total_credits: prev.total_credits || (lessonMode === "GROUP" ? "8" : "4"),
+      duration_days: prev.duration_days || "30",
+      display_price: sanitizeDecimalInput(String(template.starting_price || "0")),
+      trainer_commission_rate: sanitizeDecimalInput(String(template.trainer_commission_rate || "25")),
+      capacity: String(capacity),
+      lesson_mode: lessonMode,
+      summary: prev.summary,
+    }));
+    setServiceSheetVisible(false);
   }
 
   function applyVariantSelection(variantKey: string) {
     const variant = LESSON_VARIANTS.find((item) => item.key === variantKey);
     const template = findBestTemplateForVariant(variantKey, templates);
+    if (template) {
+      applyTemplateSelection(template);
+      return;
+    }
     const defaults = buildVariantDefaults(variant, template);
     if (variant) {
       setSelectedCategoryKey(variant.categoryKey);
     }
     setSelectedVariantKey(variantKey);
-    if (template) {
-      setSelectedService(template.service_key);
-    }
     setForm((prev) => ({
       ...prev,
       total_credits: prev.total_credits || defaults.total_credits,
@@ -247,6 +377,7 @@ export default function AdminPackagesScreen() {
       display_price: prev.display_price || defaults.display_price,
       trainer_commission_rate: prev.trainer_commission_rate || defaults.trainer_commission_rate,
       capacity: prev.capacity || defaults.capacity,
+      lesson_mode: defaults.lesson_mode,
     }));
     setServiceSheetVisible(false);
     setTimeout(() => setServiceSheetVisible(false), 0);
@@ -261,6 +392,7 @@ export default function AdminPackagesScreen() {
     if (!form.display_price.trim()) throw new Error("Paket fiyatı zorunlu.");
     if (!form.trainer_commission_rate.trim()) throw new Error("Eğitmen komisyonu zorunlu.");
     if (!form.capacity.trim()) throw new Error("Kapasite zorunlu.");
+    const lessonMode = String(form.lesson_mode || selectedTemplate?.lesson_mode || "PRIVATE").toUpperCase();
 
     if (editingPackageId) {
       return updateAdminPackageApi(editingPackageId, {
@@ -272,14 +404,12 @@ export default function AdminPackagesScreen() {
         trainer_commission_rate: Number(form.trainer_commission_rate || 0),
         capacity: Number(form.capacity || 1),
         summary: form.summary.trim(),
-        sub_lessons: form.sub_lessons
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        session_duration_minutes: DEFAULT_SESSION_DURATION,
-        break_duration_minutes: 0,
-        lesson_mode: "SINGLE",
-        is_public: !isTrialPackage,
+        sub_lessons: selectedTemplate?.sub_lessons || [],
+        session_duration_minutes: selectedTemplate?.session_duration_minutes || DEFAULT_SESSION_DURATION,
+        break_duration_minutes: selectedTemplate?.break_duration_minutes || 0,
+        lesson_mode: lessonMode,
+        is_visible: form.is_visible,
+        is_public: form.is_public,
       });
     }
 
@@ -292,16 +422,13 @@ export default function AdminPackagesScreen() {
       trainer_commission_rate: Number(form.trainer_commission_rate || 0),
       capacity: Number(form.capacity || 1),
       summary: form.summary.trim(),
-      sub_lessons: form.sub_lessons
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      session_duration_minutes: DEFAULT_SESSION_DURATION,
-      break_duration_minutes: 0,
-      lesson_mode: "SINGLE",
+      sub_lessons: selectedTemplate?.sub_lessons || [],
+      session_duration_minutes: selectedTemplate?.session_duration_minutes || DEFAULT_SESSION_DURATION,
+      break_duration_minutes: selectedTemplate?.break_duration_minutes || 0,
+      lesson_mode: lessonMode,
       is_active: true,
-      is_visible: true,
-      is_public: !isTrialPackage,
+      is_visible: form.is_visible,
+      is_public: form.is_public,
     });
 
     if (!created?.id) throw new Error("Paket oluşturulamadı.");
@@ -320,7 +447,7 @@ export default function AdminPackagesScreen() {
   invalidates: [
     ["admin-packages"],
     ["admin-package-assignments"],
-    ["admin-package-form-options"],
+    ["admin-package-templates"],
 
     ["member-packages"],
     ["member-my-packages"],
@@ -364,7 +491,7 @@ export default function AdminPackagesScreen() {
     invalidates: [
     ["admin-packages"],
     ["admin-package-assignments"],
-    ["admin-package-form-options"],
+    ["admin-package-templates"],
 
     ["member-packages"],
     ["member-my-packages"],
@@ -413,7 +540,7 @@ export default function AdminPackagesScreen() {
   invalidates: [
     ["admin-packages"],
     ["admin-package-assignments"],
-    ["admin-package-form-options"],
+    ["admin-package-templates"],
 
     ["member-packages"],
     ["member-my-packages"],
@@ -449,7 +576,7 @@ export default function AdminPackagesScreen() {
   invalidates: [
     ["admin-packages"],
     ["admin-package-assignments"],
-    ["admin-package-form-options"],
+    ["admin-package-templates"],
 
     ["member-packages"],
     ["member-my-packages"],
@@ -483,13 +610,14 @@ export default function AdminPackagesScreen() {
   function handleEditPackage(pkg: AdminPackage) {
     setEditingPackageId(pkg.id);
     setSelectedService(String(pkg.service_key || ""));
+    const matchedTemplate = templates.find((item) => item.service_key === pkg.service_key);
     const matchedVariant =
       LESSON_VARIANTS.find((item) => normalizeText(String(pkg.service_name || pkg.title || "")).includes(normalizeText(item.label))) ||
       LESSON_VARIANTS.find((item) => item.isTrial && Number(pkg.display_price || 0) === 0 && Number(pkg.total_credits || 0) === 1) ||
       LESSON_VARIANTS.find((item) => item.packageType === String(pkg.type || "").toUpperCase()) ||
       LESSON_VARIANTS.find((item) => item.key === "STANDARD");
-    setSelectedCategoryKey(matchedVariant?.categoryKey || "STANDARD");
-    setSelectedVariantKey(matchedVariant?.key || "STANDARD");
+    setSelectedCategoryKey(matchedTemplate ? categoryKeyForTemplate(matchedTemplate) : matchedVariant?.categoryKey || "STANDARD");
+    setSelectedVariantKey(matchedTemplate?.service_key || matchedVariant?.key || "STANDARD");
     const firstAssignment = assignments.find((item) => item.package_id === pkg.id && item.is_active !== false);
     setSelectedTrainerId(firstAssignment?.trainer_id || "");
     setForm({
@@ -500,7 +628,9 @@ export default function AdminPackagesScreen() {
       trainer_commission_rate: String(Number(pkg.trainer_commission_rate || 0)),
       capacity: String(pkg.capacity || 1),
       summary: String(pkg.summary || ""),
-      sub_lessons: Array.isArray(pkg.sub_lessons) ? pkg.sub_lessons.join(", ") : "",
+      lesson_mode: String(pkg.lesson_mode || "PRIVATE").toUpperCase(),
+      is_visible: pkg.is_visible !== false,
+      is_public: Boolean(pkg.is_public),
     });
   }
 
@@ -516,22 +646,37 @@ export default function AdminPackagesScreen() {
   }
 
   return (
-    <AppShell title="Paketler" subtitle="Paket oluştur, fiyat ve komisyon belirle, ardından paketi eğitmene bağla. Ücretsiz deneme dersi paketi de buradan açılır." icon="package" refreshing={packagesQuery.isRefetching} onRefresh={() => void packagesQuery.refetch()}>
+    <AppShell
+      title="Paketler"
+      subtitle="Paket oluştur, fiyat ve komisyon belirle, ardından paketi eğitmene bağla. Ücretsiz deneme dersi paketi de buradan açılır."
+      icon="package"
+      refreshing={packagesQuery.isRefetching}
+      onRefresh={() => void packagesQuery.refetch()}
+      onBack={
+        backTo
+          ? () =>
+              router.replace({
+                pathname: backTo,
+                params: backTo === "/(admin)/subscription" && subscriptionBackTo ? { backTo: subscriptionBackTo } : undefined,
+              } as never)
+          : undefined
+      }
+    >
       <SurfaceCard tone="primary">
         <Text style={styles.title}>Paket yönetimi</Text>
-        <Text style={styles.copy}>Ders türünü seç, ardından paket bilgilerini tamamen manuel olarak gir.</Text>
+        <Text style={styles.copy}>Katalogdan ana kategori ve alt kategoriyi seç; fiyat, kapasite ve komisyon otomatik gelsin, gerektiğinde düzenle.</Text>
       </SurfaceCard>
 
       <SurfaceCard>
         <Text style={styles.section}>{editingPackageId ? "Paketi düzenle" : "Yeni paket oluştur"}</Text>
-        <Text style={styles.copy}>{editingPackageId ? "Seçili paketin bilgilerini güncelle." : "Önce kategori ve alt tür seç, sonra tüm alanları sen belirle."}</Text>
+        <Text style={styles.copy}>{editingPackageId ? "Seçili paketin satış bilgilerini güncelle." : "Satışa hazır paket bilgilerini tek ekrandan tamamla."}</Text>
 
         <View style={styles.selectorGroup}>
           <Text style={styles.selectorLabel}>1. Ders türünü seç</Text>
           <Pressable testID="admin-package-category-picker" style={styles.dropdownField} onPress={() => setServiceSheetVisible(true)}>
             <View style={styles.dropdownFieldCopy}>
               <Text style={styles.dropdownFieldCaption}>Kategori</Text>
-              <Text style={styles.dropdownFieldValue}>{selectedVariant.categoryLabel}</Text>
+              <Text style={styles.dropdownFieldValue}>{selectedCategoryLabel}</Text>
             </View>
             <Text style={styles.dropdownFieldChevron}>▾</Text>
           </Pressable>
@@ -543,7 +688,7 @@ export default function AdminPackagesScreen() {
             <Text style={styles.dropdownFieldChevron}>▾</Text>
           </Pressable>
           <Text style={styles.selectorMeta}>
-            {selectedTemplate ? `${templateTypeLabel(selectedTemplate)} tipinde paket oluşturulacak.` : "Kategori ve alt tür seçmek için dokun."}
+            {selectedTemplate ? `${templateTypeLabel(selectedTemplate)} • ${lessonModeLabel(form.lesson_mode)} • ${selectedTemplate.capacity_label || "Kapasite ayarlanır"}` : "Kategori ve alt kategori seçmek için dokun."}
           </Text>
         </View>
 
@@ -551,29 +696,74 @@ export default function AdminPackagesScreen() {
           <Text style={styles.formSectionTitle}>Paket bilgileri</Text>
           <View style={styles.formCard}>
             <FormField inputId="admin-package-title-input" label="Paket adı" value={form.title} onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))} placeholder="Paket adını gir" />
-            <ActionButton
-              testID="admin-package-save-button-inline"
-              label={editingPackageId ? "Değişiklikleri kaydet" : isTrialPackage ? "Deneme paketini oluştur" : "Paketi oluştur"}
-              icon="package"
-              onPress={() => saveMutation.mutate()}
-              loading={saveMutation.isPending}
-            />
             <FormField inputId="admin-package-credits-input" label="Ders hakkı" value={form.total_credits} onChangeText={(value) => setForm((prev) => ({ ...prev, total_credits: sanitizeIntegerInput(value) }))} placeholder="Ders hakkı" keyboardType="number-pad" />
             <FormField inputId="admin-package-duration-input" label="Geçerlilik süresi" value={form.duration_days} onChangeText={(value) => setForm((prev) => ({ ...prev, duration_days: sanitizeIntegerInput(value) }))} placeholder="Gün sayısı" keyboardType="number-pad" />
             <FormField inputId="admin-package-price-input" label="Paket fiyatı" value={form.display_price} onChangeText={(value) => setForm((prev) => ({ ...prev, display_price: sanitizeDecimalInput(value) }))} placeholder="Fiyat" keyboardType="decimal-pad" />
             <FormField inputId="admin-package-commission-input" label="Komisyon (%)" value={form.trainer_commission_rate} onChangeText={(value) => setForm((prev) => ({ ...prev, trainer_commission_rate: sanitizeDecimalInput(value) }))} placeholder="Komisyon oranı" keyboardType="decimal-pad" />
-            <FormField inputId="admin-package-capacity-input" label="Kapasite" value={form.capacity} onChangeText={(value) => setForm((prev) => ({ ...prev, capacity: sanitizeIntegerInput(value) }))} placeholder="Kapasite" keyboardType="number-pad" />
-            <FormField inputId="admin-package-sub-lessons-input" label="Alt dersler" value={form.sub_lessons} onChangeText={(value) => setForm((prev) => ({ ...prev, sub_lessons: value }))} placeholder="Mat pilates, reformer başlangıç" />
+            <View style={styles.modePanel}>
+              <Text style={styles.selectorLabel}>Kapasite tipi</Text>
+              <View style={styles.chipRow}>
+                {[
+                  { value: "PRIVATE", label: "Özel", capacity: 1 },
+                  { value: "DUO", label: "Duo", capacity: 2 },
+                  { value: "GROUP", label: "Grup", capacity: Math.max(3, Number(form.capacity || selectedTemplate?.suggested_capacity || 4)) },
+                ].map((option) => (
+                  <SelectionChip
+                    key={option.value}
+                    label={option.label}
+                    active={form.lesson_mode === option.value}
+                    onPress={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        lesson_mode: option.value,
+                        capacity: String(capacityForLessonMode(option.value, option.capacity)),
+                      }))
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+            <FormField inputId="admin-package-capacity-input" label="Kişi kapasitesi" value={form.capacity} onChangeText={(value) => setForm((prev) => ({ ...prev, capacity: sanitizeIntegerInput(value) }))} placeholder="Kapasite" keyboardType="number-pad" />
             <View style={styles.previewCard}>
               <Text style={styles.previewTitle}>Planlama özeti</Text>
-              <Text style={styles.previewText}>Paketler varsayılan tekli ders akışıyla oluşturulur.</Text>
+              <Text style={styles.previewText}>
+                {lessonModeLabel(form.lesson_mode)} akış • {form.capacity || 1} kişi • {selectedTemplate?.session_duration_minutes || DEFAULT_SESSION_DURATION} dk ders
+              </Text>
               {weeklyRuleSummary ? (
                 <Text style={styles.previewText}>
                   Haftada {weeklyRuleSummary.weeklyClassHours} ders • {weeklyRuleSummary.requiredPreferenceSlots} slot seçilir • {weeklyRuleSummary.requiredTrainerFreeSlots} eğitmen boşluğu gerekir
                 </Text>
               ) : null}
             </View>
-            <FormField inputId="admin-package-summary-input" label="Paket açıklaması" value={form.summary} onChangeText={(value) => setForm((prev) => ({ ...prev, summary: value }))} placeholder="Kısa açıklama" multiline numberOfLines={4} />
+            <View style={styles.modePanel}>
+              <Text style={styles.selectorLabel}>Üye görünürlüğü</Text>
+              <View style={styles.chipRow}>
+                <SelectionChip
+                  label="Onboarding'de göster"
+                  active={form.is_public}
+                  onPress={() => setForm((prev) => ({ ...prev, is_public: !prev.is_public }))}
+                />
+                <SelectionChip
+                  label="Üye panelinde göster"
+                  active={form.is_visible}
+                  onPress={() => setForm((prev) => ({ ...prev, is_visible: !prev.is_visible }))}
+                />
+              </View>
+              <Text style={styles.previewText}>
+                Onboarding ekranında yalnız adminin burada yayına açtığı paketler görünür.
+              </Text>
+            </View>
+            <FormField
+              inputId="admin-package-summary-input"
+              label="Paket açıklaması"
+              value={form.summary}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, summary: value }))}
+              placeholder="Kısa açıklama"
+              multiline
+              numberOfLines={4}
+              returnKeyType="done"
+              blurOnSubmit
+            />
           </View>
         </View>
 
@@ -654,8 +844,9 @@ export default function AdminPackagesScreen() {
                 </View>
                 <Text style={styles.packageBody}>{pkg.summary || "Açıklama girilmedi."}</Text>
                 <Text style={styles.packageHint}>Ders hakkı: {pkg.total_credits} • Süre: {pkg.duration_days || 0} gün • Ders türü: {pkg.service_name || pkg.lesson_category || "-"}</Text>
-                <Text style={styles.packageHint}>Akış: {pkg.lesson_mode || "SINGLE"}</Text>
-                {Array.isArray(pkg.sub_lessons) && pkg.sub_lessons.length > 0 ? <Text style={styles.packageHint}>Alt dersler: {pkg.sub_lessons.join(", ")}</Text> : null}
+                <Text style={styles.packageHint}>
+                  Akış: {pkg.lesson_mode === "GROUP" ? "Grup" : pkg.lesson_mode === "DUO" ? "Duo" : "Özel"}
+                </Text>
                 <Text style={styles.assignmentLabel}>
                   Atanan eğitmenler: {packageAssignments.length > 0 ? packageAssignments.map((item) => item.trainer_full_name || item.trainer_email || "Eğitmen").join(", ") : "Henüz atanmadı"}
                 </Text>
@@ -697,10 +888,10 @@ export default function AdminPackagesScreen() {
         visible={serviceSheetVisible}
         onClose={() => setServiceSheetVisible(false)}
         title="Paket türü seç"
-        subtitle="Önce ana kategoriyi seç. Sonra alttan ilgili alt türü belirle."
+        subtitle="Önce ana kategoriyi, ardından paket alt kategorisini seç."
       >
         <View style={styles.sheetCategoryRow}>
-          {LESSON_CATEGORIES.map((category) => (
+          {effectiveCategories.map((category) => (
             <SelectionChip
               key={category.key}
               testID={`admin-package-category-${toTestIdSegment(category.label)}`}
@@ -711,23 +902,40 @@ export default function AdminPackagesScreen() {
           ))}
         </View>
         <View style={styles.sheetSection}>
-          <Text style={styles.sheetSectionTitle}>2. Alt tür</Text>
-          {visibleVariants.map((item) => {
-            const template = findBestTemplateForVariant(item.key, templates);
-            return (
-              <Pressable
-                key={item.key}
-                testID={`admin-package-variant-${toTestIdSegment(item.label)}`}
-                style={[styles.sheetOption, selectedVariantKey === item.key ? styles.sheetOptionActive : null]}
-                onPress={() => applyVariantSelection(item.key)}
-              >
-                <Text style={styles.sheetOptionTitle}>{item.label}</Text>
-                <Text style={styles.sheetOptionMeta}>
-                  {(template ? templateTypeLabel(template) : item.packageType)} • {template?.capacity_label || "Kapasite ayarlanır"} • {item.isTrial ? "0 TL" : template?.starting_price ? `${template.starting_price} TL` : "Fiyat ayarlanır"}
-                </Text>
-              </Pressable>
-            );
-          })}
+          <Text style={styles.sheetSectionTitle}>Alt kategori</Text>
+         {visibleTemplateVariants.length > 0
+  ? visibleTemplateVariants.map((template) => (
+      <Pressable
+        key={template.service_key}
+        testID={`admin-package-variant-${toTestIdSegment(templateDisplayName(template) || template.service_key)}`}
+        style={[styles.sheetOption, selectedService === template.service_key ? styles.sheetOptionActive : null]}
+        onPress={() => applyTemplateSelection(template)}
+      >
+        <Text style={styles.sheetOptionTitle}>{templateDisplayName(template) || template.service_key}</Text>
+        <Text style={styles.sheetOptionMeta}>
+          {templateTypeLabel(template)} • {lessonModeLabel(template.lesson_mode)} •{" "}
+          {template.capacity_label || "Kapasite ayarlanır"} •{" "}
+          {template.starting_price ? `${template.starting_price} TL` : "Fiyat ayarlanır"}
+        </Text>
+      </Pressable>
+    ))
+  : visibleVariants.map((item) => {
+      const template = findBestTemplateForVariant(item.key, templates);
+      return (
+        <Pressable
+          key={item.key}
+          testID={`admin-package-variant-${toTestIdSegment(item.label)}`}
+          style={[styles.sheetOption, selectedVariantKey === item.key ? styles.sheetOptionActive : null]}
+          onPress={() => applyVariantSelection(item.key)}
+        >
+          <Text style={styles.sheetOptionTitle}>{item.label}</Text>
+          <Text style={styles.sheetOptionMeta}>
+            {(template ? templateTypeLabel(template) : item.packageType)} • {template?.capacity_label || "Kapasite ayarlanır"} •{" "}
+            {item.isTrial ? "0 TL" : template?.starting_price ? `${template.starting_price} TL` : "Fiyat ayarlanır"}
+          </Text>
+        </Pressable>
+      );
+    })}
         </View>
       </DetailSheet>
 
@@ -856,6 +1064,14 @@ const styles = StyleSheet.create({
   },
   formCard: {
     gap: tokens.spacing.md,
+  },
+  modePanel: {
+    gap: tokens.spacing.xs,
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.md,
   },
   previewCard: {
     gap: 4,

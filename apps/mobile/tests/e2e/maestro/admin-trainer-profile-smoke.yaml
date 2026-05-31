@@ -1,0 +1,45 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fmembers"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Üyeler"
+- tapOn:
+    id: "admin-members-role-filter-TRAINER"
+- waitForAnimationToEnd:
+    timeout: 2000
+- swipe:
+    start: 50%, 76%
+    end: 50%, 24%
+- tapOn:
+    id: "admin-person-detail-trainer-0"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible:
+    id: "admin-trainer-hero-summary"
+- assertVisible: "Aylık kazanç"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 30%
+- assertVisible:
+    id: "admin-trainer-competency-summary"
+- assertVisible:
+    id: "admin-person-detail-tabs"
+- tapOn:
+    id: "admin-person-detail-tabs-EARNINGS"
+- waitForAnimationToEnd:
+    timeout: 2000
+- swipe:
+    start: 50%, 76%
+    end: 50%, 40%
+- assertVisible:
+    id: "admin-trainer-earning-monthly"
+- tapOn:
+    id: "app-shell-back-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "admin-members-role-filter"

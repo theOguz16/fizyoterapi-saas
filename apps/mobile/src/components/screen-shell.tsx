@@ -22,7 +22,7 @@ type Props = {
   footer?: ReactNode;
 };
 
-export function ScreenShell({ title, subtitle, children, refreshing = false, onRefresh, eyebrow = "CLINERVA", rightAction, icon = "spark", backLabel = "Geri", footer }: Props) {
+export function ScreenShell({ title, subtitle, children, refreshing = false, onRefresh, eyebrow = "FIZYOFLOW", rightAction, icon = "spark", backLabel = "Geri", footer }: Props) {
   const router = useRouter();
   const canGoBack = typeof router.canGoBack === "function" ? router.canGoBack() : false;
   const BackIcon = Platform.OS === "ios" ? ChevronLeft : ArrowLeft;

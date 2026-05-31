@@ -1,25 +1,23 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- openLink: "clinerva://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
 - assertVisible: "Bugün"
 - tapOn:
     id: "trainer-home-qr-button"
 - waitForAnimationToEnd
-- assertVisible: "QR ile ders girişi"
+- assertVisible: "Ders girişi"
 - swipe:
     start: 50%, 82%
     end: 50%, 36%
-- tapOn: "Manuel kod ekranı"
-- assertVisible: "Kod gir"
+- tapOn: "Manuel MEM kodu gir"
+- assertVisible: "Üye MEM kodu"
 - tapOn:
-    id: "trainer-manual-code-input"
-- inputText: "member@gmail.com"
-- hideKeyboard
+    id: "trainer-checkin-manual-input"
+- inputText: "MEM-DEMO001"
 - tapOn:
-    id: "trainer-manual-code-submit"
+    id: "trainer-checkin-submit"
 - assertVisible:
-    id: "trainer-manual-code-result"
-- assertVisible: "Onaylandı"
+    id: "trainer-checkin-result"

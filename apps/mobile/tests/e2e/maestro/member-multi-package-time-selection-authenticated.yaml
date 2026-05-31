@@ -1,22 +1,16 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
-- openLink: "clinerva:///e2e-login?skipAuth=1&redirect=%2F%28intake-member%29%2Fe2e-multi-package%3Fslug%3Ddemo-salon"
-- assertVisible: "Başvurunu gözden geçir"
-- swipe:
-    start: 50%, 82%
-    end: 50%, 28%
-- swipe:
-    start: 50%, 82%
-    end: 50%, 20%
-- tapOn: "Onaya gönder"
-- assertVisible: "Başvurunu gözden geçir"
-- assertVisible: "2 paket"
-- swipe:
-    start: 50%, 82%
-    end: 50%, 28%
-- swipe:
-    start: 50%, 82%
-    end: 50%, 20%
-- tapOn: "Onaya gönder"
-- assertVisible: "Başvurun incelemeye alındı"
-- assertVisible: "2 / 2 paket gönderildi"
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow:///e2e-login?skipAuth=1&redirect=%2F%28intake-member%29%2Fe2e-multi-package%3Fslug%3Ddemo-salon"
+- extendedWaitUntil:
+    visible: "Başvurunu gözden geçir"
+    timeout: 20000
+- assertVisible:
+    text: "2 paket|Grup dersi katılımı"

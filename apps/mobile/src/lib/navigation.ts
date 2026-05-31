@@ -42,11 +42,6 @@ type OnboardingState =
   | undefined;
 
 export function safeBack(router: RouterLike, fallbackHref: string, mode: "push" | "replace" = "replace") {
-  if (typeof router.canGoBack === "function" && router.canGoBack()) {
-    router.back();
-    return;
-  }
-
   if (mode === "push") {
     router.push(fallbackHref as never);
     return;
@@ -58,6 +53,12 @@ export function safeBack(router: RouterLike, fallbackHref: string, mode: "push" 
   }
 
   router.push(fallbackHref as never);
+}
+
+export function resolveBackNavigation(canGoBack: boolean, fallbackHref?: string | null) {
+  if (fallbackHref) return { type: "replace" as const, href: fallbackHref };
+  if (canGoBack) return { type: "back" as const };
+  return { type: "back" as const };
 }
 
 export function resolveRoleGroup(role: Role, onboardingState?: OnboardingState, _user?: SessionLikeUser | null) {
@@ -184,6 +185,7 @@ export function resolveContextualBackHref(segments: string[]) {
     "(admin)/pricing": "/(admin)/salon",
     "(admin)/risk-members": "/(admin)/dashboard",
     "(admin)/salon": "/(admin)/dashboard",
+    "(admin)/salon/setup": "/(admin)/dashboard",
     "(admin)/salon-profile": "/(admin)/salon",
     "(admin)/subscription": "/(admin)/salon",
     "(admin)/working-hours": "/(admin)/salon",
@@ -192,6 +194,7 @@ export function resolveContextualBackHref(segments: string[]) {
     "(member)/booking/[id]": "/(member)/bookings",
     "(member)/bookings": "/(member)/home",
     "(member)/campaigns": "/(member)/profile",
+    "(member)/group-classes": "/(member)/home",
     "(member)/measurement/[id]": "/(member)/measurements",
     "(member)/plan": "/(member)/package",
     "(member)/progress": "/(member)/profile",
@@ -200,6 +203,7 @@ export function resolveContextualBackHref(segments: string[]) {
 
     "(trainer)/bookings": "/(trainer)/calendar",
     "(trainer)/checkin": "/(trainer)/home",
+    "(trainer)/group-classes": "/(trainer)/home",
     "(trainer)/members": "/(trainer)/clients",
     "(trainer)/manual-code": "/(trainer)/home",
     "(trainer)/members/[id]": "/(trainer)/clients",
@@ -209,6 +213,10 @@ export function resolveContextualBackHref(segments: string[]) {
     "(trainer)/qr": "/(trainer)/home",
     "(trainer)/risk": "/(trainer)/home",
     "(trainer)/today": "/(trainer)/home",
+
+    "(shared)/clinics": "/(shared)/invite-join",
+    "(shared)/leave-salon": "/(member)/profile",
+    "(shared)/notification-settings": "/(member)/profile",
   };
 
   return routeMap[routeKey] ?? null;

@@ -13,8 +13,16 @@ import { User, UserRole } from "../../entities/user.entity";
 import { GroupClassService } from "../../services/group-class.service";
 import { lessonCategoryLabel } from "../../services/presentation-label.service";
 import { SlotValidationContractService } from "../../services/slot-validation-contract.service";
-import { GroupClassCancellationService } from "../../services/group-class-cancellation.service";
 
+function readEventPayload(event: NotificationEvent | null | undefined): Record<string, any> {
+  try {
+    const payload = event?.payload;
+    if (!payload) return {};
+    return typeof payload === "string" ? JSON.parse(payload) : payload;
+  } catch {
+    return {};
+  }
+}
 
 export class TrainerGroupClassesController {
   private static parseDate(value: unknown, field: string) {
@@ -48,6 +56,53 @@ export class TrainerGroupClassesController {
       throw new AppError("PACKAGE_TRAINER_ASSIGNMENT_NOT_FOUND", 400, "Bu paket egitmene atanmis degil");
     }
   }
+
+  private static async ensureGroupClassPackage(
+  tenantId: string,
+  packageId?: string | null
+) {
+  if (!packageId) {
+    throw new AppError("PACKAGE_REQUIRED", 400, "Grup dersi için paket seçilmelidir");
+  }
+
+  const pkg = await AppDataSource.getRepository(Package).findOne({
+    where: {
+      tenant_id: tenantId,
+      id: packageId,
+      is_active: true,
+    },
+    select: ["id", "title", "type", "capacity", "rules"],
+  });
+
+  if (!pkg) {
+    throw new AppError("PACKAGE_NOT_FOUND", 404, "Paket bulunamadı");
+  }
+
+  const rules =
+    pkg.rules && typeof pkg.rules === "object" && !Array.isArray(pkg.rules)
+      ? (pkg.rules as Record<string, unknown>)
+      : {};
+
+  const lessonMode = String(
+    rules.lesson_mode ??
+      (Number(pkg.capacity || 0) > 2 ? "GROUP" : Number(pkg.capacity || 0) === 2 ? "DUO" : "PRIVATE")
+  )
+    .trim()
+    .toUpperCase();
+
+  const packageType = String(pkg.type || "").trim().toUpperCase();
+  const capacity = Number(pkg.capacity || 0);
+
+  if (lessonMode !== "GROUP" && packageType !== "GROUP" && capacity <= 2) {
+    throw new AppError(
+      "PACKAGE_NOT_GROUP_COMPATIBLE",
+      400,
+      "Grup dersi sadece grup dersine uygun paketlerle açılabilir"
+    );
+  }
+
+  return pkg;
+}
 
   private static async loadBusinessHours(tenantId: string) {
     const profile = await AppDataSource.getRepository(SalonProfile).findOne({
@@ -145,6 +200,14 @@ export class TrainerGroupClassesController {
             : {};
         const lessonCategory = String(rules.lesson_category ?? "").trim().toUpperCase() || null;
         const commissionRateValue = Number(rules.trainer_commission_rate);
+        const lessonMode = String(
+          rules.lesson_mode ?? (Number(row.capacity || 0) > 2 ? "GROUP" : Number(row.capacity || 0) === 2 ? "DUO" : "PRIVATE")
+        )
+          .trim()
+          .toUpperCase();
+
+        const sessionDurationMinutes = Number(rules.session_duration_minutes ?? 45);
+        const breakDurationMinutes = Number(rules.break_duration_minutes ?? 0);
         return {
           id: row.id,
           title: row.title,
@@ -156,6 +219,10 @@ export class TrainerGroupClassesController {
           lesson_category_label: lessonCategoryLabel(lessonCategory),
           package_type: row.type,
           trainer_commission_rate: Number.isFinite(commissionRateValue) ? commissionRateValue : 25,
+          lesson_mode: lessonMode,
+          sub_lessons: Array.isArray(rules.sub_lessons) ? rules.sub_lessons : [],
+          session_duration_minutes: Number.isFinite(sessionDurationMinutes) ? sessionDurationMinutes : 45,
+          break_duration_minutes: Number.isFinite(breakDurationMinutes) ? breakDurationMinutes : 0,
         };
       })
       .filter((row) => !row.lesson_category || skillSet.size === 0 || skillSet.has(row.lesson_category as LessonCategory));
@@ -244,7 +311,6 @@ export class TrainerGroupClassesController {
       capacity,
       price,
       notification_scope,
-      requires_admin_approval,
       invited_member_count,
       recurrence_label,
       special_date,
@@ -284,6 +350,11 @@ export class TrainerGroupClassesController {
     await TrainerGroupClassesController.ensurePackageAssignment(
       tenantId,
       trainerId,
+      related_package_id ? String(related_package_id) : null
+    );
+
+    await TrainerGroupClassesController.ensureGroupClassPackage(
+      tenantId,
       related_package_id ? String(related_package_id) : null
     );
 
@@ -360,7 +431,6 @@ export class TrainerGroupClassesController {
       capacity,
       price,
       notification_scope,
-      requires_admin_approval,
       invited_member_count,
       recurrence_label,
       special_date,
@@ -415,6 +485,7 @@ export class TrainerGroupClassesController {
       throw new AppError("VALIDATION_ERROR", 400, businessHourResult.reason);
     }
     await TrainerGroupClassesController.ensurePackageAssignment(tenantId, trainerId, session.related_package_id);
+    await TrainerGroupClassesController.ensureGroupClassPackage(tenantId, session.related_package_id);
     // Güncelleme işleminde status dışarıdan ne gelirse gelsin, admin onayı için PENDING'e zorluyoruz.
     session.status = SessionStatus.PENDING; 
     
@@ -464,7 +535,7 @@ export class TrainerGroupClassesController {
     });
     if (!session) throw new AppError("SESSION_NOT_FOUND", 404, "Grup dersi bulunamadi");
 
-    const existingCancelRequest = await eventRepo.findOne({
+    const existingCancelRequests = await eventRepo.find({
       where: {
         tenant_id: tenantId,
         member_id: trainerId,
@@ -474,16 +545,12 @@ export class TrainerGroupClassesController {
       order: { created_at: "DESC" },
     });
 
-    const existingPayload =
-      existingCancelRequest?.payload && typeof existingCancelRequest.payload === "object"
-        ? existingCancelRequest.payload
-        : null;
+    const existingCancelRequest = existingCancelRequests.find((event) => {
+      const payload = readEventPayload(event);
+      return payload.request_type === "GROUP_CLASS_CANCEL" && payload.session_id === session.id;
+    });
 
-    if (
-      existingCancelRequest &&
-      existingPayload?.request_type === "GROUP_CLASS_CANCEL" &&
-      existingPayload?.session_id === session.id
-    ) {
+    if (existingCancelRequest) {
       return res.json({
         data: {
           id: existingCancelRequest.id,

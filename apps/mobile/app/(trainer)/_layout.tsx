@@ -42,9 +42,7 @@ export default function TrainerLayout() {
       <Tabs.Screen name="risk" options={{ href: null }} />
       <Tabs.Screen name="notes" options={{ href: null }} />
       <Tabs.Screen name="note-edit" options={{ href: null }} />
-      <Tabs.Screen name="manual-code" options={{ href: null }} />
       <Tabs.Screen name="group-classes" options={{ href: null }} />
-      <Tabs.Screen name="group-classes/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { ShieldCheck, Stethoscope, UserRound } from "lucide-react";
-import { ClinervaLogo } from "@/components/brand/clinerva-logo";
+import { FizyoFlowLogo } from "@/components/brand/fizyoflow-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppIcon } from "@/components/ui/app-icon";
@@ -21,6 +21,7 @@ const navByRole: Record<Role, Array<{ href: string; label: string; icon: string;
     { href: "/admin/payments", label: "Ödeme Onayları", shortLabel: "Ödemeler", icon: "fa-solid fa-credit-card" },
     { href: "/admin/risk", label: "Risk Yönetimi", shortLabel: "Risk", icon: "fa-solid fa-shield-heart" },
     { href: "/admin/applications", label: "Başvurular", shortLabel: "Başvurular", icon: "fa-solid fa-file-signature" },
+    { href: "/admin/digital-vitrine", label: "Dijital Vitrin Brief'i", shortLabel: "Vitrin", icon: "fa-solid fa-globe" },
     { href: "/admin/settings", label: "Klinik Ayarları", shortLabel: "Ayarlar", icon: "fa-solid fa-gear" },
   ],
   TRAINER: [
@@ -76,7 +77,7 @@ export function AppHeader() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-sky-200/60 bg-gradient-to-r from-white/95 via-sky-50/85 to-emerald-50/85 shadow-[0_10px_28px_rgba(14,165,233,0.08)] backdrop-blur-md">
       <div className="mx-auto flex h-[72px] w-full max-w-[1280px] items-center justify-between gap-3 px-3 md:px-5">
         <Link href={role === "ADMIN" ? "/dashboard" : role === "TRAINER" ? "/trainer/today" : "/login"}>
-          <ClinervaLogo compact={isAdmin} className="shrink-0" />
+          <FizyoFlowLogo compact={isAdmin} className="shrink-0" />
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1.5 xl:flex">

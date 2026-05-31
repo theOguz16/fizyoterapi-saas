@@ -8,6 +8,16 @@ import { MembershipPaymentStatus, SalonMembership, SalonMembershipStatus } from 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 const MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
 
+function readEventPayload(event: NotificationEvent): Record<string, any> {
+  try {
+    const payload = event.payload;
+    if (!payload) return {};
+    return typeof payload === "string" ? JSON.parse(payload) : payload;
+  } catch {
+    return {};
+  }
+}
+
 export class MemberRequestCleanupService {
   static async cleanupStaleApplicationsForAccount(accountId: string) {
     const applications = await AppDataSource.getRepository(SalonApplication)
@@ -93,10 +103,11 @@ export class MemberRequestCleanupService {
       });
 
       for (const row of rows) {
+        const payload = readEventPayload(row);
         row.status = NotificationEventStatus.PROCESSED;
         row.processed_at = new Date();
         row.payload = {
-          ...row.payload,
+          ...payload,
           decision: "CANCELLED",
           status: "CANCELLED",
           cancel_reason: reason,
@@ -133,8 +144,9 @@ export class MemberRequestCleanupService {
     });
 
     for (const row of rows) {
-      const payloadPackageId = typeof row.payload?.package_id === "string" ? row.payload.package_id : null;
-      const payloadPackageIds = Array.isArray(row.payload?.package_ids) ? row.payload.package_ids.map((item: unknown) => String(item || "")) : [];
+      const payload = readEventPayload(row);
+      const payloadPackageId = typeof payload.package_id === "string" ? payload.package_id : null;
+      const payloadPackageIds = Array.isArray(payload.package_ids) ? payload.package_ids.map((item: unknown) => String(item || "")) : [];
       const queuedPackageIds = new Set([payloadPackageId, ...payloadPackageIds].filter(Boolean) as string[]);
       const hasRequestedPackageOverlap =
         requestedPackageIds.size === 0 || Array.from(requestedPackageIds).some((queuedId) => queuedPackageIds.has(queuedId));
@@ -142,11 +154,13 @@ export class MemberRequestCleanupService {
       if (!hasRequestedPackageOverlap) {
         continue;
       }
-      const applicationId = typeof row.payload?.application_id === "string" ? row.payload.application_id : null;
+      const applicationId = typeof payload.application_id === "string" ? payload.application_id : null;
       if (!applicationId) {
         return row;
       }
-      const application = await AppDataSource.getRepository(SalonApplication).findOne({ where: { id: applicationId } });
+      const application = await AppDataSource.getRepository(SalonApplication).findOne({
+        where: tenantId ? { id: applicationId, tenant_id: tenantId } : { id: applicationId },
+      });
       const actionable = Boolean(
         application &&
           (application.status === SalonApplicationStatus.PENDING ||
@@ -158,7 +172,7 @@ export class MemberRequestCleanupService {
       row.status = NotificationEventStatus.PROCESSED;
       row.processed_at = new Date();
       row.payload = {
-        ...row.payload,
+        ...payload,
         decision: "CANCELLED",
         status: "CANCELLED",
         cancel_reason: "STALE_PENDING_REQUEST",

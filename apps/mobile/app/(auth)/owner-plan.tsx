@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { Animated, Easing, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/theme/components/app-icon";
 import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";

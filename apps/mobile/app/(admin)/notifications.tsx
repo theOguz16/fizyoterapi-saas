@@ -2,7 +2,7 @@
 // Ekranin amaci ilgili roldeki kullaniciya bu adimda gereken veri, karar veya aksiyonu sunmaktir.
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getAdminNotificationLogsApi, getAdminSettingsApi, triggerAdminNotificationTemplate } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
@@ -17,6 +17,7 @@ import { tokens } from "@/theme/tokens";
 
 export default function AdminNotificationsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [audience, setAudience] = useState("ALL_MEMBERS");
   const [message, setMessage] = useState("");
@@ -49,6 +50,7 @@ export default function AdminNotificationsScreen() {
   },
 });
   const logs = Array.isArray(logsQuery.data) ? logsQuery.data : [];
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   return (
     <AppShell
@@ -60,7 +62,7 @@ export default function AdminNotificationsScreen() {
         void settingsQuery.refetch();
         void logsQuery.refetch();
       }}
-      onBack={() => router.replace("/(admin)/dashboard" as never)}
+      onBack={() => router.replace((backTo || "/(admin)/dashboard") as never)}
     >
       <SurfaceCard tone="primary">
         <SectionTitle title="Gönderim özeti" subtitle="Bu ekran hızlı bildirim göndermek için kullanılır." />

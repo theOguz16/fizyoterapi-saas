@@ -5,8 +5,11 @@ import { AuditLogService } from "../services/audit-log.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("billing revenuecat webhook", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
   afterEach(() => {
     vi.restoreAllMocks();
+    process.env.NODE_ENV = originalNodeEnv;
     delete process.env.REVENUECAT_WEBHOOK_AUTH;
     delete process.env.REVENUECAT_ENTITLEMENT_ID;
   });
@@ -42,7 +45,7 @@ describe("billing revenuecat webhook", () => {
           type: "INITIAL_PURCHASE",
           app_user_id: "tenant-1",
           entitlement_ids: ["clinic_pro"],
-          product_id: "clinerva_admin_monthly",
+          product_id: "fizyoflow_admin_monthly",
           period_type: "NORMAL",
           store: "APP_STORE",
         },
@@ -88,7 +91,7 @@ describe("billing revenuecat webhook", () => {
           type: "EXPIRATION",
           app_user_id: "tenant-1",
           entitlement_ids: ["clinic_pro"],
-          product_id: "clinerva_admin_monthly",
+          product_id: "fizyoflow_admin_monthly",
           period_type: "NORMAL",
           store: "PLAY_STORE",
         },
@@ -101,5 +104,27 @@ describe("billing revenuecat webhook", () => {
     expect(res.statusCode).toBe(200);
     expect(tenant.subscription_status).toBe("READ_ONLY");
     expect(tenant.is_public).toBe(false);
+  });
+
+  it("requires a webhook secret in production", async () => {
+    process.env.NODE_ENV = "production";
+
+    const req = {
+      method: "POST",
+      originalUrl: "/api/billing/revenuecat/webhook",
+      headers: { authorization: "Bearer anything" },
+      body: {
+        event: {
+          type: "INITIAL_PURCHASE",
+          app_user_id: "tenant-1",
+        },
+      },
+    } as any;
+    const res = createMockResponse();
+
+    await expect(BillingController.revenueCatWebhook(req, res as any)).rejects.toMatchObject({
+      code: "REVENUECAT_WEBHOOK_AUTH_MISSING",
+      statusCode: 500,
+    });
   });
 });

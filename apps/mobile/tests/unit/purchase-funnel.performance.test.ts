@@ -1,25 +1,29 @@
 import { performance } from "node:perf_hooks";
 import { describe, expect, it } from "vitest";
+import type { PackageOption, TrainerOption } from "@/lib/mobile-api";
 import { normalizePackageOptions, normalizeTrainerOptions } from "@/lib/purchase-funnel";
 
 describe("purchase funnel helper load behavior", () => {
   it("normalizes large package and trainer payloads for mobile intake flow", () => {
-    const packages = Array.from({ length: 500 }, (_, index) => ({
+    const packages: PackageOption[] = Array.from({ length: 500 }, (_, index) => ({
       id: `pkg-${index + 1}`,
       title: index % 9 === 0 ? "" : `Paket ${index + 1}`,
       total_credits: (index % 12) + 4,
       weekly_class_hours: index % 5 === 0 ? null : (index % 7) + 1,
       is_available: index % 13 !== 0,
     }));
-    const trainers = Array.from({ length: 250 }, (_, index) =>
+    const trainers: TrainerOption[] = Array.from({ length: 250 }, (_, index) =>
       index % 17 === 0
-        ? ({ full_name: `Eksik ${index + 1}` } as any)
+        ? ({
+            id: "",
+            full_name: `Eksik ${index + 1}`,
+          } as TrainerOption)
         : ({
             id: `trainer-${index + 1}`,
             full_name: `Trainer ${index + 1}`,
             specialties: index % 2 === 0 ? ["PT"] : undefined,
             is_available: index % 8 !== 0,
-          } as any)
+          } as TrainerOption)
     );
 
     const startedAt = performance.now();

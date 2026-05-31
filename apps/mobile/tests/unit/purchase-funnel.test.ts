@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { SalonDiscoverySummary, TrainerOption } from "@/lib/mobile-api";
 import {
   buildSalonDayOptions,
   fallbackPackageOptions,
@@ -27,7 +28,7 @@ describe("purchase funnel helpers", () => {
       expect.objectContaining({
         weekday: 1,
         weekday_label: "Pazartesi",
-        time_range_label: "08:00 - 18:00",
+        time_range_label: "08:00 - 18:00 • 60 dk ders",
       })
     );
 
@@ -87,17 +88,18 @@ describe("purchase funnel helpers", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-04T10:00:00.000Z"));
 
-    const dayOptions = buildSalonDayOptions({
+    const fallbackSalon: SalonDiscoverySummary = {
       id: "salon-1",
       slug: "demo",
       name: "Demo",
       business_hours: {},
-    } as any);
+    };
+    const dayOptions = buildSalonDayOptions(fallbackSalon);
     expect(dayOptions).toHaveLength(6);
     expect(dayOptions[0]).toEqual(
       expect.objectContaining({
         weekday: 1,
-        time_range_label: "09:00 - 20:00",
+        time_range_label: "09:00 - 20:00 • 60 dk ders",
       })
     );
 
@@ -115,7 +117,14 @@ describe("purchase funnel helpers", () => {
       })
     );
 
-    const trainers = normalizeTrainerOptions([{ id: "tr-1", full_name: "", matching_slots: 2, required_matching_slots: 4 }]);
+    const trainers = normalizeTrainerOptions([
+      {
+        id: "tr-1",
+        full_name: "",
+        matching_slots: 2,
+        required_matching_slots: 4,
+      } as TrainerOption,
+    ]);
     expect(trainers[0]).toEqual(
       expect.objectContaining({
         full_name: "Eğitmen 1",

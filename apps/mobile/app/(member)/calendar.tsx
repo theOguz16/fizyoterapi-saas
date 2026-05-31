@@ -173,8 +173,8 @@ export default function MemberCalendarScreen() {
         source: "booking",
         bookingId: String(booking.id),
         raw: booking,
-        title: booking.session_title || booking.lesson_category_label || "Ders",
-        subtitle: `${booking.trainer_full_name || "Eğitmen"} • ${booking.package_title || booking.package_name || "Planlı seans"}`,
+        title: booking.is_duo ? "Duo ders" : booking.session_title || booking.lesson_category_label || "Ders",
+        subtitle: `${booking.trainer_full_name || "Eğitmen"} • ${booking.package_title || booking.package_name || "Planlı seans"}${booking.is_duo ? " • Partner ödemesi beklenebilir" : ""}`,
         startsAt: booking.starts_at,
         endsAt: booking.ends_at,
         badgeLabel: booking.pending_schedule_change ? "Saat Onayı Bekliyor" : formatStatusLabel(booking.status),
@@ -309,6 +309,8 @@ export default function MemberCalendarScreen() {
                 <DetailRow label="Ders" value={selectedBooking?.session_title || selectedBooking?.lesson_category_label || "Ders"} />
                 <DetailRow label="Eğitmen" value={selectedBooking?.trainer_full_name || "Eğitmen"} />
                 <DetailRow label="Paket" value={selectedBooking?.package_title || selectedBooking?.package_name || "Planlı seans"} />
+                {selectedBooking?.is_duo ? <DetailRow label="Duo partner" value={selectedBooking?.duo_partner_name || "Partner daveti bekleniyor"} /> : null}
+                {selectedBooking?.is_duo ? <DetailRow label="Duo durum" value={selectedBooking?.duo_status || "Partner ödemesi bekleniyor"} /> : null}
                 <DetailRow
                   label="Durum"
                   value={selectedBooking?.pending_schedule_change ? "Saat onayı bekliyor" : formatStatusLabel(selectedBooking?.status)}
@@ -342,7 +344,10 @@ export default function MemberCalendarScreen() {
                 if (!selectedEvent?.bookingId) return;
 
                 setSelectedEventId(null);
-                router.push(`/(member)/booking/${selectedEvent.bookingId}` as never);
+                router.push({
+                  pathname: "/(member)/booking/[id]",
+                  params: { id: selectedEvent.bookingId, backTo: "/(member)/calendar" },
+                } as never);
               }}
             />
           </>

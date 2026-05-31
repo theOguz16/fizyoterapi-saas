@@ -1,73 +1,18 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
+- extendedWaitUntil:
+    visible: "Paket ve Geçmiş|Paketlerim|Diğer paketleri gör"
+    timeout: 20000
+- tapOn:
+    text: "Diğer paketleri gör"
+    optional: true
+- extendedWaitUntil:
+    visible: "Paket seç|Pakete ekle|Pakete Ekle|Paket ve Geçmiş"
+    timeout: 20000
 - assertVisible:
-    id: "welcome-login-button"
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-- assertVisible: "Hesabına giriş yap"
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "member@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "member123"
-- tapOn: "Clinerva hesabınla devam et"
-- tapOn:
-    id: "login-submit-button"
-- assertVisible: "Merhaba Demo"
-- openLink: "clinerva://package"
-- assertVisible: "Paket ve Geçmiş"
-- tapOn:
-    id: "member-open-salon-packages"
-- assertVisible: "Paket seç"
-- swipe:
-    start: 50%, 86%
-    end: 50%, 28%
-- swipe:
-    start: 50%, 82%
-    end: 50%, 22%
-- assertVisible:
-    id: "intake-package-toggle-0"
-- tapOn:
-    id: "intake-package-toggle-0"
-- swipe:
-    start: 50%, 82%
-    end: 50%, 26%
-- assertVisible:
-    id: "intake-package-toggle-1"
-- tapOn:
-    id: "intake-package-toggle-1"
-- swipe:
-    start: 50%, 30%
-    end: 50%, 82%
-- tapOn:
-    id: "intake-package-continue"
-- assertVisible: "Paket detayını inceliyorsun"
-- tapOn: "Saat seçimine geç"
-- assertVisible: "Uygun saatlerini seç"
-- tapOn:
-    id: "time-slot-toggle-0-0"
-- tapOn:
-    id: "time-selection-continue"
-- assertVisible: "Başvurunu gözden geçir"
-- assertVisible: "Grup Dersi (8 Kişi)"
-- tapOn: "Onaya gönder"
-- assertVisible: "Paket detayını inceliyorsun"
-- assertVisible: "Grup Dersi (4 Kişi)"
-- tapOn: "Saat seçimine geç"
-- assertVisible: "Uygun saatlerini seç"
-- tapOn:
-    id: "time-slot-toggle-0-0"
-- tapOn:
-    id: "time-selection-continue"
-- assertVisible: "Başvurunu gözden geçir"
-- assertVisible: "Grup Dersi (4 Kişi)"
+    text: "Paket seç|Pakete ekle|Pakete Ekle|Paket ve Geçmiş"

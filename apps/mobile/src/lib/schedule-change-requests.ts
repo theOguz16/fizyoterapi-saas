@@ -2,7 +2,7 @@
 // Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
 import * as SecureStore from "expo-secure-store";
 
-const STORAGE_KEY = "clinerva.schedule_change_requests.v1";
+const STORAGE_KEY = "fizyoflow.schedule_change_requests.v1";
 
 export type ScheduleChangeRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 

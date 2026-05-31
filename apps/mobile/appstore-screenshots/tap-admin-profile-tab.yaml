@@ -1,0 +1,10 @@
+appId: com.fizyoflow.mobile
+name: tap-admin-profile-tab
+---
+- tapOn:
+    point: "88%,94%"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible: "Hesap özeti"

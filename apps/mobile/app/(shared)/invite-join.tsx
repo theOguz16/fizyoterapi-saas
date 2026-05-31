@@ -26,7 +26,7 @@ export default function InviteJoinScreen() {
         <Text style={styles.copy}>Davet kodu tamamlandıktan sonra uzmanlık, çalışma alanı ve bağlı salon bilgileri hesabına işlenir. Sonrasında eğitmen ana sayfası ve takvim ekranları açılır.</Text>
       </SurfaceCard>
       <ActionButton label="Davet kodu gir" icon="trainer" onPress={() => router.replace("/(auth)/invite-accept" as never)} />
-      <ActionButton label="Salonları görüntüle" icon="salon" variant="ghost" onPress={() => router.push("/(shared)/clinics" as never)} />
+      <ActionButton label="Salonları görüntüle" icon="salon" variant="ghost" onPress={() => router.push({ pathname: "/(shared)/clinics", params: { backTo: "/(shared)/invite-join" } } as never)} />
     </AppShell>
   );
 }

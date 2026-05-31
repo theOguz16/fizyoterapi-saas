@@ -29,6 +29,9 @@ export default function BookingSummaryScreen() {
   const isGroupFlow = isGroupClassBookingFlow(memberBookingDraft);
   const currentPackage = findCurrentPackage(memberBookingDraft);
   const selectedDaysForCurrentPackage = currentPackage?.preferred_slots || memberBookingDraft.preferredSlots;
+  const isDuoFlow = String(currentPackage?.lesson_mode || memberBookingDraft.lessonMode || "").toUpperCase() === "DUO";
+  const duoPartnerName = currentPackage?.duo_partner_name || memberBookingDraft.duoPartnerName || "";
+  const duoPartnerContact = currentPackage?.duo_partner_contact || memberBookingDraft.duoPartnerContact || "";
 
   const trainerQuery = useQuery({
     queryKey: ["trainer-options", params.slug, currentPackage?.package_id || memberBookingDraft.packageId, selectedDaysForCurrentPackage],
@@ -47,7 +50,6 @@ export default function BookingSummaryScreen() {
     : null;
   const requiredPreferenceSlots = memberBookingDraft.requiredPreferenceSlots || 0;
   const requiredTrainerFreeSlots = memberBookingDraft.requiredTrainerFreeSlots || 0;
-  const selectedSlotCount = memberBookingDraft.preferredSlots.length;
   const normalizedSelectedSlotCount = selectedDaysForCurrentPackage.length;
   const matchingSlotCount = Number(selectedTrainer?.matching_slots || 0);
   const missingPreferenceSlots = Math.max(0, requiredPreferenceSlots - normalizedSelectedSlotCount);
@@ -142,6 +144,8 @@ export default function BookingSummaryScreen() {
               package_price: currentPackage.package_price,
               preferred_slots: currentPackage.preferred_slots,
               weekly_frequency: currentPackage.weekly_frequency,
+              duo_partner_name: currentPackage.duo_partner_name,
+              duo_partner_contact: currentPackage.duo_partner_contact,
             },
           ]
         : undefined,
@@ -155,6 +159,8 @@ export default function BookingSummaryScreen() {
         : undefined,
       selected_sub_lesson:
         currentPackage?.selected_sub_lesson || memberBookingDraft.selectedSubLesson,
+      duo_partner_name: isDuoFlow ? duoPartnerName : undefined,
+      duo_partner_contact: isDuoFlow ? duoPartnerContact : undefined,
       note: memberIntent.note,
       availability_context: {
         source: "MEMBER_AVAILABILITY",
@@ -215,7 +221,7 @@ export default function BookingSummaryScreen() {
             },
             { label: "Akış", value: requiresTrainer ? selectedTrainer?.full_name || memberBookingDraft.trainerName || "-" : "Grup dersi katılımı" },
           ]}
-          footnote={isGroupFlow ? "Talep gönderildiğinde ilgili seans için katılım isteğin oluşturulur; onay ve ücret bilgisi salon tarafından netleştirilir." : "Göndermeden önce saat seçimlerini ve ihtiyaç özetini son kez kontrol et."}
+          footnote={isGroupFlow ? "Talep gönderildiğinde ilgili seans için katılım isteğin oluşturulur; onay ve ücret bilgisi salon tarafından netleştirilir." : isDuoFlow ? "Bu başvuru senin %50 ödeme payınla açılır; partner payı tamamlanmadan paket aktif ders akışına alınmaz." : "Göndermeden önce saat seçimlerini ve ihtiyaç özetini son kez kontrol et."}
         />
       </AnimatedEntrance>
 
@@ -234,6 +240,13 @@ export default function BookingSummaryScreen() {
             <>
               <Text style={styles.copy}>Bildirim kapsamı: {getGroupClassAudienceLabel(memberBookingDraft.groupClassFlow?.notificationScope)}</Text>
               <Text style={styles.copy}>Tahmini ücret: {formatGroupClassPrice(memberBookingDraft.packagePrice)}</Text>
+            </>
+          ) : null}
+          {isDuoFlow ? (
+            <>
+              <Text style={styles.copy}>Duo partner: {duoPartnerName || "-"}</Text>
+              <Text style={styles.copy}>Partner iletişim: {duoPartnerContact || "-"}</Text>
+              <Text style={styles.copy}>Ödeme planı: Senin payın %50, partner payı davet kabulünde tahsil edilir.</Text>
             </>
           ) : null}
         </SurfaceCard>
@@ -262,6 +275,7 @@ export default function BookingSummaryScreen() {
           {requiresTrainer && !hasTrainerSelection ? <Text style={styles.warning}>Onaya göndermeden önce bir eğitmen seçmelisin.</Text> : null}
           {requiresTrainer && missingTrainerSlots > 0 ? <Text style={styles.warning}>Eğitmen uygunluğu başvuru gönderildiğinde sistem tarafından yeniden kontrol edilecek.</Text> : null}
           {isGroupFlow ? <Text style={styles.success}>Katılım talebin, kapasite ve ücret kontrolüyle birlikte salon onayına iletilecek.</Text> : null}
+          {isDuoFlow ? <Text style={styles.success}>Partner bilgisi ve ikiye bölünmüş ödeme planı salon onayına birlikte iletilecek.</Text> : null}
           {missingPreferenceSlots === 0 && missingTrainerSlots === 0 ? <Text style={styles.success}>Başvurun sistem kurallarına uygun görünüyor.</Text> : null}
         </SurfaceCard>
       </AnimatedEntrance>
@@ -290,7 +304,7 @@ export default function BookingSummaryScreen() {
           {requiresTrainer && selectedTrainer ? (
             <>
               <Text style={styles.value}>{selectedTrainer.full_name}</Text>
-              <Text style={styles.copy}>{selectedTrainer.compatibility_note || "Seçtiğin paket için uygun görünüyor."}</Text>
+              <Text style={styles.copy}>{isDuoFlow ? "Bu eğitmen tek slotta iki kişilik duo dersi planlayacak." : selectedTrainer.compatibility_note || "Seçtiğin paket için uygun görünüyor."}</Text>
               <StatusBadge label="Onay Bekliyor" tone="warning" />
             </>
           ) : !requiresTrainer ? (

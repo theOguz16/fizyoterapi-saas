@@ -6,7 +6,8 @@
     "dev": "next dev -p 3939",
     "build": "next build",
     "start": "next start -p 3939",
-    "typecheck": "node -e \"console.log('apps/web typecheck, dependency install sonrası aktif edilecek')\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "preflight": "node ../../scripts/web-preflight.mjs",
     "lint": "next lint"
   },
   "dependencies": {

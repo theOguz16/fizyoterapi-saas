@@ -193,6 +193,8 @@ export default function DashboardPage() {
     loadBookings(visibleRangeRef.current.from, visibleRangeRef.current.to).catch(() =>
       toast.error("Birleşik takvim güncellenemedi")
     );
+    // loadBookings reads the current calendar filters; those filters are the intended refresh triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendarTrainerFilter, calendarStatusFilter, status]);
 
   useEffect(() => {

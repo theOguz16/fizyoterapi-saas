@@ -3,8 +3,11 @@ import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/providers/auth-session";
-import { getTrainerBookingFormOptionsApi } from "@/lib/mobile-api";
+import { RoleSwitchActions } from "@/components/role-switch-actions";
+import { AccountSecurityCard } from "@/components/account-security-card";
+import { getTrainerAssignedPackagesApi, type TrainerAssignedPackage } from "@/lib/mobile-api";
 import { getNotifıcationPreferences, setNotifıcationPreferences, type NotifıcationPreferences } from "@/lib/local-preferences";
+import { packageTypeLabel } from "@/lib/labels";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -27,11 +30,11 @@ export default function TrainerProfileScreen() {
   const router = useRouter();
   const { user, activeMembership, availablePersonas, membershipStatus, logout } = useSession();
   const [preferences, setPreferences] = useState<NotifıcationPreferences>(DEFAULT_PREFS);
-  const { data, isLoading } = useQuery({
-    queryKey: ["trainer-form-options"],
-    queryFn: getTrainerBookingFormOptionsApi,
+  const { data: assignedPackages = [], isLoading } = useQuery({
+    queryKey: ["trainer-assigned-packages"],
+    queryFn: getTrainerAssignedPackagesApi,
   });
-  const skills = data?.allowed_categories || [];
+  const lessonChips = useMemo(() => buildTrainerLessonChips(assignedPackages), [assignedPackages]);
 
   const personaLabel = useMemo(() => {
     const labels = (availablePersonas || []).map((role) => {
@@ -70,21 +73,21 @@ export default function TrainerProfileScreen() {
       </View>
 
       <View style={styles.metricsRow}>
-        <MetricCard label="Uzmanlık" value={skills.length || 0} hint="Tanımlı ders kategorisi" icon="spark" />
+        <MetricCard label="Verdiği ders" value={lessonChips.length || 0} hint="Trainer paket ataması" icon="spark" />
         <MetricCard label="Bildirim" value={preferences.weeklySummary ? "Açık" : "Kapalı"} hint="Haftalık özet" icon="notifications" />
       </View>
       <SurfaceCard>
-        <Text style={styles.section}>Uzmanlık alanları</Text>
+        <Text style={styles.section}>Verdiği dersler</Text>
         {isLoading ? (
-          <Text style={styles.copy}>Uzmanlıklar hazırlanıyor...</Text>
-        ) : skills.length > 0 ? (
-          <View style={styles.skillsRow}>
-            {skills.map((skill: string, index: number) => (
-              <StatusBadge key={index} label={skill} tone="info" />
+          <Text style={styles.copy}>Trainer dersleri hazırlanıyor...</Text>
+        ) : lessonChips.length > 0 ? (
+          <View style={styles.skillsRow} testID="trainer-profile-assigned-lessons">
+            {lessonChips.map((lesson) => (
+              <StatusBadge key={lesson} label={lesson} tone="info" />
             ))}
           </View>
         ) : (
-          <Text style={styles.copy}>Henüz tanımlı bir uzmanlık görünmüyor. Salon yöneticisi ilk kategori eşlemesini yaptığında burada listelenecek.</Text>
+          <Text style={styles.copy}>Henüz bu eğitmene atanmış ders görünmüyor. Admin paket tanımını trainera bağladığında PT, grup dersi veya ilgili ders adı burada mavi kutucuklarla listelenecek.</Text>
         )}
       </SurfaceCard>
 
@@ -122,6 +125,8 @@ export default function TrainerProfileScreen() {
         </View>
       </SurfaceCard>
 
+      <RoleSwitchActions />
+
       <SurfaceCard>
         <Text style={styles.section}>Bildirim tercihleri</Text>
         <ToggleRow label="3 saat önce" description="Yaklaşan ders hatırlatması" value={preferences.classReminderThreeHours} onValueChange={(value) => void updatePreference("classReminderThreeHours", value)} />
@@ -131,16 +136,32 @@ export default function TrainerProfileScreen() {
         <ToggleRow label="Ölçüm ve takip" description="Danışan ölçüm ve takip hatırlatmaları" value={preferences.measurementReminders} onValueChange={(value) => void updatePreference("measurementReminders", value)} />
       </SurfaceCard>
 
+      <AccountSecurityCard backTo="/(trainer)/profile" />
+
       <SurfaceCard>
         <Text style={styles.section}>Kısayollar</Text>
-        <ActionButton label="Eğitmen QR kodu" icon="qr" onPress={() => router.push("/(trainer)/qr" as never)} />
+        <ActionButton label="Eğitmen QR kodu" icon="qr" onPress={() => router.push({ pathname: "/(trainer)/qr", params: { backTo: "/(trainer)/profile" } } as never)} />
         <ActionButton label="Danışanlarımı aç" icon="members" onPress={() => router.push("/(trainer)/clients" as never)} />
-        <ActionButton label="Bugünün akışı" icon="today" variant="ghost" onPress={() => router.push("/(trainer)/today" as never)} />
+        <ActionButton label="Bugünün akışı" icon="today" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/today", params: { backTo: "/(trainer)/profile" } } as never)} />
       </SurfaceCard>
 
       <ActionButton testID="trainer-profile-logout" label="Çıkış yap" icon="logout" variant="danger" onPress={() => void logout()} />
     </AppShell>
   );
+}
+
+function buildTrainerLessonChips(packages: TrainerAssignedPackage[]) {
+  const labels = packages
+    .filter((item) => item && item.id)
+    .map((item) => {
+      const serviceName = String(item.service_name || item.lesson_category_label || item.title || item.package_name || "").trim();
+      const typeLabel = packageTypeLabel(item.package_type);
+      if (serviceName && typeLabel !== "-") return `${serviceName} • ${typeLabel}`;
+      return serviceName || typeLabel;
+    })
+    .filter((label) => label && label !== "-");
+
+  return Array.from(new Set(labels));
 }
 
 const styles = StyleSheet.create({

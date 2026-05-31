@@ -9,6 +9,7 @@ import { MetricCard } from "@/theme/components/metric-card";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { IntakeProgressCard } from "@/theme/components/intake-progress-card";
+import { FormField } from "@/theme/components/form-field";
 import { tokens } from "@/theme/tokens";
 
 export default function PackageDetailScreen() {
@@ -16,8 +17,12 @@ export default function PackageDetailScreen() {
   const params = useLocalSearchParams<{ slug: string; id: string; title: string; price: string; summary: string; credits: string; weeklyClassHours: string; requiredPreferenceSlots: string; requiredTrainerFreeSlots: string; subLessons?: string }>();
   const { memberBookingDraft, setMemberBookingDraft } = useAppFlow();
   const directToTimeSelection = memberBookingDraft.allowDropInBooking || memberBookingDraft.lessonMode === "GROUP";
+  const isDuoFlow = String(memberBookingDraft.lessonMode || "").toUpperCase() === "DUO";
   const subLessons = String(params.subLessons || "").split("||").map((item) => item.trim()).filter(Boolean);
   const selectedGroupLesson = memberBookingDraft.selectedSubLesson || (subLessons.length === 1 ? subLessons[0] : "");
+  const duoPartnerName = memberBookingDraft.duoPartnerName || "";
+  const duoPartnerContact = memberBookingDraft.duoPartnerContact || "";
+  const canContinue = !isDuoFlow || (duoPartnerName.trim().length >= 2 && duoPartnerContact.trim().length >= 5);
 
   return (
     <AppShell title={String(params.title || "Paket detayı")} subtitle="Paket kapsamını inceleyip senin için uygun akışla devam et." icon="package">
@@ -54,9 +59,51 @@ export default function PackageDetailScreen() {
           <DecisionRow icon="spark" text="Bu paket düzenli katılım planı oluşturmak isteyen üyeler için uygundur." />
           <DecisionRow icon={directToTimeSelection ? "clock" : "trainer"} text={directToTimeSelection ? "Grup dersi seçtikten sonra doğrudan uygun seansları görürsün." : "Önce eğitmenini seçer, ardından uygun saatlerini belirlersin."} />
           <DecisionRow icon="calendar" text={`Paket kuralı: haftada ${String(params.weeklyClassHours || "0")} ders ritmi için en az ${String(params.requiredPreferenceSlots || "0")} slot seçmelisin.`} />
-          <DecisionRow icon="trainer" text={`Onay için bu slotların en az ${String(params.requiredTrainerFreeSlots || "0")} tanesinde eğitmenin takvimi boş olmalı.`} />
+          <DecisionRow icon="trainer" text={isDuoFlow ? "İkili derste eğitmenin tek slotu ayrılır; iki katılımcı aynı derse bağlanır." : `Onay için bu slotların en az ${String(params.requiredTrainerFreeSlots || "0")} tanesinde eğitmenin takvimi boş olmalı.`} />
+          {isDuoFlow ? <DecisionRow icon="spark" text="Bu başvuruda senden paketin yarısı tahsil edilir. Partnerin daveti kabul edip kendi payını tamamladığında ikili paket aktifleşir." /> : null}
           {directToTimeSelection ? <DecisionRow icon="calendar" text="Sadece seçtiğin grup dersine uygun gün ve seanslar gösterilir. Katılım talebin ücret onayıyla birlikte değerlendirilir." /> : null}
         </View>
+        {isDuoFlow ? (
+          <View style={styles.subLessonWrap}>
+            <Text style={styles.section}>Duo partner bilgisi</Text>
+            <FormField
+              label="Partner adı"
+              value={duoPartnerName}
+              onChangeText={(value) =>
+                setMemberBookingDraft({
+                  ...memberBookingDraft,
+                  duoPartnerName: value,
+                  selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
+                    ...pkg,
+                    duo_partner_name: value,
+                  })),
+                })
+              }
+              placeholder="Örn. Ayşe Yılmaz"
+              helper="Partner değişimi dersler başladıktan sonra salon onayıyla yapılır."
+              testID="duo-partner-name-field"
+            />
+            <FormField
+              label="Partner telefon veya e-posta"
+              value={duoPartnerContact}
+              onChangeText={(value) =>
+                setMemberBookingDraft({
+                  ...memberBookingDraft,
+                  duoPartnerContact: value,
+                  selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
+                    ...pkg,
+                    duo_partner_contact: value,
+                  })),
+                })
+              }
+              placeholder="Telefon veya e-posta"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              helper="Salon bu bilgiyle ikinci kişiye ödeme ve katılım daveti gönderir."
+              testID="duo-partner-contact-field"
+            />
+          </View>
+        ) : null}
         {directToTimeSelection && subLessons.length > 0 ? (
           <View style={styles.subLessonWrap}>
             <Text style={styles.section}>Katılmak istediğin grup dersini seç</Text>
@@ -86,8 +133,10 @@ export default function PackageDetailScreen() {
       </SurfaceCard>
 
       <ActionButton
+        testID="package-detail-continue"
         label={directToTimeSelection ? "Saat seçimine geç" : "Eğitmen seçimine geç"}
         icon="spark"
+        disabled={!canContinue}
         onPress={() => {
           const selectedSubLesson = selectedGroupLesson;
           setMemberBookingDraft({
@@ -101,9 +150,13 @@ export default function PackageDetailScreen() {
             requiredPreferenceSlots: Number(params.requiredPreferenceSlots || 0),
             requiredTrainerFreeSlots: Number(params.requiredTrainerFreeSlots || 0),
             selectedSubLesson,
+            duoPartnerName,
+            duoPartnerContact,
             selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
               ...pkg,
               selected_sub_lesson: selectedSubLesson,
+              duo_partner_name: duoPartnerName,
+              duo_partner_contact: duoPartnerContact,
             })),
             groupClassFlow: directToTimeSelection
               ? {

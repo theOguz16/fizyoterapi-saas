@@ -1,27 +1,37 @@
 {
   "expo": {
-    "name": "Clinerva",
-    "slug": "clinerva-mobile",
-    "scheme": "clinerva",
+    "name": "FizyoFlow",
+    "slug": "fizyoflow-mobile",
+    "scheme": "fizyoflow",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#0B1220"
+      "image": "./assets/splash-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7FAF6"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.clinerva.mobile",
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fizyoflow.mobile",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Clinerva, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.",
-        "NSPhotoLibraryAddUsageDescription": "Clinerva, salon QR görsellerini galeriye kaydetmek için izin ister."
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "FizyoFlow, salon QR ve üye giriş kodlarını okutmak için kameraya erişim ister.",
+        "NSLocationWhenInUseUsageDescription": "FizyoFlow, yakınındaki salonları göstermek ve konuma uygun öneriler sunmak için konumuna erişim ister.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "FizyoFlow, yalnızca uygulama açıkken konumunu yakın salon önerileri için kullanır.",
+        "NSLocationAlwaysUsageDescription": "FizyoFlow arka planda konum takibi yapmaz; bu izin sistem uyumluluğu için tanımlıdır.",
+        "NSMicrophoneUsageDescription": "FizyoFlow mikrofon kaydı yapmaz; kamera modülünün sistem gereksinimi için bu izin açıklaması tanımlıdır.",
+        "NSFaceIDUsageDescription": "FizyoFlow, hesabını güvenli tutmak için desteklenen cihazlarda Face ID kullanabilir.",
+        "NSPhotoLibraryUsageDescription": "FizyoFlow, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.",
+        "NSPhotoLibraryAddUsageDescription": "FizyoFlow, salon QR görsellerini galeriye kaydetmek için izin ister."
       }
     },
     "android": {
-      "package": "com.clinerva.mobile",
+      "package": "com.fizyoflow.mobile",
       "permissions": [
         "READ_MEDIA_IMAGES",
         "READ_EXTERNAL_STORAGE",
@@ -38,8 +48,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Clinerva, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.",
-          "savePhotosPermission": "Clinerva, salon QR görsellerini galeriye kaydetmek için izin ister.",
+          "photosPermission": "FizyoFlow, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.",
+          "savePhotosPermission": "FizyoFlow, salon QR görsellerini galeriye kaydetmek için izin ister.",
           "isAccessMediaLocationEnabled": false,
           "granularPermissions": [
             "photo"

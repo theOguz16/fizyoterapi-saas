@@ -18,6 +18,8 @@ function buildFallbackPackage(draft: MemberBookingDraft): DraftPackageSelection 
     trainer_id: draft.trainerId,
     trainer_name: draft.trainerName,
     selected_sub_lesson: draft.selectedSubLesson,
+    duo_partner_name: draft.duoPartnerName,
+    duo_partner_contact: draft.duoPartnerContact,
   };
 }
 
@@ -67,6 +69,8 @@ export function applyCurrentPackageToDraft(draft: MemberBookingDraft, packageId:
     trainerId: currentPackage.trainer_id || "",
     trainerName: currentPackage.trainer_name || "",
     selectedSubLesson: currentPackage.selected_sub_lesson || "",
+    duoPartnerName: currentPackage.duo_partner_name || "",
+    duoPartnerContact: currentPackage.duo_partner_contact || "",
   };
 }
 

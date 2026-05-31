@@ -3,9 +3,10 @@
 import "dotenv/config";
 import "reflect-metadata";
 import { AppDataSource } from "../data-source";
+import { ScriptSafetyService } from "../services/script-safety.service";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entities/tenant.entity";
 import { User, UserRole } from "../entities/user.entity";
-import { SalonProfile } from "../entities/salon-profile.entity";
+import { ManagedGrowthStatus, SalonProfile } from "../entities/salon-profile.entity";
 import { Package, PackageType } from "../entities/package.entity";
 import { UserPackage } from "../entities/user-package.entity";
 import { ClassSession, LessonCategory, SessionStatus, SessionType } from "../entities/class-session.entity";
@@ -27,7 +28,7 @@ import { NotificationEvent } from "../entities/notification-event.entity";
 import { DeviceToken } from "../entities/device-token.entity";
 import { RetentionScore } from "../entities/retention-score.entity";
 import { TrainerMemberNote } from "../entities/trainer-member-note.entity";
-import { SalonImage } from "../entities/salon-image.entity";
+import { SalonImage, SalonImageType } from "../entities/salon-image.entity";
 import { Account } from "../entities/account.entity";
 import { MembershipPaymentStatus, SalonMembership, SalonMembershipStatus } from "../entities/salon-membership.entity";
 import { SalonApplication } from "../entities/salon-application.entity";
@@ -36,8 +37,8 @@ import { hashPassword } from "../services/password.service";
 const DEMO_SLUG = "demo-salon";
 const EXTRA_SALONS = [
   {
-    slug: "clinerva-kadikoy",
-    name: "Clinerva Kadıköy",
+    slug: "fizyoflow-kadikoy",
+    name: "FizyoFlow Kadıköy",
     city: "İstanbul",
     district: "Kadıköy",
     heroTitle: "Kadıköy'de kişiye özel fizyoterapi ve pilates",
@@ -45,8 +46,8 @@ const EXTRA_SALONS = [
     price: "650",
   },
   {
-    slug: "clinerva-besiktas",
-    name: "Clinerva Beşiktaş",
+    slug: "fizyoflow-besiktas",
+    name: "FizyoFlow Beşiktaş",
     city: "İstanbul",
     district: "Beşiktaş",
     heroTitle: "Beşiktaş'ta yoğun tempoya uygun esnek ders planı",
@@ -130,7 +131,7 @@ async function upsertTenant(slug: string, name: string) {
       slug,
       name,
       timezone: "Europe/Istanbul",
-      qr_code: `CLN-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}-001`,
+      qr_code: `FYF-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}-001`,
       is_active: true,
       review_status: TenantReviewStatus.PUBLISHED,
       subscription_status: TenantSubscriptionStatus.ACTIVE,
@@ -140,7 +141,7 @@ async function upsertTenant(slug: string, name: string) {
     tenant.slug = slug;
     tenant.name = name;
     tenant.timezone = "Europe/Istanbul";
-    tenant.qr_code = tenant.qr_code || `CLN-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}-001`;
+    tenant.qr_code = tenant.qr_code || `FYF-${slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-")}-001`;
     tenant.is_active = true;
     tenant.review_status = TenantReviewStatus.PUBLISHED;
     tenant.subscription_status = TenantSubscriptionStatus.ACTIVE;
@@ -161,6 +162,23 @@ async function createSalonProfile(
     district,
     address,
     services,
+    phone = "+905555555555",
+    whatsapp = "+905555555555",
+    instagram = "https://instagram.com/fizyoflow",
+    googleMapsUrl = "https://maps.google.com/?q=Fizyoflow",
+    googleBusinessUrl = "https://business.google.com/",
+    seoTitle,
+    seoDescription,
+    serviceArea,
+    targetAudience,
+    brandVoice = "Sakin, güven veren, klinik ama sıcak",
+    campaignNote = "İlk değerlendirme ve uygun program bilgisi için WhatsApp üzerinden hızlıca iletişime geçin.",
+    reviewUrl = "https://g.page/r/fizyoflow/review",
+    galleryUrls = [
+      "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=1200&q=82",
+      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=82",
+      "https://images.unsplash.com/photo-1597764699517-22a9dbb68eaa?auto=format&fit=crop&w=1200&q=82",
+    ],
   }: {
     slug: string;
     heroTitle: string;
@@ -170,6 +188,19 @@ async function createSalonProfile(
     district: string;
     address: string;
     services: Array<{ title: string; starting_price: string }>;
+    phone?: string;
+    whatsapp?: string;
+    instagram?: string;
+    googleMapsUrl?: string;
+    googleBusinessUrl?: string;
+    seoTitle?: string;
+    seoDescription?: string;
+    serviceArea?: string[];
+    targetAudience?: string;
+    brandVoice?: string;
+    campaignNote?: string;
+    reviewUrl?: string;
+    galleryUrls?: string[];
   }
 ) {
   const repo = AppDataSource.getRepository(SalonProfile);
@@ -179,16 +210,39 @@ async function createSalonProfile(
     hero_title: heroTitle,
     hero_subtitle: heroSubtitle,
     about_text: aboutText,
+    seo_title: seoTitle || `${heroTitle} | ${district} Fizyoterapi ve Klinik Pilates`,
+    seo_description:
+      seoDescription ||
+      `${district} bölgesinde fizyoterapi, klinik pilates ve hareket odaklı takip için ${heroTitle}. WhatsApp ile bilgi alın.`,
+    google_business_url: googleBusinessUrl,
+    google_maps_url: googleMapsUrl,
+    business_category: "Fizyoterapi Kliniği",
+    service_area: serviceArea || [district, city],
+    managed_growth_status: ManagedGrowthStatus.LIVE,
+    digital_brief: {
+      logo_url: "https://dummyimage.com/240x240/6f9274/ffffff&text=F",
+      gallery_urls: galleryUrls,
+      working_hours_note: "Hafta içi 09:00-20:00, Cumartesi 10:00-16:00",
+      review_url: reviewUrl,
+      campaign_note: campaignNote,
+      target_audience: targetAudience || `${district} ve çevresinde fizyoterapi, postür ve kontrollü hareket desteği arayan danışanlar`,
+      brand_voice: brandVoice,
+      missing_items: [],
+      internal_notes: "Seed demo vitrini; canlı klinik verisiyle değiştirilebilir.",
+      approved_at: new Date().toISOString(),
+    },
     why_us: [
-      { title: "Kişiselleştirilmiş takip" },
-      { title: "Şeffaf ders planı" },
-      { title: "Ölçülebilir gelişim" },
+      { title: "Kişiselleştirilmiş takip", desc: "Değerlendirme, paket ve ders akışı danışanın ihtiyacına göre planlanır." },
+      { title: "Şeffaf ders planı", desc: "Takvim, paket ve eğitmen bilgileri sade bir ritimde takip edilir." },
+      { title: "Ölçülebilir gelişim", desc: "Seans ve ölçüm verileri düzenli ilerlemeyi görünür kılar." },
     ],
     services,
     location: {
       city,
       district,
+      phone,
       address,
+      maps_embed_url: googleMapsUrl,
       campaigns: {
         referral_campaigns: [
           {
@@ -207,9 +261,13 @@ async function createSalonProfile(
         },
       },
     },
-    social_links: {},
-    theme: "clinerva-v2",
-    primary_color: "#0EA5E9",
+    social_links: {
+      instagram,
+      whatsapp,
+      website: `https://${slug}.fizyoflow.com`,
+    },
+    theme: "fizyoflow-v2",
+    primary_color: "#6f9274",
     business_hours: {
       timezone: "Europe/Istanbul",
       working_days: [1, 2, 3, 4, 5, 6],
@@ -223,6 +281,21 @@ async function createSalonProfile(
   });
 
   await repo.save(profile);
+
+  if (galleryUrls.length) {
+    const imageRepo = AppDataSource.getRepository(SalonImage);
+    await imageRepo.save(
+      galleryUrls.map((url, index) =>
+        imageRepo.create({
+          tenant_id: tenantId,
+          type: SalonImageType.GALLERY,
+          url,
+          sort_order: index,
+          meta: { source: "seed", alt: `${heroTitle} galeri ${index + 1}` },
+        })
+      )
+    );
+  }
 }
 
 async function createCatalogSalon(input: {
@@ -318,6 +391,7 @@ async function createUser(tenantId: string, params: SeedUser) {
 }
 
 async function main() {
+  ScriptSafetyService.assertNonProductionScript("seed");
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required");
   }
@@ -329,9 +403,9 @@ async function main() {
   await purgeTenantData(tenant.id);
   await createSalonProfile(tenant.id, {
     slug: DEMO_SLUG,
-    heroTitle: "Clinerva ile Bilimsel Fizyoterapi Takibi",
+    heroTitle: "FizyoFlow ile Bilimsel Fizyoterapi Takibi",
     heroSubtitle: "Uzman ekip, düzenli ölçüm ve sürdürülebilir gelişim planı",
-    aboutText: "Clinerva, klinik operasyonlarını tek panelden yönetmek için tasarlanmış kurumsal fizyoterapi platformudur.",
+    aboutText: "FizyoFlow, klinik operasyonlarını tek panelden yönetmek için tasarlanmış kurumsal fizyoterapi platformudur.",
     city: "İstanbul",
     district: "Kadıköy",
     address: "Kadıköy, İstanbul",
@@ -800,6 +874,7 @@ async function main() {
     AppDataSource.getRepository(Referral).create({
       tenant_id: tenant.id,
       inviter_member_id: member.id,
+      invitee_name: "Demo Arkadaş",
       invitee_phone_or_email: "friend@demo.local",
       code: "REF-DEMO-001",
       status: ReferralStatus.REWARDED,

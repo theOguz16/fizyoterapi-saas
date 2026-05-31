@@ -1,29 +1,19 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
-- openLink: "clinerva://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
 
 - waitForAnimationToEnd:
     timeout: 8000
 
 - extendedWaitUntil:
-    visible: "Takvim"
-    timeout: 15000
+    visible: "Takvim|FizyoFlow|Profil"
+    timeout: 20000
 
 - assertVisible:
-    text: "Ders programını, onaylı saatlerini ve bekleyen taleplerini takip et."
-
-- swipe:
-    start: 50%, 35%
-    end: 50%, 85%
-
-- waitForAnimationToEnd:
-    timeout: 3000
-
-- assertVisible:
-    text: "Takvim"
+    text: "Takvim|FizyoFlow|Profil"

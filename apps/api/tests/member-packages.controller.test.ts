@@ -5,6 +5,7 @@ import { createMockResponse } from "./helpers/route-chain";
 
 describe("member packages controller", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -95,10 +96,29 @@ describe("member packages controller", () => {
     const userPackageRepo = {
       createQueryBuilder: vi.fn().mockReturnValue(queryBuilder),
     };
+    const bookingRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        leftJoinAndMapOne: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      }),
+    };
+    const notificationEventRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      }),
+    };
 
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
       if (name.includes("UserPackage")) return userPackageRepo as any;
+      if (name.includes("Booking")) return bookingRepo as any;
+      if (name.includes("NotificationEvent")) return notificationEventRepo as any;
       return {} as any;
     });
 
@@ -135,6 +155,86 @@ describe("member packages controller", () => {
         }),
       ],
     });
-    vi.useRealTimers();
+  });
+
+  it("links pending group class requests when notification payload is JSON text", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-23T09:00:00.000Z"));
+
+    const userPackageRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        leftJoinAndMapOne: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([
+          {
+            id: "up-1",
+            package_id: "pkg-1",
+            remaining_credits: 8,
+            is_active: true,
+            created_at: "2026-04-20T09:00:00.000Z",
+            starts_at: "2026-04-20T09:00:00.000Z",
+            expires_at: "2026-05-20T09:00:00.000Z",
+            packageDetails: { id: "pkg-1", title: "Group Pack", type: "GROUP", total_credits: 8, display_price: 4200 },
+          },
+        ]),
+      }),
+    };
+    const bookingRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        leftJoinAndMapOne: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      }),
+    };
+    const notificationEventRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([
+          {
+            id: "evt-1",
+            payload: JSON.stringify({
+              package_id: "pkg-1",
+              selected_sub_lesson: "Mat Pilates",
+              selected_days: [
+                {
+                  group_class_id: "session-1",
+                  starts_at: "2026-04-24T09:00:00.000Z",
+                  ends_at: "2026-04-24T10:00:00.000Z",
+                },
+              ],
+            }),
+          },
+        ]),
+      }),
+    };
+
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = entity?.name || "";
+      if (name.includes("UserPackage")) return userPackageRepo as any;
+      if (name.includes("Booking")) return bookingRepo as any;
+      if (name.includes("NotificationEvent")) return notificationEventRepo as any;
+      return {} as any;
+    });
+
+    const res = createMockResponse();
+    await MemberPackagesController.listMyPackages(
+      { tenantId: "tenant-1", auth: { sub: "member-1", accountId: "account-1" } } as any,
+      res as any
+    );
+
+    expect(res.body.data[0].linked_group_classes).toEqual([
+      expect.objectContaining({
+        request_id: "evt-1",
+        session_id: "session-1",
+        title: "Mat Pilates",
+        status: "PENDING",
+      }),
+    ]);
   });
 });

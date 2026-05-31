@@ -1,43 +1,12 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
-- assertVisible:
-    id: "welcome-login-button"
-
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-
-- assertVisible: "Hesabına giriş yap"
-
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-
-- inputText: "elisauyar@gmail.com"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-
-- inputText: "trainer123"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-submit-button"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- openLink: "clinerva://(trainer)/group-classes"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fgroup-classes"
 
 - waitForAnimationToEnd:
     timeout: 5000
@@ -54,7 +23,8 @@ appId: com.clinerva.mobile
 
 - inputText: "E2E Aksam Pilates"
 
-- hideKeyboard
+- tapOn:
+    point: "50%,25%"
 
 - scrollUntilVisible:
     element:
@@ -114,4 +84,4 @@ appId: com.clinerva.mobile
 
 - assertVisible: "E2E Aksam Pilates"
 
-- assertVisible: "Onay Bekliyor"
+- assertVisible: "Onay bekliyor"

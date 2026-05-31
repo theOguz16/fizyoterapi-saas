@@ -3,8 +3,10 @@
 import "dotenv/config";
 import "reflect-metadata";
 import { AppDataSource } from "../data-source";
+import { ScriptSafetyService } from "../services/script-safety.service";
 
 async function main() {
+  ScriptSafetyService.assertNonProductionScript("reset-demo");
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required");
   }

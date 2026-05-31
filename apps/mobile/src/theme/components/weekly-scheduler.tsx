@@ -400,7 +400,7 @@ export function WeeklyScheduler({
   }, [fade, selectedDateKey, weekStart]);
 
   const selectedDay = weekDays.find((day) => day.key === selectedDateKey) || weekDays[0];
-  const weekDayKeys = new Set(weekDays.map((day) => day.key));
+  const weekDayKeys = useMemo(() => new Set(weekDays.map((day) => day.key)), [weekDays]);
   const selectedDayWorking = selectedDay ? workingDays.includes(isoDayNumber(selectedDay.date)) : true;
 
   useEffect(() => {
@@ -632,7 +632,6 @@ export function WeeklyScheduler({
                           slotHeight={SLOT_HEIGHT}
                           startMinutes={effectiveStartMinutes}
                           slotMinutes={effectiveSlotMinutes}
-                          currentDayKey={selectedDateKey}
                           canDropSlotKeys={canDropSlotKeys}
                           draggable={Boolean(onEventDrop) && event.draggable !== false}
                           onPress={event.onPress}
@@ -654,7 +653,6 @@ export function WeeklyScheduler({
 function SchedulerEventCard({
   event,
   currentDayIndex,
-  currentDayKey,
   currentSlotIndex,
   weekDays,
   slotCount,
@@ -668,7 +666,6 @@ function SchedulerEventCard({
 }: {
   event: WeeklySchedulerEvent;
   currentDayIndex: number;
-  currentDayKey: string;
   currentSlotIndex: number;
   weekDays: WeekDay[];
   slotCount: number;
@@ -738,7 +735,6 @@ function SchedulerEventCard({
       startMinutes,
       translate,
       weekDays,
-      currentDayKey,
       canDropSlotKeys,
     ]
   );

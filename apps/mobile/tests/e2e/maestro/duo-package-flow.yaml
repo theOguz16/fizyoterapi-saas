@@ -1,0 +1,18 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "fizyoflow://e2e-reset"
+
+- openLink: "fizyoflow:///e2e-login?skipAuth=1&redirect=%2F%28intake-member%29%2Fe2e-duo-flow"
+
+- extendedWaitUntil:
+    visible: "Duo Maestro senaryosu geçti"
+    timeout: 60000
+
+- assertVisible: "Yeni partner kayıt daveti"
+- assertVisible: "Mevcut hesapla davet kabulü"
+- assertVisible: "Üye, eğitmen ve admin takvim doğrulaması"
+- assertVisible: "Duo ders takvimlerde görünüyor"

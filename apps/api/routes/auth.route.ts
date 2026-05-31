@@ -3,10 +3,12 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/auth.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { authLoginRateLimit, authRegisterRateLimit } from "../middlewares/rate-limit.middleware";
 
 export const authRoutes = Router();
 
-authRoutes.post("/register", AuthController.register);
-authRoutes.post("/login", AuthController.login);
+authRoutes.post("/register", authRegisterRateLimit, AuthController.register);
+authRoutes.post("/login", authLoginRateLimit, AuthController.login);
 authRoutes.post("/logout", AuthController.logout);
+authRoutes.post("/switch-role", authMiddleware, AuthController.switchRole);
 authRoutes.get("/me", authMiddleware, AuthController.me);

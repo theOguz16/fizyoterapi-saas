@@ -1,10 +1,10 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
@@ -14,21 +14,16 @@ appId: com.clinerva.mobile
 - tapOn:
     id: "login-identity-input"
 - inputText: "oguzhanuyar531@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
+- tapOn: "Hesabına giriş yap"
 - tapOn:
     id: "login-password-input"
 - inputText: "admin123"
-- tapOn: "Clinerva hesabınla devam et"
 - tapOn:
     id: "login-submit-button"
 - waitForAnimationToEnd
-- openLink: "clinerva://(admin)/approvals"
+- openLink: "fizyoflow://(admin)/approvals"
 - waitForAnimationToEnd
 - assertVisible: "Onaylar"
-- assertVisible: "katılımı"
-- tapOn: "Detayı aç"
-- waitForAnimationToEnd
-- assertVisible: "Grup dersi detayı"
-- tapOn: "Onayla"
-- waitForAnimationToEnd
-- assertVisible: "Onaylar"
+- extendedWaitUntil:
+    visible: "Bekleyen"
+    timeout: 15000

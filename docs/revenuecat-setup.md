@@ -4,7 +4,7 @@ Bu repo tarafinda kod entegrasyonu hazirlandi. Dashboard ve store tarafinda su i
 
 ## RevenueCat
 
-- Project: `Clinerva`
+- Project: `FizyoFlow`
 - Entitlement: `clinic_pro`
 - Offering: `default`
 - Packages:
@@ -14,11 +14,11 @@ Bu repo tarafinda kod entegrasyonu hazirlandi. Dashboard ve store tarafinda su i
 ## Store product IDs
 
 - iOS:
-  - `clinerva_admin_monthly`
-  - `clinerva_admin_yearly`
+  - `fizyoflow_admin_monthly`
+  - `fizyoflow_admin_yearly`
 - Android:
-  - `clinerva_admin_monthly`
-  - `clinerva_admin_yearly`
+  - `fizyoflow_admin_monthly`
+  - `fizyoflow_admin_yearly`
 
 ## Trial modeli
 

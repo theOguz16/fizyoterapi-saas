@@ -1,6 +1,7 @@
 // Bu controller member tarafindaki measurements.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import { IsNull } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { Attendance } from "../../entities/attendance.entity";
@@ -24,7 +25,7 @@ export class MemberMeasurementsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "measurement",
       target_id: measurement.id,
       metadata: {
@@ -126,7 +127,7 @@ export class MemberMeasurementsController {
       }
 
       const rows = await AppDataSource.getRepository(Measurement).find({
-        where: { tenant_id: tenantId, member_id: memberId },
+        where: { tenant_id: tenantId, member_id: memberId, deleted_at: IsNull() },
         order: { measured_at: "DESC" },
       });
 
@@ -148,7 +149,7 @@ export class MemberMeasurementsController {
       }
 
       const rows = await AppDataSource.getRepository(Measurement).find({
-        where: { tenant_id: tenantId, member_id: memberId },
+        where: { tenant_id: tenantId, member_id: memberId, deleted_at: IsNull() },
         order: { measured_at: "ASC" },
       });
 

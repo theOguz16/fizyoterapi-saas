@@ -31,11 +31,19 @@ type PurchaseContext = {
     package_id: string;
     package_title?: string | null;
     package_price?: number | string | null;
+    duo_partner_name?: string | null;
+    duo_partner_contact?: string | null;
   }>;
   package_title?: string | null;
   trainer_id?: string | null;
   trainer_name?: string | null;
   selected_sub_lesson?: string | null;
+  lesson_mode?: string | null;
+  duo_partner_name?: string | null;
+  duo_partner_contact?: string | null;
+  duo_invite_url?: string | null;
+  duo_invite_token?: string | null;
+  duo_payment?: Record<string, unknown> | null;
   selected_days: PurchaseSlot[];
   note?: string | null;
   availability_context?: {
@@ -63,8 +71,16 @@ function isPurchaseSlotArray(raw: unknown): raw is PurchaseSlot[] {
   return Array.isArray(raw);
 }
 
+type NormalizedSelectedPackage = {
+  package_id: string;
+  package_title: string | null;
+  package_price: string | number | null;
+  duo_partner_name: string | null;
+  duo_partner_contact: string | null;
+};
+
 function normalizeSelectedPackages(raw: unknown) {
-  if (!Array.isArray(raw)) return [] as Array<{ package_id: string; package_title: string | null; package_price: string | number | null }>;
+  if (!Array.isArray(raw)) return [] as NormalizedSelectedPackage[];
   return raw
     .map((item) => {
       const row = item && typeof item === "object" ? (item as Record<string, unknown>) : null;
@@ -75,13 +91,18 @@ function normalizeSelectedPackages(raw: unknown) {
         package_title: typeof row?.package_title === "string" ? row.package_title : null,
         package_price:
           typeof row?.package_price === "number" || typeof row?.package_price === "string" ? row.package_price : null,
+        duo_partner_name: typeof row?.duo_partner_name === "string" ? row.duo_partner_name : null,
+        duo_partner_contact: typeof row?.duo_partner_contact === "string" ? row.duo_partner_contact : null,
       };
     })
-    .filter((row): row is { package_id: string; package_title: string | null; package_price: string | number | null } => row !== null);
+    .filter((row): row is NormalizedSelectedPackage => row !== null);
 }
 
 export class MobilePurchaseSyncService {
   static normalizePurchaseContext(raw: unknown): PurchaseContext | null {
+    if (typeof raw === "string") {
+      return MobilePurchaseSyncService.normalizePurchaseContext(safeParseJson<Record<string, unknown>>(raw));
+    }
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
     const payload = raw as Record<string, unknown>;
     const primaryPackageId = typeof payload.package_id === "string" ? payload.package_id : "";
@@ -104,6 +125,15 @@ export class MobilePurchaseSyncService {
       trainer_id: typeof payload.trainer_id === "string" ? payload.trainer_id : null,
       trainer_name: typeof payload.trainer_name === "string" ? payload.trainer_name : null,
       selected_sub_lesson: typeof payload.selected_sub_lesson === "string" ? payload.selected_sub_lesson : null,
+      lesson_mode: typeof payload.lesson_mode === "string" ? payload.lesson_mode : null,
+      duo_partner_name: typeof payload.duo_partner_name === "string" ? payload.duo_partner_name : null,
+      duo_partner_contact: typeof payload.duo_partner_contact === "string" ? payload.duo_partner_contact : null,
+      duo_invite_url: typeof payload.duo_invite_url === "string" ? payload.duo_invite_url : null,
+      duo_invite_token: typeof payload.duo_invite_token === "string" ? payload.duo_invite_token : null,
+      duo_payment:
+        payload.duo_payment && typeof payload.duo_payment === "object" && !Array.isArray(payload.duo_payment)
+          ? (payload.duo_payment as Record<string, unknown>)
+          : null,
       selected_days: payload.selected_days,
       note: typeof payload.note === "string" ? payload.note : null,
       availability_context:
@@ -195,12 +225,11 @@ export class MobilePurchaseSyncService {
       .orderBy("event.created_at", "DESC")
       .getOne();
 
-    if (!event?.payload || typeof event.payload !== "object") {
+    if (!event?.payload) {
       return null;
     }
 
-    const payload = event.payload as Record<string, unknown>;
-    return MobilePurchaseSyncService.normalizePurchaseContext(payload);
+    return MobilePurchaseSyncService.normalizePurchaseContext(event.payload);
   }
 
   static summarizePurchaseContext(context: PurchaseContext | null) {
@@ -222,6 +251,7 @@ export class MobilePurchaseSyncService {
           : null,
       context.trainer_name ? `Egitmen: ${context.trainer_name}` : context.trainer_id ? `Egitmen: ${context.trainer_id}` : null,
       context.selected_sub_lesson ? `Alt ders: ${context.selected_sub_lesson}` : null,
+      context.lesson_mode === "DUO" ? `Duo partner: ${context.duo_partner_name || "Partner bekleniyor"}` : null,
       context.selected_days.length ? `Tercih: ${context.selected_days.length} slot` : null,
       firstSlots.length ? `Ornek: ${firstSlots.join(", ")}` : null,
     ].filter(Boolean);
@@ -300,62 +330,82 @@ export class MobilePurchaseSyncService {
     for (const selectedPackageId of packageIds) {
       const packageRow = packageMap.get(selectedPackageId);
       if (!packageRow) continue;
-      const selectedPrice =
-        context.selected_packages?.find((item) => item.package_id === selectedPackageId)?.package_price ?? packageRow.display_price ?? null;
-      const existingUserPackage = await userPackageRepo.findOne({
-        where: {
-          tenant_id: tenantId,
-          user_id: memberUser.id,
-          package_id: packageRow.id,
-          is_active: true,
-        },
-        order: { created_at: "DESC" as never },
-      });
 
-      if (existingUserPackage) {
-          const sameRequestAlreadyApplied =
-            Boolean(requestId) && existingUserPackage.source_request_id === requestId;
-
-          if (!sameRequestAlreadyApplied) {
-            existingUserPackage.remaining_credits += Math.max(0, Number(packageRow.total_credits || 0));
-          }
-
-          existingUserPackage.starts_at = existingUserPackage.starts_at || startsAt;
-          existingUserPackage.expires_at = expiresAt ?? existingUserPackage.expires_at;
-          existingUserPackage.latest_package_price = packageRow.display_price ?? existingUserPackage.latest_package_price ?? null;
-          existingUserPackage.purchase_price = String(selectedPrice ?? existingUserPackage.purchase_price ?? packageRow.display_price ?? "");
-          existingUserPackage.package_snapshot = {
-            title: packageRow.title,
-            type: packageRow.type,
-            total_credits: packageRow.total_credits,
-            duration_days: packageRow.duration_days,
-            rules: packageRow.rules,
-          };
-          existingUserPackage.source_request_id = requestId || existingUserPackage.source_request_id || null;
-          await userPackageRepo.save(existingUserPackage);
-        }else {
-        await userPackageRepo.save(
-          userPackageRepo.create({
+      if (requestId) {
+        const alreadyApplied = await userPackageRepo.findOne({
+          where: {
             tenant_id: tenantId,
             user_id: memberUser.id,
             package_id: packageRow.id,
-            remaining_credits: packageRow.total_credits,
-            starts_at: startsAt,
-            expires_at: packageRow.duration_days > 0 ? expiresAt : undefined,
-            is_active: true,
-            purchase_price: selectedPrice === null || selectedPrice === undefined ? null : String(selectedPrice),
-            latest_package_price: packageRow.display_price ?? null,
-            package_snapshot: {
-              title: packageRow.title,
-              type: packageRow.type,
-              total_credits: packageRow.total_credits,
-              duration_days: packageRow.duration_days,
-              rules: packageRow.rules,
-            },
-            source_request_id: requestId || null,
-          })
-        );
+            source_request_id: requestId,
+          },
+        });
+
+        if (alreadyApplied) {
+          continue;
+        }
       }
+
+      const selectedPrice =
+        context.selected_packages?.find((item) => item.package_id === selectedPackageId)?.package_price ??
+        packageRow.display_price ??
+        null;
+      const packageRules = packageRow.rules && typeof packageRow.rules === "object" ? (packageRow.rules as Record<string, unknown>) : {};
+      const lessonMode = String(packageRules.lesson_mode ?? (packageRow.capacity > 2 ? "GROUP" : packageRow.capacity === 2 ? "DUO" : "PRIVATE")).toUpperCase();
+      const selectedPackageContext = context.selected_packages?.find((item) => item.package_id === selectedPackageId);
+      const isDuoPackage = lessonMode === "DUO" || String(context.lesson_mode || "").toUpperCase() === "DUO";
+      const duoSnapshot = isDuoPackage
+        ? {
+            status: "AWAITING_PARTNER_PAYMENT",
+            partner_name: selectedPackageContext?.duo_partner_name || context.duo_partner_name || null,
+            partner_contact: selectedPackageContext?.duo_partner_contact || context.duo_partner_contact || null,
+            invite_url: context.duo_invite_url || null,
+            invite_token: context.duo_invite_token || null,
+            payment: {
+              status: "AWAITING_PARTNER_PAYMENT",
+              ...(context.duo_payment || {}),
+            },
+          }
+        : null;
+
+      const packageStartsAt = new Date();
+
+      let packageExpiresAt: Date | undefined;
+      if (packageRow.duration_days > 0) {
+        packageExpiresAt = new Date(packageStartsAt);
+        packageExpiresAt.setDate(packageExpiresAt.getDate() + packageRow.duration_days);
+      }
+
+      const packageSnapshot = {
+        id: packageRow.id,
+        title: packageRow.title,
+        type: packageRow.type,
+        total_credits: packageRow.total_credits,
+        duration_days: packageRow.duration_days,
+        capacity: packageRow.capacity,
+        display_price: packageRow.display_price ?? null,
+        rules: packageRow.rules ?? {},
+        lesson_mode: lessonMode,
+        duo: duoSnapshot,
+        purchased_at: packageStartsAt.toISOString(),
+        source_request_id: requestId || null,
+      };
+
+      await userPackageRepo.save(
+        userPackageRepo.create({
+          tenant_id: tenantId,
+          user_id: memberUser.id,
+          package_id: packageRow.id,
+          remaining_credits: Math.max(0, Number(packageRow.total_credits || 0)),
+          starts_at: packageStartsAt,
+          expires_at: packageExpiresAt,
+          is_active: !duoSnapshot,
+          purchase_price: selectedPrice === null || selectedPrice === undefined ? null : String(selectedPrice),
+          latest_package_price: packageRow.display_price ?? null,
+          package_snapshot: packageSnapshot,
+          source_request_id: requestId || null,
+        })
+      );
     }
 
     const trainerRow =
@@ -524,8 +574,12 @@ export class MobilePurchaseSyncService {
               starts_at: slot.starts_at,
               ends_at: slot.ends_at,
               status: BookingStatus.PENDING,
-              payment_status: BookingPaymentStatus.APPROVED,
-              payment_approved_at: new Date(),
+              payment_status:
+                String(context.lesson_mode || "").toUpperCase() === "DUO"
+                  ? BookingPaymentStatus.REQUESTED
+                  : BookingPaymentStatus.APPROVED,
+              payment_approved_at:
+                String(context.lesson_mode || "").toUpperCase() === "DUO" ? undefined : new Date(),
               meta: {
                 package_id: slot.package_id,
                 package_ids: packageIds,
@@ -534,6 +588,17 @@ export class MobilePurchaseSyncService {
                 request_id: requestId || null,
                 source: "MOBILE_PURCHASE_APPROVAL",
                 trainer_resolution: context.trainer_id ? "EXPLICIT" : "PACKAGE_ASSIGNMENT_FALLBACK",
+                lesson_mode: context.lesson_mode || null,
+                is_duo: String(context.lesson_mode || "").toUpperCase() === "DUO",
+                duo:
+                  String(context.lesson_mode || "").toUpperCase() === "DUO"
+                    ? {
+                        status: "AWAITING_PARTNER_PAYMENT",
+                        partner_name: context.duo_partner_name || null,
+                        partner_contact: context.duo_partner_contact || null,
+                        payment: context.duo_payment || null,
+                      }
+                    : null,
               },
             })
           );
@@ -549,6 +614,8 @@ export class MobilePurchaseSyncService {
       selected_slot_count: normalizedSlots.length,
       trainer_id: resolvedTrainerId,
       trainer_name: trainerName,
+      duo_partner_name: context.duo_partner_name || null,
+      duo_partner_contact: context.duo_partner_contact || null,
       summary: MobilePurchaseSyncService.summarizePurchaseContext(context),
     };
   }

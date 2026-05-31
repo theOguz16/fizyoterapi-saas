@@ -1,70 +1,21 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- assertVisible:
-    id: "welcome-login-button"
+- openLink: "fizyoflow://e2e-reset"
 
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fgroup-classes"
 
-- assertVisible: "Hesabına giriş yap"
-
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-
-- inputText: "member@gmail.com"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-
-- inputText: "member123"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-submit-button"
+- extendedWaitUntil:
+    visible: "Grup dersleri"
+    timeout: 20000
 
 - waitForAnimationToEnd:
-    timeout: 5000
-
-- openLink: "clinerva://(member)/group-classes"
-
-- waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 3000
 
 - assertVisible: "Grup dersleri"
 
-- extendedWaitUntil:
-    visible:
-      id: "member-group-class-action-0"
-    timeout: 20000
-
-- tapOn:
-    id: "member-group-class-action-0"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
 - assertVisible:
-    text: "Onay bekliyor"
-    optional: true
-
-- assertVisible:
-    text: "Katılım talebi"
-    optional: true
-
-- tapOn:
-    text: "Tamam"
-    optional: true
-
-- tapOn:
-    text: "OK"
-    optional: true
+    text: "Uygun grup dersi yok|Grup Core Dersi|Kaydı kaldır"

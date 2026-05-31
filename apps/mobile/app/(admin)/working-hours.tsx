@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   BUSINESS_HOUR_BREAK_OPTIONS,
@@ -67,6 +67,7 @@ function formatTime(value: number) {
 
 export default function AdminWorkingHoursScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
 
   const query = useQuery({
     queryKey: calendarKeys.admin.workingHours(),
@@ -78,6 +79,7 @@ export default function AdminWorkingHoursScreen() {
   const [form, setForm] = useState<WorkingHoursForm>(() => createEmptyForm());
 
   const settings = query.data || {};
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const profile = settings.profile || settings;
   const location = profile.location || {};
 
@@ -280,7 +282,7 @@ export default function AdminWorkingHoursScreen() {
         icon="clock"
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}
-        onBack={() => router.replace("/(admin)/salon" as never)}
+        onBack={() => router.replace((backTo || "/(admin)/salon") as never)}
       >
         <View style={styles.metricsRow}>
           <MetricCard label="Açılış" value={form.start_time || "Seçilmedi"} hint="Gün başlangıcı" icon="clock" />

@@ -48,7 +48,7 @@ export default function MemberAttendanceScreen() {
               <Text style={styles.item}>Toplam hak: {row.total_credits ?? "-"}</Text>
               <Text style={styles.item}>Kullanılan hak: {row.used_credits ?? "-"}</Text>
               <Text style={styles.item}>Kalan hak: {row.remaining_credits ?? "-"}</Text>
-              <Text style={styles.hint}>Paket bazinda devam ve yenileme sinyali burada izlenir.</Text>
+              <Text style={styles.hint}>Paket bazında devam ve yenileme sinyali burada izlenir.</Text>
             </SurfaceCard>
           ))}
         </ScrollPanel>
@@ -65,7 +65,7 @@ export default function MemberAttendanceScreen() {
               <Text style={styles.item}>Kategori: {row.lesson_category_label || row.lesson_category || "Belirtilmedi"}</Text>
               <Text style={styles.item}>Paket: {row.package_name || row.package_title || "Belirtilmedi"}</Text>
               <Text style={styles.item}>Kalan hak: {row.remaining_credits ?? "-"}</Text>
-              <Text style={styles.hint}>Bu kayit sadakat, risk ve olcum takibiyle birlikte yorumlanir.</Text>
+              <Text style={styles.hint}>Bu kayıt sadakat, risk ve ölçüm takibiyle birlikte yorumlanır.</Text>
             </SurfaceCard>
           ))}
         </ScrollPanel>

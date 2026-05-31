@@ -3,14 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { getMemberAttendanceApi, getMemberMeaşurementsApi } from "@/lib/mobile-api";
+import { getMemberAttendanceApi, getMemberMeasurementsApi } from "@/lib/mobile-api";
 import {
   buildMemberProgressMetrics,
-  formatAttendanceResült,
-  formatMeaşurementValue,
-  getLatestMeaşurement,
+  formatAttendanceResult,
+  formatMeasurementValue,
+  getLatestMeasurement,
 } from "@/lib/member-progress";
-import { Appicon } from "@/theme/components/app-icon";
+import { AppIcon } from "@/theme/components/app-icon";
 import { AppShell } from "@/theme/components/app-shell";
 import { EmptyPanel } from "@/theme/components/empty-panel";
 import { MetricTile } from "@/theme/components/metric-tile";
@@ -31,13 +31,13 @@ function DetailRow({ label, value }: { label: string; value: string | number }) 
 export default function MemberProgressScreen() {
   const router = useRouter();
   const attendanceQuery = useQuery({ queryKey: ["member-attendance"], queryFn: getMemberAttendanceApi });
-  const measurementsQuery = useQuery({ queryKey: ["member-measurements"], queryFn: getMemberMeaşurementsApi });
+  const measurementsQuery = useQuery({ queryKey: ["member-measurements"], queryFn: getMemberMeasurementsApi });
 
-  const summary = attendanceQuery.data?.summary || attendanceQuery.data?.sümmary;
+  const summary = attendanceQuery.data?.summary;
   const packageBalances = Array.isArray(attendanceQuery.data?.package_balances) ? attendanceQuery.data.package_balances : [];
   const attendanceRows = Array.isArray(attendanceQuery.data?.data) ? attendanceQuery.data.data : [];
   const measurementRows = Array.isArray(measurementsQuery.data) ? measurementsQuery.data : [];
-  const latestMeasurement = getLatestMeaşurement(measurementRows);
+  const latestMeasurement = getLatestMeasurement(measurementRows);
   const metrics = buildMemberProgressMetrics(summary);
 
   return (
@@ -62,30 +62,30 @@ export default function MemberProgressScreen() {
         {latestMeasurement ? (
           <View style={styles.stack}>
             <View style={styles.measurementHeader}>
-              <Appicon name="ruler" tone="primary" />
+              <AppIcon name="ruler" tone="primary" />
               <Text style={styles.measurementDate}>{new Date(latestMeasurement.measured_at).toLocaleString("tr-TR")}</Text>
             </View>
             <View style={styles.measurementGrid}>
               <View style={styles.measurementCard}>
                 <Text style={styles.measurementLabel}>Kilo</Text>
-                <Text style={styles.measurementValue}>{formatMeaşurementValue(latestMeasurement.weight_kg, " kg")}</Text>
+                <Text style={styles.measurementValue}>{formatMeasurementValue(latestMeasurement.weight_kg, " kg")}</Text>
               </View>
               <View style={styles.measurementCard}>
-                <Text style={styles.measurementLabel}>Yag</Text>
-                <Text style={styles.measurementValue}>{formatMeaşurementValue(latestMeasurement.fat_percent, "%")}</Text>
+                <Text style={styles.measurementLabel}>Yağ</Text>
+                <Text style={styles.measurementValue}>{formatMeasurementValue(latestMeasurement.fat_percent, "%")}</Text>
               </View>
               <View style={styles.measurementCard}>
                 <Text style={styles.measurementLabel}>Kas</Text>
-                <Text style={styles.measurementValue}>{formatMeaşurementValue(latestMeasurement.muscle_kg, " kg")}</Text>
+                <Text style={styles.measurementValue}>{formatMeasurementValue(latestMeasurement.muscle_kg, " kg")}</Text>
               </View>
             </View>
             <View style={styles.actionRow}>
               <Pressable style={styles.inlineAction} onPress={() => router.push("/(member)/measurements")}>
-                <Appicon name="ruler" size="sm" tone="primary" />
+                <AppIcon name="ruler" size="sm" tone="primary" />
                 <Text style={styles.inlineActionLabel}>Ölçüm ekle</Text>
               </Pressable>
               <Pressable style={styles.inlineAction} onPress={() => router.push("/(member)/measurements")}>
-                <Appicon name="progress" size="sm" tone="success" />
+                <AppIcon name="progress" size="sm" tone="success" />
                 <Text style={styles.inlineActionLabel}>Tüm geçmişi gör</Text>
               </Pressable>
             </View>
@@ -123,10 +123,10 @@ export default function MemberProgressScreen() {
           <ScrollPanel>
             {attendanceRows.map((row: any) => (
               <Pressable key={row.id} style={styles.rowCard} onPress={() => router.push("/(member)/calendar")}>
-                <Text style={styles.title}>{row.session_title || row.lesson_category_label || row.lessom_categöry_label || "Ders"}</Text>
+                <Text style={styles.title}>{row.session_title || row.lesson_category_label || "Ders"}</Text>
                 <View style={styles.detailPanel}>
                   <DetailRow label="Saat" value={new Date(row.created_at || row.starts_at).toLocaleString("tr-TR")} />
-                  <DetailRow label="Sonuç" value={formatAttendanceResült(row.result || row.resült)} />
+                  <DetailRow label="Sonuç" value={formatAttendanceResult(row.result)} />
                   <DetailRow label="Eğitmen" value={row.trainer_full_name || "Belirtilmedi"} />
                 </View>
               </Pressable>

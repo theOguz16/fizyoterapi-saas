@@ -1,10 +1,10 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
@@ -17,14 +17,13 @@ appId: com.clinerva.mobile
     id: "login-identity-input"
     retryTapIfNoChange: true
 - inputText: "member@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
+- tapOn: "Hesabına giriş yap"
 - assertVisible:
     id: "login-password-input"
 - tapOn:
     id: "login-password-input"
     retryTapIfNoChange: true
 - inputText: "member123"
-- tapOn: "Clinerva hesabınla devam et"
 - tapOn:
     id: "login-submit-button"
 - assertVisible: "Kalan hak"

@@ -31,7 +31,7 @@ export class AdminInvitesController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "invite",
       target_id: input.invite.id,
       metadata: {

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { AppIconName } from "@/theme/components/app-icon";
 import { AppIcon } from "@/theme/components/app-icon";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
@@ -31,6 +32,19 @@ type Props = {
   backTestId?: string;
   optionTestIdPrefix?: string;
 };
+
+function toOptionTestIdSegment(value: string) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export function OnboardingQuestionStage({
   step,
@@ -141,7 +155,7 @@ export function OnboardingQuestionStage({
                       ]}
                     >
                       <Pressable
-                        testID={optionTestIdPrefix ? `${optionTestIdPrefix}-${String(option.value).toLowerCase()}` : undefined}
+                        testID={optionTestIdPrefix ? `${optionTestIdPrefix}-${toOptionTestIdSegment(option.value)}` : undefined}
                         onPress={() => onSelect(option.value)}
                         style={({ pressed }) => [styles.answerCard, active ? styles.answerCardActive : null, pressed ? styles.answerPressed : null]}
                       >

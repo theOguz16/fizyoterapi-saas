@@ -6,13 +6,18 @@ import { tokens } from "../tokens";
 
 type Props = {
   children: ReactNode;
+  testID?: string;
   style?: ViewStyle;
   tone?: "default" | "primary" | "success" | "warning" | "danger";
   padding?: "regular" | "compact" | "hero";
 };
 
-export function SurfaceCard({ children, style, tone = "default", padding = "regular" }: Props) {
-  return <View style={[styles.card, paddingStyles[padding], toneStyles[tone], style]}>{children}</View>;
+export function SurfaceCard({ children, testID, style, tone = "default", padding = "regular" }: Props) {
+  return (
+    <View testID={testID} style={[styles.card, paddingStyles[padding], toneStyles[tone], style]}>
+      {children}
+    </View>
+  );
 }
 
 const toneStyles = StyleSheet.create({

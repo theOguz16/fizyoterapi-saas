@@ -3,6 +3,26 @@
 import { Entity, Column, Index } from "typeorm";
 import { TenantScopedEntity } from "./base.entity";
 
+export enum ManagedGrowthStatus {
+  PREPARING = "PREPARING",
+  WAITING_INFO = "WAITING_INFO",
+  LIVE = "LIVE",
+  OPTIMIZING = "OPTIMIZING",
+}
+
+export type SalonDigitalBrief = {
+  logo_url?: string;
+  gallery_urls?: string[];
+  working_hours_note?: string;
+  review_url?: string;
+  campaign_note?: string;
+  target_audience?: string;
+  brand_voice?: string;
+  missing_items?: string[];
+  internal_notes?: string;
+  approved_at?: string | null;
+};
+
 @Entity("salon_profiles")
 export class SalonProfile extends TenantScopedEntity {
   @Index()
@@ -17,6 +37,31 @@ export class SalonProfile extends TenantScopedEntity {
 
   @Column({ type: "varchar", length: 240, nullable: true })
   hero_image_url?: string;
+
+  @Column({ type: "varchar", length: 160, nullable: true })
+  seo_title?: string | null;
+
+  @Column({ type: "varchar", length: 240, nullable: true })
+  seo_description?: string | null;
+
+  @Column({ type: "varchar", length: 260, nullable: true })
+  google_business_url?: string | null;
+
+  @Column({ type: "varchar", length: 260, nullable: true })
+  google_maps_url?: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  business_category?: string | null;
+
+  @Column({ type: "jsonb", default: [] })
+  service_area!: string[];
+
+  @Column({ type: "jsonb", default: {} })
+  digital_brief!: SalonDigitalBrief;
+
+  @Index()
+  @Column({ type: "enum", enum: ManagedGrowthStatus, default: ManagedGrowthStatus.PREPARING })
+  managed_growth_status!: ManagedGrowthStatus;
 
   @Column({ type: "text", nullable: true })
   about_text?: string;

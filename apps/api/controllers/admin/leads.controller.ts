@@ -1,6 +1,7 @@
 // Bu controller admin tarafindaki leads.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import { IsNull } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { LeadStatus, Lead } from "../../entities/lead.entity";
 import { AppError } from "../../errors/AppError";
@@ -25,7 +26,7 @@ export class AdminLeadsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "lead",
       target_id: input.lead.id,
       metadata: {
@@ -54,6 +55,7 @@ export class AdminLeadsController {
       const qb = AppDataSource.getRepository(Lead)
         .createQueryBuilder("l")
         .where("l.tenant_id = :tenantId", { tenantId })
+        .andWhere("l.deleted_at IS NULL")
         .orderBy("l.created_at", "DESC");
 
       if (q) {
@@ -81,7 +83,7 @@ export class AdminLeadsController {
       if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
 
       const lead = await AppDataSource.getRepository(Lead).findOne({
-        where: { id: leadId, tenant_id: tenantId },
+        where: { id: leadId, tenant_id: tenantId, deleted_at: IsNull() },
       });
       if (!lead) {
         throw new AppError("LEAD_NOT_FOUND", 404, "Lead bulunamadi");
@@ -106,7 +108,7 @@ export class AdminLeadsController {
       AdminLeadsController.validateStatus(status);
 
       const repo = AppDataSource.getRepository(Lead);
-      const lead = await repo.findOne({ where: { id: leadId, tenant_id: tenantId } });
+      const lead = await repo.findOne({ where: { id: leadId, tenant_id: tenantId, deleted_at: IsNull() } });
       if (!lead) {
         throw new AppError("LEAD_NOT_FOUND", 404, "Lead bulunamadi");
       }
@@ -135,17 +137,20 @@ export class AdminLeadsController {
       if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
 
       const repo = AppDataSource.getRepository(Lead);
-      const lead = await repo.findOne({ where: { id: leadId, tenant_id: tenantId } });
+      const lead = await repo.findOne({ where: { id: leadId, tenant_id: tenantId, deleted_at: IsNull() } });
       if (!lead) {
         throw new AppError("LEAD_NOT_FOUND", 404, "Lead bulunamadi");
       }
 
-      await repo.remove(lead);
+      const oldState = { status: lead.status, deleted_at: lead.deleted_at?.toISOString() ?? null };
+      lead.deleted_at = new Date();
+      await repo.save(lead);
       await AdminLeadsController.logLeadAudit(req, {
-        eventType: "ADMIN_LEAD_DELETED",
+        eventType: "ADMIN_LEAD_ARCHIVED",
         lead,
+        oldState,
       });
-      return res.json({ message: "Lead silindi" });
+      return res.json({ message: "Lead arşivlendi" });
     } catch (error) {
       if (error instanceof AppError) throw error;
       console.error("Admin leads remove error:", error);

@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle2, Clock3, ShieldCheck, UserRoundPlus } from "lucide-react";
 import { toast } from "sonner";
-import { ClinervaLogo } from "@/components/brand/clinerva-logo";
+import { FizyoFlowLogo } from "@/components/brand/fizyoflow-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ function InviteAcceptContent() {
       <div className="w-full max-w-3xl space-y-4">
         <Card className="interactive-panel border-slate-200/80 bg-white/95 shadow-soft">
           <CardHeader>
-            <ClinervaLogo />
+            <FizyoFlowLogo />
             <CardTitle>Davet Kabul Ekranı</CardTitle>
             <CardDescription>
               Klinik davetin doğrulandıktan sonra kişisel bilgilerini tamamlayarak güvenli hesabını oluştur.

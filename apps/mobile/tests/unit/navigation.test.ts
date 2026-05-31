@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAdminHome, resolveIndexRedirect, resolveMemberHome, resolveRoleGroup, resolveRoleHome } from "@/lib/navigation";
+import { resolveAdminHome, resolveBackNavigation, resolveIndexRedirect, resolveMemberHome, resolveRoleGroup, resolveRoleHome } from "@/lib/navigation";
 
 describe("mobile navigation rules", () => {
   it("routes admins to onboarding or dashboard depending on lifecycle state", () => {
@@ -34,5 +34,11 @@ describe("mobile navigation rules", () => {
     expect(resolveRoleHome("ADMIN", "ACTIVE_SALON")).toBe("/(admin)/dashboard");
     expect(resolveRoleHome("MEMBER", "ACTIVE_SALON")).toBe("/(member)/home");
     expect(resolveRoleHome("MEMBER", "NO_SALON")).toBe("/(intake-member)");
+  });
+
+  it("prefers contextual fallback over tab history when a fallback exists", () => {
+    expect(resolveBackNavigation(true, "/(admin)/salon")).toEqual({ type: "replace", href: "/(admin)/salon" });
+    expect(resolveBackNavigation(false, "/(admin)/salon")).toEqual({ type: "replace", href: "/(admin)/salon" });
+    expect(resolveBackNavigation(false, null)).toEqual({ type: "back" });
   });
 });

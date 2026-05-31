@@ -5,7 +5,7 @@ describe("extractSalonSlugFromQrPayload", () => {
   it("reads slug from Detour params", () => {
     expect(
       extractSalonSlugFromQrPayload(
-        "https://clinerva.godetour.link/2IbxPluNu4?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon"
+        "https://fizyoflow.godetour.link/2IbxPluNu4?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon"
       )
     ).toBe("demo-salon");
   });
@@ -13,7 +13,7 @@ describe("extractSalonSlugFromQrPayload", () => {
   it("reads slug from screen_path when salon_slug is missing", () => {
     expect(
       extractSalonSlugFromQrPayload(
-        "https://clinerva.godetour.link/2IbxPluNu4?screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon"
+        "https://fizyoflow.godetour.link/2IbxPluNu4?screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon"
       )
     ).toBe("demo-salon");
   });
@@ -21,15 +21,19 @@ describe("extractSalonSlugFromQrPayload", () => {
   it("reads slug from web join path", () => {
     expect(
       extractSalonSlugFromQrPayload(
-        "https://clinerva.godetour.link/2IbxPluNu4?web_join_path=%2Fjoin%2Fdemo-salon"
+        "https://fizyoflow.godetour.link/2IbxPluNu4?web_join_path=%2Fjoin%2Fdemo-salon"
       )
     ).toBe("demo-salon");
   });
 
   it("reads slug from direct join url", () => {
-    expect(extractSalonSlugFromQrPayload("https://clinerva.com/join/demo-salon?code=CLN-DEMO-SALON-001")).toBe(
+    expect(extractSalonSlugFromQrPayload("https://fizyoflow.com/join/demo-salon?code=FYF-DEMO-SALON-001")).toBe(
       "demo-salon"
     );
+  });
+
+  it("reads slug from FizyoFlow FYF code", () => {
+    expect(extractSalonSlugFromQrPayload("FYF-DEMO-SALON-001")).toBe("demo-salon");
   });
 
   it("reads slug from legacy CLN code", () => {
@@ -37,6 +41,6 @@ describe("extractSalonSlugFromQrPayload", () => {
   });
 
   it("ignores unrelated deep links", () => {
-    expect(extractSalonSlugFromQrPayload("clinerva://member/home")).toBeNull();
+    expect(extractSalonSlugFromQrPayload("fizyoflow://member/home")).toBeNull();
   });
 });

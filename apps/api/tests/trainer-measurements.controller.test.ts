@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TrainerMeasurementsController } from "../controllers/trainer/measurements.controller";
 import { AppDataSource } from "../data-source";
 import { AuditLogService } from "../services/audit-log.service";
+import { TrainerScopeService } from "../services/trainer-scope.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 function createQueryBuilderMock(result: {
@@ -19,6 +20,7 @@ function createQueryBuilderMock(result: {
 
 describe("trainer measurements controller", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -54,9 +56,11 @@ describe("trainer measurements controller", () => {
       if (name.includes("Measurement")) return measurementRepo as any;
       return {} as any;
     });
+    vi.spyOn(TrainerScopeService, "hasTrainerMemberScope").mockResolvedValue(true);
 
     const listReq = {
       tenantId: "tenant-1",
+      auth: { sub: "trainer-1", role: "TRAINER" },
       query: { memberId: "member-1" },
     } as any;
     const listRes = createMockResponse();
@@ -79,6 +83,7 @@ describe("trainer measurements controller", () => {
 
     const trendReq = {
       tenantId: "tenant-1",
+      auth: { sub: "trainer-1", role: "TRAINER" },
       query: { memberId: "member-1" },
     } as any;
     const trendRes = createMockResponse();
@@ -208,9 +213,11 @@ describe("trainer measurements controller", () => {
       if (name.includes("Measurement")) return measurementRepo as any;
       return {} as any;
     });
+    vi.spyOn(TrainerScopeService, "resolveTrainerMemberIds").mockResolvedValue(["member-1", "member-2"]);
 
     const req = {
       tenantId: "tenant-1",
+      auth: { sub: "trainer-1", role: "TRAINER" },
       query: { thresholdDays: "999" },
     } as any;
     const res = createMockResponse();
@@ -230,7 +237,46 @@ describe("trainer measurements controller", () => {
       ],
       thresholdDays: 365,
     });
+  });
 
-    vi.useRealTimers();
+  it("archives trainer measurements instead of hard deleting them", async () => {
+    const measurement = {
+      id: "measurement-1",
+      tenant_id: "tenant-1",
+      trainer_id: "trainer-1",
+      member_id: "member-1",
+      measured_at: new Date("2026-05-01T09:00:00.000Z"),
+      deleted_at: null,
+    };
+    const measurementRepo = {
+      findOne: vi.fn().mockResolvedValue(measurement),
+      save: vi.fn().mockImplementation(async (row) => row),
+      remove: vi.fn(),
+    };
+
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = entity?.name || "";
+      if (name.includes("Measurement")) return measurementRepo as any;
+      return {} as any;
+    });
+    vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
+
+    const res = createMockResponse();
+    await TrainerMeasurementsController.remove(
+      {
+        tenantId: "tenant-1",
+        auth: { sub: "trainer-1", role: "TRAINER" },
+        params: { id: "measurement-1" },
+        method: "DELETE",
+        originalUrl: "/api/trainer/measurements/measurement-1",
+        headers: {},
+      } as any,
+      res as any
+    );
+
+    expect(measurementRepo.remove).not.toHaveBeenCalled();
+    expect(measurement.deleted_at).toBeInstanceOf(Date);
+    expect(measurementRepo.save).toHaveBeenCalledWith(expect.objectContaining({ deleted_at: expect.any(Date) }));
+    expect(res.body.message).toBe("Olcum arşivlendi");
   });
 });

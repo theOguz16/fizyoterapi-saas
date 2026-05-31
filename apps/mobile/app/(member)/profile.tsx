@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useSession } from "@/providers/auth-session";
+import { RoleSwitchActions } from "@/components/role-switch-actions";
+import { AccountSecurityCard } from "@/components/account-security-card";
 import { getNotificationPreferences, setNotificationPreferences, type NotificationPreferences } from "@/lib/local-preferences";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -94,14 +96,16 @@ export default function MemberProfileScreen() {
           </View>
         </View>
       </SurfaceCard>
+
+      <RoleSwitchActions />
       {/* 4. HIZLI İŞLEMLER */}
       <SurfaceCard>
         <View style={styles.inlineBetween}>
         <Text style={styles.section}>Üyelik ve işlemler</Text>
           <AppIcon name="qr" size="sm" tone="primary" />
         </View>
-        <ActionButton label="QR Kodumu Göster" icon="qr" onPress={() => router.push("/(member)/qr/fullscreen" as never)} />
-        <ActionButton label="Arkadaşını Davet Et" icon="referral" variant="ghost" onPress={() => router.push("/(member)/referrals" as never)} />
+        <ActionButton label="QR Kodumu Göster" icon="qr" onPress={() => router.push({ pathname: "/(member)/qr/fullscreen", params: { backTo: "/(member)/profile" } } as never)} />
+        <ActionButton label="Arkadaşını Davet Et" icon="referral" variant="ghost" onPress={() => router.push({ pathname: "/(member)/referrals", params: { backTo: "/(member)/profile" } } as never)} />
       </SurfaceCard>
 
       {/* 5. HIZLI BİLDİRİM TERCİHLERİ */}
@@ -113,12 +117,14 @@ export default function MemberProfileScreen() {
         <ToggleRow label="Ölçüm zamanı" description="Gelişimini takip etmen için" value={preferences.measurementReminders} onValueChange={(value) => void updatePreference("measurementReminders", value)} />
       </SurfaceCard>
 
+      <AccountSecurityCard backTo="/(member)/profile" />
+
       {/* 6. TEHLİKELİ ALAN (ÇIKIŞ) */}
       <SurfaceCard>
         <Text style={styles.sectionTitleDanger}>Salon üyeliği işlemleri</Text>
         <Text style={styles.copy}>Salondan ayrılman durumunda aktif paketlerin ve bağlı ders geçmişin salon tarafında pasife düşebilir.</Text>
         {/* Buton tam kırmızı (danger) ve geniş yapıldı */}
-        <ActionButton label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => router.push("/(shared)/leave-salon" as never)} />
+        <ActionButton label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => router.push({ pathname: "/(shared)/leave-salon", params: { backTo: "/(member)/profile" } } as never)} />
       </SurfaceCard>
 
       <SurfaceCard>

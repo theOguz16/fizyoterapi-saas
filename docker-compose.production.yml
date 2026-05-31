@@ -1,0 +1,119 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fitnes_saas}
+      POSTGRES_USER: ${POSTGRES_USER:-fizyoflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fizyoflow} -d ${POSTGRES_DB:-fitnes_saas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PACKAGE: "@fitnes-saas/api"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5501
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fizyoflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-fitnes_saas}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      FIZYOFLOW_ADMIN_SECRET: ${FIZYOFLOW_ADMIN_SECRET:?FIZYOFLOW_ADMIN_SECRET is required}
+      REVENUECAT_WEBHOOK_AUTH: ${REVENUECAT_WEBHOOK_AUTH:?REVENUECAT_WEBHOOK_AUTH is required}
+      REVENUECAT_ENTITLEMENT_ID: ${REVENUECAT_ENTITLEMENT_ID:?REVENUECAT_ENTITLEMENT_ID is required}
+      CORS_ORIGIN: ${CORS_ORIGIN:-${PRODUCTION_CORS_ORIGIN:-https://app.fizyoflow.com,https://fizyoflow.com,https://www.fizyoflow.com}}
+      TRUST_PROXY: "true"
+      DB_SYNC: "false"
+      PUBLIC_WEB_BASE_URL: ${PUBLIC_WEB_BASE_URL:-https://fizyoflow.com}
+      WEB_BASE_URL: ${WEB_BASE_URL:-https://fizyoflow.com}
+      ADMIN_WEB_URL: ${ADMIN_WEB_URL:-https://app.fizyoflow.com}
+      WEB_URL: ${WEB_URL:-https://app.fizyoflow.com}
+      MOBILE_DEEP_LINK_BASE: ${MOBILE_DEEP_LINK_BASE:?MOBILE_DEEP_LINK_BASE is required}
+      DETOUR_LINK_BASE_URL: ${DETOUR_LINK_BASE_URL:-}
+      FIZYOFLOW_BOOTSTRAP_ADMIN_EMAILS: ${FIZYOFLOW_BOOTSTRAP_ADMIN_EMAILS:-}
+      ENABLE_RISK_DAILY_BATCH: ${ENABLE_RISK_DAILY_BATCH:-true}
+      ENABLE_GROUP_CLASS_REMINDER_BATCH: ${ENABLE_GROUP_CLASS_REMINDER_BATCH:-true}
+      GROUP_CLASS_REMINDER_HOURS: ${GROUP_CLASS_REMINDER_HOURS:-24,2}
+      GROUP_CLASS_REMINDER_TOLERANCE_MINUTES: ${GROUP_CLASS_REMINDER_TOLERANCE_MINUTES:-30}
+      NEXT_PUBLIC_WEB_BASE_URL: ${NEXT_PUBLIC_WEB_BASE_URL:-https://fizyoflow.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "5501"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PACKAGE: "@fitnes-saas/web"
+        NEXT_PUBLIC_WEB_BASE_URL: ${NEXT_PUBLIC_WEB_BASE_URL:-https://fizyoflow.com}
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-https://api.fizyoflow.com/api}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.fizyoflow.com}
+        NEXT_PUBLIC_IOS_APP_URL: ${NEXT_PUBLIC_IOS_APP_URL:-}
+        NEXT_PUBLIC_APP_STORE_URL: ${NEXT_PUBLIC_APP_STORE_URL:-}
+        NEXT_PUBLIC_ANDROID_APP_URL: ${NEXT_PUBLIC_ANDROID_APP_URL:-}
+        NEXT_PUBLIC_PLAY_STORE_URL: ${NEXT_PUBLIC_PLAY_STORE_URL:-}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://app.posthog.com}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_WEB_BASE_URL: https://fizyoflow.com
+      NEXT_PUBLIC_API_BASE: https://api.fizyoflow.com/api
+      NEXT_PUBLIC_APP_URL: https://app.fizyoflow.com
+      NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+      NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+      NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://app.posthog.com}
+    expose:
+      - "3939"
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PACKAGE: "@fitnes-saas/admin-web"
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.fizyoflow.com/api}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://api.fizyoflow.com/api
+    expose:
+      - "2929"
+
+  caddy:
+    build:
+      context: ./ops
+      dockerfile: Dockerfile.caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required for wildcard SSL}
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+      - admin-web
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

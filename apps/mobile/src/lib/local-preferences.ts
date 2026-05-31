@@ -3,13 +3,13 @@
 import * as SecureStore from "expo-secure-store";
 import type { SignupOnboardingProfile, SignupOnboardingRole } from "./signup-onboarding";
 
-const PREF_KEY = "clinerva.notification_preferences.v2";
-const PERMISSION_PROMPT_KEY = "clinerva.notification_permission_prompt.v1";
-const SIGNUP_ONBOARDING_KEY = "clinerva.signup_onboarding_seen.v1";
-const SIGNUP_ONBOARDING_PROFILE_KEY = "clinerva.signup_onboarding_profile.v1";
-const SIGNUP_ONBOARDING_ROLE_KEY = "clinerva.signup_onboarding_role.v1";
-const PENDING_SALON_JOIN_KEY = "clinerva.pending_salon_join_slug.v1";
-export const LOCAL_GROUP_CLASSES_KEY = "clinerva.local_group_classes.v1";
+const PREF_KEY = "fizyoflow.notification_preferences.v2";
+const PERMISSION_PROMPT_KEY = "fizyoflow.notification_permission_prompt.v1";
+const SIGNUP_ONBOARDING_KEY = "fizyoflow.signup_onboarding_seen.v1";
+const SIGNUP_ONBOARDING_PROFILE_KEY = "fizyoflow.signup_onboarding_profile.v1";
+const SIGNUP_ONBOARDING_ROLE_KEY = "fizyoflow.signup_onboarding_role.v1";
+const PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_slug.v1";
+export const LOCAL_GROUP_CLASSES_KEY = "fizyoflow.local_group_classes.v1";
 const RESETTABLE_KEYS = [
   PREF_KEY,
   PERMISSION_PROMPT_KEY,
@@ -18,8 +18,8 @@ const RESETTABLE_KEYS = [
   SIGNUP_ONBOARDING_ROLE_KEY,
   PENDING_SALON_JOIN_KEY,
   LOCAL_GROUP_CLASSES_KEY,
-  "clinerva.selected_city.v1",
-  "clinerva.schedule_change_requests.v1",
+  "fizyoflow.selected_city.v1",
+  "fizyoflow.schedule_change_requests.v1",
 ];
 
 export type NotificationPreferences = {

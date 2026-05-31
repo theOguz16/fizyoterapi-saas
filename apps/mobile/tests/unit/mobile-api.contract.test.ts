@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createAdminCampaignApi,
   createMemberChangeRequestApi,
@@ -15,7 +15,9 @@ import {
   getMemberPaymentRequestsApi,
   getMemberReferralsApi,
   adminSalonEntryScanApi,
+  getTrainerRiskApi,
   getTrainerTodayApi,
+  loginApi,
   trainerManualCheckinApi,
   trainerQrCheckinApi,
 } from "@/lib/mobile-api";
@@ -31,6 +33,10 @@ vi.mock("@/lib/http-client", () => ({
 describe("mobile api contract helpers", () => {
   beforeEach(() => {
     httpRequest.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("loads and creates member measurements through the expected endpoints", async () => {
@@ -60,11 +66,37 @@ describe("mobile api contract helpers", () => {
     });
   });
 
+  it("keeps production login on auth endpoint and sends dev e2e login to internal helper", async () => {
+    vi.stubGlobal("__DEV__", true);
+    httpRequest.mockResolvedValueOnce({ accessToken: "prod-token" }).mockResolvedValueOnce({ accessToken: "e2e-token" });
+
+    await loginApi({ email: "member@gmail.com", password: "member123" });
+    await loginApi({ email: "multi.persona@demo.local", password: "multi123", role: "TRAINER", e2e: true });
+
+    expect(httpRequest).toHaveBeenNthCalledWith(1, "/auth/login", {
+      method: "POST",
+      auth: false,
+      body: {
+        email: "member@gmail.com",
+        password: "member123",
+      },
+    });
+    expect(httpRequest).toHaveBeenNthCalledWith(2, "/internal/e2e/session", {
+      method: "POST",
+      auth: false,
+      body: {
+        email: "multi.persona@demo.local",
+        password: "multi123",
+        role: "TRAINER",
+      },
+    });
+  });
+
   it("sends trainer check-in requests to dedicated manual and qr endpoints", async () => {
     httpRequest.mockResolvedValue({ data: { attendanceId: "a-1" } });
 
     await trainerManualCheckinApi({ manual_code: "member@gmail.com", session_id: "session-1" });
-    await trainerQrCheckinApi({ qr_code: "CLN-MEMBER-001", scan_context: "TRAINER_CHECKIN" });
+    await trainerQrCheckinApi({ qr_code: "FYF-MEMBER-001", scan_context: "TRAINER_CHECKIN" });
 
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/trainer/checkin/manual", {
       method: "POST",
@@ -72,7 +104,7 @@ describe("mobile api contract helpers", () => {
     });
     expect(httpRequest).toHaveBeenNthCalledWith(2, "/trainer/checkin/qr", {
       method: "POST",
-      body: { qr_code: "CLN-MEMBER-001", scan_context: "TRAINER_CHECKIN" },
+      body: { qr_code: "FYF-MEMBER-001", scan_context: "TRAINER_CHECKIN" },
     });
   });
 
@@ -161,9 +193,14 @@ describe("mobile api contract helpers", () => {
   });
 
   it("covers trainer today and admin campaign contract endpoints", async () => {
-    httpRequest.mockResolvedValueOnce({ data: { kpis: {} } }).mockResolvedValueOnce({ data: { items: [] } }).mockResolvedValueOnce({ data: { campaign: { id: "camp-1" } } });
+    httpRequest
+      .mockResolvedValueOnce({ data: { kpis: {} } })
+      .mockResolvedValueOnce({ data: [{ member_id: "member-1" }] })
+      .mockResolvedValueOnce({ data: { items: [] } })
+      .mockResolvedValueOnce({ data: { campaign: { id: "camp-1" } } });
 
     await expect(getTrainerTodayApi()).resolves.toEqual({ data: { kpis: {} } });
+    await expect(getTrainerRiskApi()).resolves.toEqual({ data: [{ member_id: "member-1" }] });
     await expect(getAdminCampaignsApi()).resolves.toEqual({ data: { items: [] } });
     await createAdminCampaignApi({
       name: "Referans Bahar",
@@ -177,8 +214,9 @@ describe("mobile api contract helpers", () => {
     });
 
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/trainer/today");
-    expect(httpRequest).toHaveBeenNthCalledWith(2, "/admin/campaigns");
-    expect(httpRequest).toHaveBeenNthCalledWith(3, "/admin/campaigns", {
+    expect(httpRequest).toHaveBeenNthCalledWith(2, "/trainer/risk/members");
+    expect(httpRequest).toHaveBeenNthCalledWith(3, "/admin/campaigns");
+    expect(httpRequest).toHaveBeenNthCalledWith(4, "/admin/campaigns", {
       method: "POST",
       body: {
         name: "Referans Bahar",
@@ -198,8 +236,8 @@ describe("mobile api contract helpers", () => {
       .mockResolvedValueOnce({
         data: {
           tenant_id: "tenant-1",
-          qr_code: "CLN-DEMO-001",
-          qr_payload: "https://join.example.com/join/demo-salon?code=CLN-DEMO-001",
+          qr_code: "FYF-DEMO-001",
+          qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
         },
       })
       .mockResolvedValueOnce({ data: { success: true } });
@@ -210,8 +248,8 @@ describe("mobile api contract helpers", () => {
     expect(clinicQr).toEqual({
       data: {
         tenant_id: "tenant-1",
-        qr_code: "CLN-DEMO-001",
-        qr_payload: "https://join.example.com/join/demo-salon?code=CLN-DEMO-001",
+        qr_code: "FYF-DEMO-001",
+        qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
       },
     });
     expect(scanResult).toEqual({ data: { success: true } });

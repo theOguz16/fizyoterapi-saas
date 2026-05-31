@@ -51,6 +51,8 @@ export const APP_ICON_NAMES = [
   "dumbbell",
   "percent",
   "download",
+  "external",
+  "copy",
   "usersRound",
 ] as const;
 

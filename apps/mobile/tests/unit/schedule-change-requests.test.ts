@@ -33,7 +33,7 @@ describe("schedule change request storage", () => {
       memberName: "Demo Member",
       trainerId: "trainer-1",
       trainerName: "Demo Trainer",
-      tenantName: "Clinerva",
+      tenantName: "FizyoFlow",
       sessionTitle: "Reformer",
       packageTitle: "8 Ders",
       currentStartsAt: "2026-04-23T09:00:00.000Z",

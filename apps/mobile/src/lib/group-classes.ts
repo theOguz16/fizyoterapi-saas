@@ -9,6 +9,7 @@ type GroupClassLike = {
   is_group_class?: boolean | null;
   recurrence_label?: string | null;
   special_date?: string | null;
+  starts_at?: string | null;
   price?: string | number | null;
   joined_count?: number | null;
   capacity?: number | null;
@@ -24,6 +25,9 @@ type GroupClassLikeSlot = {
   lesson_name?: string | null;
   group_title?: string | null;
   is_group_class?: boolean | null;
+  group_class_id?: string | null;
+  notification_scope?: "SALON_MEMBERS" | "INVITED_MEMBERS" | null;
+  requires_admin_approval?: boolean | null;
 };
 
 export function filterGroupClassSlotsForSelection<T extends GroupClassLikeSlot>(
@@ -64,10 +68,39 @@ export function getGroupClassDisplayName(slot: GroupClassLike) {
   return String(slot.lesson_name || slot.group_title || "").trim();
 }
 
+export function formatGroupClassDate(value?: string | null) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("tr-TR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function formatGroupClassTime(value?: string | null) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+export function formatGroupClassDateTime(value?: string | null) {
+  const dateLabel = formatGroupClassDate(value);
+  const timeLabel = formatGroupClassTime(value);
+  return [dateLabel, timeLabel].filter(Boolean).join(" • ");
+}
+
 export function getGroupClassScheduleLabel(slot: GroupClassLike) {
   const recurrence = String(slot.recurrence_label || "").trim();
   if (recurrence) return recurrence;
   const specialDate = String(slot.special_date || "").trim();
+  const formattedSpecialDate = formatGroupClassDate(specialDate ? `${specialDate}T00:00:00` : slot.starts_at);
+  if (formattedSpecialDate) return `Özel tarih • ${formattedSpecialDate}`;
   if (specialDate) return `Özel tarih • ${specialDate}`;
   return "Tek seferlik plan";
 }

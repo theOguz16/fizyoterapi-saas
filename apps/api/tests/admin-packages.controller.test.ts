@@ -131,4 +131,43 @@ describe("admin packages controller", () => {
     expect(res.body).toEqual({ data: savedPackage });
     expect(AuditLogService.log).toHaveBeenCalledTimes(1);
   });
+
+  it("archives packages instead of hard deleting them", async () => {
+    const pkg = {
+      id: "pkg-1",
+      tenant_id: "tenant-1",
+      title: "Starter",
+      type: "GROUP",
+      total_credits: 8,
+      duration_days: 30,
+      is_active: true,
+      is_visible: true,
+      is_public: true,
+    };
+    const packageRepo = {
+      findOne: vi.fn().mockResolvedValue(pkg),
+      save: vi.fn().mockImplementation(async (row) => row),
+      remove: vi.fn(),
+    };
+
+    vi.spyOn(AppDataSource, "getRepository").mockReturnValue(packageRepo as any);
+    vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
+
+    const req = {
+      tenantId: "tenant-1",
+      params: { id: "pkg-1" },
+      method: "DELETE",
+      originalUrl: "/api/admin/packages/pkg-1",
+      headers: {},
+    } as any;
+    const res = createMockResponse();
+
+    await AdminPackagesController.remove(req, res as any);
+
+    expect(packageRepo.remove).not.toHaveBeenCalled();
+    expect(packageRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ is_active: false, is_visible: false, is_public: false })
+    );
+    expect(res.body.message).toBe("Package arşivlendi");
+  });
 });

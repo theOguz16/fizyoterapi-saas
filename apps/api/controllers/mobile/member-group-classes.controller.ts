@@ -53,6 +53,28 @@ function buildSelectedDayRow(session: ClassSession, packageRow?: Package | null,
   };
 }
 
+function groupClassJoinSessionId(event: NotificationEvent) {
+  try {
+    const payload = typeof event.payload === "string" ? JSON.parse(event.payload) : event.payload || {};
+    const requestType = String(payload.request_type || "").toUpperCase();
+    const selectedDays = Array.isArray(payload.selected_days) ? payload.selected_days : [];
+    if (requestType !== "GROUP_CLASS_JOIN") return "";
+    return String((selectedDays[0] as any)?.group_class_id || "");
+  } catch {
+    return "";
+  }
+}
+
+function readEventPayload(event: NotificationEvent): Record<string, any> {
+  try {
+    const payload = event.payload;
+    if (!payload) return {};
+    return typeof payload === "string" ? JSON.parse(payload) : payload;
+  } catch {
+    return {};
+  }
+}
+
 export class MemberGroupClassesController {
   static async list(req: AuthenticatedRequest, res: Response) {
     try {
@@ -194,9 +216,6 @@ export class MemberGroupClassesController {
       if (!isSessionVisibleToMember(session, memberId)) {
         throw new AppError("GROUP_CLASS_NOT_VISIBLE", 403, "Bu grup dersi sana acik degil");
       }
-      if (session.starts_at.getTime() <= Date.now()) {
-        throw new AppError("GROUP_CLASS_STARTED", 409, "Baslamis bir grup dersine katilim talebi gonderilemez");
-      }
 
       const [membership, packageRow, existingBooking, pendingRequest, countsMap] = await Promise.all([
         AppDataSource.getRepository(SalonMembership).findOne({
@@ -221,10 +240,9 @@ export class MemberGroupClassesController {
             status: In(ACTIVE_BOOKING_STATUSES),
           } as any,
         }),
-        AppDataSource.getRepository(NotificationEvent).findOne({
+        AppDataSource.getRepository(NotificationEvent).find({
           where: {
             tenant_id: tenantId,
-            member_id: eventOwnerId,
             type: MEMBER_PAYMENT_REQUEST,
             status: NotificationEventStatus.QUEUED,
           } as any,
@@ -243,14 +261,17 @@ export class MemberGroupClassesController {
         throw new AppError("GROUP_CLASS_ALREADY_JOINED", 409, "Bu grup dersi icin zaten kaydin var");
       }
 
-      const pendingRequestSessionId = String(((Array.isArray(pendingRequest?.payload?.selected_days) ? pendingRequest?.payload?.selected_days : [])[0] as any)?.group_class_id || "");
-      if (String(pendingRequest?.payload?.request_type || "").toUpperCase() === "GROUP_CLASS_JOIN" && pendingRequestSessionId === session.id) {
+      const pendingJoinEvents = pendingRequest.filter((event) => groupClassJoinSessionId(event) === session.id);
+      if (pendingJoinEvents.some((event) => event.member_id === eventOwnerId)) {
         throw new AppError("GROUP_CLASS_REQUEST_EXISTS", 409, "Bu grup dersi icin zaten bekleyen talebin var");
       }
 
       const counts = countsMap.get(session.id) || { joined: 0, approved: 0 };
-      if (session.capacity > 0 && counts.joined >= session.capacity) {
+      if (session.capacity > 0 && counts.joined + pendingJoinEvents.length >= session.capacity) {
         throw new AppError("GROUP_CLASS_FULL", 409, "Bu grup dersinde bos kontenjan kalmadi");
+      }
+      if (session.starts_at.getTime() <= Date.now()) {
+        throw new AppError("GROUP_CLASS_STARTED", 409, "Baslamis bir grup dersine katilim talebi gonderilemez");
       }
 
       const payload = {
@@ -340,8 +361,9 @@ export class MemberGroupClassesController {
       ]);
 
       const removableEvents = pendingEvents.filter((row) => {
-        const requestType = String(row.payload?.request_type || "").toUpperCase();
-        const selectedDays = Array.isArray(row.payload?.selected_days) ? row.payload.selected_days : [];
+        const payload = readEventPayload(row);
+        const requestType = String(payload.request_type || "").toUpperCase();
+        const selectedDays = Array.isArray(payload.selected_days) ? payload.selected_days : [];
         return requestType === "GROUP_CLASS_JOIN" && String((selectedDays[0] as any)?.group_class_id || "") === sessionId;
       });
 
@@ -407,10 +429,11 @@ export class MemberGroupClassesController {
       }
 
       for (const event of removableEvents) {
+        const payload = readEventPayload(event);
         event.status = NotificationEventStatus.PROCESSED;
         event.processed_at = new Date();
         event.payload = {
-          ...(event.payload || {}),
+          ...payload,
           decision: "CANCELED",
           status: "CANCELED",
         };

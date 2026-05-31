@@ -23,6 +23,7 @@ import { MobileNotificationService } from "../../services/mobile-notification.se
 import { MobilePurchaseSyncService } from "../../services/mobile-purchase-sync.service";
 import { AuditLogService } from "../../services/audit-log.service";
 import { AvailabilityProjectionService } from "../../services/availability-projection.service";
+import { TrainerScopeService } from "../../services/trainer-scope.service";
 import {
   ensureMinimumAdvanceHours,
   parseBookingDate,
@@ -48,6 +49,21 @@ type SlotParams = {
 type CalendarBusinessHours = SlotValidationContract;
 
 export class TrainerBookingsController {
+  private static sanitizeClientMeta(input: Record<string, unknown>) {
+    const allowedKeys = [
+      "package_id",
+      "package_title",
+      "package_display_price",
+      "selected_sub_lesson",
+      "lesson_category",
+      "service_name",
+      "lesson_mode",
+      "is_duo",
+      "duo",
+    ];
+    return Object.fromEntries(allowedKeys.filter((key) => key in input).map((key) => [key, input[key]]));
+  }
+
   private static async logBookingAudit(
     req: AuthenticatedRequest,
     input: {
@@ -74,7 +90,7 @@ export class TrainerBookingsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "booking",
       target_id: input.booking.id,
       metadata: {
@@ -513,7 +529,9 @@ export class TrainerBookingsController {
       const rows = await qb.getMany();
       const projectedRows = from && to ? AvailabilityProjectionService.projectWeeklyRange(rows, from, to) : rows;
       const memberIds = Array.from(new Set(projectedRows.map((row) => row.member_id).filter(Boolean)));
-      const packageIds = Array.from(new Set(projectedRows.map((row) => row.package_id).filter(Boolean)));
+      const allowedMemberIds = await TrainerScopeService.buildBookableMemberIds(tenantId, trainerId, memberIds);
+      const scopedProjectedRows = projectedRows.filter((row) => allowedMemberIds.has(row.member_id));
+      const packageIds = Array.from(new Set(scopedProjectedRows.map((row) => row.package_id).filter(Boolean)));
 
       const [members, packages] = await Promise.all([
         memberIds.length
@@ -542,7 +560,7 @@ export class TrainerBookingsController {
       );
       const packageMap = new Map(packages.map((row) => [row.id, row]));
 
-      const filteredRows = TrainerBookingsController.filterAvailabilityRowsForTrainer(trainerId, projectedRows);
+      const filteredRows = TrainerBookingsController.filterAvailabilityRowsForTrainer(trainerId, scopedProjectedRows);
 
       return res.json({
         data: filteredRows.map((row) => ({
@@ -588,8 +606,14 @@ export class TrainerBookingsController {
         }),
         TrainerBookingsController.loadBusinessHours(tenantId),
       ]);
+      const allowedMemberIds = await TrainerScopeService.buildBookableMemberIds(
+        tenantId,
+        trainerId,
+        members.map((row) => row.id)
+      );
+      const scopeFilteredMembers = members.filter((row) => allowedMemberIds.has(row.id));
 
-      const memberRows = members.map((row) => row.id);
+      const memberRows = scopeFilteredMembers.map((row) => row.id);
       const availabilityPreferenceRows = memberRows.length
         ? await AppDataSource.getRepository(Availability).find({
             where: memberRows.map((memberId) => ({ tenant_id: tenantId, member_id: memberId })) as any,
@@ -604,7 +628,7 @@ export class TrainerBookingsController {
           preferredTrainerMap.set(row.member_id, parsed.preferredTrainerId);
         }
       }
-      const filteredMembers = members.filter((row) => {
+      const filteredMembers = scopeFilteredMembers.filter((row) => {
         const preferredTrainerId = preferredTrainerMap.get(row.id);
         return !preferredTrainerId || preferredTrainerId === trainerId;
       });
@@ -750,6 +774,7 @@ export class TrainerBookingsController {
           const meta = (row.meta as Record<string, unknown> | undefined) ?? {};
           const packageId = String(meta.package_id ?? "");
           const packageInfo = packageId ? packageMap.get(packageId) : null;
+          const isDuo = Boolean(meta.is_duo || (meta as Record<string, any>).duo);
           const metaLesson = TrainerBookingsController.normalizeLessonCategory(meta.lesson_category);
           const ruleLesson = TrainerBookingsController.normalizeLessonCategory(
             (packageInfo?.rules as Record<string, unknown> | undefined)?.lesson_category
@@ -757,8 +782,8 @@ export class TrainerBookingsController {
           return {
             ...row,
             member_full_name: memberMap.get(row.member_id) ?? null,
-            session_title: row.session_id ? sessionMap.get(String(row.session_id))?.title ?? null : null,
-            session_type: row.session_id ? sessionMap.get(String(row.session_id))?.type ?? null : null,
+            session_title: row.session_id ? sessionMap.get(String(row.session_id))?.title ?? null : isDuo ? "Duo ders" : null,
+            session_type: row.session_id ? sessionMap.get(String(row.session_id))?.type ?? null : isDuo ? "DUO" : null,
             lesson_category:
               (row.session_id ? sessionMap.get(String(row.session_id))?.lesson_category ?? null : null) ??
               metaLesson ??
@@ -768,6 +793,11 @@ export class TrainerBookingsController {
                 metaLesson ??
                 ruleLesson
             ),
+            lesson_mode: isDuo ? "DUO" : meta.lesson_mode ?? null,
+            is_duo: isDuo,
+            duo_partner_name: (meta as Record<string, any>).duo?.partner_name || null,
+            duo_partner_contact: (meta as Record<string, any>).duo?.partner_contact || null,
+            duo_status: (meta as Record<string, any>).duo?.status || null,
             package_title:
               (typeof meta.package_title === "string" && meta.package_title) || packageInfo?.title || null,
             package_display_price:
@@ -857,7 +887,7 @@ export class TrainerBookingsController {
 
       const incomingMeta =
         req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta)
-          ? (req.body.meta as Record<string, unknown>)
+          ? TrainerBookingsController.sanitizeClientMeta(req.body.meta as Record<string, unknown>)
           : {};
       const mergedMeta = {
         ...((booking.meta as Record<string, unknown> | undefined) ?? {}),
@@ -1007,7 +1037,7 @@ export class TrainerBookingsController {
       const sessionId = req.body?.session_id ? String(req.body.session_id) : undefined;
       const inputMeta =
         req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta)
-          ? (req.body.meta as Record<string, unknown>)
+          ? TrainerBookingsController.sanitizeClientMeta(req.body.meta as Record<string, unknown>)
           : {};
       const packageId = String(inputMeta.package_id ?? "").trim();
 
@@ -1102,7 +1132,7 @@ export class TrainerBookingsController {
         type: "BOOKING_CREATED",
         title: "Dersiniz planlandı",
         body: `${startsAt.toLocaleString("tr-TR")} saatindeki dersiniz planlanmıştır.`,
-        deepLink: "clinerva://member/bookings",
+        deepLink: "fizyoflow://member/bookings",
         meta: {
           booking_id: booking.id,
           status: booking.status,

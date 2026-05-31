@@ -203,7 +203,7 @@ function extractLessonLabel(pkg: NonNullable<TrainerMemberDetail["package_summar
 
 export default function TrainerClientDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; backTo?: string | string[] }>();
   const [tab, setTab] = useState("SUMMARY");
   const [chartRange, setChartRange] = useState<"30" | "90" | "ALL">("90");
 
@@ -225,8 +225,12 @@ export default function TrainerClientDetailScreen() {
   });
 
   const detail = detailQuery.data;
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const attendance = Array.isArray(attendanceQuery.data) ? attendanceQuery.data : [];
-  const measurements = Array.isArray(measurementsQuery.data) ? measurementsQuery.data : [];
+  const measurements = useMemo(
+    () => (Array.isArray(measurementsQuery.data) ? measurementsQuery.data : []),
+    [measurementsQuery.data]
+  );
   const notesPayload = notesQuery.data || {};
   const noteItems = Array.isArray(notesPayload.items) ? notesPayload.items : [];
 
@@ -550,11 +554,11 @@ export default function TrainerClientDetailScreen() {
           onPress={() =>
             router.push({
               pathname: "/(trainer)/notes",
-              params: { memberId: String(params.id), memberName: detail?.full_name || "" },
+              params: { memberId: String(params.id), memberName: detail?.full_name || "", backTo: backTo || "/(trainer)/clients" },
             } as never)
           }
         />
-        <ActionButton label="QR ile check-in" icon="qr" variant="ghost" onPress={() => router.push("/(trainer)/checkin" as never)} />
+        <ActionButton label="QR ile check-in" icon="qr" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: `/(trainer)/members/${params.id}` } } as never)} />
       </SurfaceCard>
     </AppShell>
   );

@@ -29,7 +29,7 @@ export class MemberReferralsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "referral",
       target_id: input.row.id,
       metadata: {
@@ -97,11 +97,15 @@ export class MemberReferralsController {
       }
 
       const invitee = MemberReferralsController.normalizeInvitee(req.body?.invitee_phone_or_email);
+      const inviteeName = String(req.body?.invitee_name ?? "").trim();
       if (!invitee) {
         throw new AppError("VALIDATION_ERROR", 400, "invitee_phone_or_email zorunlu");
       }
       if (invitee.length > 120) {
         throw new AppError("VALIDATION_ERROR", 400, "invitee_phone_or_email cok uzun");
+      }
+      if (inviteeName.length > 120) {
+        throw new AppError("VALIDATION_ERROR", 400, "invitee_name cok uzun");
       }
 
       const repo = AppDataSource.getRepository(Referral);
@@ -122,6 +126,7 @@ export class MemberReferralsController {
         tenant_id: tenantId,
         inviter_member_id: memberId,
         invitee_phone_or_email: invitee,
+        invitee_name: inviteeName || null,
         code,
         status: ReferralStatus.INVITED,
       });

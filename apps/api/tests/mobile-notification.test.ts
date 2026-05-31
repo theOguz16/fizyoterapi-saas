@@ -56,6 +56,10 @@ describe("MobileNotificationService", () => {
       if (name.includes("Tenant")) return tenantRepo as any;
       return {} as any;
     });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ status: "ok" }] }),
+    } as Response);
 
     const result = await MobileNotificationService.queuePush({
       tenantId: "tenant-1",
@@ -64,12 +68,12 @@ describe("MobileNotificationService", () => {
       type: "BOOKING_CREATED",
       title: "Yeni randevu",
       body: "Yeni randevu planlandı",
-      deepLink: "clinerva://member/bookings",
+      deepLink: "fizyoflow://member/bookings",
       meta: { booking_id: "book-1" },
     });
 
-    expect(result).toEqual({ queued: true, count: 1, eventId: "evt-1" });
-    expect(eventRepo.save).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ queued: true, count: 1, failedCount: 0, eventId: "evt-1" });
+    expect(eventRepo.save).toHaveBeenCalledTimes(2);
     expect(deliveryRepo.save).toHaveBeenCalledTimes(1);
   });
 });

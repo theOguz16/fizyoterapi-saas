@@ -1,4 +1,4 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - assertVisible: "Uygun saatlerini seç"
 - tapOn:

@@ -52,8 +52,12 @@ describe("mobile purchase sync service", () => {
     };
     const bookingRepo = {
       findOne: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockImplementation((value) => value),
       save: vi.fn().mockResolvedValue({}),
+    };
+    const sessionRepo = {
+      find: vi.fn().mockResolvedValue([]),
     };
     const assignmentRepo = {
       findOne: vi.fn().mockResolvedValue({
@@ -70,6 +74,7 @@ describe("mobile purchase sync service", () => {
       if (name === "UserPackage") return userPackageRepo as any;
       if (name === "Availability") return availabilityRepo as any;
       if (name === "Booking") return bookingRepo as any;
+      if (name === "ClassSession") return sessionRepo as any;
       if (name === "PackageTrainerAssignment") return assignmentRepo as any;
       throw new Error(`Unexpected repository: ${name}`);
     });
@@ -114,6 +119,76 @@ describe("mobile purchase sync service", () => {
         trainer_id: "trainer-1",
         trainer_name: "Ece Yilmaz",
         selected_slot_count: 1,
+      })
+    );
+  });
+
+  it("normalizes purchase context from JSON text payloads", () => {
+    const context = MobilePurchaseSyncService.normalizePurchaseContext(
+      JSON.stringify({
+        package_id: "pkg-1",
+        package_title: "Starter",
+        selected_days: [
+          {
+            starts_at: "2026-05-12T09:00:00.000Z",
+            ends_at: "2026-05-12T10:00:00.000Z",
+          },
+        ],
+      })
+    );
+
+    expect(context).toEqual(
+      expect.objectContaining({
+        package_id: "pkg-1",
+        package_ids: ["pkg-1"],
+        package_title: "Starter",
+        selected_days: [
+          expect.objectContaining({
+            starts_at: "2026-05-12T09:00:00.000Z",
+          }),
+        ],
+      })
+    );
+  });
+
+  it("resolves purchase context from notification events with JSON text payloads", async () => {
+    const eventQuery = {
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      getOne: vi.fn().mockResolvedValue({
+        payload: JSON.stringify({
+          package_id: "pkg-2",
+          package_title: "Reformer",
+          selected_days: [
+            {
+              starts_at: "2026-05-13T09:00:00.000Z",
+              ends_at: "2026-05-13T10:00:00.000Z",
+            },
+          ],
+        }),
+      }),
+    };
+    const notificationRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue(eventQuery),
+    };
+
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = typeof entity === "function" ? entity.name : String(entity);
+      if (name === "NotificationEvent") return notificationRepo as any;
+      throw new Error(`Unexpected repository: ${name}`);
+    });
+
+    const context = await MobilePurchaseSyncService.resolvePurchaseContext({
+      id: "application-1",
+      tenant_id: "tenant-1",
+      note: "",
+    } as any);
+
+    expect(context).toEqual(
+      expect.objectContaining({
+        package_id: "pkg-2",
+        package_title: "Reformer",
       })
     );
   });

@@ -27,13 +27,14 @@ type RevenueCatOfferings = {
 };
 
 function getRevenueCatApiKey() {
+  const fallbackKey = (process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || "").trim();
   if (Platform.OS === "ios") {
-    return (process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || "").trim();
+    return (process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || fallbackKey).trim();
   }
   if (Platform.OS === "android") {
-    return (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || "").trim();
+    return (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || fallbackKey).trim();
   }
-  return "";
+  return fallbackKey;
 }
 
 function getPurchasesModule() {
@@ -49,7 +50,7 @@ let configuredAppUserId: string | null = null;
 export async function configureRevenueCat(appUserId: string) {
   const apiKey = getRevenueCatApiKey();
   if (!apiKey) {
-    throw new Error("RevenueCat API key tanimli degil. EXPO_PUBLIC_REVENUECAT_IOS_API_KEY / ANDROID_API_KEY gerekli.");
+    throw new Error("RevenueCat API key tanimli degil. EXPO_PUBLIC_REVENUECAT_API_KEY veya platform keyleri gerekli.");
   }
 
   const Purchases = getPurchasesModule();

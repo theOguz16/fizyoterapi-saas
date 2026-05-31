@@ -9,6 +9,7 @@ import { Package } from "../../entities/package.entity";
 import { SalonProfile } from "../../entities/salon-profile.entity";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { User, UserRole } from "../../entities/user.entity";
+import { UserPackage } from "../../entities/user-package.entity";
 import { SlotValidationContractService } from "../../services/slot-validation-contract.service";
 import { AuditLogService } from "../../services/audit-log.service";
 import { SalonMembership, SalonMembershipStatus, MembershipPaymentStatus } from "../../entities/salon-membership.entity";
@@ -91,7 +92,7 @@ export class MemberAvailabilityController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "availability",
       target_id: input.targetId,
       metadata: input.metadata ?? null,
@@ -320,14 +321,32 @@ export class MemberAvailabilityController {
 
       const packageIds = Array.from(new Set(slots.map((slot) => slot.package_id).filter(Boolean))) as string[];
       if (packageIds.length > 0) {
-        const packages = await AppDataSource.getRepository(Package).find({
-          where: packageIds.map((id) => ({ tenant_id: tenantId, id, is_active: true })),
-          select: ["id"],
-        });
+        const now = new Date();
+        const [packages, userPackages] = await Promise.all([
+          AppDataSource.getRepository(Package).find({
+            where: packageIds.map((id) => ({ tenant_id: tenantId, id, is_active: true })),
+            select: ["id"],
+          }),
+          AppDataSource.getRepository(UserPackage)
+            .createQueryBuilder("up")
+            .where("up.tenant_id = :tenantId", { tenantId })
+            .andWhere("up.user_id = :memberId", { memberId })
+            .andWhere("up.package_id IN (:...packageIds)", { packageIds })
+            .andWhere("up.is_active = true")
+            .andWhere("up.remaining_credits > 0")
+            .andWhere("(up.starts_at IS NULL OR up.starts_at <= :now)", { now })
+            .andWhere("(up.expires_at IS NULL OR up.expires_at >= :now)", { now })
+            .getMany(),
+        ]);
         const packageSet = new Set(packages.map((pkg) => pkg.id));
         const missing = packageIds.find((id) => !packageSet.has(id));
         if (missing) {
           throw new AppError("PACKAGE_NOT_FOUND", 404, "Seçilen paket bulunamadı veya dondurulmuş");
+        }
+        const ownedPackageSet = new Set(userPackages.map((row) => row.package_id));
+        const notOwned = packageIds.find((id) => !ownedPackageSet.has(id));
+        if (notOwned) {
+          throw new AppError("MEMBER_PACKAGE_NOT_ACTIVE", 400, "Seçilen paket için aktif hakkınız bulunmuyor");
         }
       }
 

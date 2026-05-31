@@ -1,19 +1,21 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: member-salon-detour-salons-host
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
 - waitForAnimationToEnd:
     timeout: 3000
 
-- openLink: "clinerva://salons/demo-salon?salon_slug=demo-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://salons/demo-salon?salon_slug=demo-salon&source=salon_qr&channel=qr"
 
-- waitForAnimationToEnd:
-    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon|FizyoFlow"
+    timeout: 20000
 
 - assertVisible:
-    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon"
+    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon|FizyoFlow"

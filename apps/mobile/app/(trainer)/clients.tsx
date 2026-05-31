@@ -25,7 +25,10 @@ export default function TrainerClientsScreen() {
     queryFn: getTrainerMembersApi,
   });
 
-  const source = Array.isArray(result.data) ? result.data : Array.isArray((result.data as any)?.data) ? (result.data as any).data : [];
+  const source = useMemo(
+    () => (Array.isArray(result.data) ? result.data : Array.isArray((result.data as any)?.data) ? (result.data as any).data : []),
+    [result.data]
+  );
   const items = useMemo(() => filterTrainerClients(source, { query, filter }), [filter, query, source]);
   const activeCount = source.filter((item: any) => item.is_active !== false).length;
   const riskCount = source.filter((item: any) => isTrainerClientRisky(item)).length;
@@ -70,7 +73,16 @@ export default function TrainerClientsScreen() {
       ) : (
         <ScrollPanel maxHeight={480} contentContainerStyle={styles.stack}>
           {items.map((item: any) => (
-            <Pressable key={item.id} style={styles.rowCard} onPress={() => router.push(`/(trainer)/members/${item.id}` as never)}>
+            <Pressable
+              key={item.id}
+              style={styles.rowCard}
+              onPress={() =>
+                router.push({
+                  pathname: "/(trainer)/members/[id]",
+                  params: { id: item.id, backTo: "/(trainer)/clients" },
+                } as never)
+              }
+            >
               <View style={styles.rowHeader}>
                 <View style={styles.titleWrap}>
                   <Text style={styles.title}>{item.full_name || "Danışan"}</Text>

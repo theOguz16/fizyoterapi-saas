@@ -20,6 +20,7 @@ type LoginInput = {
   email: string;
   password: string;
   tenantSlug?: string;
+  role?: "MEMBER" | "TRAINER" | "ADMIN";
 };
 
 type RegisterInput = {
@@ -42,6 +43,29 @@ type RegisterInput = {
 export class AuthController {
   private static readonly MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
   private static readonly MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
+  private static readonly DEFAULT_BOOTSTRAP_ADMIN_EMAILS = ["oguzhanuyar531@gmail.com"];
+
+  private static getBootstrapAdminEmails() {
+    const configuredEmails = String(process.env.FIZYOFLOW_BOOTSTRAP_ADMIN_EMAILS || "")
+      .split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    return new Set([...AuthController.DEFAULT_BOOTSTRAP_ADMIN_EMAILS, ...configuredEmails]);
+  }
+
+  private static shouldRegisterAsAdmin(normalizedEmail: string, accountType?: RegisterInput["account_type"]) {
+    return accountType === "CLINIC_ADMIN" || AuthController.getBootstrapAdminEmails().has(normalizedEmail);
+  }
+
+  private static readEventPayload(event: NotificationEvent): Record<string, any> {
+    try {
+      const payload = event.payload;
+      if (!payload) return {};
+      return typeof payload === "string" ? JSON.parse(payload) : payload;
+    } catch {
+      return {};
+    }
+  }
 
   static async register(req: Request, res: Response) {
     const { email, password, first_name, last_name, phone, account_type, onboarding_profile } = req.body as RegisterInput;
@@ -53,19 +77,21 @@ export class AuthController {
     }
 
     const accountRepo = AppDataSource.getRepository(Account);
-    const existing = await accountRepo.findOne({ where: { email: email.trim().toLowerCase() } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await accountRepo.findOne({ where: { email: normalizedEmail } });
     if (existing) {
       throw new AppError("ACCOUNT_EXISTS", 409, "Bu e-posta ile kayıtlı bir hesap zaten var");
     }
 
+    const registerAsAdmin = AuthController.shouldRegisterAsAdmin(normalizedEmail, account_type);
     const password_hash = await hashPassword(password);
     const account = accountRepo.create({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password_hash,
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       phone: phone.replace(/\D+/g, ""),
-      global_role_default: account_type === "CLINIC_ADMIN" ? UserRole.ADMIN : UserRole.MEMBER,
+      global_role_default: registerAsAdmin ? UserRole.ADMIN : UserRole.MEMBER,
       onboarding_profile: AuthController.normalizeOnboardingProfile(onboarding_profile),
       is_active: true,
     });
@@ -103,10 +129,11 @@ export class AuthController {
       success: true,
       request_id: (req as any).requestId || null,
       ip_address: req.ip || null,
-      user_agent: req.headers["user-agent"],
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       metadata: {
         email: account.email,
         onboarding_state: session.onboardingState,
+        bootstrap_admin: registerAsAdmin && account_type !== "CLINIC_ADMIN",
       },
     });
 
@@ -133,7 +160,7 @@ export class AuthController {
   }
 
   static async login(req: Request, res: Response) {
-    const { email, password, tenantSlug } = req.body as LoginInput;
+    const { email, password, tenantSlug, role: requestedRoleRaw } = req.body as LoginInput;
 
     if (!email || !password) {
       throw new AppError("VALIDATION_ERROR", 422, "email ve password zorunlu");
@@ -158,14 +185,15 @@ export class AuthController {
 
       // Hesabin aktif uyeligi, bekleyen basvurusu ve sahip oldugu salon ayni anda aranir.
       // Cunku kullanicinin ilk acilis ekrani bu uc kaynagin kombinasyonundan cikiyor.
-      const activeMembership = await membershipRepo
+      const requestedRole = AuthController.normalizeRole(requestedRoleRaw);
+      const activeMemberships = await membershipRepo
         .createQueryBuilder("membership")
         .where("membership.account_id = :accountId", { accountId: account.id })
         .andWhere("membership.status = :status", { status: SalonMembershipStatus.ACTIVE })
         .orderBy("membership.is_active_context", "DESC")
         .addOrderBy("membership.updated_at", "DESC")
         .addOrderBy("membership.created_at", "DESC")
-        .getOne();
+        .getMany();
       const pendingApplication = await applicationRepo
         .createQueryBuilder("application")
         .where("application.account_id = :accountId", { accountId: account.id })
@@ -183,9 +211,15 @@ export class AuthController {
         where: { owner_account_id: account.id },
         order: { created_at: "DESC" },
       });
+      const activeMembership = requestedRole
+        ? activeMemberships.find((membership) => membership.role === requestedRole) || null
+        : activeMemberships[0] || null;
       const tenant = activeMembership
         ? await TenantLifecycleService.syncTenantState(await tenantRepo.findOne({ where: { id: activeMembership.tenant_id } }))
         : await TenantLifecycleService.syncTenantState(ownedTenant);
+      if (requestedRole && !activeMembership && !(requestedRole === UserRole.ADMIN && tenant?.owner_account_id === account.id)) {
+        throw new AppError("ROLE_NOT_AVAILABLE", 403, "Bu hesap için seçilen rol kullanılamıyor");
+      }
 
       const onboardingState = AuthController.resolveOnboardingState({
         account,
@@ -194,7 +228,7 @@ export class AuthController {
         ownedTenant: activeMembership ? null : tenant,
         pendingPaymentRequest: await AuthController.findPendingPaymentRequest(account.id, activeMembership?.user_id || null),
       });
-      const role = activeMembership?.role || AuthController.resolveAccountRole(account);
+      const role = requestedRole || activeMembership?.role || AuthController.resolveAccountRole(account);
 
       const session = {
         account,
@@ -206,6 +240,7 @@ export class AuthController {
         membershipStatus: activeMembership ? activeMembership.status : pendingApplication ? pendingApplication.status : "NONE",
         pendingApplication,
         managedClinic: !activeMembership && role === UserRole.ADMIN ? tenant : null,
+        availablePersonas: AuthController.resolveAvailablePersonasForAccount(account, activeMemberships, tenant),
         accessToken: AuthController.signToken({
           sub: activeMembership?.user_id || account.id,
           tenantId: activeMembership?.tenant_id || null,
@@ -230,7 +265,7 @@ export class AuthController {
         success: true,
         request_id: (req as any).requestId || null,
         ip_address: req.ip || null,
-        user_agent: req.headers["user-agent"],
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         metadata: {
           email: account.email,
           tenant_slug: tenant?.slug || null,
@@ -256,7 +291,7 @@ export class AuthController {
         success: true,
         request_id: (req as any).requestId || null,
         ip_address: req.ip || null,
-        user_agent: req.headers["user-agent"],
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         metadata: {
           email: legacySession.account.email,
           tenant_slug: legacySession.tenant?.slug || null,
@@ -285,7 +320,7 @@ export class AuthController {
       success: true,
       request_id: (req as any).requestId || null,
       ip_address: req.ip || null,
-      user_agent: req.headers["user-agent"],
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
     });
     res.clearCookie("accessToken", {
       httpOnly: true,
@@ -294,6 +329,90 @@ export class AuthController {
       path: "/",
     });
     return res.json({ data: true });
+  }
+
+  static async switchRole(req: Request, res: Response) {
+    const auth = (req as any).auth as JwtPayload | undefined;
+    const requestedRole = AuthController.normalizeRole((req.body as { role?: string })?.role);
+    if (!auth?.accountId || auth.loginScope !== "ACCOUNT") {
+      throw new AppError("ACCOUNT_SESSION_REQUIRED", 403, "Rol değiştirmek için hesap oturumu gerekli");
+    }
+    if (!requestedRole) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir rol seçmelisin");
+    }
+
+    const accountRepo = AppDataSource.getRepository(Account);
+    const membershipRepo = AppDataSource.getRepository(SalonMembership);
+    const tenantRepo = AppDataSource.getRepository(Tenant);
+    const applicationRepo = AppDataSource.getRepository(SalonApplication);
+    const account = await accountRepo.findOne({ where: { id: auth.accountId } });
+    if (!account || !account.is_active) {
+      throw new AppError("ACCOUNT_INACTIVE", 403, "Hesap aktif değil");
+    }
+
+    const [memberships, pendingApplication, ownedTenantRaw] = await Promise.all([
+      membershipRepo
+        .createQueryBuilder("membership")
+        .where("membership.account_id = :accountId", { accountId: account.id })
+        .andWhere("membership.status = :status", { status: SalonMembershipStatus.ACTIVE })
+        .orderBy("membership.is_active_context", "DESC")
+        .addOrderBy("membership.updated_at", "DESC")
+        .getMany(),
+      applicationRepo
+        .createQueryBuilder("application")
+        .where("application.account_id = :accountId", { accountId: account.id })
+        .andWhere(
+          "(application.status = :pendingStatus OR (application.status = :approvedStatus AND application.payment_status != :verifiedStatus))",
+          {
+            pendingStatus: SalonApplicationStatus.PENDING,
+            approvedStatus: SalonApplicationStatus.APPROVED,
+            verifiedStatus: MembershipPaymentStatus.VERIFIED,
+          }
+        )
+        .orderBy("application.created_at", "DESC")
+        .getOne(),
+      tenantRepo.findOne({ where: { owner_account_id: account.id }, order: { created_at: "DESC" } }),
+    ]);
+    const ownedTenant = await TenantLifecycleService.syncTenantState(ownedTenantRaw);
+    const membership = memberships.find((row) => row.role === requestedRole) || null;
+    const tenant = membership
+      ? await TenantLifecycleService.syncTenantState(await tenantRepo.findOne({ where: { id: membership.tenant_id } }))
+      : ownedTenant;
+    if (!membership && !(requestedRole === UserRole.ADMIN && tenant?.owner_account_id === account.id)) {
+      throw new AppError("ROLE_NOT_AVAILABLE", 403, "Bu hesap için seçilen rol kullanılamıyor");
+    }
+
+    await AuthController.markActiveMembershipContext(account.id, membership?.id || null);
+    const pendingPaymentRequest = await AuthController.findPendingPaymentRequest(account.id, membership?.user_id || null);
+    const onboardingState = AuthController.resolveOnboardingState({
+      account,
+      membership,
+      pendingApplication,
+      ownedTenant: membership ? null : tenant,
+      pendingPaymentRequest,
+    });
+
+    return AuthController.respondWithSession(res, {
+      account,
+      role: requestedRole,
+      membership,
+      tenant,
+      linkedUserId: membership?.user_id || null,
+      onboardingState,
+      membershipStatus: membership ? membership.status : pendingApplication ? pendingApplication.status : "NONE",
+      pendingApplication,
+      managedClinic: !membership && requestedRole === UserRole.ADMIN ? tenant : null,
+      availablePersonas: AuthController.resolveAvailablePersonasForAccount(account, memberships, tenant),
+      accessToken: AuthController.signToken({
+        sub: membership?.user_id || account.id,
+        tenantId: membership?.tenant_id || null,
+        role: requestedRole,
+        accountId: account.id,
+        linkedUserId: membership?.user_id || null,
+        membershipId: membership?.id || null,
+        loginScope: "ACCOUNT",
+      }),
+    });
   }
 
   static async me(req: Request, res: Response) {
@@ -307,16 +426,35 @@ export class AuthController {
       if (!account) {
         throw new AppError("INVALID_TOKEN", 401, "Oturum doğrulanamadı");
       }
+      if (!account.is_active) {
+        throw new AppError("ACCOUNT_INACTIVE", 403, "Hesap aktif değil");
+      }
       await MemberRequestCleanupService.cleanupStaleApplicationsForAccount(account.id);
+      const memberships = await AppDataSource.getRepository(SalonMembership)
+        .createQueryBuilder("membership")
+        .where("membership.account_id = :accountId", { accountId: auth.accountId })
+        .andWhere("membership.status = :status", { status: SalonMembershipStatus.ACTIVE })
+        .orderBy("membership.is_active_context", "DESC")
+        .addOrderBy("membership.updated_at", "DESC")
+        .getMany();
       const membership = auth.membershipId
-        ? await AppDataSource.getRepository(SalonMembership).findOne({ where: { id: auth.membershipId } })
-        : await AppDataSource.getRepository(SalonMembership)
-            .createQueryBuilder("membership")
-            .where("membership.account_id = :accountId", { accountId: auth.accountId })
-            .andWhere("membership.status = :status", { status: SalonMembershipStatus.ACTIVE })
-            .orderBy("membership.is_active_context", "DESC")
-            .addOrderBy("membership.updated_at", "DESC")
-            .getOne();
+        ? memberships.find((row) => row.id === auth.membershipId) || null
+        : memberships.find((row) => row.is_active_context) || memberships[0] || null;
+      if (auth.membershipId && !membership) {
+        throw new AppError("SESSION_REVOKED", 401, "Oturum yetkisi artık aktif değil. Lütfen tekrar giriş yapın.");
+      }
+      if (membership?.user_id && membership.user_id !== (auth.linkedUserId || auth.sub)) {
+        throw new AppError("SESSION_REVOKED", 401, "Oturum yetkisi artık aktif değil. Lütfen tekrar giriş yapın.");
+      }
+      if (membership?.user_id) {
+        const linkedUser = await AppDataSource.getRepository(User).findOne({
+          where: { id: membership.user_id, tenant_id: membership.tenant_id, role: membership.role },
+          select: ["id", "is_active"],
+        });
+        if (!linkedUser?.is_active) {
+          throw new AppError("SESSION_REVOKED", 401, "Oturum yetkisi artık aktif değil. Lütfen tekrar giriş yapın.");
+        }
+      }
       const ownedTenant = await AppDataSource.getRepository(Tenant).findOne({
         where: { owner_account_id: account.id },
         order: { created_at: "DESC" },
@@ -364,7 +502,7 @@ export class AuthController {
           has_active_membership: Boolean(membership),
           has_pending_application: Boolean(pendingApplication),
           has_managed_clinic: Boolean(!membership && role === UserRole.ADMIN && tenant),
-          available_personas: [role],
+          available_personas: AuthController.resolveAvailablePersonasForAccount(account, memberships, tenant),
           active_membership: membership
             ? {
                 id: membership.id,
@@ -424,7 +562,7 @@ export class AuthController {
     const [user, tenant] = await Promise.all([
       AppDataSource.getRepository(User).findOne({
         where: { id: auth.sub, tenant_id: auth.tenantId || undefined },
-        select: ["id", "email", "first_name", "last_name", "role", "tenant_id"],
+        select: ["id", "email", "first_name", "last_name", "role", "tenant_id", "is_active"],
       }),
       auth.tenantId
         ? AppDataSource.getRepository(Tenant).findOne({
@@ -436,6 +574,9 @@ export class AuthController {
 
     if (!user || !tenant) {
       throw new AppError("INVALID_TOKEN", 401, "Oturum doğrulanamadı");
+    }
+    if (!user.is_active) {
+      throw new AppError("USER_INACTIVE", 403, "Kullanıcı aktif değil");
     }
 
     return res.json({
@@ -589,6 +730,39 @@ export class AuthController {
     });
   }
 
+  private static normalizeRole(value?: string | null) {
+    const role = String(value || "").toUpperCase();
+    if (role === UserRole.ADMIN) return UserRole.ADMIN;
+    if (role === UserRole.TRAINER) return UserRole.TRAINER;
+    if (role === UserRole.MEMBER) return UserRole.MEMBER;
+    return null;
+  }
+
+  private static resolveAvailablePersonasForAccount(account: Account, memberships: SalonMembership[], tenant?: Tenant | null) {
+    const roles = new Set<UserRole>();
+    memberships.forEach((membership) => roles.add(membership.role));
+    if (tenant?.owner_account_id === account.id || account.global_role_default === UserRole.ADMIN) {
+      roles.add(UserRole.ADMIN);
+    }
+    if (account.global_role_default) {
+      roles.add(account.global_role_default);
+    }
+    return Array.from(roles);
+  }
+
+  private static async markActiveMembershipContext(accountId: string, membershipId: string | null) {
+    const repo = AppDataSource.getRepository(SalonMembership);
+    await repo
+      .createQueryBuilder()
+      .update(SalonMembership)
+      .set({ is_active_context: false })
+      .where("account_id = :accountId", { accountId })
+      .andWhere("status = :status", { status: SalonMembershipStatus.ACTIVE })
+      .execute();
+    if (!membershipId) return;
+    await repo.update({ id: membershipId, account_id: accountId }, { is_active_context: true });
+  }
+
   private static respondWithSession(
     res: Response,
     input: {
@@ -602,9 +776,10 @@ export class AuthController {
       accessToken: string;
       pendingApplication?: SalonApplication | null;
       managedClinic?: Tenant | null;
+      availablePersonas?: UserRole[];
     }
   ) {
-    const { account, role, membership, tenant, linkedUserId, onboardingState, membershipStatus, accessToken, pendingApplication, managedClinic } = input;
+    const { account, role, membership, tenant, linkedUserId, onboardingState, membershipStatus, accessToken, pendingApplication, managedClinic, availablePersonas } = input;
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -623,7 +798,7 @@ export class AuthController {
         has_active_membership: Boolean(membership),
         has_pending_application: Boolean(pendingApplication),
         has_managed_clinic: Boolean(!membership && role === UserRole.ADMIN && managedClinic),
-        available_personas: [role],
+        available_personas: availablePersonas && availablePersonas.length > 0 ? availablePersonas : [role],
         active_membership: membership
           ? {
               id: membership.id,
@@ -717,18 +892,19 @@ export class AuthController {
     const event = await MemberRequestCleanupService.findActionablePaymentRequest({ identifiers });
 
     if (!event) return null;
+    const payload = AuthController.readEventPayload(event);
     return {
       id: event.id,
-      status: String(event.payload?.status || "PENDING"),
-      amount: typeof event.payload?.amount === "number" ? event.payload.amount : null,
+      status: String(payload.status || "PENDING"),
+      amount: typeof payload.amount === "number" ? payload.amount : null,
       currency: "TRY",
-      package_id: typeof event.payload?.package_id === "string" ? event.payload.package_id : null,
-      package_title: typeof event.payload?.package_title === "string" ? event.payload.package_title : null,
-      trainer_id: typeof event.payload?.trainer_id === "string" ? event.payload.trainer_id : null,
-      tenant_slug: typeof event.payload?.tenant_slug === "string" ? event.payload.tenant_slug : null,
-      tenant_name: typeof event.payload?.tenant_name === "string" ? event.payload.tenant_name : null,
-      note: typeof event.payload?.note === "string" ? event.payload.note : null,
-      selected_days: Array.isArray(event.payload?.selected_days) ? event.payload.selected_days : [],
+      package_id: typeof payload.package_id === "string" ? payload.package_id : null,
+      package_title: typeof payload.package_title === "string" ? payload.package_title : null,
+      trainer_id: typeof payload.trainer_id === "string" ? payload.trainer_id : null,
+      tenant_slug: typeof payload.tenant_slug === "string" ? payload.tenant_slug : null,
+      tenant_name: typeof payload.tenant_name === "string" ? payload.tenant_name : null,
+      note: typeof payload.note === "string" ? payload.note : null,
+      selected_days: Array.isArray(payload.selected_days) ? payload.selected_days : [],
     };
   }
 
@@ -743,13 +919,16 @@ export class AuthController {
       } as any,
       order: { created_at: "DESC" },
     });
-    return rows.map((row) => ({
-      id: row.id,
-      type: String(row.payload?.request_type || "PACKAGE_RENEWAL"),
-      status: "PENDING",
-      created_at: row.created_at,
-      reason: typeof row.payload?.note === "string" ? row.payload.note : null,
-    }));
+    return rows.map((row) => {
+      const payload = AuthController.readEventPayload(row);
+      return {
+        id: row.id,
+        type: String(payload.request_type || "PACKAGE_RENEWAL"),
+        status: "PENDING",
+        created_at: row.created_at,
+        reason: typeof payload.note === "string" ? payload.note : null,
+      };
+    });
   }
 
   private static resolveMobileActions(role: UserRole, options?: { hasActiveMembership?: boolean }) {

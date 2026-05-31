@@ -26,7 +26,7 @@ export default function TrainerMembersScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const { data, isRefetching, refetch } = useQuery({ queryKey: ["trainer-members"], queryFn: getTrainerMembersApi });
-  const rows = Array.isArray(data) ? data : [];
+  const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   const filteredRows = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("tr");
@@ -64,7 +64,16 @@ export default function TrainerMembersScreen() {
       ) : null}
 
       {filteredRows.map((row: TrainerMemberListItem) => (
-        <Pressable key={row.id} style={styles.rowCard} onPress={() => router.push(`/(trainer)/members/${row.id}` as never)}>
+        <Pressable
+          key={row.id}
+          style={styles.rowCard}
+          onPress={() =>
+            router.push({
+              pathname: "/(trainer)/members/[id]",
+              params: { id: row.id, backTo: "/(trainer)/members" },
+            } as never)
+          }
+        >
           <View style={styles.rowHeader}>
             <View style={styles.titleWrap}>
               <Text style={styles.title}>{row.full_name || "Danışan"}</Text>

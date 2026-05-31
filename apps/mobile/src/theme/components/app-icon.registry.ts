@@ -41,6 +41,8 @@ import {
   UserRound,
   Users,
   Download,
+  Copy,
+  ExternalLink,
   Wallet,
   Weight,
   Dumbbell,
@@ -100,6 +102,8 @@ export const APP_ICON_COMPONENTS: Record<AppIconName, LucideIcon> = {
   dumbbell: Dumbbell,
   money: TurkishLira,
   download: Download,
+  external: ExternalLink,
+  copy: Copy,
   usersRound: UsersRound,
 };
 

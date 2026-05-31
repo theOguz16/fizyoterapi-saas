@@ -36,14 +36,14 @@ export default function AdminRiskMembersScreen() {
               <View style={styles.headerRow}>
                 <View style={styles.identityRow}>
                   <AppIcon name="risk" size="sm" tone="danger" />
-                  <Text style={styles.title}>{item.member_full_name || item.member_name || (item as any).full_name || "Üye"}</Text>
+                  <Text style={styles.title}>{resolveMemberName(item)}</Text>
                 </View>
                 <StatusBadge label={item.risk_label || item.level || "Takip"} tone="danger" />
               </View>
               <Text style={styles.copy}>{resolveRiskReason(item)}</Text>
               <View style={styles.metaRow}>
-                <Text style={styles.meta}>Skor: {item.risk_score ?? "-"}</Text>
-                <Text style={styles.meta}>Devamsızlık: {item.attendance_gap_days ?? "-"} gün</Text>
+                <Text style={styles.meta}>Skor: {item.risk_score ?? item.score ?? "-"}</Text>
+                <Text style={styles.meta}>Devamsızlık: {item.attendance_gap_days ?? item.days_since_attendance ?? "-"} gün</Text>
                 <Text style={styles.meta}>Kalan hak: {item.remaining_credits ?? "-"}</Text>
               </View>
               <View style={styles.actionPill}>
@@ -59,7 +59,11 @@ export default function AdminRiskMembersScreen() {
 }
 
 function resolveRiskReason(item: AdminRiskMemberItem) {
-  return item.primary_reason || item.reasom || "Katılım düşmüş, paket bitişe yaklaşmış veya takip verisi güncel değil.";
+  return item.primary_reason || item.reasom || item.reasons?.[0] || "Katılım düşmüş, paket bitişe yaklaşmış veya takip verisi güncel değil.";
+}
+
+function resolveMemberName(item: AdminRiskMemberItem) {
+  return item.member_full_name || item.member_name || item.full_name || item.email || "Üye adı bekleniyor";
 }
 
 const styles = StyleSheet.create({

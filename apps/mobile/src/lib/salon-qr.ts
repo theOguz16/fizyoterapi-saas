@@ -73,7 +73,7 @@ function readSlugFromClinicCode(value: string): string | null {
   const raw = String(value || "").trim();
   if (!raw) return null;
 
-  const normalizedCode = raw.replace(/^CLN-/i, "");
+  const normalizedCode = raw.replace(/^(FYF|CLN)-/i, "");
   const codeParts = normalizedCode.split("-").filter(Boolean);
 
   if (codeParts.length < 2) return null;

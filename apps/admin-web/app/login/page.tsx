@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { ShieldCheck, Stethoscope, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import { ClinervaLogo } from "@/components/brand/clinerva-logo";
+import { FizyoFlowLogo } from "@/components/brand/fizyoflow-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export default function LoginPage() {
       });
 
       if (payload?.data?.available_surfaces?.web === false) {
-        throw new Error("Bu hesap web paneline hazir degil. Once Clinerva onayini bekleyin.");
+        throw new Error("Bu hesap web paneline hazir degil. Once FizyoFlow onayini bekleyin.");
       }
 
       const role = payload?.data?.user?.role as Role | undefined;
@@ -64,7 +64,7 @@ export default function LoginPage() {
       <div className="w-full max-w-5xl space-y-4">
         <Card className="interactive-panel border-slate-200/80 bg-white/95 shadow-soft">
           <CardHeader className="space-y-3">
-            <ClinervaLogo />
+            <FizyoFlowLogo />
             <CardTitle className="text-3xl tracking-tight">Salon Operasyon Girişi</CardTitle>
             <CardDescription className="max-w-3xl text-sm md:text-base">
               Bu panel yalnız yönetici ve eğitmen girişleri içindir. Üyeler giriş ve salon seçimini mobil uygulama üzerinden yapar.
@@ -107,7 +107,7 @@ export default function LoginPage() {
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="ornek@clinerva.com"
+                    placeholder="ornek@fizyoflow.com"
                     value={form.email}
                     onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
                   />

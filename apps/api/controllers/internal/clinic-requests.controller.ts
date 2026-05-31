@@ -10,6 +10,7 @@ import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../enti
 import { User, UserRole } from "../../entities/user.entity";
 import { AppError } from "../../errors/AppError";
 import { AuditLogService } from "../../services/audit-log.service";
+import { AuditLog } from "../../entities/audit-log.entity";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
 
 function plusDays(days: number) {
@@ -38,7 +39,7 @@ export class InternalClinicRequestsController {
       success: true,
       request_id: (req as Request & { requestId?: string }).requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "tenant",
       target_id: input.tenant.id,
       metadata: {
@@ -86,6 +87,30 @@ export class InternalClinicRequestsController {
     });
   }
 
+  static async listDemoLeads(_req: Request, res: Response) {
+    const rows = await AppDataSource.getRepository(AuditLog).find({
+      where: { event_type: "PRODUCT_SITE_DEMO_LEAD_SUBMIT" },
+      order: { created_at: "DESC" },
+      take: 100,
+    });
+
+    return res.json({
+      data: rows.map((row) => {
+        const metadata = row.metadata || {};
+        return {
+          id: row.id,
+          created_at: row.created_at,
+          full_name: String(metadata.full_name || ""),
+          clinic_name: String(metadata.clinic_name || ""),
+          phone: String(metadata.phone || ""),
+          city: String(metadata.city || ""),
+          note: String(metadata.note || ""),
+          source: String(metadata.source || "PRODUCT_SITE_DEMO"),
+        };
+      }),
+    });
+  }
+
   static async publish(req: Request, res: Response) {
     const tenantId = String(req.params.id || "");
     const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
@@ -121,7 +146,7 @@ export class InternalClinicRequestsController {
       await profileRepo.save(profile);
     }
 
-    let linkedUser = await userRepo.findOne({ where: { email: account.email } as any });
+    let linkedUser = await userRepo.findOne({ where: { tenant_id: tenant.id, email: account.email, role: UserRole.ADMIN } as any });
     if (!linkedUser) {
       linkedUser = userRepo.create({
         tenant_id: tenant.id,
@@ -134,7 +159,6 @@ export class InternalClinicRequestsController {
         is_active: true,
       });
     } else {
-      linkedUser.tenant_id = tenant.id;
       linkedUser.password_hash = account.password_hash;
       linkedUser.first_name = account.first_name;
       linkedUser.last_name = account.last_name;
@@ -178,7 +202,7 @@ export class InternalClinicRequestsController {
 
   static async reject(req: Request, res: Response) {
     const tenantId = String(req.params.id || "");
-    const note = typeof req.body?.note === "string" ? req.body.note.trim() : "Clinerva incelemesi sonrası reddedildi";
+    const note = typeof req.body?.note === "string" ? req.body.note.trim() : "FizyoFlow incelemesi sonrası reddedildi";
     const repo = AppDataSource.getRepository(Tenant);
     const profileRepo = AppDataSource.getRepository(SalonProfile);
     const membershipRepo = AppDataSource.getRepository(SalonMembership);

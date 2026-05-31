@@ -89,14 +89,17 @@ export default function MemberPlanScreen() {
   const weeklyTarget = Number(homeQuery.data?.member?.weekly_class_hours || 1);
   const requiredSlots = weeklyTarget * 3;
   const requiredTrainerFreeSlots = Math.ceil(requiredSlots * (2 / 3));
-  const availabilityRows = Array.isArray(availabilityQuery.data) ? availabilityQuery.data : [];
-  const anchorDate = availabilityRows[0]?.starts_at ? new Date(availabilityRows[0].starts_at) : new Date();
+  const availabilityRows = useMemo(() => (Array.isArray(availabilityQuery.data) ? availabilityQuery.data : []), [availabilityQuery.data]);
+  const anchorDate = useMemo(
+    () => (availabilityRows[0]?.starts_at ? new Date(availabilityRows[0].starts_at) : new Date()),
+    [availabilityRows]
+  );
   const slotCandidates = useMemo(() => buildWeekSlots(homeQuery.data?.calendar?.business_hours, anchorDate), [homeQuery.data?.calendar?.business_hours, anchorDate]);
 
   useEffect(() => {
     const keys = availabilityRows.map((row: any) => new Date(row.starts_at).toISOString());
     setSelectedKeys(keys);
-  }, [availabilityQuery.data]);
+  }, [availabilityRows]);
 
   const targetMutation = useMutation({
   mutationFn: (value: number) => patchMemberWeeklyTarget(value),

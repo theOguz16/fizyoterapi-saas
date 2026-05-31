@@ -152,6 +152,7 @@ describe("trainer today controller", () => {
         lunch_break_start: "12:00",
         lunch_break_end: "13:00",
         slot_minutes: 60,
+        break_duration_minutes: 0,
       },
       booking_policy: {
         min_hours_before_start: 3,

@@ -11,7 +11,7 @@ import {
   type TrainerAssignedPackage,
 } from "@/lib/mobile-api";
 import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
-import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
+import { formatGroupClassDateTime, formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassScheduleLabel } from "@/lib/group-classes";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -56,11 +56,6 @@ type DateOption = {
   isoDay: number;
 };
 
-type TimeOption = {
-  value: string;
-  helper: string;
-};
-
 type GroupClassFormState = {
   id: string;
   lesson_name: string;
@@ -100,6 +95,25 @@ function toIsoDate(date: string, time: string, minutes: number) {
     starts_at: start.toISOString(),
     ends_at: end.toISOString(),
   };
+}
+
+function toLocalDateKey(value?: string | null) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function toLocalTimeKey(value?: string | null) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function buildEmptyForm(): GroupClassFormState {
@@ -255,15 +269,51 @@ export default function TrainerGroupClassesScreen() {
     queryFn: getTrainerGroupClassFormOptionsApi,
   });
 
-  const rows = Array.isArray(groupClassesQuery.data) ? groupClassesQuery.data : [];
-  const packages = Array.isArray(formOptionsQuery.data?.packages) ? formOptionsQuery.data.packages : [];
-  const members = Array.isArray(formOptionsQuery.data?.members) ? formOptionsQuery.data.members : [];
+  const rows = useMemo(() => (Array.isArray(groupClassesQuery.data) ? groupClassesQuery.data : []), [groupClassesQuery.data]);
+  const sortedRows = useMemo(
+    () =>
+      [...rows].sort((a, b) => {
+        const pendingDelta = Number(String(b.status || "").toUpperCase() === "PENDING") - Number(String(a.status || "").toUpperCase() === "PENDING");
+        if (pendingDelta !== 0) return pendingDelta;
+        return new Date(b.starts_at || 0).getTime() - new Date(a.starts_at || 0).getTime();
+      }),
+    [rows]
+  );
+  const allPackages = Array.isArray(formOptionsQuery.data?.packages) ? formOptionsQuery.data.packages : [];
+
+  const packages = allPackages.filter((pkg) => {
+  const lessonMode = String(pkg.lesson_mode || "").toUpperCase();
+  const packageType = String(pkg.package_type || "").toUpperCase();
+  const capacity = Number(pkg.capacity || 0);
+
+  return lessonMode === "GROUP" || packageType === "GROUP" || capacity > 2;
+});
+  const members = useMemo(
+    () => (Array.isArray(formOptionsQuery.data?.members) ? formOptionsQuery.data.members : []),
+    [formOptionsQuery.data?.members]
+  );
   const businessHours = useMemo(
     () => normalizeBusinessHours(formOptionsQuery.data?.business_hours),
     [formOptionsQuery.data?.business_hours]
   );
   const timeOptions = useMemo(() => buildTimeOptions(businessHours), [businessHours]);
   const dateOptions = useMemo(() => buildUpcomingWorkingDates(businessHours.working_days, 24), [businessHours.working_days]);
+  const occupiedSlotKeys = useMemo(() => {
+    const keys = new Set<string>();
+    rows.forEach((row) => {
+      if (form.id && String(row.id) === form.id) return;
+      const dateKey = toLocalDateKey(row.starts_at);
+      const timeKey = toLocalTimeKey(row.starts_at);
+      if (dateKey && timeKey) {
+        keys.add(`${dateKey}T${timeKey}`);
+      }
+    });
+    return keys;
+  }, [form.id, rows]);
+  const availableTimeOptions = useMemo(
+    () => timeOptions.filter((option) => !occupiedSlotKeys.has(`${form.date}T${option.value}`)),
+    [form.date, occupiedSlotKeys, timeOptions]
+  );
   const workingDayOptions = useMemo(
     () => DAY_OPTIONS.filter((item) => businessHours.working_days.includes(item.value)),
     [businessHours.working_days]
@@ -315,10 +365,11 @@ export default function TrainerGroupClassesScreen() {
   }, [dateOptions, form.date]);
 
   useEffect(() => {
-    if ((!form.time || !timeOptions.some((item) => item.value === form.time)) && timeOptions.length > 0) {
-      setForm((prev) => ({ ...prev, time: timeOptions[0].value }));
+    const currentTimeIsAvailable = availableTimeOptions.some((item) => item.value === form.time);
+    if ((!form.time || !currentTimeIsAvailable) && availableTimeOptions.length > 0) {
+      setForm((prev) => ({ ...prev, time: availableTimeOptions[0].value }));
     }
-  }, [form.time, timeOptions]);
+  }, [availableTimeOptions, form.time]);
 
   useEffect(() => {
     if (form.recurrence_days.length === 0 && workingDayOptions.length > 0) {
@@ -349,6 +400,18 @@ export default function TrainerGroupClassesScreen() {
 
     if (!form.package_id) {
       throw new Error("Önce paketi seçmelisin.");
+    }
+
+    if (!selectedPackage) {
+      throw new Error("Seçilen paket bulunamadı.");
+    }
+
+    const selectedLessonMode = String(selectedPackage.lesson_mode || "").toUpperCase();
+    const selectedPackageType = String(selectedPackage.package_type || "").toUpperCase();
+    const selectedCapacity = Number(selectedPackage.capacity || 0);
+
+    if (selectedLessonMode !== "GROUP" && selectedPackageType !== "GROUP" && selectedCapacity <= 2) {
+      throw new Error("Grup dersi sadece grup dersine uygun paketlerle açılabilir.");
     }
 
     if (!resolvedDate) {
@@ -618,6 +681,11 @@ function confirmDelete(row: GroupClassSession) {
             placeholder="Örn. Akşam Reformer Grubu"
           />
           <Text style={styles.label}>Paket seç</Text>
+          {packages.length === 0 ? (
+          <Text style={styles.helperText}>
+            Grup dersi açmaya uygun paket bulunmuyor. Admin panelinden GROUP olan bir paket oluşturmalısın.
+          </Text>
+        ) : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {packages.map((option) => {
               const active = form.package_id === option.id;
@@ -706,7 +774,11 @@ function confirmDelete(row: GroupClassSession) {
             label="Başlangıç saati"
             testID="trainer-group-classes-time-picker"
             value={selectedTime?.helper || "Saat bloğu seç"}
-            helper="Salon çalışma saatlerine uygun bloklar listelenir."
+            helper={
+              availableTimeOptions.length > 0
+                ? "Dolu saatler gizlenir; yalnız uygun bloklar listelenir."
+                : "Bu tarihte uygun saat kalmadı. Farklı bir tarih seç."
+            }
             onPress={() => setActivePicker("time")}
           />
 
@@ -837,11 +909,11 @@ function confirmDelete(row: GroupClassSession) {
 
         <SurfaceCard>
           <SectionTitle title="Aktif kayıtlar" subtitle="Gerçek grup ders kayıtlarını düzenle, yayını ve davet kurgusunu güncelle." />
-          {rows.length === 0 ? (
+          {sortedRows.length === 0 ? (
             <Text style={styles.empty}>Henüz açılmış grup dersi görünmüyor.</Text>
           ) : (
             <ScrollPanel testID="trainer-group-classes-list" maxHeight={460}>
-              {rows.map((row) => (
+              {sortedRows.map((row) => (
                 <SurfaceCard key={row.id} tone="default">
                   {/* BAŞLIK VE DURUM ROZETİ YAN YANA */}
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
@@ -862,8 +934,8 @@ function confirmDelete(row: GroupClassSession) {
                       tone={row.status === "PENDING" ? "warning" : row.status === "SCHEDULED" ? "success" : "danger"} 
                     />
                   </View>      
-                  <Text style={styles.copy}>{new Date(row.starts_at).toLocaleString("tr-TR")}</Text>
-                  <Text style={styles.copy}>Plan: {row.recurrence_label || `Özel tarih • ${row.special_date || row.starts_at.slice(0, 10)}`}</Text>
+                  <Text style={styles.copy}>{formatGroupClassDateTime(row.starts_at)}</Text>
+                  <Text style={styles.copy}>Plan: {getGroupClassScheduleLabel(row)}</Text>
                   <Text style={styles.copy}>Paket: {row.package_title || packages.find((item) => item.id === row.related_package_id)?.title || "Bağlı paket yok"}</Text>
                   <Text style={styles.copy}>Bildirim: {getGroupClassAudienceLabel(row.notification_scope)}</Text>
                   <Text style={styles.copy}>Kişi başı ücret: {formatGroupClassPrice(row.price)}</Text>
@@ -921,7 +993,7 @@ function confirmDelete(row: GroupClassSession) {
         title="Saat seç"
         subtitle="Çalışma saatlerine uygun slotlardan seçim yap."
         onClose={() => setActivePicker(null)}
-        rows={timeOptions.map((option) => ({
+        rows={availableTimeOptions.map((option) => ({
           key: option.value,
           label: option.helper,
           helper: "",

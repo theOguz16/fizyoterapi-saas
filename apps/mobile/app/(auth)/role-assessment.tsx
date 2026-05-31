@@ -43,7 +43,7 @@ export default function RoleAssessmentScreen() {
       icon: "spark" as const,
       eyebrow: "Rol seçimi",
       badgeLabel: "Başlangıç",
-      title: "Clinerva’yı hangi rolde kullanacaksın?",
+      title: "FizyoFlow’yı hangi rolde kullanacaksın?",
       subtitle: "Önce kullanım tipini seçelim; sonraki sorular buna göre şekillenecek.",
       helperText: "Rol seçimi sonrası kayıt akışı, ekran öncelikleri ve öneri dili sana göre uyarlanır.",
       options: PERSONA_OPTIONS,

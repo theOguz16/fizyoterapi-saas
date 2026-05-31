@@ -42,7 +42,7 @@ export default function TrainerHomeScreen() {
         label="QR okut"
         icon="qr"
         fullWidth={false}
-        onPress={() => router.push("/(trainer)/checkin" as never)}
+        onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: "/(trainer)/home" } } as never)}
       />
     }
   >
@@ -73,13 +73,13 @@ export default function TrainerHomeScreen() {
         <Text style={styles.copy}>Bugün en sık kullanacağın alanlara buradan geç.</Text>
         <View style={styles.quickGrid}>
           <QuickAction testID="trainer-home-calendar" title="Takvimim" icon="calendar" onPress={() => router.push("/(trainer)/calendar" as never)} />
-          <QuickAction testID="trainer-home-manual-code" title="Yoklama / QR" icon="scan" onPress={() => router.push("/(trainer)/checkin" as never)} />
-          <QuickAction testID="trainer-home-qr" title="Eğitmen QR" icon="qr" onPress={() => router.push("/(trainer)/qr" as never)} />
-          <QuickAction testID="trainer-home-packages" title="Paketlerim" icon="package" onPress={() => router.push("/(trainer)/packages" as never)} />
+          <QuickAction testID="trainer-home-manual-code" title="Yoklama / QR" icon="scan" onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: "/(trainer)/home" } } as never)} />
+          <QuickAction testID="trainer-home-qr" title="Eğitmen QR" icon="qr" onPress={() => router.push({ pathname: "/(trainer)/qr", params: { backTo: "/(trainer)/home" } } as never)} />
+          <QuickAction testID="trainer-home-packages" title="Paketlerim" icon="package" onPress={() => router.push({ pathname: "/(trainer)/packages", params: { backTo: "/(trainer)/home" } } as never)} />
           <QuickAction testID="trainer-home-earnings" title="Kazanç" icon="wallet" onPress={() => router.push("/(trainer)/earnings" as never)} />
           <QuickAction testID="trainer-home-clients" title="Danışanlar" icon="members" onPress={() => router.push("/(trainer)/clients" as never)} />
           <QuickAction testID="trainer-home-profile" title="Profil" icon="profile" onPress={() => router.push("/(trainer)/profile" as never)} />
-          <QuickAction testID="trainer-home-group-classes" title="Grup Dersleri" icon="dumbbell" onPress={() => router.push("/(trainer)/group-classes" as never)} />
+          <QuickAction testID="trainer-home-group-classes" title="Grup Dersleri" icon="dumbbell" onPress={() => router.push({ pathname: "/(trainer)/group-classes", params: { backTo: "/(trainer)/home" } } as never)} />
         </View>
       </SurfaceCard>
     </View>

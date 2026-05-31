@@ -1,0 +1,4 @@
+appId: com.fizyoflow.mobile
+---
+- tapOn:
+    point: "62%,37%"

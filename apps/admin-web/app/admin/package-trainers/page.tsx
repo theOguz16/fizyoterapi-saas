@@ -32,6 +32,11 @@ type LessonCatalogItem = {
   trainer_commission_rate: string;
   capacity_label: string;
   package_type: LessonCatalogPackageType;
+  category_group?: string | null;
+  lesson_mode?: "PRIVATE" | "DUO" | "GROUP" | string | null;
+  sub_lessons?: string[];
+  session_duration_minutes?: number | null;
+  break_duration_minutes?: number | null;
 };
 
 type PackageRow = {
@@ -105,6 +110,11 @@ type SettingsPayload = {
         trainer_commission_rate?: string | number;
         capacity_label?: string;
         package_type?: LessonCatalogPackageType;
+        category_group?: string | null;
+        lesson_mode?: string | null;
+        sub_lessons?: string[];
+        session_duration_minutes?: number | null;
+        break_duration_minutes?: number | null;
       }>;
     };
   };
@@ -237,6 +247,19 @@ function normalizeCatalog(raw: unknown): LessonCatalogItem[] {
       trainer_commission_rate: asNumericString(item.trainer_commission_rate, "25.00"),
       capacity_label: String(item.capacity_label || "1 kişi"),
       package_type: normalizedPackageType,
+      category_group: String(item.category_group || "").trim() || null,
+      lesson_mode: String(item.lesson_mode || "").trim() || null,
+      sub_lessons: Array.isArray(item.sub_lessons)
+        ? item.sub_lessons.map((subLesson) => String(subLesson || "").trim()).filter(Boolean)
+        : [],
+      session_duration_minutes:
+        item.session_duration_minutes === undefined || item.session_duration_minutes === null
+          ? null
+          : Number(item.session_duration_minutes),
+      break_duration_minutes:
+        item.break_duration_minutes === undefined || item.break_duration_minutes === null
+          ? null
+          : Number(item.break_duration_minutes),
     });
   }
 
@@ -432,6 +455,11 @@ export default function AdminPackageTrainersPage() {
               trainer_commission_rate: item.trainer_commission_rate,
               capacity_label: item.capacity_label,
               package_type: item.package_type,
+              category_group: item.category_group || undefined,
+              lesson_mode: item.lesson_mode || undefined,
+              sub_lessons: item.sub_lessons || [],
+              session_duration_minutes: item.session_duration_minutes ?? undefined,
+              break_duration_minutes: item.break_duration_minutes ?? undefined,
             })),
           },
         }),
@@ -458,6 +486,11 @@ export default function AdminPackageTrainersPage() {
         trainer_commission_rate: "25.00",
         capacity_label: "1 kişi",
         package_type: "OTHER",
+        category_group: null,
+        lesson_mode: "PRIVATE",
+        sub_lessons: [],
+        session_duration_minutes: 45,
+        break_duration_minutes: 0,
       },
     ]);
   }
@@ -868,6 +901,54 @@ export default function AdminPackageTrainersPage() {
                             updateCatalogRow(service.code, { trainer_commission_rate: sanitizeDecimalInput(e.target.value) })
                           }
                         />
+                        <Input
+                          value={service.category_group || ""}
+                          placeholder="Kategori grubu (örn. Pilates)"
+                          onChange={(e) => updateCatalogRow(service.code, { category_group: e.target.value })}
+                        />
+                        <Select
+                          value={service.lesson_mode || ""}
+                          onChange={(e) => updateCatalogRow(service.code, { lesson_mode: e.target.value || null })}
+                        >
+                          <option value="">Akış otomatik</option>
+                          <option value="PRIVATE">Özel</option>
+                          <option value="DUO">Duo</option>
+                          <option value="GROUP">Grup</option>
+                        </Select>
+                        <Input
+                          value={(service.sub_lessons || []).join(", ")}
+                          placeholder="Alt dersler (virgülle ayır)"
+                          onChange={(e) =>
+                            updateCatalogRow(service.code, {
+                              sub_lessons: e.target.value
+                                .split(",")
+                                .map((item) => item.trim())
+                                .filter(Boolean),
+                            })
+                          }
+                        />
+                        <div className="grid gap-2 md:grid-cols-2">
+                          <Input
+                            value={service.session_duration_minutes ? String(service.session_duration_minutes) : ""}
+                            inputMode="numeric"
+                            placeholder="Ders süresi (dk)"
+                            onChange={(e) =>
+                              updateCatalogRow(service.code, {
+                                session_duration_minutes: Number(sanitizeIntegerInput(e.target.value)) || null,
+                              })
+                            }
+                          />
+                          <Input
+                            value={service.break_duration_minutes === null || service.break_duration_minutes === undefined ? "" : String(service.break_duration_minutes)}
+                            inputMode="numeric"
+                            placeholder="Ara (dk)"
+                            onChange={(e) =>
+                              updateCatalogRow(service.code, {
+                                break_duration_minutes: Number(sanitizeIntegerInput(e.target.value)) || 0,
+                              })
+                            }
+                          />
+                        </div>
                       </div>
                     ) : null}
                   </>

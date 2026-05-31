@@ -2,7 +2,13 @@ node_modules
 .DS_Store
 .env
 .env.local
+.env.production
+.env.staging
 .env.*.local
+*.p8
+*.p12
+*.mobileprovision
+*.provisionprofile
 dist
 .turbo
 .next

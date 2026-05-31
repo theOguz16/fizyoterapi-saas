@@ -46,10 +46,14 @@ export type MemberBookingDraft = {
     trainer_id?: string;
     trainer_name?: string;
     selected_sub_lesson?: string;
+    duo_partner_name?: string;
+    duo_partner_contact?: string;
   }>;
   lessonMode?: string;
   allowDropInBooking?: boolean;
   selectedSubLesson?: string;
+  duoPartnerName?: string;
+  duoPartnerContact?: string;
   packageTitle?: string;
   packagePrice?: string;
   packageSummary?: string;

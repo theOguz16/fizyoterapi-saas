@@ -1,0 +1,18 @@
+<svg width="344" height="88" viewBox="0 0 344 88" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Fizyoflow açık renk logosu</title>
+  <desc id="desc">Koyu zeminlerde kullanılan Fizyoflow logosu.</desc>
+  <g>
+    <rect x="4" y="4" width="80" height="80" rx="26" fill="#FFFFFF" opacity="0.14"/>
+    <rect x="4" y="4" width="80" height="80" rx="26" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="2"/>
+    <rect x="22" y="22" width="15" height="15" rx="5" fill="#FFFFFF" fill-opacity="0.16" stroke="#C8E7CD" stroke-width="2.8"/>
+    <rect x="52" y="22" width="15" height="15" rx="5" fill="#FFFFFF" fill-opacity="0.16" stroke="#C8E7CD" stroke-width="2.8"/>
+    <rect x="22" y="52" width="15" height="15" rx="5" fill="#FFFFFF" fill-opacity="0.16" stroke="#C8E7CD" stroke-width="2.8"/>
+    <rect x="52" y="52" width="15" height="15" rx="5" fill="#C8E7CD"/>
+    <path d="M29 52C29 40 39 34 46 42C54 50 60 41 60 31" stroke="#C8E7CD" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M29 38C35 44 40 47 46 47C52 47 58 44 63 38" stroke="#8FD0F4" stroke-width="3.8" stroke-linecap="round"/>
+    <circle cx="46" cy="42" r="4.2" fill="#FFD285"/>
+    <path d="M57 60L60 63L68 55" stroke="#1F2937" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="104" y="43" fill="#FFFFFF" font-family="Poppins, Inter, Arial, sans-serif" font-size="31" font-weight="800" letter-spacing="0">Fizyoflow</text>
+  <text x="106" y="65" fill="#FFFFFF" fill-opacity="0.72" font-family="Poppins, Inter, Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="0">Dijital klinik altyapısı</text>
+</svg>

@@ -1,0 +1,67 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "fizyoflow://e2e-reset"
+- tapOn:
+    text: "Aç"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fmeasurements"
+- tapOn:
+    text: "Aç"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible: "Ölçümlerim"
+    timeout: 30000
+- tapOn:
+    id: "member-measurements-add"
+- extendedWaitUntil:
+    visible: "Yeni Ölçüm Ekle"
+    timeout: 10000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible: "Ölçümlerim"
+    timeout: 10000
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcheckin%3FbackTo%3D%2F%28trainer%29%2Fhome"
+- tapOn:
+    text: "Aç"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible: "Ders girişi"
+    timeout: 30000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible: "Bugün"
+    timeout: 10000
+
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3FbackTo%3D%2F%28admin%29%2Fsalon"
+- tapOn:
+    text: "Aç"
+    optional: true
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "admin-subscription-hero"
+    timeout: 30000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible: "Salon ayarları"
+    timeout: 10000

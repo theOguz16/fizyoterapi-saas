@@ -1,0 +1,35 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- assertVisible:
+    id: "welcome-login-button"
+- openLink: "fizyoflow://(intake-member)"
+- assertVisible: "Seni en iyi hangi hedef tanımlar?"
+- tapOn:
+    id: "member-intake-goal-agrilarimi-azaltmak-istiyorum"
+- assertVisible: "Şu an seni en çok zorlayan konu ne?"
+- tapOn:
+    id: "member-intake-issue-skolyoz-postur-takibi"
+- assertVisible: "Salon seçerken en çok neye bakarsın?"
+- tapOn:
+    id: "member-intake-expectation-yakin-olsun"
+- assertVisible: "Haftada kaç gün ayırabilirsin?"
+- tapOn:
+    id: "member-intake-weeklyDays-2-gun"
+- assertVisible: "Tercih ettiğin saat aralığı nedir?"
+- tapOn:
+    id: "member-intake-timePreference-sabah"
+- openLink: "fizyoflow://(intake-member)/packages?slug=demo-salon"
+- assertVisible: "Paket seç"
+- scrollUntilVisible:
+    element:
+      id: "intake-package-recommended-surface"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: ".*Sana özel öneri.*"
+- assertVisible: ".*Skolyoz Seansı.*"
+- assertVisible:
+    id: "intake-package-card-0"

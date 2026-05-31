@@ -91,7 +91,7 @@ export class AdminCmsController {
         primary_color,
       } = req.body ?? {};
 
-      let profile = await AppDataSource.getRepository(SalonProfile).findOne({
+      const profile = await AppDataSource.getRepository(SalonProfile).findOne({
         where: { tenant_id: tenantId },
       });
 
@@ -270,7 +270,7 @@ export class AdminCmsController {
       throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
     }
 
-    let profile = await AppDataSource.getRepository(SalonProfile).findOne({
+    const profile = await AppDataSource.getRepository(SalonProfile).findOne({
         where: { tenant_id: tenantId },
       });
 
@@ -297,7 +297,7 @@ export class AdminCmsController {
     }
 
     const profileRepo = AppDataSource.getRepository(SalonProfile);
-    let profile = await profileRepo.findOne({ where: { tenant_id: tenantId } });
+    const profile = await profileRepo.findOne({ where: { tenant_id: tenantId } });
     
     if (!profile) {
       throw new AppError("PROFILE_NOT_FOUND", 404, "Profil bulunamadı");
@@ -325,7 +325,7 @@ export class AdminCmsController {
     }
 
     const profileRepo = AppDataSource.getRepository(SalonProfile);
-    let profile = await profileRepo.findOne({ where: { tenant_id: tenantId } });
+    const profile = await profileRepo.findOne({ where: { tenant_id: tenantId } });
     
     if (!profile) {
       throw new AppError("PROFILE_NOT_FOUND", 404, "Profil bulunamadı");

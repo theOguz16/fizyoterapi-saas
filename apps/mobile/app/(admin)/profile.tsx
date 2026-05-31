@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSession } from "@/providers/auth-session";
+import { RoleSwitchActions } from "@/components/role-switch-actions";
+import { AccountSecurityCard } from "@/components/account-security-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -11,7 +13,12 @@ import { tokens } from "@/theme/tokens";
 
 export default function AdminProfileScreen() {
   const router = useRouter();
-  const { user, activeMembership, logout } = useSession();
+  const { user, activeMembership, availablePersonas, logout } = useSession();
+  const personaLabel = (availablePersonas || []).map((role) => {
+    if (role === "TRAINER") return "Eğitmen";
+    if (role === "ADMIN") return "Yönetici";
+    return "Üye";
+  }).join(" • ") || "Yönetici";
 
   return (
     <AppShell title="Profil" subtitle="Salon sahibi hesabın, iletişim bilgilerin ve yönetim kısayolların burada yer alır." icon="profile">
@@ -26,7 +33,7 @@ export default function AdminProfileScreen() {
       </SurfaceCard>
 
       <View style={styles.metricsRow}>
-        <MetricCard label="Rol" value="Yönetici" hint="Aktif persona" icon="dashboard" />
+        <MetricCard label="Rol" value="Yönetici" hint={personaLabel} icon="dashboard" />
         <MetricCard label="Salon" value={activeMembership?.tenant_name || "-"} hint="Aktif bağlantı" icon="clinic" />
       </View>
 
@@ -57,13 +64,17 @@ export default function AdminProfileScreen() {
         </View>
       </SurfaceCard>
 
+      <RoleSwitchActions />
+
       <SurfaceCard>
         <Text style={styles.section}>Hızlı işlemler</Text>
-        <ActionButton label="Bildirim merkezi" icon="notifications" onPress={() => router.push("/(admin)/notifications" as never)} />
-        <ActionButton label="Salon QR kodu" icon="qr" variant="ghost" onPress={() => router.push("/(admin)/clinic-qr" as never)} />
-        <ActionButton label="Plan ve fiyatlar" icon="subscription" variant="ghost" onPress={() => router.push("/(admin)/subscription" as never)} />
-        <ActionButton label="Salon ayarları" icon="settings" variant="ghost" onPress={() => router.push("/(admin)/salon" as never)} />
+        <ActionButton label="Bildirim merkezi" icon="notifications" onPress={() => router.push({ pathname: "/(admin)/notifications", params: { backTo: "/(admin)/profile" } } as never)} />
+        <ActionButton label="Salon QR kodu" icon="qr" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/clinic-qr", params: { backTo: "/(admin)/profile" } } as never)} />
+        <ActionButton label="Plan ve fiyatlar" icon="subscription" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/subscription", params: { backTo: "/(admin)/profile" } } as never)} />
+        <ActionButton label="Salon ayarları" icon="settings" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/salon", params: { backTo: "/(admin)/profile" } } as never)} />
       </SurfaceCard>
+
+      <AccountSecurityCard backTo="/(admin)/profile" />
 
       <ActionButton label="Çıkış yap" icon="logout" variant="danger" onPress={() => void logout()} />
     </AppShell>

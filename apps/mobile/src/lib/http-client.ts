@@ -2,6 +2,7 @@
 // Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
 import Constants from "expo-constants";
 import { ApiClientError, resolveApiError } from "./api-error";
+import { markNetworkFailure, markNetworkSuccess } from "./connectivity";
 
 let authToken: string | null = null;
 
@@ -39,6 +40,10 @@ function buildApiBase() {
       // Env'de localhost birakilsa bile gercek cihazda makine IP'sine ceviriyoruz.
       if (detectedHost && (url.hostname === "localhost" || url.hostname === "127.0.0.1")) {
         url.hostname = detectedHost;
+        return url.toString().replace(/\/$/, "");
+      }
+      if (!detectedHost && url.hostname === "127.0.0.1") {
+        url.hostname = "localhost";
         return url.toString().replace(/\/$/, "");
       }
       return configuredBase.replace(/\/$/, "");
@@ -103,9 +108,12 @@ export async function httpRequest<T>(path: string, options: RequestOptions = {})
     const message =
       error instanceof Error && error.name === "AbortError"
         ? "İstek zaman aşımına uğradı. Lütfen tekrar deneyin."
-        : `API'ye baglanilamadi. Mobil istemci su anda ${API_BASE} adresini kullaniyor.`;
+        : "Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.";
+    markNetworkFailure(message);
     throw new ApiClientError(message, 0, "NETWORK_REQUEST_FAILED");
   }
+
+  markNetworkSuccess();
 
   let payload: any = null;
   try {

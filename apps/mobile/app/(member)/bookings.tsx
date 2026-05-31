@@ -24,7 +24,7 @@ export default function MemberBookingsScreen() {
     queryFn: getMemberBookingsApi,
   });
 
-  const rows = Array.isArray(data) ? data : [];
+  const rows = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const filteredRows = useMemo(() => {
     return filterMemberBookingsBySegment(rows, segment as "upcoming" | "history");
   }, [rows, segment]);
@@ -57,14 +57,25 @@ export default function MemberBookingsScreen() {
       {filteredRows.length > 0 ? (
         <ScrollPanel maxHeight={480}>
           {filteredRows.map((row: any, index: number) => (
-            <Pressable testID={`member-booking-card-${index}`} key={row.id} style={styles.card} onPress={() => router.push(`/(member)/booking/${row.id}` as never)}>
+            <Pressable
+              testID={`member-booking-card-${index}`}
+              key={row.id}
+              style={styles.card}
+              onPress={() =>
+                router.push({
+                  pathname: "/(member)/booking/[id]",
+                  params: { id: row.id, backTo: "/(member)/bookings" },
+                } as never)
+              }
+            >
               <View style={styles.rowTop}>
-                <Text style={styles.title}>{row.is_group_class ? getGroupClassDisplayName(row) || row.session_title || row.lesson_category_label || "Grup dersi" : row.session_title || row.lesson_category_label || "Randevu"}</Text>
+                <Text style={styles.title}>{row.is_group_class ? getGroupClassDisplayName(row) || row.session_title || row.lesson_category_label || "Grup dersi" : row.is_duo ? "Duo ders" : row.session_title || row.lesson_category_label || "Randevu"}</Text>
                 <Text style={[styles.badge, getBookingCancelState(row) === "İptal edilebilir" ? styles.badgeSuccess : styles.badgeWarning]}>{getBookingCancelState(row)}</Text>
               </View>
               <Text style={styles.item}>{new Date(row.starts_at).toLocaleString("tr-TR")}</Text>
               <Text style={styles.item}>Eğitmen: {row.trainer_full_name || "Belirtilmedi"}</Text>
-              <Text style={styles.item}>Ders tipi: {row.is_group_class ? `Grup dersi${row.lesson_name ? ` • ${row.lesson_name}` : ""}` : row.lesson_category_label || row.lesson_category || "Belirtilmedi"}</Text>
+              <Text style={styles.item}>Ders tipi: {row.is_group_class ? `Grup dersi${row.lesson_name ? ` • ${row.lesson_name}` : ""}` : row.is_duo ? "İkili ders" : row.lesson_category_label || row.lesson_category || "Belirtilmedi"}</Text>
+              {row.is_duo ? <Text style={styles.item}>Partner: {row.duo_partner_name || "Davet bekleniyor"} • {row.duo_status || "Partner ödemesi bekleniyor"}</Text> : null}
               <Text style={styles.item}>Paket: {row.package_name || row.package_title || "Belirtilmedi"}</Text>
               {row.is_group_class ? <Text style={styles.item}>Ücret onayı: {formatGroupClassPrice(row.price)}</Text> : null}
               {row.is_group_class ? <Text style={styles.item}>Katılım: {row.status === "PENDING" ? "Admin onayı bekliyor" : "Onaylandı"}</Text> : null}

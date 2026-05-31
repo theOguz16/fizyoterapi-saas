@@ -27,17 +27,17 @@ describe("admin approvals helpers", () => {
     expect(getAdminApprovalStatusMeta("APPROVED")).toEqual({
       iconName: "approvals",
       tone: "success",
-      label: "APPROVED",
+      label: "Onaylandı",
     });
     expect(getAdminApprovalStatusMeta("REJECTED")).toEqual({
       iconName: "risk",
       tone: "danger",
-      label: "REJECTED",
+      label: "Reddedildi",
     });
     expect(getAdminApprovalStatusMeta("PENDING")).toEqual({
       iconName: "request",
       tone: "warning",
-      label: "PENDING",
+      label: "Bekliyor",
     });
   });
 
@@ -55,7 +55,7 @@ describe("admin approvals helpers", () => {
     expect(getAdminApprovalStatusMeta("IN_REVIEW")).toEqual({
       iconName: "request",
       tone: "warning",
-      label: "PENDING",
+      label: "Bekliyor",
     });
   });
 });

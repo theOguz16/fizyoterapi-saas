@@ -1,17 +1,26 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
     id: "welcome-signup-button"
     retryTapIfNoChange: true
-- assertVisible: "Clinerva’yı hangi rolde kullanacaksın?"
-- tapOn: "Üye"
+- assertVisible: "FizyoFlow’yı hangi rolde kullanacaksın?"
+- scrollUntilVisible:
+    element:
+      id: "role-option-member"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 80
+- tapOn:
+    id: "role-option-member"
+- waitForAnimationToEnd:
+    timeout: 3000
 - assertVisible: "Başlangıçta en çok hangi hedefe odaklanıyorsun?"
 - tapOn:
     id: "role-step-primarygoal-fitness"

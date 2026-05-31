@@ -1,12 +1,14 @@
 // Bu controller trainer tarafindaki measurements.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import { IsNull } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { Measurement } from "../../entities/measurement.entity";
 import { User, UserRole } from "../../entities/user.entity";
 import { AuditLogService } from "../../services/audit-log.service";
+import { TrainerScopeService } from "../../services/trainer-scope.service";
 
 type ParsedMeasurementPayload = {
   member_id: string;
@@ -40,7 +42,7 @@ export class TrainerMeasurementsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "measurement",
       target_id: input.measurement.id,
       metadata: {
@@ -128,9 +130,10 @@ export class TrainerMeasurementsController {
     };
   }
 
-  private static async buildDueList(tenantId: string, thresholdDays: number) {
+  private static async buildDueList(tenantId: string, thresholdDays: number, memberIds: string[]) {
+    if (memberIds.length === 0) return [];
     const members = await AppDataSource.getRepository(User).find({
-      where: { tenant_id: tenantId, role: UserRole.MEMBER, is_active: true },
+      where: memberIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.MEMBER, is_active: true })) as any,
       order: { created_at: "DESC" },
     });
 
@@ -140,6 +143,8 @@ export class TrainerMeasurementsController {
       .createQueryBuilder("m")
       .distinctOn(["m.member_id"])
       .where("m.tenant_id = :tenantId", { tenantId })
+      .andWhere("m.member_id IN (:...memberIds)", { memberIds })
+      .andWhere("m.deleted_at IS NULL")
       .orderBy("m.member_id", "ASC")
       .addOrderBy("m.measured_at", "DESC")
       .getMany();
@@ -187,15 +192,22 @@ export class TrainerMeasurementsController {
   static async list(req: AuthenticatedRequest, res: Response) {
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+      const trainerId = req.auth?.sub;
+      if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
 
       const memberId = req.query.memberId ? String(req.query.memberId).trim() : "";
       const qb = AppDataSource.getRepository(Measurement)
         .createQueryBuilder("m")
         .where("m.tenant_id = :tenantId", { tenantId })
+        .andWhere("m.trainer_id = :trainerId", { trainerId })
+        .andWhere("m.deleted_at IS NULL")
         .orderBy("m.measured_at", "DESC");
 
       if (memberId) {
+        const hasScope = await TrainerScopeService.hasTrainerMemberScope(tenantId, trainerId, memberId);
+        if (!hasScope) {
+          throw new AppError("MEMBER_SCOPE_FORBIDDEN", 403, "Bu uye trainer kapsaminda degil");
+        }
         qb.andWhere("m.member_id = :memberId", { memberId });
       }
 
@@ -212,15 +224,20 @@ export class TrainerMeasurementsController {
   static async trend(req: AuthenticatedRequest, res: Response) {
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+      const trainerId = req.auth?.sub;
+      if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
 
       const memberId = String(req.query.memberId ?? "").trim();
       if (!memberId) {
         throw new AppError("VALIDATION_ERROR", 400, "memberId zorunlu");
       }
+      const hasScope = await TrainerScopeService.hasTrainerMemberScope(tenantId, trainerId, memberId);
+      if (!hasScope) {
+        throw new AppError("MEMBER_SCOPE_FORBIDDEN", 403, "Bu uye trainer kapsaminda degil");
+      }
 
       const rows = await AppDataSource.getRepository(Measurement).find({
-        where: { tenant_id: tenantId, member_id: memberId },
+        where: { tenant_id: tenantId, trainer_id: trainerId, member_id: memberId, deleted_at: IsNull() },
         order: { measured_at: "ASC" },
       });
 
@@ -244,12 +261,14 @@ export class TrainerMeasurementsController {
   static async dueList(req: AuthenticatedRequest, res: Response) {
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+      const trainerId = req.auth?.sub;
+      if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
 
       const thresholdRaw = req.query.thresholdDays ? Number(req.query.thresholdDays) : 30;
       const thresholdDays = Number.isFinite(thresholdRaw) ? Math.min(Math.max(thresholdRaw, 1), 365) : 30;
 
-      const due = await TrainerMeasurementsController.buildDueList(tenantId, thresholdDays);
+      const memberIds = await TrainerScopeService.resolveTrainerMemberIds(tenantId, trainerId);
+      const due = await TrainerMeasurementsController.buildDueList(tenantId, thresholdDays, memberIds);
       return res.json({ data: due, thresholdDays });
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -310,7 +329,7 @@ export class TrainerMeasurementsController {
 
       const repo = AppDataSource.getRepository(Measurement);
       const measurement = await repo.findOne({
-        where: { id: measurementId, tenant_id: tenantId, trainer_id: trainerId },
+        where: { id: measurementId, tenant_id: tenantId, trainer_id: trainerId, deleted_at: IsNull() },
       });
       if (!measurement) {
         throw new AppError("MEASUREMENT_NOT_FOUND", 404, "Olcum bulunamadi");
@@ -381,13 +400,14 @@ export class TrainerMeasurementsController {
         measured_at: measurement.measured_at.toISOString(),
       };
 
-      await repo.remove(measurement);
+      measurement.deleted_at = new Date();
+      await repo.save(measurement);
       await TrainerMeasurementsController.logMeasurementAudit(req, {
-        eventType: "TRAINER_MEASUREMENT_DELETED",
+        eventType: "TRAINER_MEASUREMENT_ARCHIVED",
         measurement,
         oldState,
       });
-      return res.json({ message: "Olcum silindi" });
+      return res.json({ message: "Olcum arşivlendi" });
     } catch (error) {
       if (error instanceof AppError) throw error;
       console.error("Trainer measurements remove error:", error);

@@ -4,9 +4,10 @@ import { Router } from "express";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { tenantMiddleware } from "../../middlewares/tenant.middleware";
 import { requireRole } from "../../middlewares/rbac.middleware";
+import { qrRateLimit } from "../../middlewares/rate-limit.middleware";
 import { TrainerQrController } from "../../controllers/trainer/qr.controller";
 
 export const trainerQrRoutes = Router();
 
 trainerQrRoutes.use(authMiddleware, tenantMiddleware, requireRole(["TRAINER"]));
-trainerQrRoutes.get("/", TrainerQrController.getMyQr);
+trainerQrRoutes.get("/", qrRateLimit, TrainerQrController.getMyQr);

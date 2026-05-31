@@ -7,7 +7,7 @@ import { AppError } from "../../errors/AppError";
 import { Booking, BookingPaymentStatus, BookingStatus } from "../../entities/booking.entity";
 import { ClassSession, LessonCategory } from "../../entities/class-session.entity";
 import { Package } from "../../entities/package.entity";
-import { User } from "../../entities/user.entity";
+import { User, UserRole } from "../../entities/user.entity";
 import { AuditLogService } from "../../services/audit-log.service";
 
 
@@ -33,7 +33,7 @@ export class AdminBookingsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "booking",
       target_id: input.booking.id,
       metadata: {
@@ -61,6 +61,42 @@ export class AdminBookingsController {
       throw new AppError("VALIDATION_ERROR", 400, `${field} geçerli bir tarih olmalıdır`);
     }
     return date;
+  }
+
+  private static async ensureActiveUser(tenantId: string, userId: string, role: UserRole) {
+    const user = await AppDataSource.getRepository(User).findOne({
+      where: { tenant_id: tenantId, id: userId, role, is_active: true },
+      select: ["id"],
+    });
+    if (!user) {
+      throw new AppError(
+        role === UserRole.MEMBER ? "MEMBER_NOT_FOUND" : "TRAINER_NOT_FOUND",
+        404,
+        role === UserRole.MEMBER ? "Üye bulunamadı veya aktif değil" : "Eğitmen bulunamadı veya aktif değil"
+      );
+    }
+  }
+
+  private static async ensureSessionScope(tenantId: string, sessionId?: string | null, trainerId?: string | null) {
+    if (!sessionId) return;
+    const session = await AppDataSource.getRepository(ClassSession).findOne({
+      where: { tenant_id: tenantId, id: sessionId },
+      select: ["id", "trainer_id"],
+    });
+    if (!session) {
+      throw new AppError("SESSION_NOT_FOUND", 404, "Seans bulunamadı");
+    }
+    if (trainerId && session.trainer_id && session.trainer_id !== trainerId) {
+      throw new AppError("SESSION_TRAINER_MISMATCH", 400, "Seans ve eğitmen eşleşmiyor");
+    }
+  }
+
+  private static async ensureBookingActors(tenantId: string, memberId: string, trainerId: string, sessionId?: string | null) {
+    await Promise.all([
+      AdminBookingsController.ensureActiveUser(tenantId, memberId, UserRole.MEMBER),
+      AdminBookingsController.ensureActiveUser(tenantId, trainerId, UserRole.TRAINER),
+      AdminBookingsController.ensureSessionScope(tenantId, sessionId, trainerId),
+    ]);
   }
 
   private static lessonCategoryLabel(category?: string | null) {
@@ -178,6 +214,7 @@ export class AdminBookingsController {
           const memberInfo = userMap.get(row.member_id);
           const trainerInfo = userMap.get(row.trainer_id);
           const sessionInfo = row.session_id ? sessionMap.get(String(row.session_id)) : null;
+          const isDuo = Boolean(meta.is_duo || (meta as Record<string, any>).duo);
           const metaLesson = AdminBookingsController.normalizeLessonCategory(meta.lesson_category);
           const ruleLesson = AdminBookingsController.normalizeLessonCategory(
             (packageInfo?.rules as Record<string, unknown> | undefined)?.lesson_category
@@ -192,10 +229,15 @@ export class AdminBookingsController {
             trainer_full_name: trainerInfo?.full_name || null,
             trainer_email: trainerInfo?.email || null,
             trainer_phone: trainerInfo?.phone || null,
-            session_title: sessionInfo?.title || null,
-            session_type: sessionInfo?.type || null,
+            session_title: sessionInfo?.title || (isDuo ? "Duo ders" : null),
+            session_type: sessionInfo?.type || (isDuo ? "DUO" : null),
             lesson_category: lessonCategory,
-            lesson_category_label: AdminBookingsController.lessonCategoryLabel(lessonCategory),
+            lesson_category_label: isDuo ? "İkili ders" : AdminBookingsController.lessonCategoryLabel(lessonCategory),
+            lesson_mode: isDuo ? "DUO" : meta.lesson_mode ?? null,
+            is_duo: isDuo,
+            duo_partner_name: (meta as Record<string, any>).duo?.partner_name || null,
+            duo_partner_contact: (meta as Record<string, any>).duo?.partner_contact || null,
+            duo_status: (meta as Record<string, any>).duo?.status || null,
             package_title:
               (typeof meta.package_title === "string" && meta.package_title) || packageInfo?.title || null,
             package_display_price:
@@ -240,6 +282,13 @@ export class AdminBookingsController {
       if (!member_id || !trainer_id || !starts_at || !ends_at)  {
         throw new AppError("VALIDATION_ERROR", 400, "member_id, trainer_id, starts_at ve ends_at alanları zorunludur");
       }
+
+      await AdminBookingsController.ensureBookingActors(
+        tenantId,
+        String(member_id),
+        String(trainer_id),
+        session_id ? String(session_id) : null
+      );
 
       const bookingRepostiry = AppDataSource.getRepository(Booking);
       const booking = new Booking();
@@ -293,13 +342,6 @@ export class AdminBookingsController {
       if (!booking) {
         throw new AppError("BOOKING_NOT_FOUND", 404, "Booking bulunamadı");
       }
-      const oldState = {
-        member_id: booking.member_id,
-        trainer_id: booking.trainer_id,
-        starts_at: booking.starts_at.toISOString(),
-        ends_at: booking.ends_at.toISOString(),
-        status: booking.status,
-      };
       return res.json({ data: booking });
 
     } catch (error) {
@@ -351,6 +393,13 @@ export class AdminBookingsController {
       if (booking.ends_at <= booking.starts_at) {
         throw new AppError("VALIDATION_ERROR", 400, "ends_at, starts_at'dan sonra olmalıdır");
       }
+
+      await AdminBookingsController.ensureBookingActors(
+        tenantId,
+        String(booking.member_id),
+        String(booking.trainer_id),
+        booking.session_id || null
+      );
 
       await bookingRepo.save(booking);
       await AdminBookingsController.logBookingAudit(req, {
@@ -488,6 +537,13 @@ export class AdminBookingsController {
       if (req.body?.session_id !== undefined) {
         booking.session_id = req.body.session_id ? String(req.body.session_id) : undefined;
       }
+
+      await AdminBookingsController.ensureBookingActors(
+        tenantId,
+        String(booking.member_id),
+        String(booking.trainer_id),
+        booking.session_id || null
+      );
 
       await bookingRepo.save(booking);
       await AdminBookingsController.logBookingAudit(req, {

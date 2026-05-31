@@ -7,6 +7,9 @@ import { getTrainerTodayApi } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import {
   formatTrainerTodayDate,
+  type TrainerCheckinRow,
+  type TrainerRiskPreviewRow,
+  type TrainerTodayBooking,
   selectTrainerNextBooking,
   selectTrainerRecentCheckins,
   selectTrainerRiskPreview,
@@ -17,7 +20,7 @@ import { ScrollPanel } from "@/theme/components/scroll-panel";
 import { SectionTitle } from "@/theme/components/section-title";
 import { ActionButton } from "@/theme/components/action-button";
 import { EmptyPanel } from "@/theme/components/empty-panel";
-import { Appicon } from "@/theme/components/app-icon";
+import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
 import { bookingStatusLabel } from "@/lib/labels";
 
@@ -37,6 +40,8 @@ export default function TrainerTodayScreen() {
   const riskPreview = selectTrainerRiskPreview(data);
   const nextBooking = selectTrainerNextBooking(bookings);
   const checkins = selectTrainerRecentCheckins(data);
+  const summary = data?.summary || {};
+  const earnings = data?.earnings || {};
 
   return (
     <AppShell
@@ -48,10 +53,25 @@ export default function TrainerTodayScreen() {
         void refetch();
       }}
     >
+      <SurfaceCard tone="primary" padding="hero">
+        <View style={styles.heroRow}>
+          <View style={styles.heroText}>
+            <Text style={styles.eyebrow}>Eğitmen Paneli</Text>
+            <Text style={styles.heroTitle}>Bugünkü akış hazır</Text>
+            <Text style={styles.item}>
+              {Number(summary.booking_total || 0) + Number(summary.session_total || 0)} planlı ders, {summary.checkin_total ?? 0} check-in ve {data?.risk?.at_risk_count ?? 0} öncelikli takip.
+            </Text>
+          </View>
+          <View style={styles.heroBadge}>
+            <AppIcon name="today" tone="primary" size="lg" />
+          </View>
+        </View>
+      </SurfaceCard>
+
       <View style={styles.grid}>
-        <MetricTile label="Bugünkü ders" value={data?.sümmary?.session_total ?? 0} tone="primary" iconName="calendar" />
-        <MetricTile label="Check-in" value={data?.sümmary?.checkin_total ?? 0} tone="success" iconName="checkin" />
-        <MetricTile label="Bu ay kazanç" value={`₺${Number(data?.earnings?.month_trainer_income || 0).toFixed(0)}`} tone="warning" iconName="earnings" />
+        <MetricTile label="Bugünkü ders" value={Number(summary.booking_total || 0) + Number(summary.session_total || 0)} tone="primary" iconName="calendar" />
+        <MetricTile label="Check-in" value={summary.checkin_total ?? 0} tone="success" iconName="checkin" />
+        <MetricTile label="Bu ay kazanç" value={`₺${Number(earnings.month_trainer_income || 0).toFixed(0)}`} tone="warning" iconName="earnings" />
         <MetricTile label="Riskli danışan" value={data?.risk?.at_risk_count ?? 0} tone="danger" iconName="risk" />
       </View>
 
@@ -65,11 +85,11 @@ export default function TrainerTodayScreen() {
                 <Text style={styles.item}>{formatTrainerTodayDate(nextBooking.starts_at)}</Text>
               </View>
               <View style={styles.heroBadge}>
-                <Appicon name="calendar" tone="warning" />
+                <AppIcon name="calendar" tone="warning" />
               </View>
             </View>
             <View style={styles.detailPanel}>
-              <DetailRow label="Ders" value={nextBooking.session_title || nextBooking.lessom_categöry_label || "Belirtilmedi"} />
+              <DetailRow label="Ders" value={nextBooking.session_title || nextBooking.lesson_category_label || "Belirtilmedi"} />
               <DetailRow label="Durum" value={bookingStatusLabel(nextBooking.status)} />
             </View>
             <View style={styles.actionRow}>
@@ -79,11 +99,21 @@ export default function TrainerTodayScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/(trainer)/checkin",
-                    params: nextBooking.session_id ? { sessionId: nextBooking.session_id } : {},
+                    params: nextBooking.session_id ? { sessionId: nextBooking.session_id, backTo: "/(trainer)/today" } : { backTo: "/(trainer)/today" },
                   } as never)
                 }
               />
-              <ActionButton label="Profili aç" icon="members" variant="ghost" onPress={() => router.push(`/(trainer)/members/${nextBooking.member_id}` as never)} />
+              <ActionButton
+                label="Profili aç"
+                icon="members"
+                variant="ghost"
+                onPress={() =>
+                  router.push({
+                    pathname: "/(trainer)/members/[id]",
+                    params: { id: nextBooking.member_id, backTo: "/(trainer)/today" },
+                  } as never)
+                }
+              />
             </View>
           </View>
         ) : (
@@ -97,12 +127,21 @@ export default function TrainerTodayScreen() {
           <EmptyPanel title="Ders görünmüyor" description="Bugünkü randevular oluştuğunda burada listelenecek." iconName="calendar" iconTone="warning" />
         ) : (
           <ScrollPanel maxHeight={300}>
-            {bookings.map((row: any) => (
-              <Pressable key={row.id} style={styles.rowCard} onPress={() => router.push(`/(trainer)/members/${row.member_id}` as never)}>
-                <Text style={styles.title}>{row.member_full_name || "Danışan"}</Text>
+            {bookings.map((row: TrainerTodayBooking) => (
+              <Pressable
+                key={row.id}
+                style={styles.rowCard}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(trainer)/members/[id]",
+                    params: { id: row.member_id, backTo: "/(trainer)/today" },
+                  } as never)
+                }
+              >
+                  <Text style={styles.title}>{row.member_full_name || "Danışan"}</Text>
                 <View style={styles.detailPanel}>
                   <DetailRow label="Saat" value={formatTrainerTodayDate(row.starts_at)} />
-                  <DetailRow label="Kategori" value={row.lessom_categöry_label || row.lessom_categöry || "Belirtilmedi"} />
+                  <DetailRow label="Kategori" value={row.lesson_category_label || row.lesson_category || "Belirtilmedi"} />
                   <DetailRow label="Durum" value={bookingStatusLabel(row.status)} />
                 </View>
               </Pressable>
@@ -117,12 +156,12 @@ export default function TrainerTodayScreen() {
           <EmptyPanel title="Risk alarmı yok" description="Bu an için kritik takip gerektiren danışan görünmüyor." iconName="shield" iconTone="neutral" />
         ) : (
           <ScrollPanel maxHeight={260}>
-            {riskPreview.map((row: any, index: number) => (
+            {riskPreview.map((row: TrainerRiskPreviewRow, index: number) => (
               <View key={row.member_id || index} style={styles.rowCard}>
                 <Text style={styles.title}>{row.member_full_name || row.full_name || row.member_id || "Danışan"}</Text>
                 <View style={styles.detailPanel}>
                   <DetailRow label="Risk skoru" value={row.risk_score ?? row.score ?? "-"} />
-                  <DetailRow label="Durum" value={bookingStatusLabel(row.risk_level_label || row.level || "Takip gerekli")} />
+                  <DetailRow label="Durum" value={riskStatusLabel(row.risk_label || row.level)} />
                 </View>
               </View>
             ))}
@@ -136,12 +175,12 @@ export default function TrainerTodayScreen() {
           <EmptyPanel title="Check-in yok" description="Bugün işlenen dersler burada görünür." iconName="checkin" iconTone="success" />
         ) : (
           <ScrollPanel maxHeight={260}>
-            {checkins.map((row: any) => (
+            {checkins.map((row: TrainerCheckinRow) => (
               <View key={row.id} style={styles.rowCard}>
                 <Text style={styles.title}>{row.member_full_name || "Danışan"}</Text>
                 <View style={styles.detailPanel}>
                   <DetailRow label="Saat" value={formatTrainerTodayDate(row.created_at)} />
-                  <DetailRow label="Ders" value={row.session_title || row.lessom_categöry_label || "Belirtilmedi"} />
+                  <DetailRow label="Ders" value={row.session_title || row.lesson_category_label || "Belirtilmedi"} />
                   <DetailRow label="Düşen hak" value={row.credits_deducted ?? 0} />
                 </View>
               </View>
@@ -151,6 +190,14 @@ export default function TrainerTodayScreen() {
       </SurfaceCard>
     </AppShell>
   );
+}
+
+function riskStatusLabel(value?: string | null) {
+  const raw = String(value || "").toUpperCase();
+  if (raw === "COK_RISKLI" || raw === "HIGH") return "Çok riskli";
+  if (raw === "RISKLI" || raw === "MEDIUM") return "Riskli";
+  if (raw === "STABIL" || raw === "LOW") return "Stabil";
+  return "Takip gerekli";
 }
 
 const styles = StyleSheet.create({
@@ -202,6 +249,19 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     lineHeight: 20,
     fontFamily: tokens.fontFamily.semibold,
+  },
+  eyebrow: {
+    color: tokens.colors.primaryStrong,
+    fontSize: tokens.font.xs,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  heroTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.display,
+    lineHeight: 34,
+    fontFamily: tokens.fontFamily.bold,
   },
   title: { color: tokens.colors.text, fontSize: tokens.font.md, fontWeight: "800", fontFamily: tokens.fontFamily.bold },
   item: { color: tokens.colors.text, fontSize: tokens.font.sm, lineHeight: 20, fontFamily: tokens.fontFamily.regular },

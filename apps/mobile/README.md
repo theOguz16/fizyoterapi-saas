@@ -1,4 +1,4 @@
-# Clinerva Mobile
+# FizyoFlow Mobile
 
 Expo managed mobil uygulama (role-based):
 - Member: full akış

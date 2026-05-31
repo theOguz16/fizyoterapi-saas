@@ -2,7 +2,8 @@
 // Grup icindeki sayfalar ayni stack, tab veya ust seviye yonlendirme kurallarini bu dosyadan alir.
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, StyleSheet, Text, TextInput, View } from "react-native";
+import type { ReactNode } from "react";
+import { ActivityIndicator, Animated, Easing, Linking, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,13 +12,18 @@ import { SessionProvider, useSession } from "@/providers/auth-session";
 import { AppFlowProvider, useAppFlow } from "@/providers/app-flow";
 import { MobileQueryProvider } from "@/providers/query-provider";
 import { DetourLinkHandler } from "@/providers/detour-link-handler";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { resolveRoleGroup, resolveRoleHome } from "@/lib/navigation";
 import { resolveNotificationResponseHref } from "@/lib/push";
 import { subscribeToMemberRealtime } from "@/lib/member-realtime";
 import { getPendingSalonJoinSlug, setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { extractSalonSlugFromQrPayload } from "@/lib/salon-qr";
 import { detourConfig, isDetourConfigured } from "@/lib/detour";
+import { initMobileSentry, setSentryUserContext, wrapMobileRoot } from "@/lib/sentry";
 import { tokens } from "@/theme/tokens";
+
+initMobileSentry();
 
 function RootGate() {
   const { user, loading, onboardingState, availableSurfaces, pendingPostAuthScreen, refreshMe } = useSession();
@@ -33,6 +39,10 @@ function RootGate() {
       setPendingSalonSlug(slug);
     });
   }, []);
+
+  useEffect(() => {
+    setSentryUserContext(user);
+  }, [user]);
 
   useEffect(() => {
     async function handleIncomingUrl(rawUrl: string | null | undefined) {
@@ -82,6 +92,8 @@ function RootGate() {
     const inE2ELoginRoute = currentRoute === "e2e-login";
     const inAuthGroup = currentGroup === "(auth)";
     const inIntakeGroup = currentGroup === "(intake-member)";
+    const inSharedGroup = currentGroup === "(shared)";
+    const sharedLeaf = segments.at(1);
     const authLeaf = segments.at(1);
     const allowedUnauthedGroups = inAuthGroup || inE2ELoginRoute;
 
@@ -132,6 +144,9 @@ function RootGate() {
       currentGroup === "(intake-member)" &&
       onboardingState === "ACTIVE_SALON" &&
       !pendingSalonHome;
+    const allowSharedUtilityFlow =
+      inSharedGroup &&
+      ["notification-settings", "leave-salon", "invite-join"].includes(sharedLeaf || "");
 
     if (inAuthGroup && pendingPostAuthScreen === "NOTIFICATION_PERMISSION" && authLeaf !== "notification-permission") {
       router.replace("/(auth)/notification-permission" as never);
@@ -147,7 +162,7 @@ function RootGate() {
       return;
     }
 
-    if (currentGroup && currentGroup !== expectedGroup && !allowMemberPurchaseFlow) {
+    if (currentGroup && currentGroup !== expectedGroup && !allowMemberPurchaseFlow && !allowSharedUtilityFlow) {
       router.replace(nextHome as never);
     }
   }, [
@@ -244,6 +259,7 @@ function RootGate() {
       ) : null}
 
       <Slot />
+      <ConnectivityBanner />
     </>
   );
 }
@@ -295,7 +311,7 @@ function resolveInternalHrefFromIncomingUrl(rawUrl: string | null | undefined) {
 
   try {
     const url = new URL(normalized);
-    if (url.protocol !== "clinerva:") return null;
+    if (url.protocol !== "fizyoflow:") return null;
 
     const host = String(url.hostname || "").trim().toLowerCase();
     const pathname = String(url.pathname || "").trim();
@@ -314,7 +330,7 @@ function resolveInternalHrefFromIncomingUrl(rawUrl: string | null | undefined) {
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     "Poppins-Light": require("../assets/fonts/Poppins-Light.ttf"),
     "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
@@ -347,13 +363,17 @@ export default function RootLayout() {
   }
 
   const appTree = (
-    <MobileQueryProvider>
-      <SessionProvider>
-        <AppFlowProvider>
-          <RootGate />
-        </AppFlowProvider>
-      </SessionProvider>
-    </MobileQueryProvider>
+    <BrandedLaunchOverlay>
+      <MobileQueryProvider>
+        <SessionProvider>
+          <AppFlowProvider>
+            <AppErrorBoundary>
+              <RootGate />
+            </AppErrorBoundary>
+          </AppFlowProvider>
+        </SessionProvider>
+      </MobileQueryProvider>
+    </BrandedLaunchOverlay>
   );
 
   if (!isDetourConfigured()) {
@@ -363,11 +383,93 @@ export default function RootLayout() {
   return <DetourProvider config={detourConfig}>{appTree}</DetourProvider>;
 }
 
+export default wrapMobileRoot(RootLayout);
+
+function BrandedLaunchOverlay({ children }: { children: ReactNode }) {
+  const [visible, setVisible] = useState(true);
+  const markScale = useRef(new Animated.Value(0.88)).current;
+  const markOpacity = useRef(new Animated.Value(0)).current;
+  const wordOpacity = useRef(new Animated.Value(0)).current;
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(markOpacity, {
+          toValue: 1,
+          duration: 260,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.spring(markScale, {
+          toValue: 1,
+          damping: 13,
+          stiffness: 120,
+          mass: 0.8,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(wordOpacity, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.delay(520),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setVisible(false);
+    });
+  }, [markOpacity, markScale, overlayOpacity, wordOpacity]);
+
+  return (
+    <View style={styles.rootWrap}>
+      {children}
+      {visible ? (
+        <Animated.View pointerEvents="none" style={[styles.brandOverlay, { opacity: overlayOpacity }]}>
+          <Animated.Image
+            source={require("../assets/brand/fizyoflow-mark.png")}
+            style={[styles.brandMark, { opacity: markOpacity, transform: [{ scale: markScale }] }]}
+          />
+          <Animated.Text style={[styles.brandWordmark, { opacity: wordOpacity }]}>FIZYOFLOW</Animated.Text>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  rootWrap: {
+    flex: 1,
+    backgroundColor: tokens.colors.background,
+  },
   loadingWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: tokens.colors.background,
+  },
+  brandOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F7FAF6",
+  },
+  brandMark: {
+    width: 104,
+    height: 104,
+    resizeMode: "contain",
+  },
+  brandWordmark: {
+    marginTop: 18,
+    color: "#5F8F6D",
+    fontFamily: tokens.fontFamily.bold,
+    fontSize: 22,
+    letterSpacing: 6,
   },
 });

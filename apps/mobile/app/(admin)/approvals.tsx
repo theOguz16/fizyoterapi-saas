@@ -8,7 +8,6 @@ import { getAdminMobileApprovalsApi, type AdminApprovalItem } from "@/lib/mobile
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
-import { SelectionChip } from "@/theme/components/selection-chip";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { EmptyState } from "@/theme/components/empty-state";
@@ -59,6 +58,7 @@ function getOperationalHint(item: AdminApprovalItem) {
   const normalizedType = String(item.type || "").toUpperCase();
   const normalizedRequestType = String(item.request_type || "").toUpperCase();
   if (normalizedRequestType.includes("GROUP_CLASS")) return "Katılım listesi, bildirim kapsamı ve ücret onayı birlikte kontrol edilmelidir.";
+  if (item.is_duo) return "Duo pakette ilk ödeme %50 olarak onaylanır; partner daveti ve kalan ödeme tamamlanmadan ders akışı aktifleşmez.";
   if (isActiveMembershipPackagePurchase(item)) return "Bu kayıt yeni başvuru değil, mevcut üyeye eklenecek paket satışıdır. Onay sonrası aynı üyelikte yeni haklar açılır.";
   if (normalizedType === "PAYMENT") return "Ödeme doğrulanırsa üyelik ve plan aktivasyonu bir sonraki adıma geçer.";
   if (normalizedType === "CHANGE_REQUEST") return "Talep etkisi kontrol edilip takvim veya üyelik kaydı güncellenmelidir.";
@@ -67,6 +67,7 @@ function getOperationalHint(item: AdminApprovalItem) {
 
 function getPrimaryDescription(item: AdminApprovalItem) {
   if (item.subtitle?.trim()) return item.subtitle.trim();
+  if (item.is_duo) return "İkili ders paketi için partner bilgisi ve bölünmüş ödeme onayı bekleniyor.";
   if (item.is_group_class) return "Trainer tarafından açılan grup dersi için katılım ve ücret onayı bekleniyor.";
   if (isActiveMembershipPackagePurchase(item)) return "Mevcut üyeye ek paket satın alma talebi onay bekliyor.";
   if (item.type === "PAYMENT") return "Paket ödemesi doğrulama kuyruğunda bekliyor.";
@@ -82,7 +83,7 @@ export default function AdminApprovalsScreen() {
     queryKey: ["admin-approvals-v2"],
     queryFn: getAdminMobileApprovalsApi,
   });
-  const items = Array.isArray(query.data) ? query.data : [];
+  const items = useMemo(() => (Array.isArray(query.data) ? query.data : []), [query.data]);
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const statusOk = statusFilter === "ALL" || String(item.status || "").toUpperCase().includes(statusFilter);
@@ -176,6 +177,7 @@ export default function AdminApprovalsScreen() {
               <View style={styles.metaRow}>
                 <StatusBadge label={getTypeLabel(item.type)} tone={item.type === "PAYMENT" ? "info" : item.type === "CHANGE_REQUEST" ? "warning" : "success"} />
                 {isActiveMembershipPackagePurchase(item) ? <StatusBadge label="Mevcut üyeye ek paket" tone="warning" /> : null}
+                {item.is_duo ? <StatusBadge label="Duo %50 ödeme" tone="info" /> : null}
                 <Text style={styles.meta}>{formatAmount(item.amount)}</Text>
                 <Text style={styles.meta}>{formatDateLabel(item.created_at)}</Text>
               </View>
@@ -188,6 +190,11 @@ export default function AdminApprovalsScreen() {
               {item.is_group_class ? (
                 <Text style={styles.detail}>
                   {item.lesson_name || "Grup dersi"} • {item.recurrence_label || item.special_date || "Özel tarih"} • {item.notification_scope === "INVITED_MEMBERS" ? "Davetli akışı" : "Salon geneli bildirimi"}
+                </Text>
+              ) : null}
+              {item.is_duo ? (
+                <Text style={styles.detail}>
+                  Partner: {item.duo_partner_name || "Belirtilmedi"} • {item.duo_partner_contact || "İletişim bekleniyor"} • {item.duo_payment_status || "Partner ödemesi bekleniyor"}
                 </Text>
               ) : null}
               <Text style={styles.hint}>{getOperationalHint(item)}</Text>
@@ -222,6 +229,12 @@ export default function AdminApprovalsScreen() {
                       notificationScope: item.notification_scope || "",
                       invitedMemberCount: String(item.invited_member_count || ""),
                       joinedMemberCount: String(item.joined_member_count || ""),
+                      isDuo: item.is_duo ? "1" : "",
+                      duoPartnerName: item.duo_partner_name || "",
+                      duoPartnerContact: item.duo_partner_contact || "",
+                      duoPaymentStatus: item.duo_payment_status || "",
+                      duoPaymentNote: item.duo_payment_note || "",
+                      backTo: "/(admin)/approvals",
                     },
                   } as never)
                 }

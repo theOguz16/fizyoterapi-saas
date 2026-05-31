@@ -332,7 +332,12 @@ export default function MemberHomeScreen() {
           subtitle={`${nextBooking.trainer_full_name || "Eğitmen belirlenecek"} • ${nextBooking.package_name || nextBooking.package_title || "Paket"}`}
           timeLabel={formatDate(nextBooking.starts_at)}
           badge={{ label: "Sonraki ders", tone: "info" }}
-          onPress={() => router.push(`/(member)/booking/${nextBooking.id}` as never)}
+          onPress={() =>
+            router.push({
+              pathname: "/(member)/booking/[id]",
+              params: { id: nextBooking.id, backTo: "/(member)/home" },
+            } as never)
+          }
         />
       ) : (
         <EmptyState title="Planlanmış dersin yok" description="Yeni planlama yaptığında burada ilk olarak görünecek." icon="calendar" />
@@ -344,7 +349,7 @@ export default function MemberHomeScreen() {
             <Text style={styles.sectionTitle}>Grup dersleri</Text>
             <Text style={styles.copy}>Kaydırarak diğer grup derslerini gör, istediklerine katıl.</Text>
           </View>
-          <ActionButton label="Tümü" icon="calendar" variant="ghost" fullWidth={false} onPress={() => router.push("/(member)/group-classes" as never)} />
+          <ActionButton label="Tümü" icon="calendar" variant="ghost" fullWidth={false} onPress={() => router.push({ pathname: "/(member)/group-classes", params: { backTo: "/(member)/home" } } as never)} />
         </View>
         {homeGroupClasses.length === 0 ? (
           <EmptyState title="Aktif grup dersi yok" description="Trainer yeni grup dersi açtığında burada slider olarak göreceksin." icon="calendar" />
@@ -460,7 +465,7 @@ export default function MemberHomeScreen() {
             <AppIcon name="gift" size="md" tone="primary" />
           </View>
         </View>
-        <ActionButton label="Arkadaşını davet et" icon="referral" onPress={() => router.push("/(member)/referrals" as never)} />
+        <ActionButton label="Arkadaşını davet et" icon="referral" onPress={() => router.push({ pathname: "/(member)/referrals", params: { backTo: "/(member)/home" } } as never)} />
       </SurfaceCard>
     </AppShell>
   );

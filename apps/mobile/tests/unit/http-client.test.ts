@@ -76,6 +76,38 @@ describe("mobile http client", () => {
     );
   });
 
+  it("throws a user-facing network error when the API cannot be reached", async () => {
+    const { httpRequest } = await loadHttpClientModule();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+
+    await expect(httpRequest("/member/home")).rejects.toEqual(
+      expect.objectContaining({
+        message: "Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.",
+        status: 0,
+        code: "NETWORK_REQUEST_FAILED",
+      })
+    );
+  });
+
+  it("updates connectivity status around network failures and recovery", async () => {
+    const { httpRequest } = await loadHttpClientModule();
+    const { getConnectivitySnapshot } = await import("@/lib/connectivity");
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: { ok: true } }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(httpRequest("/member/home")).rejects.toMatchObject({ code: "NETWORK_REQUEST_FAILED" });
+    expect(getConnectivitySnapshot().status).toBe("offline");
+
+    await expect(httpRequest("/member/home")).resolves.toEqual({ ok: true });
+    expect(getConnectivitySnapshot().status).toBe("online");
+  });
+
   it("creates abortable timeout signals", async () => {
     vi.useFakeTimers();
     const { createTimeoutSignal } = await loadHttpClientModule();

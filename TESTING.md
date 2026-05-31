@@ -74,8 +74,8 @@ Not:
 
 Uygulama kimliği:
 
-- iOS: `com.clinerva.mobile`
-- Android: `com.clinerva.mobile`
+- iOS: `com.fizyoflow.mobile`
+- Android: `com.fizyoflow.mobile`
 
 Çalıştırma akışı:
 
@@ -111,7 +111,7 @@ Not:
 
 - `pnpm test:e2e:mobile` sadece repo root script'i.
 - `apps/mobile` içinde doğru script `pnpm test:e2e`.
-- `appId: com.clinerva.mobile` olduğu için Maestro, Expo Go yerine development build / installed app ile daha stabil çalışır.
+- `appId: com.fizyoflow.mobile` olduğu için Maestro, Expo Go yerine development build / installed app ile daha stabil çalışır.
 
 ## Beklenen Kısıtlar
 

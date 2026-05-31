@@ -7,11 +7,15 @@ import {
   getAdminMemberAttendanceApi,
   getAdminMemberDetailApi,
   getAdminMemberMeaşurementsApi,
+  getAdminPackageAssignmentsApi,
   getAdminMemberRetentionApi,
   getAdminTrainerDetailApi,
   getAdminTrainerEarningsApi,
   getAdminTrainerSkillsApi,
+  type AdminTrainerEarnings,
+  type AdminPackageAssignment,
 } from "@/lib/mobile-api";
+import { buildTrainerSummary, getRetentionReasons, type TrainerBookingInsight } from "@/lib/admin-trainer-insights";
 import { summarizeSignupOnboarding } from "@/lib/signup-onboarding";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
@@ -24,7 +28,7 @@ import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
-import { bookingStatusLabel } from "@/lib/labels";
+import { bookingStatusLabel, packageTypeLabel } from "@/lib/labels";
 
 function daysSince(value?: string | null) {
   if (!value) return null;
@@ -63,38 +67,70 @@ function formatMetricValue(value: string | number | null | undefined, unit?: str
   return prefix ? `${unit}${text}` : `${text} ${unit}`;
 }
 
-function isCanceledStatus(value?: string | null) {
-  return ["CANCELLED", "CANCELED"].includes(String(value || "").toUpperCase());
-}
-
-function isCompletedBooking(item: any) {
-  const status = String(item?.status || "").toUpperCase();
-  if (status === "COMPLETED") return true;
-  if (isCanceledStatus(status)) return false;
-  const startsAt = item?.starts_at ? new Date(item.starts_at) : null;
-  return !!startsAt && !Number.isNaN(startsAt.getTime()) && startsAt.getTime() < Date.now();
-}
-
 function roleLabel(role?: string | null) {
   return role === "TRAINER" ? "Eğitmen" : "Üye";
 }
 
-function getRetentionReasons(retention: any) {
-  const reasonsFromBreakdown = Array.isArray(retention?.breakdown?.reasons) ? retention.breakdown.reasons : [];
-  const directReasons = [
-    retention?.reason,
-    retention?.primary_reason,
-    retention?.reasom,
-    retention?.primary_reasom,
-  ].filter(Boolean);
-  return [...reasonsFromBreakdown, ...directReasons].map((item) => String(item));
+function buildTrainerLessonChips(assignments: AdminPackageAssignment[]) {
+  const labels = assignments
+    .filter((item) => item?.is_active !== false && item?.package_is_active !== false && item?.trainer_is_active !== false)
+    .map((item) => {
+      const lessonName = String(
+        item.package_service_name ||
+          item.package_title ||
+          item.package_lesson_category ||
+          item.package_capacity_label ||
+          ""
+      ).trim();
+      const typeLabel = packageTypeLabel(item.package_type);
+      if (lessonName && typeLabel !== "-" && typeLabel !== lessonName) return `${lessonName} • ${typeLabel}`;
+      return lessonName || typeLabel;
+    })
+    .filter((label) => label && label !== "-");
+
+  return Array.from(new Set(labels));
 }
+
+type AttendanceItem = {
+  id?: string;
+  starts_at?: string | null;
+  date?: string | null;
+  created_at?: string | null;
+  session_title?: string | null;
+  lesson_category_label?: string | null;
+  status?: string | null;
+  trainer_full_name?: string | null;
+  package_name?: string | null;
+  package_title?: string | null;
+};
+
+type MeasurementItem = {
+  id?: string;
+  measured_at?: string | null;
+  date?: string | null;
+  weight_kg?: string | number | null;
+  fat_percent?: string | number | null;
+  muscle_kg?: string | number | null;
+  muscle_percent?: string | number | null;
+  height_cm?: string | number | null;
+};
+
+type RetentionItem = {
+  score?: string | number | null;
+  level?: string | null;
+  breakdown?: { reasons?: unknown[] } | null;
+  reason?: unknown;
+  primary_reason?: unknown;
+  reasom?: unknown;
+  primary_reasom?: unknown;
+};
 
 export default function AdminMemberDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id: string; role?: string }>();
+  const params = useLocalSearchParams<{ id: string; role?: string; backTo?: string | string[] }>();
   const [tab, setTab] = useState("GENERAL");
   const requestedRole = String(params.role || "").toUpperCase();
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   const detailQuery = useQuery({
     queryKey: ["admin-person-detail", params.id, requestedRole],
@@ -141,13 +177,25 @@ export default function AdminMemberDetailScreen() {
     queryFn: () => getAdminBookingsApi({ trainer_id: String(params.id) }),
     enabled: entityRole === "TRAINER",
   });
+  const trainerAssignmentsQuery = useQuery({
+    queryKey: ["admin-trainer-package-assignments", params.id],
+    queryFn: () => getAdminPackageAssignmentsApi({ trainer_id: String(params.id), is_active: true }),
+    enabled: entityRole === "TRAINER",
+  });
 
-  const retention = retentionQuery.data || {};
-  const attendance = Array.isArray(attendanceQuery.data) ? attendanceQuery.data : [];
-  const measurements = Array.isArray(measurementsQuery.data) ? measurementsQuery.data : [];
+  const retention: RetentionItem = useMemo(() => retentionQuery.data || {}, [retentionQuery.data]);
+  const attendance: AttendanceItem[] = Array.isArray(attendanceQuery.data) ? attendanceQuery.data : [];
+  const measurements: MeasurementItem[] = Array.isArray(measurementsQuery.data) ? measurementsQuery.data : [];
   const trainerSkills = Array.isArray(trainerSkillsQuery.data) ? trainerSkillsQuery.data : [];
-  const trainerBookings = Array.isArray(trainerBookingsQuery.data) ? trainerBookingsQuery.data : [];
-  const trainerEarnings = trainerEarningsQuery.data || null;
+  const trainerBookings: TrainerBookingInsight[] = useMemo(
+    () => (Array.isArray(trainerBookingsQuery.data) ? trainerBookingsQuery.data : []),
+    [trainerBookingsQuery.data]
+  );
+  const trainerEarnings: AdminTrainerEarnings | null = trainerEarningsQuery.data || null;
+  const trainerAssignments = useMemo(
+    () => (Array.isArray(trainerAssignmentsQuery.data) ? trainerAssignmentsQuery.data : []),
+    [trainerAssignmentsQuery.data]
+  );
 
   const latestAttendance = attendance[0]?.starts_at || attendance[0]?.date || person?.last_attended_at || person?.updated_at;
   const latestMeasurement = measurements[0]?.measured_at || measurements[0]?.date;
@@ -167,23 +215,8 @@ export default function AdminMemberDetailScreen() {
     return Array.from(new Set(reasons));
   }, [attendance.length, latestAttendance, latestMeasurement, measurements.length, retentionReasons]);
 
-  const trainerSummary = useMemo(() => {
-    const activeRows = trainerBookings.filter((item: any) => !isCanceledStatus(item?.status));
-    const completedRows = activeRows.filter(isCompletedBooking);
-    const uniqueLessons = Array.from(
-      new Set(
-        completedRows
-          .map((item: any) => item.lesson_category_label || item.session_title || item.package_title)
-          .filter(Boolean)
-      )
-    );
-    return {
-      total: activeRows.length,
-      completed: completedRows.length,
-      uniqueLessons,
-      recentLessons: completedRows.slice(0, 8),
-    };
-  }, [trainerBookings]);
+  const trainerSummary = useMemo(() => buildTrainerSummary(trainerBookings), [trainerBookings]);
+  const trainerLessonChips = useMemo(() => buildTrainerLessonChips(trainerAssignments), [trainerAssignments]);
 
   const personName = `${person?.first_name || ""} ${person?.last_name || ""}`.trim() || person?.email || `${roleLabel(entityRole)} detayı`;
 
@@ -194,7 +227,8 @@ export default function AdminMemberDetailScreen() {
     measurementsQuery.isRefetching ||
     trainerSkillsQuery.isRefetching ||
     trainerEarningsQuery.isRefetching ||
-    trainerBookingsQuery.isRefetching;
+    trainerBookingsQuery.isRefetching ||
+    trainerAssignmentsQuery.isRefetching;
 
   async function handleRefresh() {
     await Promise.all([
@@ -205,6 +239,7 @@ export default function AdminMemberDetailScreen() {
       entityRole === "TRAINER" ? trainerSkillsQuery.refetch() : Promise.resolve(),
       entityRole === "TRAINER" ? trainerEarningsQuery.refetch() : Promise.resolve(),
       entityRole === "TRAINER" ? trainerBookingsQuery.refetch() : Promise.resolve(),
+      entityRole === "TRAINER" ? trainerAssignmentsQuery.refetch() : Promise.resolve(),
     ]);
   }
 
@@ -224,9 +259,10 @@ export default function AdminMemberDetailScreen() {
   return (
     <AppShell
       title={personName}
-      subtitle={entityRole === "TRAINER" ? "Kazanç, verilen dersler ve yetkinlikler tek yerde." : "Paketler, katılım, ölçüm ve risk sinyalleri tek yerde."}
+      subtitle={entityRole === "TRAINER" ? "Kazanç, verilen dersler ve yetkinlikler tek ekranda doğrulanır." : "Paketler, katılım, ölçüm ve risk sinyalleri tek yerde."}
       icon={entityRole === "TRAINER" ? "trainer" : "members"}
       showBackButton
+      onBack={backTo ? () => router.replace(backTo as never) : undefined}
       refreshing={isRefreshing}
       onRefresh={() => void handleRefresh()}
     >
@@ -241,12 +277,14 @@ export default function AdminMemberDetailScreen() {
               <View style={styles.heroIdentity}>
                 <Text style={styles.section}>{roleLabel(entityRole)} profili</Text>
                 <Text style={styles.title}>{person.email || person.phone || "-"}</Text>
-                <Text style={styles.copy}>Kayıt: {formatDate(person.created_at)}</Text>
+                <Text style={styles.copy}>Kayıt tarihi: {formatDate(person.created_at)}</Text>
               </View>
               <StatusBadge label={person.is_active ? "Aktif" : "Pasif"} tone={person.is_active ? "success" : "warning"} />
             </View>
             {entityRole === "TRAINER" ? (
-              <Text style={styles.copy}>Bugünkü özet: {formatCurrency(trainerEarnings?.daily_income)} kazanç, {trainerSummary.completed} tamamlanan ders.</Text>
+              <Text style={styles.copy} testID="admin-trainer-hero-summary">
+                Bugünkü özet: {formatCurrency(trainerEarnings?.daily_income)} kazanç, {trainerSummary.completed} tamamlanan ders.
+              </Text>
             ) : (
               <>
                 <Text style={styles.copy}>Risk skoru: {retention.score ?? retention.level ?? "Belirsiz"}</Text>
@@ -260,6 +298,7 @@ export default function AdminMemberDetailScreen() {
             {entityRole === "TRAINER" ? (
               <>
                 <MetricCard label="Tamamlanan ders" value={trainerSummary.completed} hint="Geçmiş rezervasyon" icon="calendar" />
+                <MetricCard label="Atanan ders" value={trainerLessonChips.length} hint="Paket-trainer tanımı" icon="spark" />
                 <MetricCard label="Aylık kazanç" value={formatCurrency(trainerEarnings?.monthly_income)} hint="Komisyon bazlı özet" icon="money" />
               </>
             ) : (
@@ -272,7 +311,28 @@ export default function AdminMemberDetailScreen() {
 
           {onboardingSummary ? <OnboardingSummaryCard summary={onboardingSummary} compact /> : null}
 
+          {entityRole === "TRAINER" ? (
+            <SurfaceCard testID="admin-trainer-competency-summary">
+              <View style={styles.sectionHeader}>
+                <Text style={styles.section}>Verdiği dersler</Text>
+                <StatusBadge label={`${trainerLessonChips.length} ders`} tone="info" />
+              </View>
+              {trainerAssignmentsQuery.isLoading ? (
+                <Text style={styles.copy}>Trainer ders atamaları hazırlanıyor...</Text>
+              ) : trainerLessonChips.length > 0 ? (
+                <View style={styles.inlineMetaRow} testID="admin-trainer-assigned-lessons">
+                  {trainerLessonChips.map((lesson) => (
+                    <StatusBadge key={lesson} label={lesson} tone="info" />
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.copy}>Bu trainera atanmış aktif ders görünmüyor. Admin paket tanımını trainera bağladığında çocuk yogası, PT, grup dersi veya ilgili paket adı burada mavi kutucuklarla görünür.</Text>
+              )}
+            </SurfaceCard>
+          ) : null}
+
           <SegmentedSwitch
+            testID="admin-person-detail-tabs"
             value={tab}
             options={
               entityRole === "TRAINER"
@@ -312,13 +372,13 @@ export default function AdminMemberDetailScreen() {
                   <AppIcon name={entityRole === "TRAINER" ? "trainer" : "package"} size="sm" tone="neutral" />
                   <Text style={styles.copy}>
                     {entityRole === "TRAINER"
-                      ? `Verilebilen ders: ${trainerSkills.length || 0}`
+                      ? `Tanımlı yetkinlik: ${trainerSkills.length || 0}`
                       : `Aktif paket: ${person.active_package_count || person.active_packages?.length || 0}`}
                   </Text>
                 </View>
               </View>
               {entityRole === "TRAINER" ? (
-                <Text style={styles.hint}>Bu profil, eğitmenin kazanç ve ders kapsama alanını hızlıca incelemek için optimize edildi.</Text>
+                <Text style={styles.hint}>Bu profil, eğitmenin yetkinliklerini ve kazanç akışını tek bakışta doğrulamak için düzenlendi.</Text>
               ) : null}
             </SurfaceCard>
           ) : null}
@@ -333,7 +393,7 @@ export default function AdminMemberDetailScreen() {
                 <EmptyState title="Katılım kaydı yok" description="İlk ders kaydı oluştuğunda burada listelenecek." icon="calendar" />
               ) : (
                 <ScrollPanel maxHeight={420}>
-                  {attendance.map((item: any, index: number) => (
+                  {attendance.map((item, index: number) => (
                     <View key={item.id || index} style={styles.historyCard}>
                       <View style={styles.historyHeader}>
                         <View style={styles.historyTitleWrap}>
@@ -397,7 +457,7 @@ export default function AdminMemberDetailScreen() {
                 <EmptyState title="Ölçüm kaydı yok" description="İlk ölçüm eklendiğinde burada özet ve geçmiş oluşacak." icon="measurements" />
               ) : (
                 <ScrollPanel maxHeight={420}>
-                  {measurements.map((item: any, index: number) => (
+                  {measurements.map((item, index: number) => (
                     <View key={item.id || index} style={styles.historyCard}>
                       <View style={styles.historyHeader}>
                         <View style={styles.historyTitleWrap}>
@@ -455,21 +515,21 @@ export default function AdminMemberDetailScreen() {
             <SurfaceCard>
               <View style={styles.sectionHeader}>
                 <Text style={styles.section}>Verilen dersler</Text>
-                <StatusBadge label={`${trainerSummary.completed} tamamlandı`} tone="success" />
+                <StatusBadge label={`${trainerLessonChips.length} tanımlı`} tone="info" />
               </View>
-              <View style={styles.inlineMetaRow}>
-                {trainerSummary.uniqueLessons.slice(0, 6).map((lesson) => (
-                  <View key={lesson} style={styles.metaPill}>
-                    <AppIcon name="calendar" size="sm" tone="neutral" />
-                    <Text style={styles.metaText}>{lesson}</Text>
-                  </View>
-                ))}
-              </View>
+              {trainerLessonChips.length > 0 ? (
+                <View style={styles.inlineMetaRow}>
+                  {trainerLessonChips.map((lesson) => (
+                    <StatusBadge key={lesson} label={lesson} tone="info" />
+                  ))}
+                </View>
+              ) : null}
+              <StatusBadge label={`${trainerSummary.completed} tamamlanan ders`} tone="success" />
               {trainerSummary.recentLessons.length === 0 ? (
                 <EmptyState title="Tamamlanan ders görünmüyor" description="İlk rezervasyonlar oluştukça burada ders geçmişi akacak." icon="calendar" />
               ) : (
                 <ScrollPanel maxHeight={420}>
-                  {trainerSummary.recentLessons.map((item: any) => (
+                  {trainerSummary.recentLessons.map((item) => (
                     <View key={item.id} style={styles.historyCard}>
                       <View style={styles.historyHeader}>
                         <View style={styles.historyTitleWrap}>
@@ -492,7 +552,7 @@ export default function AdminMemberDetailScreen() {
                   ))}
                 </ScrollPanel>
               )}
-              <Text style={styles.hint}>Bu bölüm eğitmenin kaç ders yaptığı ve hangi dersleri verdiğini hızlıca özetler.</Text>
+              <Text style={styles.hint}>Mavi kutucuklar adminin paketi trainera bağladığı aktif ders tanımlarından gelir; geçmiş listesi ise tamamlanan rezervasyonları gösterir.</Text>
             </SurfaceCard>
           ) : null}
 
@@ -500,23 +560,24 @@ export default function AdminMemberDetailScreen() {
             <SurfaceCard>
               <Text style={styles.section}>Kazanç özeti</Text>
               <View style={styles.metricsGrid}>
-                <View style={styles.earningTile}>
+                <View style={styles.earningTile} testID="admin-trainer-earning-daily">
                   <Text style={styles.measurementLabel}>Günlük</Text>
                   <Text style={styles.earningValue}>{formatCurrency(trainerEarnings?.daily_income)}</Text>
                 </View>
-                <View style={styles.earningTile}>
+                <View style={styles.earningTile} testID="admin-trainer-earning-weekly">
                   <Text style={styles.measurementLabel}>Haftalık</Text>
                   <Text style={styles.earningValue}>{formatCurrency(trainerEarnings?.weekly_income)}</Text>
                 </View>
-                <View style={styles.earningTile}>
+                <View style={styles.earningTile} testID="admin-trainer-earning-monthly">
                   <Text style={styles.measurementLabel}>Aylık</Text>
                   <Text style={styles.earningValue}>{formatCurrency(trainerEarnings?.monthly_income)}</Text>
                 </View>
-                <View style={styles.earningTile}>
+                <View style={styles.earningTile} testID="admin-trainer-earning-yearly">
                   <Text style={styles.measurementLabel}>Yıllık</Text>
                   <Text style={styles.earningValue}>{formatCurrency(trainerEarnings?.yearly_income)}</Text>
                 </View>
               </View>
+              <Text style={styles.hint}>Bu alan check-in sonrası otomatik yenilenir; günlük, haftalık, aylık ve yıllık toplamlar aynı matematik tabanından beslenir.</Text>
             </SurfaceCard>
           ) : null}
 
@@ -529,7 +590,7 @@ export default function AdminMemberDetailScreen() {
               {trainerSkills.length === 0 ? (
                 <EmptyState title="Yetkinlik tanımlı değil" description="Eğitmenin verebildiği ders kategorileri burada görünür." icon="trainer" />
               ) : (
-                <View style={styles.inlineMetaRow}>
+                <View style={styles.inlineMetaRow} testID="admin-trainer-skills-list">
                   {trainerSkills.map((skill) => (
                     <View key={skill} style={styles.skillPill}>
                       <AppIcon name="spark" size="sm" tone="primary" />
@@ -550,9 +611,9 @@ export default function AdminMemberDetailScreen() {
               </>
             ) : (
               <>
-                <ActionButton label="Kampanya gönder" icon="campaigns" onPress={() => router.push("/(admin)/campaigns" as never)} />
-                <ActionButton label="Riskli üyeleri aç" icon="risk" variant="ghost" onPress={() => router.push("/(admin)/risk-members" as never)} />
-                <ActionButton label="Paket yenileme öner" icon="package" variant="ghost" onPress={() => router.push("/(admin)/campaigns" as never)} />
+                <ActionButton label="Kampanya gönder" icon="campaigns" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: `/(admin)/members/${params.id}` } } as never)} />
+                <ActionButton label="Riskli üyeleri aç" icon="risk" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/risk-members", params: { backTo: `/(admin)/members/${params.id}` } } as never)} />
+                <ActionButton label="Paket yenileme öner" icon="package" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: `/(admin)/members/${params.id}` } } as never)} />
               </>
             )}
           </SurfaceCard>

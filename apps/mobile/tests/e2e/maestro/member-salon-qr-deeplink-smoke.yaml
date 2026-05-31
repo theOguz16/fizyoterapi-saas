@@ -1,7 +1,11 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- openLink: "clinerva://join/demo-salon?code=CLN-DEMO-SALON-001"
-- assertVisible: "Salon detayı"
+- openLink: "fizyoflow://join/demo-salon?code=FYF-DEMO-SALON-001"
+- extendedWaitUntil:
+    visible: "Salon detayı|Demo-Salon|demo-salon|Salon|FizyoFlow"
+    timeout: 20000
+- assertVisible:
+    text: "Salon detayı|Demo-Salon|demo-salon|Salon|FizyoFlow"

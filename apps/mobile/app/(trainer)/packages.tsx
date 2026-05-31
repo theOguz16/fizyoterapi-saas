@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { getTrainerAssignedPackagesApi } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";

@@ -121,6 +121,7 @@ export default function AdminMembersScreen() {
         <View style={styles.filterBlock}>
           <Text style={styles.filterLabel}>Rol</Text>
           <SegmentedSwitch
+            testID="admin-members-role-filter"
             value={roleFilter}
             options={[
               { label: "Hepsi", value: "ALL" },
@@ -160,8 +161,8 @@ export default function AdminMembersScreen() {
         <EmptyState title="Liste boş" description="Filtreye uyan üye veya eğitmen bulunduğunda burada listelenecek." icon="members" />
       ) : (
         <ScrollPanel maxHeight={480} contentContainerStyle={styles.stack}>
-          {items.map((item) => (
-            <SurfaceCard key={item.id}>
+          {items.map((item, index: number) => (
+            <SurfaceCard key={item.id} testID={`admin-person-card-${item.role.toLowerCase()}-${index}`}>
               <View style={styles.row}>
                 <View style={styles.titleWrap}>
                   <Text style={styles.title}>{[item.first_name, item.last_name].filter(Boolean).join(" ") || item.email || "Üye"}</Text>
@@ -188,7 +189,17 @@ export default function AdminMembersScreen() {
                 </View>
               </View>
               <Text style={styles.hint}>{getRiskLabel(item)}</Text>
-              <ActionButton label="Detayı gör" icon={item.role === "TRAINER" ? "trainer" : "members"} onPress={() => router.push(`/(admin)/members/${item.id}?role=${item.role}` as never)} />
+              <ActionButton
+                testID={`admin-person-detail-${item.role.toLowerCase()}-${index}`}
+                label="Detayı gör"
+                icon={item.role === "TRAINER" ? "trainer" : "members"}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(admin)/members/[id]",
+                    params: { id: item.id, role: item.role, backTo: "/(admin)/members" },
+                  } as never)
+                }
+              />
             </SurfaceCard>
           ))}
         </ScrollPanel>

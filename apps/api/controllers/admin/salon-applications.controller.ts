@@ -113,7 +113,9 @@ export class AdminSalonApplicationsController {
       throw new AppError("ACTIVE_SALON_EXISTS", 409, "Kullanıcının zaten aktif bir salonu bulunuyor");
     }
 
-    let linkedUser = await userRepo.findOne({ where: { email: account.email } as any });
+    let linkedUser = await userRepo.findOne({
+      where: { tenant_id: tenantId, email: account.email, role: UserRole.MEMBER },
+    });
     if (!linkedUser) {
       linkedUser = userRepo.create({
         tenant_id: tenantId,
@@ -126,7 +128,6 @@ export class AdminSalonApplicationsController {
         is_active: true,
       });
     } else {
-      linkedUser.tenant_id = tenantId;
       linkedUser.password_hash = account.password_hash;
       linkedUser.first_name = account.first_name;
       linkedUser.last_name = account.last_name;
@@ -212,6 +213,24 @@ export class AdminSalonApplicationsController {
     const repo = AppDataSource.getRepository(SalonApplication);
     const application = await repo.findOne({ where: { id, tenant_id: tenantId } });
     if (!application) throw new AppError("APPLICATION_NOT_FOUND", 404, "Başvuru bulunamadı");
+    if (
+      application.status === SalonApplicationStatus.APPROVED &&
+      application.payment_status === MembershipPaymentStatus.VERIFIED
+    ) {
+      const membership = await AppDataSource.getRepository(SalonMembership).findOne({
+        where: { tenant_id: tenantId, account_id: application.account_id, role: UserRole.MEMBER },
+        order: { updated_at: "DESC" },
+      });
+      return res.json({
+        data: {
+          application_id: application.id,
+          membership_id: membership?.id || null,
+          user_id: membership?.user_id || null,
+          payment_status: application.payment_status,
+          idempotent: true,
+        },
+      });
+    }
     if (application.status !== SalonApplicationStatus.APPROVED) {
       throw new AppError("APPLICATION_NOT_READY_FOR_PAYMENT", 409, "Başvuru önce ödeme akışına alınmalıdır");
     }
@@ -245,7 +264,7 @@ export class AdminSalonApplicationsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "salon_application",
       target_id: application.id,
       metadata: { membership_id: membership.id, user_id: linkedUser.id, payment_status: application.payment_status },
@@ -273,6 +292,25 @@ export class AdminSalonApplicationsController {
 
     const application = await appRepo.findOne({ where: { id, tenant_id: tenantId } });
     if (!application) throw new AppError("APPLICATION_NOT_FOUND", 404, "Başvuru bulunamadı");
+    if (
+      application.status === SalonApplicationStatus.APPROVED &&
+      application.payment_status === MembershipPaymentStatus.VERIFIED
+    ) {
+      const membership = await AppDataSource.getRepository(SalonMembership).findOne({
+        where: { tenant_id: tenantId, account_id: application.account_id, role: UserRole.MEMBER },
+        order: { updated_at: "DESC" },
+      });
+      return res.json({
+        data: {
+          application_id: application.id,
+          membership_id: membership?.id || null,
+          user_id: membership?.user_id || null,
+          status: application.status,
+          payment_status: application.payment_status,
+          idempotent: true,
+        },
+      });
+    }
     const [account, tenant] = await Promise.all([
       accountRepo.findOne({ where: { id: application.account_id } }),
       tenantRepo.findOne({ where: { id: tenantId } }),
@@ -320,7 +358,7 @@ export class AdminSalonApplicationsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "salon_application",
       target_id: application.id,
       metadata: {
@@ -383,7 +421,7 @@ export class AdminSalonApplicationsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "salon_application",
       target_id: application.id,
       metadata: { status: application.status, note: application.note || null },

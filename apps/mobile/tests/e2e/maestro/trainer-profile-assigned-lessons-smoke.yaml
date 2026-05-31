@@ -1,0 +1,17 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- extendedWaitUntil:
+    visible: "Profil"
+    timeout: 20000
+- assertVisible: "Verdiği dersler"
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-assigned-lessons"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "trainer-profile-assigned-lessons"

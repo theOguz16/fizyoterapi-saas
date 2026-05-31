@@ -59,6 +59,11 @@ export default function AdminApprovalDetailScreen() {
     notificationScope: string;
     invitedMemberCount: string;
     joinedMemberCount: string;
+    isDuo: string;
+    duoPartnerName: string;
+    duoPartnerContact: string;
+    duoPaymentStatus: string;
+    duoPaymentNote: string;
   }>();
  const approveMutation = useMutation({
   mutationFn: (decision: "APPROVE" | "REJECT") =>
@@ -101,6 +106,7 @@ export default function AdminApprovalDetailScreen() {
   const detailNote = String(params.note || "").trim();
   const subtitle = String(params.subtitle || "").trim();
   const isGroupClass = String(params.isGroupClass || "") === "1";
+  const isDuo = String(params.isDuo || "") === "1";
   const isMembershipAddOn = isActiveMembershipPackagePurchase({ type: params.type, requestScope: params.requestScope });
 
   return (
@@ -108,6 +114,7 @@ export default function AdminApprovalDetailScreen() {
       <SurfaceCard tone="primary">
         <StatusBadge label={String(params.status || "PENDING")} tone={getStatusTone(String(params.status || ""))} />
         {isMembershipAddOn ? <StatusBadge label="Mevcut üyeye ek paket" tone="warning" /> : null}
+        {isDuo ? <StatusBadge label="Duo %50 ödeme" tone="info" /> : null}
         <Text style={styles.copy}>{subtitle || "Kayıt özeti burada görünür."}</Text>
       </SurfaceCard>
       <View style={styles.metricsRow}>
@@ -128,8 +135,17 @@ export default function AdminApprovalDetailScreen() {
           <Text style={styles.copy}>Aktif üyelik kaydı: {String(params.activeMembershipId)}</Text>
         ) : null}
         <Text style={styles.copy}>Tutar: {amountLabel}</Text>
-        <Text style={styles.copy}>{getJourneyCopy(String(params.type || ""))}</Text>
+        <Text style={styles.copy}>{isDuo ? "Onay sonrası ilk üyenin ödeme payı kayda alınır. Partner daveti ve kalan ödeme tamamlanmadan duo paket aktifleşmez." : getJourneyCopy(String(params.type || ""))}</Text>
       </SurfaceCard>
+      {isDuo ? (
+        <SurfaceCard>
+          <Text style={styles.section}>Duo detayı</Text>
+          <Text style={styles.copy}>Partner: {String(params.duoPartnerName || "Belirtilmedi")}</Text>
+          <Text style={styles.copy}>İletişim: {String(params.duoPartnerContact || "İletişim bekleniyor")}</Text>
+          <Text style={styles.copy}>Ödeme durumu: {String(params.duoPaymentStatus || "Partner ödemesi bekleniyor")}</Text>
+          <Text style={styles.copy}>{String(params.duoPaymentNote || "Partner kendi payını tamamladığında ikili dersler aktif takvime alınır.")}</Text>
+        </SurfaceCard>
+      ) : null}
       {isGroupClass ? (
         <SurfaceCard>
           <Text style={styles.section}>Grup dersi detayı</Text>
@@ -185,6 +201,8 @@ function resolveRequestTypeLabel(type: string) {
       return "Grup dersi güncellemesi";
     case "GROUP_CLASS_CANCEL":
       return "Grup dersi iptali";
+    case "DUO_PARTNER_PAYMENT":
+      return "Duo partner ödemesi";
     case "PAYMENT":
       return "Ödeme onayı";
     default:

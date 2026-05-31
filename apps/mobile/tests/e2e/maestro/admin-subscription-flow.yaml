@@ -1,0 +1,30 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3FbackTo%3D%2F%28admin%29%2Fsalon"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "FizyoFlow"
+- assertVisible:
+    id: "admin-subscription-hero"
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-manage-packages"
+    direction: DOWN
+- tapOn:
+    id: "admin-subscription-manage-packages"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Paketler"
+- tapOn:
+    id: "app-shell-back-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "FizyoFlow"
+- tapOn:
+    id: "app-shell-back-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible: "Salon ayarları"

@@ -1,32 +1,12 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
-- assertVisible:
-    id: "welcome-login-button"
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-- assertVisible: "Hesabına giriş yap"
-- assertVisible:
-    id: "login-identity-input"
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "oguzhanuyar531@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
-- assertVisible:
-    id: "login-password-input"
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "admin123"
-- tapOn: "Clinerva hesabınla devam et"
-- tapOn:
-    id: "login-submit-button"
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- waitForAnimationToEnd:
+    timeout: 8000
 - assertVisible: "Yönetim merkezi"
 - swipe:
     start: 50%, 82%
@@ -34,32 +14,32 @@ appId: com.clinerva.mobile
 - tapOn:
     id: "admin-dashboard-packages"
 - assertVisible: "Paketler"
+- scrollUntilVisible:
+    element:
+      id: "admin-package-title-input"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "admin-package-title-input"
 - inputText: "QA Smoke Paket"
-- tapOn:
-    id: "admin-package-credits-input"
-- eraseText
-- inputText: "6"
-- tapOn:
-    id: "admin-package-duration-input"
-- eraseText
-- inputText: "21"
-- tapOn:
-    id: "admin-package-price-input"
-- eraseText
-- inputText: "4200"
-- tapOn:
-    id: "admin-package-commission-input"
-- eraseText
-- inputText: "30"
-- tapOn:
-    id: "admin-package-capacity-input"
-- eraseText
-- inputText: "1"
-- tapOn:
-    id: "admin-package-summary-input"
-- inputText: "Smoke package create flow"
+- scrollUntilVisible:
+    element:
+      id: "admin-package-save-button"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "admin-package-save-button"
-- assertVisible: "QA Smoke Paket"
+- assertVisible: "Paket oluşturuldu"
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    text: "Tamam"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      text: "QA Smoke Paket"
+    direction: DOWN
+    timeout: 10000

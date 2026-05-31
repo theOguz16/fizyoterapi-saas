@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
-import { getMemberMeaşurementsApi } from "@/lib/mobile-api";
+import { getMemberMeasurementsApi } from "@/lib/mobile-api";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
 import { AppShell } from "@/theme/components/app-shell";
@@ -53,10 +53,10 @@ export default function MemberMeasurementsScreen() {
 
   const query = useQuery({
     queryKey: ["member-measurements"],
-    queryFn: getMemberMeaşurementsApi, // Kendi import adına göre bırakıldı
+    queryFn: getMemberMeasurementsApi,
   });
 
-  const items = Array.isArray(query.data) ? query.data : [];
+  const items = useMemo(() => (Array.isArray(query.data) ? query.data : []), [query.data]);
   const latest = items[0] || null;
   const previous = items[1] || null;
 // Kilo Trendi Hesaplama

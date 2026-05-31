@@ -18,14 +18,19 @@ export type MemberActivityFilter = "ACTIVE" | "INACTIVE" | "ALL";
 export type MemberRiskItem = {
   member_id: string;
   full_name: string;
+  member_full_name: string;
+  member_name: string;
   email: string;
   phone: string;
   is_active: boolean;
   score: number;
+  risk_score: number;
   level: RiskLevel;
   risk_label: "COK_RISKLI" | "RISKLI" | "STABIL";
+  primary_reason: string | null;
   calculated_at: Date;
   days_since_attendance: number | null;
+  attendance_gap_days: number | null;
   days_since_measurement: number | null;
   active_package_count: number;
   remaining_credits: number;
@@ -160,17 +165,24 @@ export class RiskService {
     const riskLabel = RiskService.toRiskLabel(level);
     const reasons = RiskService.buildReasons(member, signals);
 
+    const fullName = `${member.first_name} ${member.last_name}`.trim() || member.email;
+
     return {
       member_id: member.id,
-      full_name: `${member.first_name} ${member.last_name}`.trim(),
+      full_name: fullName,
+      member_full_name: fullName,
+      member_name: fullName,
       email: member.email,
       phone: member.phone,
       is_active: member.is_active,
       score,
+      risk_score: score,
       level,
       risk_label: riskLabel,
+      primary_reason: reasons[0] ?? null,
       calculated_at: new Date(),
       days_since_attendance: signals.daysSinceAttendance,
+      attendance_gap_days: signals.daysSinceAttendance,
       days_since_measurement: signals.daysSinceMeasurement,
       active_package_count: signals.activePackageCount,
       remaining_credits: signals.remainingCredits,

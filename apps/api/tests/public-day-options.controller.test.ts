@@ -64,6 +64,7 @@ describe("public day options controller", () => {
         },
       ]),
     };
+    const packageFind = vi.fn().mockResolvedValue([groupPackage]);
 
     vi.spyOn(TenantLifecycleService, "syncTenantState").mockImplementation(async (row) => row as any);
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
@@ -79,7 +80,7 @@ describe("public day options controller", () => {
       }
       if (typeof entity === "function" && entity.name === "Package") {
         return {
-          find: vi.fn().mockResolvedValue([groupPackage]),
+          find: packageFind,
         } as any;
       }
       if (typeof entity === "function" && entity.name === "ClassSession") {
@@ -111,6 +112,17 @@ describe("public day options controller", () => {
 
     await PublicController.getSalonDayOptions(req, res as any);
 
+    expect(packageFind).toHaveBeenCalledWith({
+      where: [
+        {
+          tenant_id: "tenant-1",
+          id: "pkg-1",
+          is_active: true,
+          is_public: true,
+          is_visible: true,
+        },
+      ],
+    });
     expect(res.body).toEqual({
       data: [
         expect.objectContaining({

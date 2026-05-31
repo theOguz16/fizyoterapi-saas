@@ -26,10 +26,14 @@ describe("trainer measurements route integration", () => {
     const measurementRepo = {
       save: vi.fn(),
     };
+    const userRepo = {
+      findOne: vi.fn().mockResolvedValue({ id: "member-1", is_active: true }),
+    };
 
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
       if (name.includes("Tenant")) return tenantRepo as any;
+      if (name.includes("User")) return userRepo as any;
       if (name.includes("Measurement")) return measurementRepo as any;
       return {} as any;
     });

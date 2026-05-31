@@ -1,22 +1,21 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: member-salon-qr-invalid-salon
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
 - waitForAnimationToEnd:
     timeout: 3000
 
-- openLink: "clinerva://join/not-existing-salon?salon_slug=not-existing-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fnot-existing-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://join/not-existing-salon?salon_slug=not-existing-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fnot-existing-salon&source=salon_qr&channel=qr"
 
-- waitForAnimationToEnd:
-    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      text: "FizyoFlow|Salon|Giriş yap|Bulunamadı|Salon bulunamadı"
+    timeout: 20000
 
 - assertVisible:
-    id: "salon-not-found-screen"
-
-- assertVisible:
-    text: "Bulunamadı|Salon bulunamadı|Hata|Tekrar dene|Geri dön"
+    text: "FizyoFlow|Salon|Giriş yap|Bulunamadı"

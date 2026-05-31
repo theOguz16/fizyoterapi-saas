@@ -10,8 +10,10 @@ export enum UserRole {
 }
 
 @Entity("users")
+@Index("UQ_users_tenant_email_role", ["tenant_id", "email", "role"], { unique: true })
+@Index("UQ_users_tenant_qr_code", ["tenant_id", "qr_code"], { unique: true, where: "qr_code IS NOT NULL" })
 export class User extends TenantScopedEntity {
-    @Index({ unique: true })
+    @Index()
     @Column({ type: "varchar", length: 140 })
     email!: string;
 

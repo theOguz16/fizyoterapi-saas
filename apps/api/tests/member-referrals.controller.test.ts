@@ -61,7 +61,7 @@ describe("member referrals controller", () => {
     const req = {
       tenantId: "tenant-1",
       auth: { sub: "member-1", role: "MEMBER" },
-      body: { invitee_phone_or_email: "  FRIEND@Example.COM " },
+      body: { invitee_name: "Ayşe Yılmaz", invitee_phone_or_email: "  FRIEND@Example.COM " },
       method: "POST",
       originalUrl: "/api/member/referrals",
       headers: { "user-agent": "vitest" },
@@ -76,6 +76,7 @@ describe("member referrals controller", () => {
       expect.objectContaining({
         tenant_id: "tenant-1",
         inviter_member_id: "member-1",
+        invitee_name: "Ayşe Yılmaz",
         invitee_phone_or_email: "friend@example.com",
         status: "INVITED",
       })

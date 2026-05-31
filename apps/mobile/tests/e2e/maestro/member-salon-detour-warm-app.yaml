@@ -1,23 +1,27 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: member-salon-detour-warm-app
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
 - waitForAnimationToEnd:
     timeout: 3000
 
-- assertVisible:
-    id: "welcome-login-button"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
 
 # Uygulama zaten açıkken QR/deep link geliyor.
-- openLink: "clinerva://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
 
-- waitForAnimationToEnd:
-    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon|FizyoFlow"
+    timeout: 20000
 
 - assertVisible:
-    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon"
+    text: "Demo-Salon|demo-salon|Paket|Kayıt|Salon|FizyoFlow"

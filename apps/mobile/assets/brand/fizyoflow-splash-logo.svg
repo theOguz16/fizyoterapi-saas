@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260">
+  <defs>
+    <linearGradient id="mark" x1="48" y1="34" x2="220" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#78A082"/>
+      <stop offset="1" stop-color="#4E805F"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#365A42" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="900" height="260" fill="#F7FAF6"/>
+  <g filter="url(#shadow)">
+    <path d="M64 55C64 35.67 79.67 20 99 20H247C264.397 20 278.5 34.103 278.5 51.5C278.5 68.897 264.397 83 247 83H132V130H217C234.397 130 248.5 144.103 248.5 161.5C248.5 178.897 234.397 193 217 193H132V214C132 236.644 113.644 255 91 255H64V55Z" fill="url(#mark)"/>
+    <path d="M64 230C64 214.812 76.312 202.5 91.5 202.5H105C118.807 202.5 130 213.693 130 227.5C130 241.307 118.807 252.5 105 252.5H84C72.954 252.5 64 243.546 64 230Z" fill="url(#mark)"/>
+    <circle cx="278" cy="138" r="19" fill="url(#mark)"/>
+  </g>
+  <text x="350" y="156" fill="#5E8C6A" font-family="Poppins, Avenir Next, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="10">FIZYOFLOW</text>
+</svg>

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
@@ -41,7 +42,7 @@ function resolveQrMode(detourUrl: string, joinUrl: string) {
       label: "Yönlendirme hazır",
       tone: "success" as const,
       description:
-        "Danışanlar bu QR kodu okuttuğunda doğrudan salon sayfana yönlendirilir. Uygulama yüklüyse Clinerva açılır; yüklü değilse indirme akışıyla devam eder.",
+        "Danışanlar bu QR kodu okuttuğunda doğrudan salon sayfana yönlendirilir. Uygulama yüklüyse FizyoFlow açılır; yüklü değilse indirme akışıyla devam eder.",
       appInstalledLabel: "Salon sayfan açılır",
       appMissingLabel: "İndirme sayfası açılır",
       routeTypeLabel: "Akıllı yönlendirme",
@@ -72,22 +73,24 @@ function resolveQrMode(detourUrl: string, joinUrl: string) {
 }
 
 export default function AdminClinicQrScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const [feedback, setFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const qrShotRef = useRef<View>(null);
+  const qrShotRef = useRef<ViewShot>(null);
 
   const query = useQuery({
     queryKey: ["admin-clinic-qr"],
     queryFn: getAdminClinicQrApi,
   });
 
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const data = unwrapQrData(query.data as AdminClinicQrResponse | undefined);
   const currentCode = normalizeText(data.qr_code);
   const joinUrl = normalizeText(data.join_url);
   const detourUrl = normalizeText(data.detour_url);
   const qrPayload = normalizeText(data.qr_payload || detourUrl || joinUrl || currentCode);
   const salonName = normalizeText(data.name) || "Salon";
-  const salonSlug = normalizeText(data.slug) || "salon";
   const qrMode = resolveQrMode(detourUrl, joinUrl);
 
   async function handleSaveQr() {
@@ -133,6 +136,7 @@ export default function AdminClinicQrScreen() {
       icon="qr"
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
+      onBack={() => router.replace((backTo || "/(admin)/dashboard") as never)}
     >
       <SurfaceCard tone="primary">
         <View style={styles.heroBlock}>
@@ -189,7 +193,7 @@ export default function AdminClinicQrScreen() {
                 <View testID="admin-clinic-qr-preview" collapsable={false} style={styles.qrFrame}>
                   <QrPreview value={qrPayload} size={230} showCode={false} />
 
-                  <Text style={styles.qrBrand}>Clinerva</Text>
+                  <Text style={styles.qrBrand}>FizyoFlow</Text>
                   <Text style={styles.qrSalonName} numberOfLines={1}>
                     {salonName}
                   </Text>

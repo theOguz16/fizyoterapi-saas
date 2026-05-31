@@ -170,6 +170,6 @@ test.describe("login routing", () => {
     await page.getByRole("button", { name: "Giriş Yap" }).click();
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByText("Bu hesap web paneline hazir degil. Once Clinerva onayini bekleyin.")).toBeVisible();
+    await expect(page.getByText("Bu hesap web paneline hazir degil. Once FizyoFlow onayini bekleyin.")).toBeVisible();
   });
 });

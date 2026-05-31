@@ -6,5 +6,5 @@ export function buildQrFileName(input: { salonSlug?: string | null }) {
     .replace(/^_+|_+$/g, "")
     .toLowerCase();
 
-  return `clinerva-salon-qr-${slug || "salon"}`;
+  return `fizyoflow-salon-qr-${slug || "salon"}`;
 }

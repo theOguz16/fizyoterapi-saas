@@ -45,7 +45,7 @@ function noteCategoryDescription(category: string) {
 
 export default function TrainerNoteEditScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ memberId: string; memberName?: string; noteId: string; title: string; body: string; category: string }>();
+  const params = useLocalSearchParams<{ memberId: string; memberName?: string; noteId: string; title: string; body: string; category: string; backTo?: string | string[] }>();
   const [form, setForm] = useState({
     title: String(params.title || ""),
     body: String(params.body || ""),
@@ -84,6 +84,7 @@ export default function TrainerNoteEditScreen() {
 });
 
   const memberName = String(params.memberName || "Danışan");
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const categoryTone = noteCategoryTone(form.category);
   const categoryIconTone = form.category === "RISK" ? "danger" : form.category === "GOAL" ? "success" : form.category === "FOLLOW_UP" ? "warning" : "neutral";
 
@@ -99,6 +100,7 @@ export default function TrainerNoteEditScreen() {
           params: {
             memberId: String(params.memberId),
             memberName,
+            backTo: backTo || "/(trainer)/clients",
           },
         } as never)
       }

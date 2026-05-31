@@ -9,6 +9,7 @@ import { ClassSession, SessionStatus, SessionType } from "../../entities/class-s
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
 import {
+  catalogLabelForCode,
   derivePackageFromCatalog,
   enrichPackageRowForDisplay,
   normalizeLessonCatalogServices,
@@ -36,7 +37,7 @@ export class AdminPackagesController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "package",
       target_id: input.pkg.id,
       metadata: {
@@ -81,6 +82,34 @@ export class AdminPackagesController {
       order: { created_at: "DESC" },
     });
     return normalizeLessonCatalogServices(profile?.services);
+  }
+
+  private static titleizeCatalogLabel(value: unknown, fallback: string) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return fallback;
+    return raw
+      .replace(/_/g, " ")
+      .toLocaleLowerCase("tr-TR")
+      .replace(/(^|\s)\S/g, (char) => char.toLocaleUpperCase("tr-TR"));
+  }
+
+  private static lessonModeLabel(value: unknown) {
+    const normalized = String(value ?? "").trim().toUpperCase();
+    if (normalized === "GROUP") return "Grup";
+    if (normalized === "DUO") return "Duo";
+    return "Özel";
+  }
+
+  private static packageTypeLabel(value: unknown) {
+    const catalogLabel = catalogLabelForCode(value);
+    if (catalogLabel) return catalogLabel;
+    const normalized = String(value ?? "").trim().toUpperCase();
+    if (normalized === "GROUP") return "Grup dersi";
+    if (normalized === "PT") return "Özel ders";
+    if (normalized === "SCOLIOSIS") return "Skolyoz";
+    if (normalized === "REFORMER") return "Reformer";
+    if (normalized === "MANUAL") return "Manuel terapi";
+    return "Diğer";
   }
 
   // --- GET /api/admin/packages ---
@@ -135,24 +164,40 @@ export class AdminPackagesController {
           lesson_catalog: activeCatalog,
           session_duration_options: [45, 50, 60],
           break_duration_options: [0, 5, 10, 15, 20, 25, 30, 45, 60],
-          lesson_mode_options: ["SINGLE", "DUO", "GROUP"],
-          templates: activeCatalog.map((item) => ({
-            service_key: item.code,
-            lesson_category: item.code,
-            service_name: item.title,
-            capacity_label: item.capacity_label,
-            suggested_capacity: (() => {
-              const values = item.capacity_label.match(/\d+/g) || [];
-              const last = values.length > 0 ? values[values.length - 1] : "1";
-              return Number(last || 1);
-            })(),
-            starting_price: item.starting_price,
-            trainer_commission_rate: item.trainer_commission_rate,
-            package_type: item.package_type,
-            session_duration_minutes: 45,
-            break_duration_minutes: 0,
-            lesson_mode: Number((item.capacity_label.match(/\d+/g) || ["1"]).slice(-1)[0] || 1) > 2 ? "GROUP" : "SINGLE",
-          })),
+          lesson_mode_options: [
+            { value: "PRIVATE", label: "Özel", suggested_capacity: 1 },
+            { value: "DUO", label: "Duo", suggested_capacity: 2 },
+            { value: "GROUP", label: "Grup", suggested_capacity: 4 },
+          ],
+          templates: activeCatalog.map((item) => {
+            const values = item.capacity_label.match(/\d+/g) || [];
+            const last = values.length > 0 ? values[values.length - 1] : "1";
+            const suggestedCapacity = Number(last || 1);
+            const categoryKey = String(item.category_group || item.package_type || "OTHER").trim();
+            const lessonMode = item.lesson_mode ?? (suggestedCapacity > 2 ? "GROUP" : suggestedCapacity === 2 ? "DUO" : "PRIVATE");
+
+            return {
+              service_key: item.code,
+              lesson_category: item.code,
+              service_name: item.title,
+              category_group: categoryKey,
+              category_label: item.category_label || AdminPackagesController.titleizeCatalogLabel(categoryKey, "Diğer"),
+              sub_category_key: item.code,
+              sub_category_label: item.title,
+              capacity_label: item.capacity_label,
+              suggested_capacity: suggestedCapacity,
+              starting_price: item.starting_price,
+              trainer_commission_rate: item.trainer_commission_rate,
+              package_type: item.package_type,
+              package_type_label: catalogLabelForCode(item.code) || AdminPackagesController.packageTypeLabel(item.package_type),
+              session_duration_minutes: item.session_duration_minutes ?? 45,
+              break_duration_minutes: item.break_duration_minutes ?? 0,
+              lesson_mode: lessonMode,
+              lesson_mode_label: AdminPackagesController.lessonModeLabel(lessonMode),
+              sub_lessons: item.sub_lessons ?? [],
+              default_title: `${item.title} Paketi`,
+            };
+          }),
           linkable_group_classes: groupSessions.map((session) => ({
             id: session.id,
             lesson_name: session.title,
@@ -527,13 +572,16 @@ export class AdminPackagesController {
         is_active: pkg.is_active,
       };
 
-      await packageRepo.remove(pkg);
+      pkg.is_active = false;
+      pkg.is_visible = false;
+      pkg.is_public = false;
+      const updatedPackage = await packageRepo.save(pkg);
       await AdminPackagesController.logPackageAudit(req, {
-        eventType: "ADMIN_PACKAGE_DELETED",
-        pkg,
+        eventType: "ADMIN_PACKAGE_ARCHIVED",
+        pkg: updatedPackage,
         oldState,
       });
-      return res.json({ message: "Package başarıyla silindi" });
+      return res.json({ message: "Package arşivlendi", data: updatedPackage });
     } catch (error) {
       if (error instanceof AppError) {
         throw error;

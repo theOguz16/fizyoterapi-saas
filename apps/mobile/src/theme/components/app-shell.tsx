@@ -1,11 +1,11 @@
 // Bu paylasilan UI component'i mobil tasarim sistemindeki app shell parcasi icin standart gorunum saglar.
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
 import { ReactNode, useEffect, useRef } from "react";
-import { useRouter, useSegments } from "expo-router";
+import { useLocalSearchParams, useRouter, useSegments } from "expo-router";
 import { ArrowLeft, ChevronLeft } from "lucide-react-native";
 import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { resolveContextualBackHref } from "@/lib/navigation";
+import { resolveBackNavigation, resolveContextualBackHref } from "@/lib/navigation";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
 
@@ -40,6 +40,7 @@ export function AppShell({
 }: Props) {
   const router = useRouter();
   const segments = useSegments();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const canGoBack = typeof router.canGoBack === "function" ? router.canGoBack() : false;
   const BackIcon = Platform.OS === "ios" ? ChevronLeft : ArrowLeft;
   const heroOpacity = useRef(new Animated.Value(0)).current;
@@ -47,7 +48,8 @@ export function AppShell({
   const bodyOpacity = useRef(new Animated.Value(0)).current;
   const bodyTranslate = useRef(new Animated.Value(18)).current;
   const isTabRootRoute = isPrimaryTabRootRoute(segments);
-  const contextualBackHref = backHref || resolveContextualBackHref(segments);
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const contextualBackHref = backHref || backTo || resolveContextualBackHref(segments);
   const shouldShowBackButton = showBackButton && !isTabRootRoute && (canGoBack || Boolean(onBack) || Boolean(contextualBackHref));
 
   useEffect(() => {
@@ -89,6 +91,7 @@ export function AppShell({
         {shouldShowBackButton ? (
           <View style={styles.topNavigation}>
             <Pressable
+              testID="app-shell-back-button"
               accessibilityRole="button"
               accessibilityLabel={backLabel}
               style={({ pressed }) => [styles.navChip, styles.navChipElevated, pressed ? styles.navChipPressed : null]}
@@ -97,8 +100,13 @@ export function AppShell({
                   onBack();
                   return;
                 }
-                if (contextualBackHref && typeof router.replace === "function") {
-                  router.replace(contextualBackHref as never);
+                const nextAction = resolveBackNavigation(canGoBack, contextualBackHref);
+                if (nextAction.type === "back") {
+                  router.back();
+                  return;
+                }
+                if (typeof router.replace === "function") {
+                  router.replace(nextAction.href as never);
                   return;
                 }
                 router.back();
@@ -123,7 +131,7 @@ export function AppShell({
               <View style={styles.heroHeader}>
                 <View style={styles.heroIdentity}>
                   <AppIcon name={icon} active size="lg" />
-                  <Text style={styles.eyebrow}>CLINERVA</Text>
+                  <Text style={styles.eyebrow}>FIZYOFLOW</Text>
                 </View>
                 {rightAction ? <View>{rightAction}</View> : <View style={styles.navSpacer} />}
               </View>

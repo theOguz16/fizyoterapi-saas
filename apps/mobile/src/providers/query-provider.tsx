@@ -3,25 +3,53 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 
-type QueryKeyList = readonly (readonly unknown[])[];
+type QueryKeyTarget = {
+  queryKey: readonly unknown[];
+  exact?: boolean;
+};
 
-export function MobileQueryProvider({ children }: { children: any }) {
+type QueryInvalidateInput = readonly (readonly unknown[] | QueryKeyTarget)[];
+
+function isQueryKeyTarget(target: readonly unknown[] | QueryKeyTarget): target is QueryKeyTarget {
+  return !Array.isArray(target);
+}
+
+export function normalizeInvalidateTargets(invalidates: QueryInvalidateInput | undefined): QueryKeyTarget[] {
+  if (!invalidates?.length) return [];
+
+  return invalidates.map((target) => {
+    if (isQueryKeyTarget(target)) {
+      return {
+        queryKey: target.queryKey,
+        exact: target.exact ?? true,
+      };
+    }
+
+    return {
+      queryKey: target,
+      exact: true,
+    };
+  });
+}
+
+type QueryClientProviderChildren = ComponentProps<typeof QueryClientProvider>["children"];
+
+export function MobileQueryProvider({ children }: { children: QueryClientProviderChildren }) {
   const [client] = useState(() => {
     const queryClient = new QueryClient({
       mutationCache: new MutationCache({
         onSuccess: async (_data, _variables, _context, mutation) => {
-          const invalidates = mutation.meta?.invalidates as
-            | QueryKeyList
-            | undefined;
+          const invalidates = normalizeInvalidateTargets(mutation.meta?.invalidates as QueryInvalidateInput | undefined);
 
           if (invalidates?.length) {
             await Promise.all(
-              invalidates.map((queryKey) =>
+              invalidates.map((target) =>
                 queryClient.invalidateQueries({
-                  queryKey,
-                  exact: true,
+                  queryKey: target.queryKey,
+                  exact: target.exact,
                   refetchType: "all",
                 })
               )

@@ -1,47 +1,22 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: admin-salon-qr-ignored
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
-- assertVisible:
-    id: "welcome-login-button"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
 
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-
-- assertVisible: "Hesabına giriş yap"
-
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "oguzhanuyar531@gmail.com"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "admin123"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-submit-button"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- assertVisible:
-    text: "Yönetici|Admin|Panel|Onay|Onaylar|Üyeler|Randevu|Randevular|Paket|Paketler|Kampanya|Kampanyalar|Salon QR|Dashboard|Ana Sayfa|Profil|Ayarlar|Çıkış Yap"
+- extendedWaitUntil:
+    visible:
+      text: "Yönetici|Admin|Panel|Onay|Onaylar|Üyeler|Randevu|Randevular|Paket|Paketler|Kampanya|Kampanyalar|Salon QR|Dashboard|Ana Sayfa|Profil|Ayarlar|Çıkış Yap"
+    timeout: 20000
 
 
 # Admin QR açsa bile member salon onboarding'e sokulmamalı.
-- openLink: "clinerva://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
 
 - waitForAnimationToEnd:
     timeout: 5000

@@ -1,12 +1,10 @@
 // Bu controller admin tarafindaki members.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
-import { Request, Response } from "express";
+import { Response } from "express";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { User, UserRole} from "../../entities/user.entity";
-import { UserPackage } from "../../entities/user-package.entity";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
-import { Package } from "../../entities/package.entity";
 import { Attendance } from "../../entities/attendance.entity";
 import { Measurement } from "../../entities/measurement.entity";
 import { RetentionScore } from "../../entities/retention-score.entity";
@@ -15,9 +13,9 @@ import { SalonMembership, SalonMembershipStatus } from "../../entities/salon-mem
 import crypto from "crypto";
 import { hashPassword } from "../../services/password.service";
 import { IsNull } from "typeorm";
-import { PackageTrainerAssignment } from "../../entities/package-trainer-assignment.entity";
 import { Account } from "../../entities/account.entity";
 import { AuditLogService } from "../../services/audit-log.service";
+import { MemberPackageService } from "../../services/member-package.service";
 
 export class AdminMembersController {
   private static async logMemberAudit(
@@ -42,7 +40,7 @@ export class AdminMembersController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "member",
       target_id: input.member.id,
       metadata: {
@@ -57,13 +55,13 @@ export class AdminMembersController {
   }
 
   private static toSafeUser(user: User) {
-    const { password_hash, ...safeUser } = user;
+    const { password_hash: _password_hash, ...safeUser } = user;
     return safeUser;
   }
 
   // Şifre oluşturma
   private static generateRandomPassword(length: number = 12): string {
-      let randomPassword = crypto.randomBytes(length).toString("base64").slice(0, length);
+      const randomPassword = crypto.randomBytes(length).toString("base64").slice(0, length);
       return randomPassword;
     }
   // CRUD
@@ -165,12 +163,6 @@ export class AdminMembersController {
       if (!member) {
         throw new AppError("MEMBER_NOT_FOUND", 404, "Admin member bulunamadı");
       }
-      const oldState = {
-        email: member.email,
-        first_name: member.first_name,
-        last_name: member.last_name,
-        phone: member.phone,
-      };
       const membership = await AppDataSource.getRepository(SalonMembership).findOne({
         where: { tenant_id: tenantId, user_id: member.id, role: UserRole.MEMBER },
         order: { created_at: "DESC" },
@@ -358,8 +350,7 @@ export class AdminMembersController {
 
   // Paket atama / hak
   static async assignPackageToMember(req: AuthenticatedRequest, res: Response) {
-    // --- POST /api/admin/members/:id/package ---
-      try {
+    try {
       const tenantId = req.tenantId;
       if (!tenantId) {
         throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
@@ -372,49 +363,14 @@ export class AdminMembersController {
         throw new AppError("VALIDATION_ERROR", 400, "memberId ve package_id zorunludur");
       }
 
-      const packageRepo = AppDataSource.getRepository(Package);
-      const userPackageRepo = AppDataSource.getRepository(UserPackage);
-      const memberRepo = AppDataSource.getRepository(User);
-
-      const member = await memberRepo.findOne({
-        where: { tenant_id: tenantId, id: memberId, role: UserRole.MEMBER },
-      });
-      if (!member) {
-        throw new AppError("MEMBER_NOT_FOUND", 404, "Admin member bulunamadı");
-      }
-
-      const pkg = await packageRepo.findOne({
-      where: { tenant_id: tenantId, id: String(package_id), is_active: true },
-      });
-      if (!pkg) throw new AppError("PACKAGE_NOT_FOUND", 404, "Paket bulunamadı");
-
-      const startsAt = starts_at ? new Date(starts_at) : new Date();
-      if (Number.isNaN(startsAt.getTime())) {
-        throw new AppError("VALIDATION_ERROR", 400, "starts_at geçersiz");
-      }
-
-      let expiresAt: Date | null = null;
-      if (expires_at !== undefined && expires_at !== null) {
-        expiresAt = new Date(expires_at);
-        if (Number.isNaN(expiresAt.getTime())) {
-          throw new AppError("VALIDATION_ERROR", 400, "expires_at geçersiz");
-        }
-      } else if (pkg.duration_days > 0) {
-        expiresAt = new Date(startsAt);
-        expiresAt.setDate(expiresAt.getDate() + pkg.duration_days);
-      }
-
-        const userPackage = userPackageRepo.create({
-        tenant_id: tenantId,
-        user_id: memberId,
-        package_id: pkg.id,
-        remaining_credits: pkg.total_credits,
-        starts_at: startsAt,
-        expires_at: expiresAt ?? undefined,
-        is_active: true,
+      const result = await MemberPackageService.assignPackageToMember({
+        tenantId,
+        memberId,
+        packageId: String(package_id),
+        startsAt: starts_at ?? null,
+        expiresAt: expires_at ?? null,
       });
 
-      await userPackageRepo.save(userPackage);
       await AuditLogService.log({
         tenant_id: tenantId,
         actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
@@ -428,142 +384,72 @@ export class AdminMembersController {
         success: true,
         request_id: req.requestId || null,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "user_package",
-        target_id: userPackage.id,
+        target_id: result.userPackage.id,
         metadata: {
-          member_id: member.id,
-          package_id: pkg.id,
-          remaining_credits: userPackage.remaining_credits,
+          member_id: result.member.id,
+          package_id: result.package.id,
+          remaining_credits: result.userPackage.remaining_credits,
+          starts_at: result.userPackage.starts_at?.toISOString?.() ?? null,
+          expires_at: result.userPackage.expires_at?.toISOString?.() ?? null,
+          purchase_price: result.userPackage.purchase_price ?? null,
         },
       });
 
-      return res.status(201).json({ data: userPackage });
-
-      } catch (error) {
+      return res.status(201).json({ data: result.userPackage });
+    } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
+
       console.error("Admin Add Package Error:", error);
       throw new AppError("ADMIN_MEMBER_PACKAGE_ADD_ERROR", 500, "Admin package eklerken sunucu hatası oluştu");
-    }  
+    }
   }
 
   static async listMemberPackages(req: AuthenticatedRequest, res: Response) {
-    // --- GET /api/admin/members/:id/package ---
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      if (!tenantId) {
+        throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      }
 
       const memberId = String(req.params.memberId ?? req.params.id ?? "");
-      if (!memberId) throw new AppError("VALIDATION_ERROR", 400, "memberId zorunlu");
-
-      const userPackageRepo = AppDataSource.getRepository(UserPackage);
-      const memberRepo = AppDataSource.getRepository(User);
-
-      const member = await memberRepo.findOne({
-        where: { tenant_id: tenantId, id: memberId, role: UserRole.MEMBER },
-      });
-      if (!member) {
-        throw new AppError("MEMBER_NOT_FOUND", 404, "Admin member bulunamadı");
+      if (!memberId) {
+        throw new AppError("VALIDATION_ERROR", 400, "memberId zorunlu");
       }
 
-      const rows = await userPackageRepo.find({
-      where: { tenant_id: tenantId, user_id: memberId },
-      order: { created_at: "DESC" },
+      const result = await MemberPackageService.listMemberPackages({
+        tenantId,
+        memberId,
       });
 
-      const packageIds = Array.from(new Set(rows.map((row) => row.package_id).filter(Boolean)));
-      const packages = packageIds.length
-        ? await AppDataSource.getRepository(Package).find({
-            where: packageIds.map((id) => ({ tenant_id: tenantId, id })),
-          })
-        : [];
-      const packageMap = new Map(packages.map((pkg) => [pkg.id, pkg]));
-
-      const assignments = packageIds.length
-        ? await AppDataSource.getRepository(PackageTrainerAssignment).find({
-            where: packageIds.map((packageId) => ({ tenant_id: tenantId, package_id: packageId, is_active: true })),
-          })
-        : [];
-      const trainerIds = Array.from(new Set(assignments.map((row) => row.trainer_id).filter(Boolean)));
-      const trainers = trainerIds.length
-        ? await AppDataSource.getRepository(User).find({
-            where: trainerIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.TRAINER })),
-            select: ["id", "first_name", "last_name", "email"],
-          })
-        : [];
-      const trainerMap = new Map(
-        trainers.map((trainer) => [
-          trainer.id,
-          {
-            id: trainer.id,
-            full_name: `${trainer.first_name || ""} ${trainer.last_name || ""}`.trim() || trainer.email,
-            email: trainer.email,
-          },
-        ])
-      );
-      const assignmentsByPackage = new Map<string, Array<{ id: string; full_name: string; email: string }>>();
-      for (const assignment of assignments) {
-        const trainer = trainerMap.get(assignment.trainer_id);
-        if (!trainer) continue;
-        assignmentsByPackage.set(assignment.package_id, [...(assignmentsByPackage.get(assignment.package_id) || []), trainer]);
-      }
-
-      const now = new Date();
-      const data = rows.map((row) => {
-      const isExpired = !!row.expires_at && row.expires_at <= now;
-      const pkg = packageMap.get(row.package_id);
-      const assignedTrainers = assignmentsByPackage.get(row.package_id) || [];
-      return {
-        ...row,
-        is_expired: isExpired,
-        package_title: pkg?.title ?? null,
-        package_type: pkg?.type ?? null,
-        package_total_credits: pkg?.total_credits ?? null,
-        package_duration_days: pkg?.duration_days ?? null,
-        package_price: pkg?.display_price ? Number(pkg.display_price) : null,
-        assigned_trainers: assignedTrainers,
-        trainer_summary: assignedTrainers.length ? assignedTrainers.map((trainer) => trainer.full_name).join(", ") : null,
-      };
-      });
-
-      const totalRemainingCredits = data
-        .filter((r) => r.is_active && !r.is_expired)
-        .reduce((acc, r) => acc + r.remaining_credits, 0);
-
-      return res.json({ data, totalRemainingCredits });
-
-
+      return res.json(result);
     } catch (error) {
-    if (error instanceof AppError) throw error;
-    console.error("Admin list member packages error:", error);
-    throw new AppError("ADMIN_MEMBER_PACKAGES_LIST_ERROR", 500, "Üye paketleri listelenirken hata oluştu");
-  }
+      if (error instanceof AppError) throw error;
 
+      console.error("Admin list member packages error:", error);
+      throw new AppError("ADMIN_MEMBER_PACKAGES_LIST_ERROR", 500, "Üye paketleri listelenirken hata oluştu");
+    }
   }
 
   static async adjustCredits(req: AuthenticatedRequest, res: Response) {
-    // --- PATCH /api/admin/members/user-packages/:userPackageId/credits ---
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      if (!tenantId) {
+        throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      }
 
       const userPackageId = String(req.params.userPackageId ?? req.params.id ?? "");
       const { remaining_credits } = req.body ?? {};
 
-      const credits = Number(remaining_credits);
-      if (!Number.isFinite(credits) || credits < 0) {
-        throw new AppError("VALIDATION_ERROR", 400, "remaining_credits geçersiz");
-      }
+      const result = await MemberPackageService.adjustCredits({
+        tenantId,
+        userPackageId,
+        remainingCredits: Number(remaining_credits),
+      });
 
-      const repo = AppDataSource.getRepository(UserPackage);
-      const row = await repo.findOne({ where: { tenant_id: tenantId, id: userPackageId } });
-      if (!row) throw new AppError("USER_PACKAGE_NOT_FOUND", 404, "User package bulunamadı");
-      const oldState = { remaining_credits: row.remaining_credits };
-
-      row.remaining_credits = credits;
-      await repo.save(row);
       await AuditLogService.log({
         tenant_id: tenantId,
         actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
@@ -577,39 +463,39 @@ export class AdminMembersController {
         success: true,
         request_id: req.requestId || null,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "user_package",
-        target_id: row.id,
+        target_id: result.row.id,
         metadata: {
-          member_id: row.user_id,
-          old_state: oldState,
-          remaining_credits: row.remaining_credits,
+          member_id: result.row.user_id,
+          old_state: result.oldState,
+          remaining_credits: result.row.remaining_credits,
         },
       });
 
-      return res.json({ data: row });
+      return res.json({ data: result.row });
     } catch (error) {
       if (error instanceof AppError) throw error;
+
       console.error("Admin adjust credits error:", error);
       throw new AppError("ADMIN_MEMBER_CREDITS_ADJUST_ERROR", 500, "Kredi güncellenirken hata oluştu");
     }
   }
 
   static async removeUserPackage(req: AuthenticatedRequest, res: Response) {
-    // --- DELETE /api/admin/members/user-packages/:userPackageId ---
     try {
       const tenantId = req.tenantId;
-      if (!tenantId) throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      if (!tenantId) {
+        throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadı");
+      }
 
       const userPackageId = String(req.params.userPackageId ?? req.params.id ?? "");
-      const repo = AppDataSource.getRepository(UserPackage);
 
-      const row = await repo.findOne({ where: { tenant_id: tenantId, id: userPackageId } });
-      if (!row) throw new AppError("USER_PACKAGE_NOT_FOUND", 404, "User package bulunamadı");
-      const oldState = { is_active: row.is_active };
+      const result = await MemberPackageService.deactivateUserPackage({
+        tenantId,
+        userPackageId,
+      });
 
-      row.is_active = false;
-      await repo.save(row);
       await AuditLogService.log({
         tenant_id: tenantId,
         actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
@@ -623,19 +509,23 @@ export class AdminMembersController {
         success: true,
         request_id: req.requestId || null,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "user_package",
-        target_id: row.id,
+        target_id: result.row.id,
         metadata: {
-          member_id: row.user_id,
-          old_state: oldState,
-          is_active: row.is_active,
+          member_id: result.row.user_id,
+          old_state: result.oldState,
+          is_active: result.row.is_active,
         },
       });
 
-      return res.json({ message: "User package donduruldu", data: row });
+      return res.json({
+        message: "User package donduruldu",
+        data: result.row,
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
+
       console.error("Admin remove user package error:", error);
       throw new AppError("ADMIN_MEMBER_PACKAGE_REMOVE_ERROR", 500, "User package kaldırılırken hata oluştu");
     }

@@ -40,7 +40,7 @@ export default function AdminDashboardScreen() {
       icon="dashboard" 
       refreshing={query.isRefetching} 
       onRefresh={() => void query.refetch()}
-      rightAction={<ActionButton testID="admin-dashboard-notifications" label="Bildirim" icon="notifications" fullWidth={false} variant="ghost" onPress={() => router.push("/(admin)/notifications" as never)} />}
+      rightAction={<ActionButton testID="admin-dashboard-notifications" label="Bildirim" icon="notifications" fullWidth={false} variant="ghost" onPress={() => router.push({ pathname: "/(admin)/notifications", params: { backTo: "/(admin)/dashboard" } } as never)} />}
     >
       <View style={styles.metricsRow}>
         <MetricCard label="Aktif üye" value={kpis.active_members ?? 0} hint="Salon genel görünümü" icon="members" />
@@ -67,8 +67,8 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionTitle}>Günlük operasyon</Text>
         <Text style={styles.copy}>Bugün en sık kullanacağın alanları öne çıkarır.</Text>
         <View style={styles.quickGrid}>
-          <QuickAction testID="admin-dashboard-approvals" title="Onaylar" icon="approvals" onPress={() => router.push("/(admin)/approvals" as never)} />
-          <QuickAction testID="admin-dashboard-entry-scan" title="Giriş Tarama" icon="scan" onPress={() => router.push("/(admin)/entry-scan" as never)} />
+          <QuickAction testID="admin-dashboard-approvals" title="Onaylar" icon="approvals" onPress={() => router.push({ pathname: "/(admin)/approvals", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-entry-scan" title="Giriş Tarama" icon="scan" onPress={() => router.push({ pathname: "/(admin)/entry-scan", params: { backTo: "/(admin)/dashboard" } } as never)} />
           <QuickAction testID="admin-dashboard-calendar" title="Takvim" icon="calendar" onPress={() => router.push("/(admin)/calendar" as never)} />
           <QuickAction testID="admin-dashboard-members" title="Üyeler" icon="members" onPress={() => router.push("/(admin)/members" as never)} />
         </View>
@@ -78,12 +78,13 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionTitle}>Yönetim araçları</Text>
         <Text style={styles.copy}>Daha düşük frekanslı ama kritik yönetim alanları burada kalır.</Text>
         <View style={styles.quickGrid}>
-          <QuickAction testID="admin-dashboard-risk" title="Risk Havuzu" icon="risk" onPress={() => router.push("/(admin)/risk-members" as never)} />
-          <QuickAction testID="admin-dashboard-packages" title="Paketler" icon="package" onPress={() => router.push("/(admin)/packages" as never)} />
-          <QuickAction testID="admin-dashboard-campaigns" title="Kampanyalar" icon="campaigns" onPress={() => router.push("/(admin)/campaigns" as never)} />
-          <QuickAction testID="admin-dashboard-revenue" title="Gelir Detayı" icon="earnings" onPress={() => router.push("/(admin)/dashboard/revenue-detail" as never)} />
-          <QuickAction testID="admin-dashboard-salon" title="Salon Ayarları" icon="clinic" onPress={() => router.push("/(admin)/salon" as never)} />
-          <QuickAction testID="admin-dashboard-clinic-qr" title="Salon QR" icon="qr" onPress={() => router.push("/(admin)/clinic-qr" as never)} />
+          <QuickAction testID="admin-dashboard-risk" title="Risk Havuzu" icon="risk" onPress={() => router.push({ pathname: "/(admin)/risk-members", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-packages" title="Paketler" icon="package" onPress={() => router.push({ pathname: "/(admin)/packages", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-campaigns" title="Kampanyalar" icon="campaigns" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-digital-vitrine" title="Dijital Vitrin" icon="external" onPress={() => router.push({ pathname: "/(admin)/salon", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-revenue" title="Gelir Detayı" icon="earnings" onPress={() => router.push({ pathname: "/(admin)/dashboard/revenue-detail", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-salon" title="Salon Ayarları" icon="clinic" onPress={() => router.push({ pathname: "/(admin)/salon", params: { backTo: "/(admin)/dashboard" } } as never)} />
+          <QuickAction testID="admin-dashboard-clinic-qr" title="Salon QR" icon="qr" onPress={() => router.push({ pathname: "/(admin)/clinic-qr", params: { backTo: "/(admin)/dashboard" } } as never)} />
         </View>
       </SurfaceCard>
 
@@ -108,7 +109,7 @@ export default function AdminDashboardScreen() {
               </View>
             ))}
           </ScrollPanel>
-          <ActionButton label="Tüm riskli üyeleri gör" icon="risk" variant="ghost" onPress={() => router.push("/(admin)/risk-members" as never)} />
+          <ActionButton label="Tüm riskli üyeleri gör" icon="risk" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/risk-members", params: { backTo: "/(admin)/dashboard" } } as never)} />
         </SurfaceCard>
       )}
     </AppShell>

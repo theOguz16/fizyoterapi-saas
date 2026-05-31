@@ -1,6 +1,7 @@
 // Bu controller member tarafindaki salon applications.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import { In } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { Account } from "../../entities/account.entity";
 import { SalonApplication, SalonApplicationSource, SalonApplicationStatus } from "../../entities/salon-application.entity";
@@ -80,7 +81,7 @@ export class MemberSalonApplicationsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "salon_application",
       target_id: application.id,
       metadata: { tenant_slug: tenant.slug, tenant_name: tenant.name },
@@ -102,11 +103,14 @@ export class MemberSalonApplicationsController {
     const accountId = req.auth?.accountId;
     if (!accountId) throw new AppError("INVALID_TOKEN", 401, "Oturum doğrulanamadı");
 
-    const [memberships, applications, tenants] = await Promise.all([
+    const [memberships, applications] = await Promise.all([
       AppDataSource.getRepository(SalonMembership).find({ where: { account_id: accountId }, order: { updated_at: "DESC" } }),
       AppDataSource.getRepository(SalonApplication).find({ where: { account_id: accountId }, order: { created_at: "DESC" } }),
-      AppDataSource.getRepository(Tenant).find(),
     ]);
+    const tenantIds = Array.from(new Set([...memberships.map((row) => row.tenant_id), ...applications.map((row) => row.tenant_id)]));
+    const tenants = tenantIds.length
+      ? await AppDataSource.getRepository(Tenant).find({ where: { id: In(tenantIds) } })
+      : [];
 
     const tenantMap = new Map(tenants.map((row) => [row.id, row]));
     return res.json({
@@ -161,7 +165,7 @@ export class MemberSalonApplicationsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "salon_membership",
       target_id: membership.id,
       metadata: { tenant_id: membership.tenant_id, user_id: membership.user_id || null },
@@ -175,7 +179,9 @@ export class MemberSalonApplicationsController {
     });
 
     if (membership.user_id) {
-      const user = await AppDataSource.getRepository(User).findOne({ where: { id: membership.user_id } });
+      const user = await AppDataSource.getRepository(User).findOne({
+        where: { id: membership.user_id, tenant_id: membership.tenant_id },
+      });
       if (user) {
         user.is_active = false;
         await AppDataSource.getRepository(User).save(user);

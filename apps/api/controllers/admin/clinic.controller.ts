@@ -22,13 +22,13 @@ export class AdminClinicController {
       process.env.PUBLIC_WEB_BASE_URL?.trim() ||
       process.env.WEB_BASE_URL?.trim() ||
       process.env.NEXT_PUBLIC_WEB_BASE_URL?.trim() ||
-      "http://localhost:3939"
+      (process.env.NODE_ENV === "production" ? "https://fizyoflow.com" : "http://localhost:3939")
     ).replace(/\/+$/, "");
   }
 
   private static buildTenantQr(slug: string) {
     const short = crypto.randomBytes(3).toString("hex").toUpperCase();
-    return `CLN-${slug.toUpperCase()}-${short}`;
+    return `FYF-${slug.toUpperCase()}-${short}`;
   }
 
   private static buildTenantJoinUrl(slug: string, qrCode: string) {
@@ -37,34 +37,40 @@ export class AdminClinicController {
   }
 
   private static resolveDetourLinkBaseUrl() {
-  return (
-    process.env.DETOUR_LINK_BASE_URL?.trim() ||
-    process.env.EXPO_PUBLIC_DETOUR_LINK_BASE_URL?.trim() ||
-    ""
-  ).replace(/\/+$/, "");
-}
+    const rawBaseUrl = (
+      process.env.DETOUR_LINK_BASE_URL?.trim() ||
+      process.env.EXPO_PUBLIC_DETOUR_LINK_BASE_URL?.trim() ||
+      ""
+    ).replace(/\/+$/, "");
 
-private static buildTenantDetourUrl(slug: string, qrCode: string) {
-  const baseUrl = AdminClinicController.resolveDetourLinkBaseUrl();
-  if (!baseUrl) return null;
+    if (/clinerva/i.test(rawBaseUrl)) {
+      return "";
+    }
 
-  const mobileScreenPath = `/(intake-member)/salons/${slug}`;
-  const webJoinPath = `/join/${slug}`;
-  const joinUrl = AdminClinicController.buildTenantJoinUrl(slug, qrCode);
+    return rawBaseUrl;
+  }
 
-  const params = new URLSearchParams({
-    salon_slug: slug,
-    screen_path: mobileScreenPath,
-    web_join_path: webJoinPath,
-    code: qrCode,
-    source: "salon_qr",
-    campaign: slug,
-    channel: "qr",
-    fallback_url: joinUrl,
-  });
+  private static buildTenantDetourUrl(slug: string, qrCode: string) {
+    const baseUrl = AdminClinicController.resolveDetourLinkBaseUrl();
+    if (!baseUrl) return null;
 
-  return `${baseUrl}?${params.toString()}`;
-}
+    const mobileScreenPath = `/(intake-member)/salons/${slug}`;
+    const webJoinPath = `/join/${slug}`;
+    const joinUrl = AdminClinicController.buildTenantJoinUrl(slug, qrCode);
+
+    const params = new URLSearchParams({
+      salon_slug: slug,
+      screen_path: mobileScreenPath,
+      web_join_path: webJoinPath,
+      code: qrCode,
+      source: "salon_qr",
+      campaign: slug,
+      channel: "qr",
+      fallback_url: joinUrl,
+    });
+
+    return `${baseUrl}?${params.toString()}`;
+  }
 
   private static serializeSubscription(tenant: Tenant) {
     const trialEndsAt = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null;
@@ -214,7 +220,7 @@ private static buildTenantDetourUrl(slug: string, qrCode: string) {
         success: true,
         request_id: req.requestId || null,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "tenant",
         target_id: tenant.id,
         metadata: {

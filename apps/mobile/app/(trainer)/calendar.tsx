@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { buildSlotStartMinutes, resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
+import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import {
@@ -203,78 +203,6 @@ function rangesOverlap(startA: Date, endA: Date, startB?: string | null, endB?: 
   const rangeEndB = endB ? new Date(endB) : addMinutes(rangeStartB, 60);
 
   return startA < rangeEndB && endA > rangeStartB;
-}
-
-function buildAvailableSlots(
-  dateKey: string,
-  businessHours: BusinessHours | null,
-  bookings: TrainerScheduleEntry[],
-  minHoursBeforeStart: number
-) {
-  if (!businessHours?.start_time || !businessHours?.end_time) return [] as AvailableSlot[];
-
-  const workingDays =
-    Array.isArray(businessHours.working_days) && businessHours.working_days.length
-      ? businessHours.working_days
-      : [];
-
-  const dayDate = new Date(`${dateKey}T00:00:00`);
-
-  if (!workingDays.includes(isoDayNumber(dayDate))) return [] as AvailableSlot[];
-
-  const startMinutes = timeToMinutes(businessHours.start_time);
-  const endMinutes = timeToMinutes(businessHours.end_time);
-  const slotMinutes = Math.max(30, Number(businessHours.slot_minutes || 60));
-  const breakMinutes = Math.max(0, Number(businessHours.break_duration_minutes || 0));
-  const lunchStartMinutes = timeToMinutes(businessHours.lunch_break_start, -1);
-  const lunchEndMinutes = timeToMinutes(businessHours.lunch_break_end, -1);
-
-  const dayBookings = bookings.filter((booking) => toDateKey(booking.starts_at) === dateKey);
-  const slots: AvailableSlot[] = [];
-
-  for (const minute of buildSlotStartMinutes(startMinutes, endMinutes, slotMinutes, breakMinutes)) {
-    const slotStartMinutes = minute;
-    const slotEndMinutes = minute + slotMinutes;
-
-    const isLunchBreak =
-      lunchStartMinutes >= 0 &&
-      lunchEndMinutes >= 0 &&
-      slotStartMinutes < lunchEndMinutes &&
-      slotEndMinutes > lunchStartMinutes;
-
-    if (isLunchBreak) continue;
-
-    const slotStart = new Date(`${dateKey}T00:00:00`);
-    slotStart.setHours(Math.floor(slotStartMinutes / 60), slotStartMinutes % 60, 0, 0);
-
-    const slotEnd = addMinutes(slotStart, slotMinutes);
-    const overlapsBooking = dayBookings.some((booking) =>
-      rangesOverlap(slotStart, slotEnd, booking.starts_at, booking.ends_at)
-    );
-
-    if (overlapsBooking || isOutsideMinimumLeadTime(slotStart.toISOString(), minHoursBeforeStart)) continue;
-
-    slots.push({
-      key: `${dateKey}-${slotStart.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
-      startsAt: slotStart.toISOString(),
-      endsAt: slotEnd.toISOString(),
-      label: `${slotStart.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${slotEnd.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      dayKey: dateKey,
-      dayLabel: dayDate.toLocaleDateString("tr-TR", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-      }),
-    });
-  }
-
-  return slots;
 }
 
 function slotFitsBusinessHours(slot: { starts_at: string; ends_at?: string | null }, businessHours: BusinessHours | null) {
@@ -482,8 +410,11 @@ export default function TrainerCalendarScreen() {
     queryFn: getTrainerMembersApi,
   });
 
-  const liveBookings = Array.isArray(bookingQuery.data) ? bookingQuery.data : [];
-  const liveAvailabilities = Array.isArray(availabilityQuery.data) ? availabilityQuery.data : [];
+  const liveBookings = useMemo(() => (Array.isArray(bookingQuery.data) ? bookingQuery.data : []), [bookingQuery.data]);
+  const liveAvailabilities = useMemo(
+    () => (Array.isArray(availabilityQuery.data) ? availabilityQuery.data : []),
+    [availabilityQuery.data]
+  );
 
   const bookings: any[] = useMemo(
     () =>
@@ -548,10 +479,10 @@ export default function TrainerCalendarScreen() {
     () =>
       bookings.map((row) => ({
         id: String(row.id),
-        title: row.is_group_class ? row.lesson_name || row.session_title || "Grup dersi" : row.member_full_name || "Danışan",
+        title: row.is_group_class ? row.lesson_name || row.session_title || "Grup dersi" : row.is_duo ? `Duo: ${row.member_full_name || "Danışan"}` : row.member_full_name || "Danışan",
         subtitle: row.is_group_class
           ? `${row.recurrence_label || "Özel tarih"} • ${Number(row.joined_member_count || 0)} katılım`
-          : `${row.lesson_category_label || row.package_name || row.package_title || "Seans"} • ${
+          : `${row.is_duo ? "İkili ders" : row.lesson_category_label || row.package_name || row.package_title || "Seans"} • ${
               row.package_title || row.package_name || "Paket"
             }`,
         startsAt: row.starts_at,
@@ -903,7 +834,7 @@ export default function TrainerCalendarScreen() {
       <DetailSheet
         visible={Boolean(selectedBooking)}
         onClose={() => setSelectedBookingId(null)}
-        title={selectedBooking?.is_group_class ? selectedBooking?.lesson_name || "Grup dersi" : selectedBooking?.member_full_name || "Ders detayı"}
+        title={selectedBooking?.is_group_class ? selectedBooking?.lesson_name || "Grup dersi" : selectedBooking?.is_duo ? `Duo: ${selectedBooking?.member_full_name || "Ders detayı"}` : selectedBooking?.member_full_name || "Ders detayı"}
         subtitle={formatStatusLabel(selectedBooking?.status) || "Ders detayı"}
       >
         <SurfaceCard tone="primary">
@@ -924,6 +855,8 @@ export default function TrainerCalendarScreen() {
               value={
                 selectedBooking?.is_group_class
                   ? "Grup dersi"
+                  : selectedBooking?.is_duo
+                    ? "İkili ders"
                   : selectedBooking?.lesson_category_label || selectedBooking?.lesson_category || "Bireysel seans"
               }
             />
@@ -932,6 +865,8 @@ export default function TrainerCalendarScreen() {
               label="Danışan"
               value={selectedBooking?.is_group_class ? "Grup dersi katılımcıları" : selectedBooking?.member_full_name}
             />
+            {selectedBooking?.is_duo ? <DetailRow label="Duo partner" value={selectedBooking?.duo_partner_name || "Partner daveti bekleniyor"} /> : null}
+            {selectedBooking?.is_duo ? <DetailRow label="Duo durum" value={selectedBooking?.duo_status || "Partner ödemesi bekleniyor"} /> : null}
             <DetailRow label="Planlanan saat" value={formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)} />
           </View>
         </SurfaceCard>
@@ -1127,7 +1062,10 @@ export default function TrainerCalendarScreen() {
             if (!selectedBooking?.member_id) return;
 
             setSelectedBookingId(null);
-            router.push(`/(trainer)/members/${selectedBooking.member_id}` as never);
+            router.push({
+              pathname: "/(trainer)/members/[id]",
+              params: { id: selectedBooking.member_id, backTo: "/(trainer)/calendar" },
+            } as never);
           }}
         />
       </DetailSheet>

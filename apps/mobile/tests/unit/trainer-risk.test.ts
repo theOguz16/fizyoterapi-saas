@@ -25,7 +25,7 @@ describe("trainer risk helpers", () => {
   });
 
   it("keeps deterministic fallback labels for empty rows", () => {
-    expect(normalizeTrainerRiskRows([{} as any])).toEqual([
+    expect(normalizeTrainerRiskRows([{}])).toEqual([
       { key: "risk-0", name: "Danışan", score: "-", level: "Takip", reason: null },
     ]);
   });

@@ -5,16 +5,18 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAuthToken } from "@/lib/http-client";
-import { inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser } from "@/lib/mobile-api";
+import { inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
 
-const TOKEN_KEY = "clinerva.access_token";
+const TOKEN_KEY = "fizyoflow.access_token";
 
 type LoginInput = {
   email: string;
   password: string;
   tenantSlug?: string;
+  role?: SessionRole;
+  e2e?: boolean;
 };
 
 type RegisterInput = {
@@ -37,6 +39,7 @@ type InviteAcceptInput = {
   first_name: string;
   last_name: string;
   phone: string;
+  email?: string;
   password: string;
 };
 
@@ -67,6 +70,7 @@ type SessionContextType = {
   requestNotificationPermission: () => Promise<PushPermissionStatus>;
   refreshNotificationPermissionStatus: () => Promise<PushPermissionStatus>;
   login: (input: LoginInput) => Promise<void>;
+  switchRole: (role: SessionRole) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   acceptInvite: (input: InviteAcceptInput) => Promise<void>;
@@ -270,6 +274,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
+    // Bootstrap must run once on mount; clearSessionState is intentionally not a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -289,6 +295,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.remove();
     };
+    // The app-state listener is tied to token presence; refreshMe reads the latest session through state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const login = async (input: LoginInput) => {
@@ -307,6 +315,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(data.accessToken);
     applySessionPayload(data);
     await syncNotificationPermission({ allowPromptScreen: true });
+  };
+
+  const switchRole = async (role: SessionRole) => {
+    const data = await switchRoleApi(role);
+    if (data.available_surfaces?.mobile === false) {
+      throw new Error("Bu rol mobil uygulamadan açılamaz. Lütfen web paneli kullanın.");
+    }
+    if (!data.accessToken) {
+      throw new Error("Yeni rol oturumu başlatılamadı.");
+    }
+
+    queryClient.clear();
+
+    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+    setAuthToken(data.accessToken);
+    setToken(data.accessToken);
+    applySessionPayload(data);
+    await syncNotificationPermission();
   };
 
   const register = async (input: RegisterInput) => {
@@ -372,11 +398,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       requestNotificationPermission,
       refreshNotificationPermissionStatus: () => syncNotificationPermission(),
       login,
+      switchRole,
       register,
       logout,
       acceptInvite,
       refreshMe,
     }),
+    // Action functions intentionally stay outside the memo deps to keep the provider value stable between state updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [user, loading, token, onboardingState, membershipState, membershipStatus, recommendedEntrySurface, hasActiveMembership, hasPendingApplication, hasManagedClinic, availablePersonas, activeMembership, managedClinic, pendingApplication, pendingPaymentRequest, activeChangeRequests, availableMobileActions, scanCapabilities, availableSurfaces, pendingPostAuthScreen, notificationPermissionStatus]
   );
 

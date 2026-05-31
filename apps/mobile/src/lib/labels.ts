@@ -70,6 +70,17 @@ export function packageTypeLabel(type?: string | null) {
     REFORMER: "Reformer",
     MANUAL: "Manuel terapi",
     SCOLIOSIS: "Skolyoz",
+    CHILD_YOGA: "Çocuk yogası",
+    COCUK_YOGASI: "Çocuk yogası",
+    KIDS_YOGA: "Çocuk yogası",
+    CHILD: "Çocuk",
+    KIDS: "Çocuk",
+    PEDIATRIC: "Pediatrik destek",
+    PEDIATRIK: "Pediatrik destek",
+    YOGA: "Yoga",
+    PILATES: "Pilates",
+    PILATES_YOGA: "Pilates Yoga",
+    CLINICAL_PILATES: "Klinik Pilates",
     OTHER: "Diğer",
   };
 
@@ -80,7 +91,8 @@ export function lessonModeLabel(mode?: string | null) {
   const value = String(mode || "").toUpperCase();
 
   const labels: Record<string, string> = {
-    SINGLE: "Tekli ders",
+    PRIVATE: "Özel ders",
+    SINGLE: "Özel ders",
     MULTI: "Çoklu ders",
     GROUP: "Grup dersi",
     DUO: "İkili ders"

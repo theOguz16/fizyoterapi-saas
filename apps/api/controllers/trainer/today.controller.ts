@@ -14,6 +14,7 @@ import { UserPackage } from "../../entities/user-package.entity";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { RiskService } from "../../services/risk.service";
 import { lessonCategoryLabel } from "../../services/presentation-label.service";
+import { SlotValidationContractService } from "../../services/slot-validation-contract.service";
 import { resolveMinimumAdvanceHours } from "./booking-helpers";
 
 export class TrainerTodayController {
@@ -356,7 +357,7 @@ export class TrainerTodayController {
           })),
           sessions: todaySessions,
           calendar: {
-            business_hours: profile?.business_hours ?? null,
+            business_hours: SlotValidationContractService.normalizeBusinessHours(profile?.business_hours),
             booking_policy: {
               min_hours_before_start: resolveMinimumAdvanceHours(
                 profile?.location?.campaigns?.cancellation_policy?.min_hours_before_start,

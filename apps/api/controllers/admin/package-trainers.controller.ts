@@ -29,7 +29,7 @@ export class AdminPackageTrainersController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "package_trainer_assignment",
       target_id: input.row.id,
       metadata: {

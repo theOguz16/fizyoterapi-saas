@@ -13,6 +13,16 @@ type OptionsInput = {
 };
 
 export function createResponsiveTabOptions({ routeName, width, bottomInset, iconMap, featuredRoutes = [] }: OptionsInput) {
+  const isTabRoute = Object.prototype.hasOwnProperty.call(iconMap, routeName);
+  if (!isTabRoute) {
+    return {
+      headerShown: false,
+      tabBarStyle: {
+        display: "none" as const,
+      },
+    };
+  }
+
   const compact = width < 390;
   const isFeatured = featuredRoutes.includes(routeName);
   const tabBarHeight = (compact ? 60 : 66) + Math.max(bottomInset, compact ? 6 : 8);

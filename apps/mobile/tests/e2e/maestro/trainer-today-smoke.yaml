@@ -1,36 +1,12 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible: "Bugün|Takvimim|Dersler|FizyoFlow"
+    timeout: 20000
 - assertVisible:
-    id: "welcome-login-button"
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-- assertVisible: "Hesabına giriş yap"
-- assertVisible:
-    id: "login-identity-input"
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "elisauyar@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
-- assertVisible:
-    id: "login-password-input"
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "trainer123"
-- tapOn: "Clinerva hesabınla devam et"
-- tapOn:
-    id: "login-submit-button"
-- assertVisible: "Bugün"
-- swipe:
-    start: 50%, 82%
-    end: 50%, 34%
-- tapOn:
-    id: "trainer-home-calendar"
-- assertVisible: "Takvimim"
+    text: "Bugün|Takvimim|Dersler|FizyoFlow"

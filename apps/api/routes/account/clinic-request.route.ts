@@ -2,10 +2,11 @@
 // URL duzeni ile yetkilendirme kurallari bu katmanda bir araya getirilir.
 import { Router } from "express";
 import { AccountClinicRequestController } from "../../controllers/account/clinic-request.controller";
+import { activeAccountMiddleware } from "../../middlewares/active-account.middleware";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 
 export const accountClinicRequestRoutes = Router();
 
-accountClinicRequestRoutes.use(authMiddleware);
+accountClinicRequestRoutes.use(authMiddleware, activeAccountMiddleware);
 accountClinicRequestRoutes.get("/", AccountClinicRequestController.mine);
 accountClinicRequestRoutes.post("/", AccountClinicRequestController.createOrUpdate);

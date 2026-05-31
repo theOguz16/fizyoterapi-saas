@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 import { leaveMemberGroupClassApi, getMemberGroupClassesApi, joinMemberGroupClassApi } from "@/lib/mobile-api";
-import { formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassDisplayName, getGroupClassScheduleLabel } from "@/lib/group-classes";
+import { formatGroupClassDateTime, formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassDisplayName, getGroupClassScheduleLabel } from "@/lib/group-classes";
 import { AppShell } from "@/theme/components/app-shell";
 import { EmptyState } from "@/theme/components/empty-state";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
@@ -111,7 +111,7 @@ export default function MemberGroupClassesScreen() {
                   </View>
                   <StatusBadge label={getJoinLabel(joinState)} tone={getJoinTone(joinState)} />
                 </View>
-                <Text style={styles.copy}>Saat: {new Date(row.starts_at).toLocaleString("tr-TR", { weekday: "long", hour: "2-digit", minute: "2-digit" })}</Text>
+                <Text style={styles.copy}>Saat: {formatGroupClassDateTime(row.starts_at) || "Saat bekleniyor"}</Text>
                 <Text style={styles.copy}>Paket: {row.package_title || "Grup paketi"}</Text>
                 <Text style={styles.copy}>Ücret: {formatGroupClassPrice(row.price)}</Text>
                 <Text style={styles.copy}>Bildirim: {getGroupClassAudienceLabel(row.notification_scope)}</Text>

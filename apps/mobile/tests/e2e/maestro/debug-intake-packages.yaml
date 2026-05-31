@@ -1,8 +1,8 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://(intake-member)/packages?slug=demo-salon"
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://(intake-member)/packages?slug=demo-salon"
 - assertVisible: "Paket seç"

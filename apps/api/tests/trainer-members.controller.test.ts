@@ -127,6 +127,7 @@ describe("trainer members controller", () => {
       ),
     };
     const measurementRepo = {
+      count: vi.fn().mockResolvedValue(0),
       findOne: vi.fn().mockResolvedValue({ measured_at: "2026-05-01T09:00:00.000Z" }),
     };
     const userPackageRepo = {
@@ -244,10 +245,16 @@ describe("trainer members controller", () => {
       find: vi.fn().mockResolvedValue([historyRow]),
       remove: vi.fn().mockResolvedValue(undefined),
     };
+    const bookingRepo = { count: vi.fn().mockResolvedValue(1) };
+    const attendanceRepo = { count: vi.fn().mockResolvedValue(0) };
+    const measurementRepo = { count: vi.fn().mockResolvedValue(0) };
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
       if (name.includes("TrainerMemberNoteHistory")) return historyRepo as any;
       if (name.includes("TrainerMemberNote")) return noteRepo as any;
+      if (name.includes("Booking")) return bookingRepo as any;
+      if (name.includes("Attendance")) return attendanceRepo as any;
+      if (name.includes("Measurement")) return measurementRepo as any;
       if (name.includes("User")) return userRepo as any;
       return {} as any;
     });

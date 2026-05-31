@@ -1,0 +1,27 @@
+{
+  email {$ACME_EMAIL}
+}
+
+api.fizyoflow.com {
+  tls {
+    dns cloudflare {$CLOUDFLARE_API_TOKEN}
+  }
+  encode zstd gzip
+  reverse_proxy api:5501
+}
+
+app.fizyoflow.com {
+  tls {
+    dns cloudflare {$CLOUDFLARE_API_TOKEN}
+  }
+  encode zstd gzip
+  reverse_proxy admin-web:2929
+}
+
+fizyoflow.com, www.fizyoflow.com, *.fizyoflow.com {
+  tls {
+    dns cloudflare {$CLOUDFLARE_API_TOKEN}
+  }
+  encode zstd gzip
+  reverse_proxy web:3939
+}

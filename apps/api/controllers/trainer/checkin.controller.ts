@@ -99,7 +99,7 @@ export class TrainerCheckinController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "attendance",
       target_id: input.attendanceId,
       metadata: {
@@ -271,7 +271,7 @@ export class TrainerCheckinController {
         type: "CAMPAIGN_REWARD_EARNED",
         title: "Sadakat ödülü kazandın",
         body: campaign.reward_label,
-        deepLink: "clinerva://member/home",
+        deepLink: "fizyoflow://member/home",
         meta: {
           campaign_id: campaign.id,
           reward_type: campaign.reward_type,
@@ -307,7 +307,7 @@ export class TrainerCheckinController {
       type: "CAMPAIGN_REWARD_EARNED",
       title: "Sadakat ödülü hazır",
       body: campaign.reward_label,
-      deepLink: "clinerva://member/home",
+      deepLink: "fizyoflow://member/home",
       meta: {
         campaign_id: campaign.id,
         reward_type: campaign.reward_type,
@@ -894,43 +894,128 @@ export class TrainerCheckinController {
     );
 
     if (!userPackage) {
-      const referralCreditConsume = await MemberCreditWalletService.consumeOneCredit({
-        tenantId,
-        memberId: member.id,
-        source: CreditLedgerSource.CHECKIN_USE,
-        referenceType: "ATTENDANCE",
-        meta: {
-          checkin_mode: resolvedSessionId ? "SESSION" : "MANUAL_OR_QR",
-          booking_id: bookingId,
-        },
-      });
+      const referralResult = await AppDataSource.transaction(async (manager) => {
+        const bookingRepo = manager.getRepository(Booking);
+        const attendanceRepo = manager.getRepository(Attendance);
+        const lockedBooking = await bookingRepo.findOne({
+          where: { tenant_id: tenantId, id: bookingId },
+          lock: { mode: "pessimistic_write" },
+        });
+        if (!lockedBooking) {
+          throw new AppError("BOOKING_NOT_FOUND", 404, "Booking bulunamadı");
+        }
+        if (lockedBooking.checkin_status === BookingCheckinStatus.COMPLETED) {
+          const duplicateAttendance = await attendanceRepo.findOne({
+            where: { tenant_id: tenantId, booking_id: bookingId, result: AttendanceResult.CREDIT_DEDUCTED },
+            order: { created_at: "DESC" },
+          });
+          return {
+            consumed: false as const,
+            idempotent: true,
+            attendance: duplicateAttendance,
+            booking: lockedBooking,
+            wallet: null,
+          };
+        }
 
-      if (referralCreditConsume.consumed) {
-        await TrainerCheckinController.markBookingCompleted({
-          booking: sessionContext.booking,
-          trainerId,
-          source,
-          creditSource: "REFERRAL_WALLET",
-          userPackageId: null,
-          remainingCreditsAfter: referralCreditConsume.wallet.referral_group_credits,
-          checkedInAt: now,
+        const duplicateAttendance = await attendanceRepo.findOne({
+          where: { tenant_id: tenantId, booking_id: bookingId, result: AttendanceResult.CREDIT_DEDUCTED },
+          order: { created_at: "DESC" },
+        });
+        if (duplicateAttendance) {
+          return {
+            consumed: false as const,
+            idempotent: true,
+            attendance: duplicateAttendance,
+            booking: lockedBooking,
+            wallet: null,
+          };
+        }
+
+        const referralCreditConsume = await MemberCreditWalletService.consumeOneCreditWithManager(manager, {
+          tenantId,
+          memberId: member.id,
+          source: CreditLedgerSource.CHECKIN_USE,
+          referenceType: "ATTENDANCE",
+          referenceId: bookingId,
+          meta: {
+            checkin_mode: resolvedSessionId ? "SESSION" : "MANUAL_OR_QR",
+            booking_id: bookingId,
+          },
         });
 
-        const attendance = await TrainerCheckinController.persistAttendance({
-          tenantId,
-          trainerId,
-          memberId: member.id,
+        if (!referralCreditConsume.consumed) {
+          return {
+            consumed: false as const,
+            idempotent: false,
+            attendance: null,
+            booking: lockedBooking,
+            wallet: referralCreditConsume.wallet,
+          };
+        }
+
+        lockedBooking.checkin_status = BookingCheckinStatus.COMPLETED;
+        lockedBooking.checked_in_at = now;
+        lockedBooking.checked_in_by_trainer_id = trainerId;
+        lockedBooking.checked_in_user_package_id = null;
+        lockedBooking.credits_charged = 1;
+        lockedBooking.meta = {
+          ...(lockedBooking.meta || {}),
+          checkin: {
+            source,
+            credit_source: "REFERRAL_WALLET",
+            checked_in_at: now.toISOString(),
+            user_package_id: null,
+            remaining_credits_after: referralCreditConsume.wallet.referral_group_credits,
+          },
+        };
+        await bookingRepo.save(lockedBooking);
+
+        const attendance = attendanceRepo.create({
+          tenant_id: tenantId,
+          trainer_id: trainerId,
+          member_id: member.id,
           result: AttendanceResult.CREDIT_DEDUCTED,
-          creditsDeducted: 1,
-          sessionId: resolvedSessionId,
-          bookingId,
-          manualCode,
+          credits_deducted: 1,
+          session_id: resolvedSessionId,
+          booking_id: bookingId,
+          manual_code: manualCode,
           meta: {
             booking_id: bookingId,
             expected_package_id: expectedPackageId,
             resolution_strategy: "REFERRAL_WALLET",
           },
         });
+        const savedAttendance = await attendanceRepo.save(attendance);
+
+        return {
+          consumed: true as const,
+          idempotent: false,
+          attendance: savedAttendance,
+          booking: lockedBooking,
+          wallet: referralCreditConsume.wallet,
+        };
+      });
+
+      if (referralResult.idempotent) {
+        return res.json({
+          data: {
+            attendanceId: referralResult.attendance?.id ?? null,
+            bookingId,
+            memberId: member.id,
+            result: AttendanceResult.CREDIT_DEDUCTED,
+            creditsDeducted: 0,
+            remainingCredits: referralResult.wallet?.referral_group_credits ?? null,
+            userPackageId: null,
+            creditSource: "REFERRAL_WALLET",
+            idempotent: true,
+            message: "Bu ders için check-in zaten tamamlandı. Tekrar hak düşülmedi.",
+          },
+        });
+      }
+
+      if (referralResult.consumed && referralResult.attendance && referralResult.wallet) {
+        const attendance = referralResult.attendance;
 
         await TrainerCheckinController.logCheckinAudit(req, {
           eventType: "CHECKIN_CREDIT_DEDUCTED",
@@ -954,7 +1039,7 @@ export class TrainerCheckinController {
           type: "CHECKIN_RECORDED",
           title: "Ders katılımı kaydedildi",
           body: "Katılım işlendi ve hak düşümü tamamlandı.",
-          deepLink: "clinerva://member/attendance",
+          deepLink: "fizyoflow://member/attendance",
           meta: {
             attendance_id: attendance.id,
             booking_id: bookingId,
@@ -969,7 +1054,7 @@ export class TrainerCheckinController {
             memberId: member.id,
             result: AttendanceResult.CREDIT_DEDUCTED,
             creditsDeducted: 1,
-            remainingCredits: referralCreditConsume.wallet.referral_group_credits,
+            remainingCredits: referralResult.wallet.referral_group_credits,
             userPackageId: null,
             creditSource: "REFERRAL_WALLET",
             idempotent: false,
@@ -1026,41 +1111,151 @@ export class TrainerCheckinController {
       });
     }
 
-    userPackage.remaining_credits -= 1;
+      const checkinResult = await AppDataSource.transaction(async (manager) => {
+      const bookingRepo = manager.getRepository(Booking);
+      const attendanceRepo = manager.getRepository(Attendance);
+      const userPackageRepo = manager.getRepository(UserPackage);
 
-    if (userPackage.remaining_credits < 0) {
-      userPackage.remaining_credits = 0;
+      const lockedBooking = await bookingRepo.findOne({
+        where: {
+          tenant_id: tenantId,
+          id: bookingId,
+        },
+        lock: {
+          mode: "pessimistic_write",
+        },
+      });
+
+      if (!lockedBooking) {
+        throw new AppError("BOOKING_NOT_FOUND", 404, "Booking bulunamadı");
+      }
+
+      if (lockedBooking.checkin_status === BookingCheckinStatus.COMPLETED) {
+        return {
+          idempotent: true,
+          attendance: null,
+          userPackage,
+          booking: lockedBooking,
+          message: "Bu ders için check-in zaten tamamlandı. Tekrar hak düşülmedi.",
+        };
+      }
+
+      const duplicateAttendance = await attendanceRepo.findOne({
+        where: {
+          tenant_id: tenantId,
+          booking_id: bookingId,
+          result: AttendanceResult.CREDIT_DEDUCTED,
+        },
+        order: { created_at: "DESC" },
+      });
+
+      if (duplicateAttendance) {
+        return {
+          idempotent: true,
+          attendance: duplicateAttendance,
+          userPackage,
+          booking: lockedBooking,
+          message: "Bu ders için check-in zaten tamamlandı. Tekrar hak düşülmedi.",
+        };
+      }
+
+      const lockedUserPackage = await userPackageRepo.findOne({
+        where: {
+          tenant_id: tenantId,
+          id: userPackage.id,
+          user_id: member.id,
+          is_active: true,
+        },
+        lock: {
+          mode: "pessimistic_write",
+        },
+      });
+
+      if (!lockedUserPackage) {
+        throw new AppError("PACKAGE_NOT_FOUND", 404, "Üye paketi bulunamadı");
+      }
+
+      if (lockedUserPackage.remaining_credits <= 0) {
+        throw new AppError("NO_CREDIT", 400, "Üyenin kalan hakkı yok");
+      }
+
+      lockedUserPackage.remaining_credits -= 1;
+
+      if (lockedUserPackage.remaining_credits < 0) {
+        lockedUserPackage.remaining_credits = 0;
+      }
+
+      await userPackageRepo.save(lockedUserPackage);
+
+      lockedBooking.checkin_status = BookingCheckinStatus.COMPLETED;
+      lockedBooking.checked_in_at = now;
+      lockedBooking.checked_in_by_trainer_id = trainerId;
+      lockedBooking.checked_in_user_package_id = lockedUserPackage.id;
+      lockedBooking.credits_charged = 1;
+      lockedBooking.meta = {
+        ...(lockedBooking.meta || {}),
+        checkin: {
+          source,
+          credit_source: "PACKAGE",
+          checked_in_at: now.toISOString(),
+          user_package_id: lockedUserPackage.id,
+          remaining_credits_after: lockedUserPackage.remaining_credits,
+        },
+      };
+
+      await bookingRepo.save(lockedBooking);
+
+      const attendance = attendanceRepo.create({
+        tenant_id: tenantId,
+        trainer_id: trainerId,
+        member_id: member.id,
+        result: AttendanceResult.CREDIT_DEDUCTED,
+        credits_deducted: 1,
+        session_id: resolvedSessionId,
+        booking_id: bookingId,
+        user_package_id: lockedUserPackage.id,
+        manual_code: manualCode,
+        meta: {
+          booking_id: bookingId,
+          expected_package_id: expectedPackageId,
+          resolved_package_id: lockedUserPackage.package_id,
+          resolution_strategy: "SCHEDULED_SESSION_PACKAGE",
+        },
+      });
+
+      const savedAttendance = await attendanceRepo.save(attendance);
+
+      return {
+        idempotent: false,
+        attendance: savedAttendance,
+        userPackage: lockedUserPackage,
+        booking: lockedBooking,
+        message: "Check-in tamamlandı. Paket hakkından 1 ders düşüldü.",
+      };
+    });
+
+    if (checkinResult.idempotent) {
+      return res.json({
+        data: {
+          attendanceId: checkinResult.attendance?.id ?? null,
+          bookingId,
+          memberId: member.id,
+          result: AttendanceResult.CREDIT_DEDUCTED,
+          creditsDeducted: 0,
+          remainingCredits: checkinResult.userPackage.remaining_credits,
+          userPackageId: checkinResult.userPackage.id,
+          creditSource: "PACKAGE",
+          idempotent: true,
+          message: checkinResult.message,
+        },
+      });
     }
 
-    await AppDataSource.getRepository(UserPackage).save(userPackage);
+    const attendance = checkinResult.attendance;
 
-    await TrainerCheckinController.markBookingCompleted({
-      booking: sessionContext.booking,
-      trainerId,
-      source,
-      creditSource: "PACKAGE",
-      userPackageId: userPackage.id,
-      remainingCreditsAfter: userPackage.remaining_credits,
-      checkedInAt: now,
-    });
-
-    const attendance = await TrainerCheckinController.persistAttendance({
-      tenantId,
-      trainerId,
-      memberId: member.id,
-      result: AttendanceResult.CREDIT_DEDUCTED,
-      creditsDeducted: 1,
-      sessionId: resolvedSessionId,
-      bookingId,
-      userPackageId: userPackage.id,
-      manualCode,
-      meta: {
-        booking_id: bookingId,
-        expected_package_id: expectedPackageId,
-        resolved_package_id: userPackage.package_id,
-        resolution_strategy: "SCHEDULED_SESSION_PACKAGE",
-      },
-    });
+    if (!attendance) {
+      throw new AppError("ATTENDANCE_NOT_CREATED", 500, "Attendance kaydı oluşturulamadı");
+    }
 
     await TrainerCheckinController.logCheckinAudit(req, {
       eventType: "CHECKIN_CREDIT_DEDUCTED",
@@ -1070,7 +1265,7 @@ export class TrainerCheckinController {
       sessionId: resolvedSessionId,
       result: AttendanceResult.CREDIT_DEDUCTED,
       creditsDeducted: 1,
-      userPackageId: userPackage.id,
+      userPackageId: checkinResult.userPackage.id,
       creditSource: "PACKAGE",
       manualCodeUsed: source === "MANUAL",
       qrUsed: source === "QR",
@@ -1085,11 +1280,11 @@ export class TrainerCheckinController {
       type: "CHECKIN_RECORDED",
       title: "Ders katılımı kaydedildi",
       body: "Katılım işlendi ve paket hakkından 1 ders düşüldü.",
-      deepLink: "clinerva://member/attendance",
+      deepLink: "fizyoflow://member/attendance",
       meta: {
         attendance_id: attendance.id,
         booking_id: bookingId,
-        user_package_id: userPackage.id,
+        user_package_id: checkinResult.userPackage.id,
       },
     });
 
@@ -1100,11 +1295,11 @@ export class TrainerCheckinController {
         memberId: member.id,
         result: AttendanceResult.CREDIT_DEDUCTED,
         creditsDeducted: 1,
-        remainingCredits: userPackage.remaining_credits,
-        userPackageId: userPackage.id,
+        remainingCredits: checkinResult.userPackage.remaining_credits,
+        userPackageId: checkinResult.userPackage.id,
         creditSource: "PACKAGE",
         idempotent: false,
-        message: "Check-in tamamlandı. Paket hakkından 1 ders düşüldü.",
+        message: checkinResult.message,
       },
     });
   }

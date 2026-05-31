@@ -11,6 +11,7 @@ import { UserRole } from "../../entities/user.entity";
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
+import { isReservedPublicSlug } from "../../constants/reserved-slugs";
 
 function slugify(value: string) {
   return value
@@ -82,11 +83,14 @@ export class AccountClinicRequestController {
 
     const baseSlug = slugify(clinic_name);
     if (!baseSlug) throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir klinik adı girin");
+    if (isReservedPublicSlug(baseSlug)) {
+      throw new AppError("RESERVED_SLUG", 422, "Bu klinik URL kodu sistem tarafından ayrılmıştır");
+    }
 
     let slug = tenant?.slug || baseSlug;
     if (!tenant || tenant.slug !== slug) {
       let suffix = 1;
-      while (true) {
+      for (;;) {
         const conflict = await tenantRepo.findOne({ where: { slug } });
         if (!conflict || conflict.id === tenant?.id) break;
         suffix += 1;
@@ -142,7 +146,7 @@ export class AccountClinicRequestController {
           address: district,
         } as any,
         social_links: {},
-        theme: "clinerva-v2",
+        theme: "fizyoflow-v2",
         primary_color: "#0EA5E9",
         business_hours: {
           timezone: "Europe/Istanbul",
@@ -154,6 +158,10 @@ export class AccountClinicRequestController {
           slot_minutes: 60,
         },
         is_published: false,
+        seo_title: `${clinic_name} | ${district} ${city} Fizyoterapi ve Klinik Hizmetleri`,
+        seo_description: `${clinic_name}, ${city} ${district} bölgesinde fizyoterapi ve hareket odaklı klinik hizmetleri sunar. Bilgi ve randevu talebi için iletişime geçin.`,
+        business_category: "Fizyoterapi Kliniği",
+        service_area: [city, district].filter(Boolean),
       });
     } else {
       profile.slug = tenant.slug;
@@ -165,6 +173,12 @@ export class AccountClinicRequestController {
         city,
         district,
       };
+      profile.service_area = [city, district].filter(Boolean);
+      profile.seo_title = profile.seo_title || `${clinic_name} | ${district} ${city} Fizyoterapi ve Klinik Hizmetleri`;
+      profile.seo_description =
+        profile.seo_description ||
+        `${clinic_name}, ${city} ${district} bölgesinde fizyoterapi ve hareket odaklı klinik hizmetleri sunar. Bilgi ve randevu talebi için iletişime geçin.`;
+      profile.business_category = profile.business_category || "Fizyoterapi Kliniği";
       profile.is_published = false;
     }
     await profileRepo.save(profile);

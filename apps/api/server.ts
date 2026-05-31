@@ -7,7 +7,10 @@ import { AppDataSource } from "./data-source";
 import { Tenant } from "./entities/tenant.entity";
 import { GroupClassReminderService } from "./services/group-class-reminder.service";
 import { JobLockService } from "./services/job-lock.service";
+import { LoggerService } from "./services/logger.service";
 import { RiskNotificationService } from "./services/risk-notification.service";
+import { SchemaMaintenanceService } from "./services/schema-maintenance.service";
+import { StartupConfigService } from "./services/startup-config.service";
 
 // HTTP sunucusu ve zamanlanmis batch isleri ayni process'te ayaga kalkiyor.
 // Bu dosya operasyonel bootstrap noktasi olarak davranir.
@@ -25,44 +28,34 @@ async function runDailyRiskBatch() {
           tenantId: tenant.id,
           riskSegment: "AT_RISK",
         });
-        console.log(
-          JSON.stringify({
-            event: "risk_batch_tenant_done",
-            tenant: tenant.slug,
-            targeted: result.totalTargeted,
-          })
-        );
+        LoggerService.info("risk_batch_tenant_done", {
+          tenant: tenant.slug,
+          targeted: result.totalTargeted,
+        });
       } catch (error) {
-        console.error(
-          JSON.stringify({
-            event: "risk_batch_tenant_failed",
-            tenant: tenant.slug,
-            error: error instanceof Error ? error.message : String(error),
-          })
-        );
+        LoggerService.error("risk_batch_tenant_failed", error, { tenant: tenant.slug });
       }
     }
   });
 
   if (!lock.executed) {
-    console.log(
-      JSON.stringify({
-        event: "risk_batch_lock_skipped",
-        reason: "advisory_lock_not_acquired",
-      })
-    );
+    LoggerService.info("risk_batch_lock_skipped", {
+      reason: "advisory_lock_not_acquired",
+    });
   }
 }
 
 async function bootstrap() {
+  StartupConfigService.validateProductionEnv();
   // DataSource initialize edilmeden repository'ler kullanilamaz.
   await AppDataSource.initialize();
+  await SchemaMaintenanceService.ensureRuntimeColumns(AppDataSource);
 
   const app = createApp();
   const port = Number(process.env.PORT || 5501);
 
   app.listen(port, () => {
-    console.log(`API running on port ${port}`);
+    LoggerService.info("api_started", { port });
   });
 
   if (process.env.ENABLE_RISK_DAILY_BATCH !== "false") {
@@ -70,10 +63,10 @@ async function bootstrap() {
     const warmupMs = 15 * 1000;
     // Warmup ilk deploy sonrasi gun sonunu beklemeden batch'in bir kez calismasini saglar.
     setTimeout(() => {
-      runDailyRiskBatch().catch((error) => console.error("[risk-batch] warmup failed", error));
+      runDailyRiskBatch().catch((error) => LoggerService.error("risk_batch_warmup_failed", error));
     }, warmupMs);
     setInterval(() => {
-      runDailyRiskBatch().catch((error) => console.error("[risk-batch] interval failed", error));
+      runDailyRiskBatch().catch((error) => LoggerService.error("risk_batch_interval_failed", error));
     }, dayMs);
   }
 
@@ -82,18 +75,27 @@ async function bootstrap() {
     const warmupMs = 25 * 1000;
     setTimeout(() => {
       GroupClassReminderService.triggerAllTenants().catch((error) =>
-        console.error("[group-class-reminder] warmup failed", error)
+        LoggerService.error("group_class_reminder_warmup_failed", error)
       );
     }, warmupMs);
     setInterval(() => {
       GroupClassReminderService.triggerAllTenants().catch((error) =>
-        console.error("[group-class-reminder] interval failed", error)
+        LoggerService.error("group_class_reminder_interval_failed", error)
       );
     }, intervalMs);
   }
 }
 
+process.on("unhandledRejection", (error) => {
+  LoggerService.error("unhandled_rejection", error);
+});
+
+process.on("uncaughtException", (error) => {
+  LoggerService.error("uncaught_exception", error);
+  process.exit(1);
+});
+
 bootstrap().catch((e) => {
-  console.error("Bootstrap failed:", e);
+  LoggerService.error("bootstrap_failed", e);
   process.exit(1);
 });

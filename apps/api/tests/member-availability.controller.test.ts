@@ -135,6 +135,11 @@ describe("member availability controller", () => {
     const packageRepo = {
       find: vi.fn().mockResolvedValue([{ id: "pkg-1" }]),
     };
+    const userPackageRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue(createQueryBuilderMock({
+        many: [{ id: "up-1", package_id: "pkg-1" }],
+      })),
+    };
     const transactionAvailabilityRepo = {
       createQueryBuilder: vi.fn().mockReturnValue({
         delete: vi.fn().mockReturnThis(),
@@ -168,6 +173,7 @@ describe("member availability controller", () => {
       if (name.includes("Booking")) return bookingRepo as any;
       if (name.includes("SalonProfile")) return salonProfileRepo as any;
       if (name.includes("User") && !name.includes("Package")) return userRepo as any;
+      if (name.includes("UserPackage")) return userPackageRepo as any;
       if (name.includes("Package")) return packageRepo as any;
       return {} as any;
     });

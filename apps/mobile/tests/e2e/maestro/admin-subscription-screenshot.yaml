@@ -1,0 +1,20 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3FbackTo%3D%2F%28admin%29%2Fsalon"
+- tapOn:
+    point: "67%,57%"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "FizyoFlow"
+- assertVisible:
+    id: "admin-subscription-hero"
+- scrollUntilVisible:
+    element: "₺349.99"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "₺349.99"
+- assertVisible: "₺3,499.90"
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/mobile/appstore-screenshots/raw/admin-subscription-paywall"

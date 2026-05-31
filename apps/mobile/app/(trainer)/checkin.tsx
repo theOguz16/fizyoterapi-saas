@@ -124,6 +124,8 @@ export default function TrainerCheckinScreen() {
         ["trainer-today"],
         ["trainer-today-calendar"],
         ["trainer-earnings"],
+        { queryKey: ["admin-trainer-bookings"], exact: false },
+        { queryKey: ["admin-trainer-earnings"], exact: false },
 
         ["member-package-summary"],
         ["member-my-packages-list"],
@@ -238,7 +240,7 @@ export default function TrainerCheckinScreen() {
 
   return (
     <AppShell
-      title="Ders check-in"
+      title="Ders girişi"
       subtitle="Üyenin QR kodunu okut veya MEM kodunu gir. Sistem o saatteki onaylı derse göre doğru paketten hak düşer."
       icon="scan"
       showBackButton
@@ -250,7 +252,7 @@ export default function TrainerCheckinScreen() {
 
       <SurfaceCard tone="primary">
         <View style={styles.cardHeader}>
-          <Text style={styles.title}>Check-in yöntemi</Text>
+          <Text style={styles.title}>Ders giriş yöntemi</Text>
           <StatusBadge label={statusLabel} tone={statusTone} />
         </View>
 
@@ -273,8 +275,9 @@ export default function TrainerCheckinScreen() {
         <SurfaceCard>
           <Text style={styles.title}>Kamera ile okut</Text>
           <Text style={styles.copy}>
-            Üyenin QR kodunu çerçeve içine getir. QR algılandığında check-in işlemi otomatik başlar.
+            Üyenin QR kodunu çerçeve içine getir. QR algılandığında ders girişi otomatik başlar.
           </Text>
+          <ActionButton label="Manuel MEM kodu gir" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
 
           {permission?.granted ? (
             <View style={styles.cameraFrame}>
@@ -324,7 +327,7 @@ export default function TrainerCheckinScreen() {
         </SurfaceCard>
       ) : (
         <SurfaceCard>
-          <Text style={styles.title}>Manuel MEM kodu ile check-in</Text>
+          <Text style={styles.title}>Manuel MEM kodu ile ders girişi</Text>
           <Text style={styles.copy}>
             Üyenin QR ekranında görünen kısa MEM kodunu gir. Sistem o saatteki onaylı dersi bulur ve doğru paketten otomatik hak düşer.
           </Text>
@@ -342,7 +345,7 @@ export default function TrainerCheckinScreen() {
 
           <ActionButton
             testID="trainer-checkin-submit"
-            label="Check-in yap"
+            label="Ders girişini onayla"
             icon="checkin"
             onPress={submitManualCode}
             loading={mutation.isPending}

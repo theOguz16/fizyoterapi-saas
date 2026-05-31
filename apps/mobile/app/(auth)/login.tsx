@@ -36,7 +36,7 @@ export default function LoginScreen() {
     hasCompletedSignupOnboarding().then(setSignupOnboardingSeen).catch(() => setSignupOnboardingSeen(false));
     getPendingSalonJoinSlug().then(setPendingSalonSlug).catch(() => setPendingSalonSlug(null));
     resetSignupFlow();
-  }, []);
+  }, [resetSignupFlow]);
 
   useEffect(() => {
     Animated.parallel([
@@ -87,23 +87,11 @@ export default function LoginScreen() {
       <Animated.View style={[styles.contentStack, { opacity: introOpacity, transform: [{ translateY: introTranslate }] }]}>
         {pendingSalonSlug ? (
           <SurfaceCard tone="primary" padding="compact">
-            <Text style={styles.pendingSalonEyebrow}>Salon secimi korunuyor</Text>
+            <Text style={styles.pendingSalonEyebrow}>Salon seçimi korunuyor</Text>
             <Text style={styles.pendingSalonTitle}>{pendingSalonSlug}</Text>
-            <Text style={styles.pendingSalonCopy}>Giris tamamlaninca bu salonun paket ve kayit akisina doneceksin.</Text>
+            <Text style={styles.pendingSalonCopy}>Giriş tamamlanınca bu salonun paket ve kayıt akışına döneceksin.</Text>
           </SurfaceCard>
         ) : null}
-        <SurfaceCard tone="primary">
-          <Text style={styles.panelTitle}>Clinerva hesabınla devam et</Text>
-          <View style={styles.signalList}>
-            {TRUST_SIGNALS.map((item) => (
-              <View key={item} style={styles.signalRow}>
-                <AppIcon name="spark" size="sm" tone="primary" />
-                <Text style={styles.signalText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        </SurfaceCard>
-
         <SurfaceCard padding="hero">
           <FormField
             label="E-posta"
@@ -158,6 +146,18 @@ export default function LoginScreen() {
               </View>
               <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
             </Pressable>
+          </View>
+        </SurfaceCard>
+
+        <SurfaceCard tone="primary">
+          <Text style={styles.panelTitle}>FizyoFlow hesabınla devam et</Text>
+          <View style={styles.signalList}>
+            {TRUST_SIGNALS.map((item) => (
+              <View key={item} style={styles.signalRow}>
+                <AppIcon name="spark" size="sm" tone="primary" />
+                <Text style={styles.signalText}>{item}</Text>
+              </View>
+            ))}
           </View>
         </SurfaceCard>
       </Animated.View>

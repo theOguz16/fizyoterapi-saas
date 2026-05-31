@@ -20,6 +20,9 @@ export class Referral extends TenantScopedEntity {
   @Column({ type: "varchar", length: 120 })
   invitee_phone_or_email!: string;
 
+  @Column({ type: "varchar", length: 120, nullable: true })
+  invitee_name?: string | null;
+
   @Column({ type: "varchar", length: 40 })
   code!: string;
 

@@ -41,7 +41,7 @@ function buildActionKind(req: AuthenticatedRequest) {
   return "READ";
 }
 
-function shouldAudit(req: AuthenticatedRequest, res: Response) {
+function shouldAudit(req: AuthenticatedRequest) {
   const path = String(req.originalUrl || "");
   if (path === "/health" || path.startsWith("/uploads")) return false;
   if (String(req.method || "").toUpperCase() === "OPTIONS") return false;
@@ -108,7 +108,7 @@ export function auditMiddleware(req: AuthenticatedRequest, res: Response, next: 
   patchJsonResponse(req, res);
 
   res.on("finish", () => {
-    if (!shouldAudit(req, res)) return;
+    if (!shouldAudit(req)) return;
 
     const auditError = AuditLogService.getAuditError(res);
     const statusCode = res.statusCode || 200;
@@ -128,7 +128,7 @@ export function auditMiddleware(req: AuthenticatedRequest, res: Response, next: 
       duration_ms: Date.now() - startedAt,
       request_id: requestId,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: inferTargetType(req),
       target_id: targetId,
       error_code: auditError.code,

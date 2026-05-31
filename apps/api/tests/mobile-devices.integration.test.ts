@@ -108,10 +108,14 @@ describe("mobile devices route integration", () => {
       create: vi.fn().mockImplementation((input) => ({ id: "dev-1", ...input })),
       save: vi.fn().mockImplementation(async (input) => input),
     };
+    const userRepo = {
+      findOne: vi.fn().mockResolvedValue({ id: "member-1", is_active: true }),
+    };
 
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
       if (name.includes("Tenant")) return tenantRepo as any;
+      if (name.includes("User")) return userRepo as any;
       if (name.includes("DeviceToken")) return deviceRepo as any;
       return {} as any;
     });

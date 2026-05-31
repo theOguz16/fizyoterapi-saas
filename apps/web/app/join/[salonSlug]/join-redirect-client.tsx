@@ -57,32 +57,37 @@ export function JoinRedirectClient({
   }, [deepLink, storeUrl]);
 
   return (
-    <main className="container" style={{ padding: "32px 0 44px" }}>
-      <section className="hero">
-        <div className="hero-split">
+    <main className="join-page">
+      <section className="container join-panel">
+        <a className="brand" href="/">
+          <span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span>
+          <span>Fizyoflow</span>
+        </a>
+        <div className="join-grid">
           <div>
-            <span className="chip">Salon QR yonlendirmesi</span>
-            <h1 style={{ margin: "14px 0 10px" }}>Uygulama aciliyor</h1>
-            <p className="muted" style={{ fontSize: "1rem", lineHeight: 1.7 }}>
-              Uygulama kuruluysa dogrudan acilir. Kurulu degilse otomatik olarak indirme ekranina yonlendirilirsin.
+            <p className="eyebrow">Klinik daveti</p>
+            <h1>Uygulama açılıyor.</h1>
+            <p className="lead">
+              Fizyoflow kuruluysa klinik akışına devam edeceksiniz. Kurulu değilse indirme ekranına otomatik
+              yönlendirilirsiniz.
             </p>
-            <div className="hero-badges">
-              <span className="chip">Salon: {salonSlug}</span>
-              {salonCode ? <span className="chip">Kod: {salonCode}</span> : null}
+            <div className="join-actions">
+              <a className="primary-action" href={deepLink}>Uygulamayı Aç</a>
+              <a className="secondary-action" href={storeUrl}>İndirme Ekranına Git</a>
+            </div>
+            <div className="join-tags">
+              <span>Salon: {salonSlug}</span>
+              {salonCode ? <span>Kod: {salonCode}</span> : null}
             </div>
           </div>
-          <div className="hero-side">
-            <div className="hero-mini-card">
-              <strong>Kurulu degilse</strong>
-              <p className="muted small" style={{ marginBottom: 0 }}>
-                Sistem seni otomatik olarak store ekranina yonlendirecek.
-              </p>
-            </div>
-            <div className="hero-mini-card">
-              <strong>Kuruluysa</strong>
-              <p className="muted small" style={{ marginBottom: 0 }}>
-                Salonun onboarding akisina devam edersin.
-              </p>
+          <div className="join-status-card">
+            <span className="join-pulse" aria-hidden="true" />
+            <h2>Güvenli yönlendirme</h2>
+            <p>Bu ekran yalnızca klinik davetini mobil uygulamadaki doğru onboarding akışına taşır.</p>
+            <div className="join-status-list">
+              <span>Kuruluysa uygulama açılır</span>
+              <span>Kurulu değilse mağazaya gider</span>
+              <span>Klinik kodu korunur</span>
             </div>
           </div>
         </div>

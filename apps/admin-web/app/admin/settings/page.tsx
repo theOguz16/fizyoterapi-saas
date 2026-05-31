@@ -35,6 +35,7 @@ type NotificationType = "PACKAGE_ENDING" | "MEASUREMENT_DUE" | "SESSION_REMINDER
 type TemplateMode = "INSTANT" | "SCHEDULED";
 type TemplateCadence = "DAILY" | "WEEKLY" | "EVERY_3_DAYS";
 type LessonPackageType = "GROUP" | "PT" | "SCOLIOSIS" | "REFORMER" | "MANUAL" | "OTHER";
+type ManagedGrowthStatus = "PREPARING" | "WAITING_INFO" | "LIVE" | "OPTIMIZING";
 
 type LessonCatalogItem = {
   code: string;
@@ -45,6 +46,11 @@ type LessonCatalogItem = {
   trainer_commission_rate: string;
   capacity_label: string;
   package_type: LessonPackageType;
+  category_group?: string | null;
+  lesson_mode?: string | null;
+  sub_lessons?: string[];
+  session_duration_minutes?: number | null;
+  break_duration_minutes?: number | null;
 };
 
 type SettingsPayload = {
@@ -54,6 +60,13 @@ type SettingsPayload = {
       hero_title?: string;
       hero_subtitle?: string;
       about_text?: string;
+      seo_title?: string | null;
+      seo_description?: string | null;
+      google_business_url?: string | null;
+      google_maps_url?: string | null;
+      business_category?: string | null;
+      service_area?: string[];
+      managed_growth_status?: ManagedGrowthStatus;
       theme: string;
       primary_color: string;
       services?: Array<{
@@ -65,6 +78,11 @@ type SettingsPayload = {
         trainer_commission_rate?: string | number;
         capacity_label?: string;
         package_type?: LessonPackageType;
+        category_group?: string | null;
+        lesson_mode?: string | null;
+        sub_lessons?: string[];
+        session_duration_minutes?: number | null;
+        break_duration_minutes?: number | null;
       }>;
       business_hours?: {
         timezone?: string;
@@ -109,6 +127,14 @@ type SettingsPayload = {
         }>;
       };
       is_published: boolean;
+    };
+    growth_analytics?: {
+      page_views: number;
+      cta_clicks: number;
+      lead_count: number;
+      conversion_rate?: number;
+      by_event?: Record<string, number>;
+      last_30_days?: Record<string, number>;
     };
     notification_templates: Array<{
       id: string;
@@ -176,6 +202,13 @@ function lessonPackageTypeLabel(type: LessonPackageType) {
   if (type === "REFORMER") return "Reformer";
   if (type === "MANUAL") return "Manuel";
   return "Diğer";
+}
+
+function managedGrowthStatusLabel(status: ManagedGrowthStatus) {
+  if (status === "WAITING_INFO") return "Eksik Bilgi Bekliyor";
+  if (status === "LIVE") return "Yayında";
+  if (status === "OPTIMIZING") return "Optimizasyonda";
+  return "Hazırlanıyor";
 }
 
 function formatTry(value: string | number) {
@@ -260,6 +293,11 @@ function normalizeLessonCatalog(rawServices: SettingsPayload["data"]["profile"][
       trainer_commission_rate: String(service?.trainer_commission_rate ?? base?.trainer_commission_rate ?? "25"),
       capacity_label: String(service?.capacity_label || base?.capacity_label || "1 kişi"),
       package_type: (service?.package_type as LessonPackageType) || base?.package_type || "OTHER",
+      category_group: String(service?.category_group || base?.category_group || "").trim() || null,
+      lesson_mode: String(service?.lesson_mode || base?.lesson_mode || "").trim() || null,
+      sub_lessons: Array.isArray(service?.sub_lessons) ? service.sub_lessons.map((item) => String(item || "").trim()).filter(Boolean) : base?.sub_lessons || [],
+      session_duration_minutes: service?.session_duration_minutes ?? base?.session_duration_minutes ?? null,
+      break_duration_minutes: service?.break_duration_minutes ?? base?.break_duration_minutes ?? null,
     });
   }
 
@@ -274,12 +312,20 @@ export default function AdminSettingsPage() {
   const [busy, setBusy] = useState(false);
   const [initialSnapshot, setInitialSnapshot] = useState("");
   const [showAllCatalogSummary, setShowAllCatalogSummary] = useState(false);
+  const [growthAnalytics, setGrowthAnalytics] = useState<NonNullable<SettingsPayload["data"]["growth_analytics"]>>({ page_views: 0, cta_clicks: 0, lead_count: 0 });
 
   const [profile, setProfile] = useState({
     slug: "",
     hero_title: "",
     hero_subtitle: "",
     about_text: "",
+    seo_title: "",
+    seo_description: "",
+    google_business_url: "",
+    google_maps_url: "",
+    business_category: "Fizyoterapi Kliniği",
+    service_area: "",
+    managed_growth_status: "PREPARING" as ManagedGrowthStatus,
     theme: "minimal",
     primary_color: "#111827",
     services: normalizeLessonCatalog(undefined),
@@ -359,6 +405,13 @@ export default function AdminSettingsPage() {
       hero_title: payload.data.profile.hero_title || "",
       hero_subtitle: payload.data.profile.hero_subtitle || "",
       about_text: payload.data.profile.about_text || "",
+      seo_title: payload.data.profile.seo_title || "",
+      seo_description: payload.data.profile.seo_description || "",
+      google_business_url: payload.data.profile.google_business_url || "",
+      google_maps_url: payload.data.profile.google_maps_url || "",
+      business_category: payload.data.profile.business_category || "Fizyoterapi Kliniği",
+      service_area: (payload.data.profile.service_area || []).join(", "),
+      managed_growth_status: payload.data.profile.managed_growth_status || "PREPARING",
       theme: payload.data.profile.theme || "minimal",
       primary_color: payload.data.profile.primary_color || "#111827",
       services,
@@ -415,6 +468,7 @@ export default function AdminSettingsPage() {
       is_published: Boolean(payload.data.profile.is_published),
     };
     const nextTemplates = payload.data.notification_templates || [];
+    setGrowthAnalytics(payload.data.growth_analytics || { page_views: 0, cta_clicks: 0, lead_count: 0 });
     setProfile(nextProfile);
     setTemplates(nextTemplates);
     setInitialSnapshot(
@@ -434,6 +488,10 @@ export default function AdminSettingsPage() {
         body: JSON.stringify({
           profile: {
             ...profile,
+            service_area: profile.service_area
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean),
             services: profile.services.map((service) => ({
               type: service.code,
               title: service.title,
@@ -443,6 +501,11 @@ export default function AdminSettingsPage() {
               trainer_commission_rate: service.trainer_commission_rate,
               capacity_label: service.capacity_label,
               package_type: service.package_type,
+              category_group: service.category_group || undefined,
+              lesson_mode: service.lesson_mode || undefined,
+              sub_lessons: service.sub_lessons || [],
+              session_duration_minutes: service.session_duration_minutes ?? undefined,
+              break_duration_minutes: service.break_duration_minutes ?? undefined,
             })),
           },
           notification_templates: templates.map((tpl) => ({
@@ -614,8 +677,9 @@ export default function AdminSettingsPage() {
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Aktif Ders" value={activeServices.length} tone="sky" icon={<i className="fa-solid fa-book-medical" aria-hidden="true" />} />
         <MetricCard label="Tekil Özet" value={uniqueActiveServices.length} tone="emerald" icon={<i className="fa-solid fa-layer-group" aria-hidden="true" />} />
-        <MetricCard label="Referans Kampanyası" value={profile.location.campaigns.referral_campaigns.length} tone="amber" icon={<i className="fa-solid fa-user-group" aria-hidden="true" />} />
-        <MetricCard label="Bildirim Şablonu" value={templates.length} tone="slate" icon={<i className="fa-solid fa-bell" aria-hidden="true" />} />
+        <MetricCard label="Vitrin CTA" value={growthAnalytics.cta_clicks} tone="amber" icon={<i className="fa-solid fa-arrow-pointer" aria-hidden="true" />} />
+        <MetricCard label="Public Lead" value={growthAnalytics.lead_count} tone="slate" icon={<i className="fa-solid fa-user-plus" aria-hidden="true" />} />
+        <MetricCard label="Dönüşüm" value={`%${growthAnalytics.conversion_rate ?? 0}`} tone="emerald" icon={<i className="fa-solid fa-chart-line" aria-hidden="true" />} />
       </section>
 
       <Card className="surface-card">
@@ -624,6 +688,7 @@ export default function AdminSettingsPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Bölüm Kısayolları</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <a href="#settings-clinic-profile" className="interactive rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700">Klinik Profili</a>
+              <a href="#settings-growth" className="interactive rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700">Dijital Vitrin</a>
               <a href="#settings-working-hours" className="interactive rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700">Çalışma Saatleri</a>
               <a href="#settings-lesson-catalog" className="interactive rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700">Ders Kataloğu</a>
               <a href="#settings-campaigns" className="interactive rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-700">Kampanyalar</a>
@@ -637,6 +702,14 @@ export default function AdminSettingsPage() {
               <div className="detail-pill">
                 <AppIcon icon="fa-solid fa-globe" className="text-sky-600" />
                 <span>Yayın durumu: {profile.is_published ? "Açık" : "Kapalı"}</span>
+              </div>
+              <div className="detail-pill">
+                <AppIcon icon="fa-solid fa-chart-line" className="text-sky-600" />
+                <span>Dijital vitrin: {managedGrowthStatusLabel(profile.managed_growth_status)}</span>
+              </div>
+              <div className="detail-pill">
+                <AppIcon icon="fa-solid fa-eye" className="text-sky-600" />
+                <span>Vitrin görüntülenme: {growthAnalytics.page_views}</span>
               </div>
               <div className="detail-pill">
                 <AppIcon icon="fa-solid fa-calendar-days" className="text-sky-600" />
@@ -708,6 +781,71 @@ export default function AdminSettingsPage() {
             <input type="checkbox" checked={profile.is_published} onChange={(e) => setProfile((p) => ({ ...p, is_published: e.target.checked }))} />
             Profili yayınla (son kullanıcıya aç)
           </label>
+        </CardContent>
+      </Card>
+
+      <Card id="settings-growth" className="surface-card">
+        <CardHeader>
+          <CardTitle>Dijital Vitrin ve Managed Growth</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="Vitrin Durumu" hint="Fizyoflow ekibinin yönettiği hazırlık/optimizasyon durumudur">
+              <Select
+                value={profile.managed_growth_status}
+                onChange={(e) => setProfile((p) => ({ ...p, managed_growth_status: e.target.value as ManagedGrowthStatus }))}
+              >
+                <option value="PREPARING">Hazırlanıyor</option>
+                <option value="WAITING_INFO">Eksik Bilgi Bekliyor</option>
+                <option value="LIVE">Yayında</option>
+                <option value="OPTIMIZING">Optimizasyonda</option>
+              </Select>
+            </FormField>
+            <FormField label="İşletme Kategorisi">
+              <Input
+                placeholder="Fizyoterapi Kliniği"
+                value={profile.business_category}
+                onChange={(e) => setProfile((p) => ({ ...p, business_category: e.target.value }))}
+              />
+            </FormField>
+          </div>
+          <FormField label="SEO Başlığı">
+            <Input
+              placeholder="Atlas Fizyo | Kadıköy Fizyoterapi ve Klinik Pilates"
+              value={profile.seo_title}
+              onChange={(e) => setProfile((p) => ({ ...p, seo_title: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="SEO Açıklaması">
+            <Textarea
+              placeholder="Lokasyon ve hizmet odaklı kısa arama sonucu açıklaması"
+              value={profile.seo_description}
+              onChange={(e) => setProfile((p) => ({ ...p, seo_description: e.target.value }))}
+            />
+          </FormField>
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="Google Business URL">
+              <Input
+                placeholder="https://g.page/..."
+                value={profile.google_business_url}
+                onChange={(e) => setProfile((p) => ({ ...p, google_business_url: e.target.value }))}
+              />
+            </FormField>
+            <FormField label="Google Maps URL">
+              <Input
+                placeholder="https://maps.google.com/..."
+                value={profile.google_maps_url}
+                onChange={(e) => setProfile((p) => ({ ...p, google_maps_url: e.target.value }))}
+              />
+            </FormField>
+          </div>
+          <FormField label="Hizmet Bölgeleri" hint="Virgülle ayırın: Kadıköy, Moda, Acıbadem">
+            <Input
+              placeholder="İlçe, semt veya şehir"
+              value={profile.service_area}
+              onChange={(e) => setProfile((p) => ({ ...p, service_area: e.target.value }))}
+            />
+          </FormField>
         </CardContent>
       </Card>
 

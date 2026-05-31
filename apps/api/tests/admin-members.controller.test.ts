@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminMembersController } from "../controllers/admin/members.controller";
 import { AppDataSource } from "../data-source";
 import { AuditLogService } from "../services/audit-log.service";
+import { MemberPackageService } from "../services/member-package.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("admin members controller", () => {
@@ -177,31 +178,42 @@ describe("admin members controller", () => {
         { id: "pkg-1", title: "Starter", type: "LESSON", total_credits: 8, duration_days: 30, display_price: "4200" },
       ]),
     };
-    const userPackageRepo = {
-      create: vi.fn().mockImplementation((input) => input),
-      save: vi
-        .fn()
-        .mockResolvedValueOnce(savedUserPackage)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined),
-      find: vi.fn().mockResolvedValue([savedUserPackage]),
-      findOne: vi
-        .fn()
-        .mockResolvedValueOnce(savedUserPackage)
-        .mockResolvedValueOnce(savedUserPackage),
-    };
-    const assignmentRepo = {
-      find: vi.fn().mockResolvedValue([{ package_id: "pkg-1", trainer_id: "trainer-1", is_active: true }]),
-    };
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
-      if (name.includes("PackageTrainerAssignment")) return assignmentRepo as any;
-      if (name.includes("UserPackage")) return userPackageRepo as any;
       if (name.includes("Package") && !name.includes("UserPackage")) return packageRepo as any;
       if (name.includes("User")) return userRepo as any;
       return {} as any;
     });
     vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
+    vi.spyOn(MemberPackageService, "assignPackageToMember").mockResolvedValue({
+      userPackage: savedUserPackage as never,
+      member: { id: "member-1" } as never,
+      package: { id: "pkg-1" } as never,
+    });
+    vi.spyOn(MemberPackageService, "listMemberPackages").mockResolvedValue({
+      data: [
+        {
+          ...savedUserPackage,
+          package_title: "Starter",
+          trainer_summary: "Deniz Akin",
+          remaining_credits: 8,
+        },
+      ],
+      totalRemainingCredits: 8,
+    });
+    vi.spyOn(MemberPackageService, "adjustCredits").mockResolvedValue({
+      row: {
+        ...savedUserPackage,
+        remaining_credits: 5,
+      } as never,
+    });
+    vi.spyOn(MemberPackageService, "deactivateUserPackage").mockResolvedValue({
+      row: {
+        ...savedUserPackage,
+        is_active: false,
+      } as never,
+      member: { id: "member-1" } as never,
+    });
 
     const assignReq = {
       tenantId: "tenant-1",

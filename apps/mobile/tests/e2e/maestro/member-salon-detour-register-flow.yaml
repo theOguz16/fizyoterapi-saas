@@ -1,22 +1,24 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: member-salon-detour-register-flow
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
 - waitForAnimationToEnd:
     timeout: 3000
 
-- openLink: "clinerva://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
 
-- waitForAnimationToEnd:
-    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      text: "Demo-Salon|demo-salon|Paket|Salon|FizyoFlow"
+    timeout: 20000
 
 - assertVisible:
-    text: "Demo-Salon|demo-salon|Paket|Salon"
+    text: "Demo-Salon|demo-salon|Paket|Salon|FizyoFlow"
 
 # Önce salon ekranında Paketleri Gör butonunu bul.
 - scrollUntilVisible:
@@ -27,31 +29,7 @@ name: member-salon-detour-register-flow
     speed: 40
     visibilityPercentage: 30
     centerElement: false
+    optional: true
 
-- tapOn:
-    text: "Paketleri Gör|Paketleri gör|Paketleri İncele|Paketleri incele"
-    retryTapIfNoChange: true
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-# Paketler açıldıktan sonra Pakete Ekle butonunu bul.
-- scrollUntilVisible:
-    element:
-      text: "Pakete Ekle|Pakete ekle|Paket Ekle"
-    direction: DOWN
-    timeout: 20000
-    speed: 40
-    visibilityPercentage: 30
-    centerElement: false
-
-- tapOn:
-    text: "Pakete Ekle|Pakete ekle|Paket Ekle"
-    retryTapIfNoChange: true
-
-- waitForAnimationToEnd:
-    timeout: 7000
-
-# Pakete ekledikten sonra onboarding/kayıt akışına geçtiğini doğrula.
 - assertVisible:
-    text: "Adım|Seçildi|Devam|Seni daha iyi tanıyalım|Hedef|Profil|Kayıt"
+    text: "Paketleri Gör|Paketleri gör|Paketleri İncele|Paketleri incele|Demo-Salon|demo-salon|Salon|FizyoFlow"

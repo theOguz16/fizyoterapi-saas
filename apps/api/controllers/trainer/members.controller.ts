@@ -18,6 +18,7 @@ import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
 import { SalonMembership } from "../../entities/salon-membership.entity";
 import { Account } from "../../entities/account.entity";
+import { TrainerScopeService } from "../../services/trainer-scope.service";
 
 type StructuredTrainerNoteCategory = "GENERAL" | "GOAL" | "RISK" | "FOLLOW_UP";
 
@@ -54,7 +55,7 @@ export class TrainerMembersController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "trainer_member_note",
       target_id: input.noteId,
       metadata: {
@@ -76,6 +77,15 @@ export class TrainerMembersController {
     });
     if (!member) {
       throw new AppError("MEMBER_NOT_FOUND", 404, "Uye bulunamadi");
+    }
+    return member;
+  }
+
+  private static async ensureScopedMember(tenantId: string, trainerId: string, memberId: string) {
+    const member = await TrainerMembersController.ensureMember(tenantId, memberId);
+    const hasScope = await TrainerScopeService.hasTrainerMemberScope(tenantId, trainerId, memberId);
+    if (!hasScope) {
+      throw new AppError("MEMBER_SCOPE_FORBIDDEN", 403, "Bu uye trainer kapsaminda degil");
     }
     return member;
   }
@@ -341,7 +351,7 @@ export class TrainerMembersController {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
 
-      const member = await TrainerMembersController.ensureMember(tenantId, memberId);
+      const member = await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const [bookingCount, checkinCount, latestMeasurement, packageRows, rewardRows, trendRows, membership] = await Promise.all([
         AppDataSource.getRepository(Booking).count({
@@ -506,7 +516,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const rawLimit = req.query.limit ? Number(req.query.limit) : 50;
       const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.floor(rawLimit), 1), 200) : 50;
@@ -550,7 +560,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const rawLimit = req.query.limit ? Number(req.query.limit) : 50;
       const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.floor(rawLimit), 1), 200) : 50;
@@ -577,7 +587,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const items = await TrainerMembersController.listNoteItems(tenantId, trainerId, memberId);
       const latest = items[0] || null;
@@ -610,7 +620,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const items = await TrainerMembersController.listNoteItems(tenantId, trainerId, memberId);
 
@@ -633,7 +643,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const historyRepo = AppDataSource.getRepository(TrainerMemberNoteHistory);
       const note = TrainerMembersController.normalizeNoteInput(req.body?.note ?? req.body);
@@ -686,7 +696,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const note = TrainerMembersController.normalizeNoteInput(req.body?.note ?? req.body);
       const historyRepo = AppDataSource.getRepository(TrainerMemberNoteHistory);
@@ -736,7 +746,7 @@ export class TrainerMembersController {
       if (!tenantId || !trainerId) {
         throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
       }
-      await TrainerMembersController.ensureMember(tenantId, memberId);
+      await TrainerMembersController.ensureScopedMember(tenantId, trainerId, memberId);
 
       const historyRepo = AppDataSource.getRepository(TrainerMemberNoteHistory);
       const row = await historyRepo.findOne({

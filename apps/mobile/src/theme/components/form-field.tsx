@@ -54,7 +54,7 @@ export function FormField({
         style={[styles.input, multiline ? styles.inputMultiline : null, error ? styles.inputError : null]}
         {...inputProps}
       />
-      {!!error ? <Text style={styles.error}>{error}</Text> : helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      {error ? <Text style={styles.error}>{error}</Text> : helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>
   );
 }

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>FizyoFlow</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>fizyoflow</string>
+          <string>com.fizyoflow.mobile</string>
+        </array>
+      </dict>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+      <key>NSAllowsArbitraryLoads</key>
+      <false/>
+      <key>NSAllowsLocalNetworking</key>
+      <true/>
+    </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>FizyoFlow, salon QR ve üye giriş kodlarını okutmak için kameraya erişim ister.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>FizyoFlow, hesabını güvenli tutmak için desteklenen cihazlarda Face ID kullanabilir.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>FizyoFlow, yalnızca uygulama açıkken konumunu yakın salon önerileri için kullanır.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>FizyoFlow arka planda konum takibi yapmaz; bu izin sistem uyumluluğu için tanımlıdır.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>FizyoFlow, yakınındaki salonları göstermek ve konuma uygun öneriler sunmak için konumuna erişim ister.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>FizyoFlow mikrofon kaydı yapmaz; kamera modülünün sistem gereksinimi için bu izin açıklaması tanımlıdır.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>FizyoFlow, salon QR görsellerini galeriye kaydetmek için izin ister.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>FizyoFlow, QR görsellerini galeriye kaydetmek için fotoğraflara erişim izni ister.</string>
+    <key>NSUserActivityTypes</key>
+    <array>
+      <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
+    </array>
+    <key>RCTNewArchEnabled</key>
+    <true/>
+    <key>UILaunchStoryboardName</key>
+    <string>SplashScreen</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+      <string>arm64</string>
+    </array>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+    <key>UIStatusBarStyle</key>
+    <string>UIStatusBarStyleDefault</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    </array>
+    <key>UIUserInterfaceStyle</key>
+    <string>Automatic</string>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <false/>
+  </dict>
+</plist>

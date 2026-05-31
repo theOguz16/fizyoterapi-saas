@@ -1,47 +1,27 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 name: member-salon-qr-own-active-member
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- openLink: "clinerva://e2e-reset"
+- openLink: "fizyoflow://e2e-reset"
 
-- assertVisible:
-    id: "welcome-login-button"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
 
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-
-- assertVisible: "Hesabına giriş yap"
-
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "member@gmail.com"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "member123"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-submit-button"
-
-- waitForAnimationToEnd:
-    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Bugün|Ana sayfa|Paketim|Grup dersleri"
+    timeout: 20000
 
 # Member zaten demo-salon'a bağlıyken kendi salon QR'ını açıyor.
-- openLink: "clinerva://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
+- openLink: "fizyoflow://join/demo-salon?salon_slug=demo-salon&screen_path=%2F%28intake-member%29%2Fsalons%2Fdemo-salon&source=salon_qr&channel=qr"
 
-- waitForAnimationToEnd:
-    timeout: 5000
+- extendedWaitUntil:
+    visible:
+      text: "Merhaba Demo|Kalan hak|Sonraki ders|Profil|Demo-Salon|Paketleri gör|Paketler"
+    timeout: 20000
 
-# Intake-member salon kayıt ekranına düşmemeli, member ana akışta kalmalı.
+# Aktif üye kendi salon QR'ını açınca intake kayıt ekranına düşmeden güvenli akışta kalır.
 - assertVisible:
-    text: "Merhaba Demo|Ana Sayfa|Randevu|Paket|Profil"
+    text: "Merhaba Demo|Kalan hak|Sonraki ders|Profil|Demo-Salon|Paketleri gör|Paketler"

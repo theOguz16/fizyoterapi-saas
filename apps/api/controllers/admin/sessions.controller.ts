@@ -8,6 +8,8 @@ import { ClassSession, GroupClassNotificationScope, LessonCategory, SessionStatu
 import { Booking, BookingStatus } from "../../entities/booking.entity";
 import { PackageTrainerAssignment } from "../../entities/package-trainer-assignment.entity";
 import { TrainerSkill } from "../../entities/trainer-skill.entity";
+import { SalonMembership, SalonMembershipStatus } from "../../entities/salon-membership.entity";
+import { UserRole } from "../../entities/user.entity";
 import { AuditLogService } from "../../services/audit-log.service";
 import { GroupClassService } from "../../services/group-class.service";
 
@@ -29,7 +31,7 @@ export class AdminSessionsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "session",
       target_id: input.session.id,
       metadata: {
@@ -79,6 +81,34 @@ export class AdminSessionsController {
     ) {
       throw new AppError("VALIDATION_ERROR", 400, "Gecersiz bildirim kapsami");
     }
+  }
+
+  private static normalizeInvitedMemberIds(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return Array.from(new Set(value.map((item) => String(item ?? "").trim()).filter(Boolean)));
+  }
+
+  private static async ensureInvitedMembers(tenantId: string, invitedMemberIds: string[]) {
+    if (invitedMemberIds.length === 0) return [];
+
+    const memberships = await AppDataSource.getRepository(SalonMembership).find({
+      where: invitedMemberIds.map((userId) => ({
+        tenant_id: tenantId,
+        user_id: userId,
+        role: UserRole.MEMBER,
+        status: SalonMembershipStatus.ACTIVE,
+        is_active_context: true,
+      })) as any,
+      select: ["user_id"],
+    });
+
+    const validIds = new Set(memberships.map((row) => String(row.user_id || "")).filter(Boolean));
+    const missingIds = invitedMemberIds.filter((memberId) => !validIds.has(memberId));
+    if (missingIds.length > 0) {
+      throw new AppError("VALIDATION_ERROR", 400, "Davet listesinde salonda aktif olmayan uye bulunuyor");
+    }
+
+    return invitedMemberIds;
   }
 
   private static async ensureTrainerSkill(
@@ -230,6 +260,10 @@ export class AdminSessionsController {
         trainerId,
         related_package_id ? String(related_package_id) : undefined
       );
+      const normalizedInvitedMemberIds = await AdminSessionsController.ensureInvitedMembers(
+        tenantId,
+        AdminSessionsController.normalizeInvitedMemberIds(invited_member_ids)
+      );
 
       const session = AppDataSource.getRepository(ClassSession).create({
         tenant_id: tenantId,
@@ -249,9 +283,7 @@ export class AdminSessionsController {
         recurrence_label: typeof recurrence_label === "string" && recurrence_label.trim() ? recurrence_label.trim() : null,
         special_date: typeof special_date === "string" && special_date.trim() ? special_date.trim() : null,
         meta: {
-          invited_member_ids: Array.isArray(invited_member_ids)
-            ? invited_member_ids.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
-            : [],
+          invited_member_ids: normalizedInvitedMemberIds,
         },
       });
       await AppDataSource.getRepository(ClassSession).save(session);
@@ -369,11 +401,13 @@ export class AdminSessionsController {
         session.special_date = typeof special_date === "string" && special_date.trim() ? special_date.trim() : null;
       }
       if (invited_member_ids !== undefined) {
+        const normalizedInvitedMemberIds = await AdminSessionsController.ensureInvitedMembers(
+          tenantId,
+          AdminSessionsController.normalizeInvitedMemberIds(invited_member_ids)
+        );
         session.meta = {
           ...(session.meta || {}),
-          invited_member_ids: Array.isArray(invited_member_ids)
-            ? invited_member_ids.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
-            : [],
+          invited_member_ids: normalizedInvitedMemberIds,
         };
       }
 
@@ -439,9 +473,11 @@ export class AdminSessionsController {
       if (!session) {
         throw new AppError("SESSION_NOT_FOUND", 404, "Seans bulunamadi");
       }
-      await repo.remove(session);
-      await AdminSessionsController.logSessionAudit(req, { eventType: "ADMIN_SESSION_DELETED", session });
-      return res.json({ message: "Seans silindi" });
+      const oldState = { status: session.status };
+      session.status = SessionStatus.CANCELED;
+      await repo.save(session);
+      await AdminSessionsController.logSessionAudit(req, { eventType: "ADMIN_SESSION_CANCELED", session, oldState });
+      return res.json({ message: "Seans iptal edildi", data: session });
     } catch (error) {
       if (error instanceof AppError) throw error;
       console.error("Admin sessions remove error:", error);

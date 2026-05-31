@@ -55,8 +55,11 @@ export default function TrainerBookingsScreen() {
   return now >= opensAt && now <= closesAt;
 }
 
-  const rows = Array.isArray(bookingsQuery.data) ? bookingsQuery.data : [];
-  const availabilityRows = Array.isArray(availabilitiesQuery.data) ? availabilitiesQuery.data : [];
+  const rows = useMemo(() => (Array.isArray(bookingsQuery.data) ? bookingsQuery.data : []), [bookingsQuery.data]);
+  const availabilityRows = useMemo(
+    () => (Array.isArray(availabilitiesQuery.data) ? availabilitiesQuery.data : []),
+    [availabilitiesQuery.data]
+  );
   const groupClassRows = useMemo(() => rows.filter((row: any) => row.is_group_class), [rows]);
   const diagnostics = formOptionsQuery.data?.member_package_diagnostics || {};
   const visibleBookings = useMemo(() => (filter === "REQUESTS" ? [] : rows), [filter, rows]);
@@ -82,7 +85,7 @@ export default function TrainerBookingsScreen() {
         <SectionTitle title="Grup dersi oluştur" subtitle="Trainer mobilde tek tarihli veya tekrar eden grup dersi açabilir; salondaki üyeleri davet edip bildirim tetikler." />
         <Text style={styles.hint}>Katıl butonuna basan üyeler önce salon tarafında toplanır, ardından admin ücret ve kapasite onayına düşer.</Text>
         <View style={styles.actions}>
-          <ActionButton label="Grup derslerini yönet" icon="calendar" onPress={() => router.push("/(trainer)/group-classes" as never)} />
+          <ActionButton label="Grup derslerini yönet" icon="calendar" onPress={() => router.push({ pathname: "/(trainer)/group-classes", params: { backTo: "/(trainer)/bookings" } } as never)} />
         </View>
       </SurfaceCard>
       <View style={styles.filters}>
@@ -152,7 +155,18 @@ export default function TrainerBookingsScreen() {
       ) : (
         <ScrollPanel maxHeight={420}>
           {visibleBookings.map((row: any) => (
-            <Pressable key={row.id} style={styles.rowCard} onPress={() => row.member_id ? router.push(`/(trainer)/members/${row.member_id}` as never) : null}>
+            <Pressable
+              key={row.id}
+              style={styles.rowCard}
+              onPress={() =>
+                row.member_id
+                  ? router.push({
+                      pathname: "/(trainer)/members/[id]",
+                      params: { id: row.member_id, backTo: "/(trainer)/bookings" },
+                    } as never)
+                  : null
+              }
+            >
               <Text style={styles.title}>{row.member_full_name || "Belirtilmedi"}</Text>
               <Text style={styles.item}>{new Date(row.starts_at).toLocaleString("tr-TR")}</Text>
               <Text style={styles.item}>Ders: {row.session_title || "Belirtilmedi"}</Text>
@@ -167,7 +181,7 @@ export default function TrainerBookingsScreen() {
                     onPress={() =>
                       router.push({
                         pathname: "/(trainer)/checkin",
-                        params: row.session_id ? { sessionId: row.session_id } : {},
+                        params: row.session_id ? { sessionId: row.session_id, backTo: "/(trainer)/bookings" } : { backTo: "/(trainer)/bookings" },
                       } as never)
                     }
                   />

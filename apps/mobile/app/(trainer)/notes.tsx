@@ -53,7 +53,7 @@ function formatDateTime(value?: string | null) {
 
 export default function TrainerNotesScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ memberId: string; memberName?: string }>();
+  const params = useLocalSearchParams<{ memberId: string; memberName?: string; backTo?: string | string[] }>();
   const [form, setForm] = useState({ title: "", body: "", category: "GENERAL" as NoteCategory });
 
   const detailQuery = useQuery({
@@ -90,6 +90,7 @@ export default function TrainerNotesScreen() {
 
   const items = Array.isArray(notesQuery.data?.items) ? notesQuery.data.items : [];
   const selectedCategoryLabel = noteCategoryLabel(form.category);
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   return (
     <AppShell
@@ -100,7 +101,7 @@ export default function TrainerNotesScreen() {
       onBack={() =>
         router.replace({
           pathname: "/(trainer)/members/[id]",
-          params: { id: String(params.memberId) },
+          params: { id: String(params.memberId), backTo: backTo || "/(trainer)/clients" },
         } as never)
       }
     >
@@ -203,6 +204,7 @@ export default function TrainerNotesScreen() {
                           title: String(item.title || ""),
                           body: String(item.body || item.note || ""),
                           category,
+                          backTo: backTo || "/(trainer)/clients",
                         },
                       } as never)
                     }

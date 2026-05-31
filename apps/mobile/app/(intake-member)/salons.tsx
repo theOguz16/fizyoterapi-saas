@@ -23,7 +23,7 @@ export default function IntakeSalonsScreen() {
     queryFn: () => getPublıcSalonsApi(requestedCity || undefined),
   });
 
-  const salons = Array.isArray(salonsQuery.data) ? salonsQuery.data : [];
+  const salons = useMemo(() => (Array.isArray(salonsQuery.data) ? salonsQuery.data : []), [salonsQuery.data]);
 
   const sections = useMemo(() => {
     const boosted = salons.filter((salon) => salon.is_boosted);

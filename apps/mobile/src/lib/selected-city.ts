@@ -2,7 +2,7 @@
 // Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
 import * as SecureStore from "expo-secure-store";
 
-const CITY_KEY = "clinerva.selected_city";
+const CITY_KEY = "fizyoflow.selected_city";
 
 export async function getSelectedCity() {
   return (await SecureStore.getItemAsync(CITY_KEY)) || "";

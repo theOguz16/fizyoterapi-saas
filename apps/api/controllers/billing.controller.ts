@@ -1,6 +1,7 @@
 // Bu controller genel tarafindaki billing.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Request, Response } from "express";
+import { timingSafeEqual } from "crypto";
 import { AppDataSource } from "../data-source";
 import { Tenant, TenantSubscriptionStatus } from "../entities/tenant.entity";
 import { AppError } from "../errors/AppError";
@@ -18,7 +19,7 @@ export class BillingController {
       status_code: 200,
       success: true,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "billing_plan",
       target_id: planId,
       metadata: { plan_id: planId },
@@ -37,7 +38,15 @@ export class BillingController {
     const configuredAuth = String(process.env.REVENUECAT_WEBHOOK_AUTH || "").trim();
     const incomingAuth = String(req.headers.authorization || "").trim();
 
-    if (configuredAuth && incomingAuth !== configuredAuth) {
+    if (!configuredAuth && process.env.NODE_ENV === "production") {
+      throw new AppError("REVENUECAT_WEBHOOK_AUTH_MISSING", 500, "RevenueCat webhook anahtarı tanımlı değil");
+    }
+
+    const configured = Buffer.from(configuredAuth);
+    const incoming = Buffer.from(incomingAuth);
+    const isAuthorized =
+      !configuredAuth || (incoming.length === configured.length && timingSafeEqual(incoming, configured));
+    if (!isAuthorized) {
       throw new AppError("REVENUECAT_UNAUTHORIZED", 401, "RevenueCat webhook yetkisi gecersiz");
     }
 
@@ -74,7 +83,7 @@ export class BillingController {
         status_code: 202,
         success: true,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "tenant",
         target_id: tenantId,
         metadata: {
@@ -115,7 +124,7 @@ export class BillingController {
       status_code: 200,
       success: true,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "tenant",
       target_id: tenant.id,
       metadata: {

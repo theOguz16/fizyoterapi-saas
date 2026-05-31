@@ -27,7 +27,7 @@ describe("group classes helpers", () => {
         lessonMode: "GROUP",
         allowDropInBooking: true,
         selectedSubLesson: "Pilates",
-      }).map((row: any) => row.id)
+      }).map((row) => row.id)
     ).toEqual(["1", "3"]);
   });
 
@@ -43,7 +43,7 @@ describe("group classes helpers", () => {
         lessonMode: "GROUP",
         allowDropInBooking: true,
         selectedSubLesson: "Pilates",
-      }).map((row: any) => row.id)
+      }).map((row) => row.id)
     ).toEqual(["1"]);
   });
 

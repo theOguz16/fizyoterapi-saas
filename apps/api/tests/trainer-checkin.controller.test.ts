@@ -78,13 +78,42 @@ describe("trainer checkin controller", () => {
       findOne: vi.fn().mockResolvedValue(member),
     };
     const userPackageRepo = {
+      findOne: vi.fn().mockResolvedValue(bookedUserPackage),
       save: vi.fn(async (row) => row),
     };
+    const bookingRepo = {
+      findOne: vi.fn().mockResolvedValue({
+        id: "booking-1",
+        tenant_id: "tenant-1",
+        checkin_status: "PENDING",
+        meta: {},
+      }),
+      save: vi.fn(async (row) => row),
+    };
+    const attendanceRepo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn((row) => ({ id: "attendance-1", ...row })),
+      save: vi.fn(async (row) => row),
+    };
+
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback) =>
+      callback({
+        getRepository: (entity: { name?: string }) => {
+          const name = entity?.name || "";
+          if (name.includes("Booking")) return bookingRepo;
+          if (name.includes("Attendance")) return attendanceRepo;
+          if (name.includes("UserPackage")) return userPackageRepo;
+          return { findOne: vi.fn(), save: vi.fn(async (row) => row) };
+        },
+      } as never)
+    );
 
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = entity?.name || "";
       if (name.includes("UserPackage")) return userPackageRepo as any;
       if (name.includes("User")) return userRepo as any;
+      if (name.includes("Attendance")) return attendanceRepo as any;
+      if (name.includes("Booking")) return bookingRepo as any;
       return { save: vi.fn(async (row) => row) } as any;
     });
 

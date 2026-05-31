@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getAdminSettingsApi, updateAdminSettingsApi } from "@/lib/mobile-api";
 import { TURKEY_CITIES, TURKEY_DISTRICTS_BY_CITY } from "@/lib/turkey-locations";
@@ -16,6 +16,7 @@ type PickerMode = "city" | "district" | null;
 
 export default function AdminSalonProfileScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const query = useQuery({ queryKey: ["admin-salon-profile"], queryFn: getAdminSettingsApi });
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [search, setSearch] = useState("");
@@ -51,6 +52,7 @@ export default function AdminSalonProfileScreen() {
     if (!normalizedSearch) return source;
     return source.filter((item) => item.includes(normalizedSearch));
   }, [districtOptions, pickerMode, search]);
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   const mutation = useMutation({
   mutationFn: () =>
@@ -120,7 +122,7 @@ export default function AdminSalonProfileScreen() {
         icon="clinic"
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}
-        onBack={() => router.replace("/(admin)/salon" as never)}
+        onBack={() => router.replace((backTo || "/(admin)/salon") as never)}
       >
         <SurfaceCard tone="primary">
           <Text style={styles.title}>Yayın görünümü</Text>

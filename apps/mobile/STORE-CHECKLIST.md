@@ -1,4 +1,4 @@
-# Clinerva Mobile Store Checklist
+# FizyoFlow Mobile Store Checklist
 
 ## Zorunlu Hazırlık
 - Uygulama gizlilik metni ve KVKK/aydınlatma linkleri

@@ -17,6 +17,7 @@ import { Booking, BookingStatus } from "../entities/booking.entity";
 import { AuditLogService } from "../services/audit-log.service";
 import { GroupClassService } from "../services/group-class.service";
 import { UserPackage } from "../entities/user-package.entity";
+import { isReservedPublicSlug } from "../constants/reserved-slugs";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
@@ -135,6 +136,22 @@ export class PublicController {
         hero_title: profile.hero_title,
         hero_subtitle: profile.hero_subtitle,
         hero_image_url: profile.hero_image_url,
+        seo_title: profile.seo_title || null,
+        seo_description: profile.seo_description || null,
+        google_business_url: profile.google_business_url || null,
+        google_maps_url: profile.google_maps_url || null,
+        business_category: profile.business_category || null,
+        service_area: Array.isArray(profile.service_area) ? profile.service_area : [],
+        managed_growth_status: profile.managed_growth_status || "PREPARING",
+        digital_brief: {
+          logo_url: profile.digital_brief?.logo_url || "",
+          gallery_urls: Array.isArray(profile.digital_brief?.gallery_urls) ? profile.digital_brief.gallery_urls : [],
+          working_hours_note: profile.digital_brief?.working_hours_note || "",
+          review_url: profile.digital_brief?.review_url || "",
+          campaign_note: profile.digital_brief?.campaign_note || "",
+          target_audience: profile.digital_brief?.target_audience || "",
+          brand_voice: profile.digital_brief?.brand_voice || "",
+        },
         about_text: profile.about_text,
         why_us: profile.why_us,
         services: PublicController.buildPublicServiceCatalog(publicPackages, profile.services, packageMemberCounts),
@@ -196,7 +213,7 @@ export class PublicController {
       // Public whitelist (tenant_id vb. internal alanları sızdırma)
       const data = packages.map((p) => {
         const rules = p.rules && typeof p.rules === "object" ? (p.rules as Record<string, unknown>) : {};
-        const lessonMode = String(rules.lesson_mode ?? (p.capacity > 2 ? "GROUP" : p.capacity === 2 ? "DUO" : "SINGLE")).toUpperCase();
+        const lessonMode = String(rules.lesson_mode ?? (p.capacity > 2 ? "GROUP" : p.capacity === 2 ? "DUO" : "PRIVATE")).toUpperCase();
         const weeklyClassHours = PublicController.deriveWeeklyClassHours(p);
         const dropInGroupPackage = lessonMode === "GROUP";
         return {
@@ -244,7 +261,13 @@ export class PublicController {
     const packageIds = PublicController.parsePackageIds(req.query.package_ids);
     const selectedPackages = packageIds.length
       ? await AppDataSource.getRepository(Package).find({
-          where: packageIds.map((id) => ({ tenant_id: context.tenant!.id, id })) as any,
+          where: packageIds.map((id) => ({
+            tenant_id: context.tenant!.id,
+            id,
+            is_active: true,
+            is_public: true,
+            is_visible: true,
+          })) as any,
         })
       : [];
     const businessHours = profile.business_hours as Record<string, unknown> | undefined;
@@ -274,7 +297,9 @@ export class PublicController {
         })
       : [];
     const packageRow = packageId
-      ? await AppDataSource.getRepository(Package).findOne({ where: { tenant_id: tenant.id, id: packageId } })
+      ? await AppDataSource.getRepository(Package).findOne({
+          where: { tenant_id: tenant.id, id: packageId, is_active: true, is_public: true, is_visible: true },
+        })
       : null;
     const requiredMatchingSlots = selectedDayRows.length > 0
       ? Math.max(1, Math.ceil(selectedDayRows.length * (2 / 3)))
@@ -399,6 +424,60 @@ export class PublicController {
     });
   }
 
+  static async createDemoLead(req: Request, res: Response) {
+    const website = String(req.body?.website ?? "").trim();
+    if (website) {
+      return res.status(202).json({ message: "Demo talebiniz alındı." });
+    }
+
+    const fullName = String(req.body?.full_name ?? "").trim();
+    const clinicName = String(req.body?.clinic_name ?? "").trim();
+    const city = String(req.body?.city ?? "").trim();
+    const note = String(req.body?.note ?? "").trim();
+    const clinicType = String(req.body?.clinic_type ?? "").trim().slice(0, 80);
+    const primaryNeed = String(req.body?.primary_need ?? "").trim().slice(0, 80);
+    const attribution = String(req.body?.attribution ?? "").trim().slice(0, 160);
+    const pagePath = String(req.body?.page_path ?? "").trim().slice(0, 240);
+    const consent = Boolean(req.body?.consent);
+    const { phoneClean } = PublicController.normalizePhone(req.body?.phone);
+
+    if (fullName.length < 2) throw new AppError("VALIDATION_ERROR", 400, "Ad Soyad en az 2 karakter olmalıdır");
+    if (clinicName.length < 2) throw new AppError("VALIDATION_ERROR", 400, "Klinik adı en az 2 karakter olmalıdır");
+    if (!phoneClean || phoneClean.length < 7 || phoneClean.length > 15) throw new AppError("VALIDATION_ERROR", 400, "Geçersiz telefon numarası");
+    if (city.length > 100) throw new AppError("VALIDATION_ERROR", 400, "Şehir/ilçe alanı çok uzun");
+    if (note.length > 1200) throw new AppError("VALIDATION_ERROR", 400, "Not çok uzun");
+    if (!consent) throw new AppError("VALIDATION_ERROR", 400, "Demo talebi için aydınlatma metni onayı gereklidir");
+
+    await AuditLogService.log({
+      tenant_id: null,
+      actor_role: "PUBLIC",
+      event_type: "PRODUCT_SITE_DEMO_LEAD_SUBMIT",
+      action: "PRODUCT_SITE_DEMO_LEAD_SUBMIT",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 202,
+      success: true,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      target_type: "product_demo_lead",
+      target_id: null,
+      metadata: {
+        source: "PRODUCT_SITE_DEMO",
+        full_name: fullName,
+        clinic_name: clinicName,
+        phone: phoneClean,
+        city: city || null,
+        note: note || null,
+        clinic_type: clinicType || null,
+        primary_need: primaryNeed || null,
+        attribution: attribution || null,
+        page_path: pagePath || null,
+      },
+    });
+
+    return res.status(202).json({ message: "Demo talebiniz alındı. Fizyoflow ekibi kısa sürede sizinle iletişime geçecek." });
+  }
+
   // --- POST /salons/:slug/leads ---
   static async createLead(req: Request, res: Response) {
     try {
@@ -411,6 +490,9 @@ export class PublicController {
       const interest = typeof req.body?.interest === "string" ? req.body.interest.trim() : undefined;
       const availabilityNote =
         typeof req.body?.availability_note === "string" ? req.body.availability_note.trim() : undefined;
+      const leadSource = String(req.body?.source ?? "").trim().slice(0, 80) || null;
+      const attribution = String(req.body?.attribution ?? "").trim().slice(0, 160) || null;
+      const pagePath = String(req.body?.page_path ?? "").trim().slice(0, 240) || null;
 
       const { phoneClean } = PublicController.normalizePhone(req.body?.phone);
 
@@ -471,7 +553,7 @@ export class PublicController {
         status_code: 201,
         success: true,
         ip_address: req.ip || null,
-        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "lead",
         target_id: newLead.id,
         metadata: {
@@ -479,6 +561,9 @@ export class PublicController {
           phone: phoneClean,
           full_name: fullName,
           interest: interest || null,
+          source: leadSource,
+          attribution,
+          page_path: pagePath,
         },
       });
 
@@ -490,6 +575,58 @@ export class PublicController {
       console.error("Lead oluşturulurken hata:", error);
       throw new AppError("LEAD_CREATION_ERROR", 500, "Lead oluşturulurken hata oluştu");
     }
+  }
+
+  static async trackSalonEvent(req: Request, res: Response) {
+    const slug = PublicController.getSlug(req);
+    if (!slug) throw new AppError("INVALID_SLUG", 400, "Geçersiz slug");
+
+    const eventType = String(req.body?.event_type ?? "").trim().toUpperCase();
+    const allowedEvents = new Set([
+      "PAGE_VIEW",
+      "LEAD_SUBMIT",
+      "WHATSAPP_CLICK",
+      "PHONE_CLICK",
+      "MAP_CLICK",
+      "INSTAGRAM_CLICK",
+      "REVIEW_CLICK",
+      "SECTION_VIEW",
+    ]);
+    if (!allowedEvents.has(eventType)) {
+      throw new AppError("VALIDATION_ERROR", 400, "Geçersiz etkinlik türü");
+    }
+
+    const context = await PublicController.resolvePublicSalonContext(slug);
+    if (!context.tenant) {
+      throw new AppError("SALON_NOT_FOUND", 404, "Salon bulunamadı");
+    }
+
+    const source = String(req.body?.source ?? "").trim().slice(0, 80) || null;
+    const pagePath = String(req.body?.page_path ?? "").trim().slice(0, 240) || null;
+    const section = String(req.body?.section ?? "").trim().slice(0, 80) || null;
+
+    await AuditLogService.log({
+      tenant_id: context.tenant.id,
+      actor_role: "PUBLIC",
+      event_type: `PUBLIC_SITE_${eventType}`,
+      action: `PUBLIC_SITE_${eventType}`,
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 202,
+      success: true,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      target_type: "public_site",
+      target_id: context.tenant.id,
+      metadata: {
+        tenant_slug: context.tenant.slug,
+        source,
+        page_path: pagePath,
+        section,
+      },
+    });
+
+    return res.status(202).json({ ok: true });
   }
 
   static async listCities(_req: Request, res: Response) {
@@ -580,6 +717,10 @@ export class PublicController {
   }
 
   private static async resolvePublicSalonContext(slug: string): Promise<{ tenant: Tenant | null; profile: SalonProfile | null }> {
+    if (!slug || isReservedPublicSlug(slug)) {
+      return { tenant: null, profile: null };
+    }
+
     const profileRepo = AppDataSource.getRepository(SalonProfile);
     const tenantRepo = AppDataSource.getRepository(Tenant);
 
@@ -617,14 +758,14 @@ export class PublicController {
     return {
       tenant_id: tenant.id,
       slug,
-      hero_title: tenant.name || "Clinerva Salon",
+      hero_title: tenant.name || "FizyoFlow Salon",
       hero_subtitle: "Salon profili hazırlanıyor. Güncel bilgiler yakında yayınlanacak.",
       about_text: "",
       why_us: [],
       services: [],
       location: {},
       social_links: {},
-      theme: "clinerva-v2",
+      theme: "fizyoflow-v2",
       primary_color: "#0EA5E9",
       business_hours: {
         timezone: tenant.timezone || "Europe/Istanbul",
@@ -768,7 +909,6 @@ export class PublicController {
     const day = startOfWeek.getDay() || 7;
     startOfWeek.setDate(startOfWeek.getDate() - day + 1);
     startOfWeek.setHours(0, 0, 0, 0);
-    const timeRangeLabel = `${String(businessHours?.start_time || "09:00")} - ${String(businessHours?.end_time || "18:00")}`;
     const slotMinutes = Math.max(15, Math.min(180, Number(businessHours?.slot_minutes || 60)));
     const breakMinutes = Math.max(0, Math.min(60, Number(businessHours?.break_duration_minutes || 0)));
     const flowLabel = `${slotMinutes} dk ders`;
@@ -855,7 +995,7 @@ export class PublicController {
 
     const hasDropInGroupPackage = packages.some((pkg) => {
       const rules = pkg.rules && typeof pkg.rules === "object" ? (pkg.rules as Record<string, unknown>) : {};
-      const lessonMode = String(rules.lesson_mode ?? (pkg.capacity > 2 ? "GROUP" : pkg.capacity === 2 ? "DUO" : "SINGLE")).toUpperCase();
+      const lessonMode = String(rules.lesson_mode ?? (pkg.capacity > 2 ? "GROUP" : pkg.capacity === 2 ? "DUO" : "PRIVATE")).toUpperCase();
       const allowDropInBooking =
         typeof rules.allow_drop_in_booking === "boolean" ? rules.allow_drop_in_booking : lessonMode === "GROUP";
       return allowDropInBooking;
@@ -1059,6 +1199,9 @@ export class PublicController {
 
     const latestByTenant = new Map<string, SalonProfile>();
     for (const row of rows) {
+      if (!row.slug || isReservedPublicSlug(row.slug)) {
+        continue;
+      }
       if (!latestByTenant.has(row.tenant_id)) {
         latestByTenant.set(row.tenant_id, row);
       }

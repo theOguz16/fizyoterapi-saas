@@ -19,8 +19,13 @@ const poppins = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Clinerva",
-  description: "Clinerva fizyoterapi klinik yönetim platformu",
+  title: "Fizyoflow Panel",
+  description: "Fizyoflow fizyoterapi klinik yönetim platformu",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

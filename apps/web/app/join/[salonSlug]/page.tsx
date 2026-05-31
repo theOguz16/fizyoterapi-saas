@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { JoinRedirectClient } from "./join-redirect-client";
 
 type SalonJoinPageProps = {
@@ -5,8 +6,17 @@ type SalonJoinPageProps = {
   searchParams?: { code?: string };
 };
 
+export const metadata: Metadata = {
+  title: "Fizyoflow uygulamasına yönlendiriliyorsunuz",
+  description: "Fizyoflow klinik daveti uygulama açılış ekranı.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 function getDeepLink(salonSlug: string) {
-  return `clinerva://(intake-member)/salons/${encodeURIComponent(salonSlug)}`;
+  return `fizyoflow://(intake-member)/salons/${encodeURIComponent(salonSlug)}`;
 }
 
 export default function SalonJoinPage({ params, searchParams }: SalonJoinPageProps) {

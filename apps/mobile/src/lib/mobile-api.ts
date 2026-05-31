@@ -94,9 +94,14 @@ export type PurchaseDaySelection = {
 export type PackageOption = {
   id: string;
   title: string;
+  type?: string | null;
   display_price?: string | number | null;
   total_credits?: number | null;
   summary?: string | null;
+  rules?: Record<string, unknown> | null;
+  service_key?: string | null;
+  service_name?: string | null;
+  lesson_category?: string | null;
   weekly_class_hours?: number | null;
   required_preference_slots?: number | null;
   required_trainer_free_slots?: number | null;
@@ -144,18 +149,27 @@ export type AdminPackageFormTemplate = {
   service_key: string;
   lesson_category: string;
   service_name: string;
+  category_group?: string | null;
+  category_label?: string | null;
+  sub_category_key?: string | null;
+  sub_category_label?: string | null;
   capacity_label: string;
   suggested_capacity: number;
   starting_price: string;
   trainer_commission_rate: string;
   package_type: string;
+  package_type_label?: string | null;
   session_duration_minutes?: number;
   break_duration_minutes?: number;
-  lesson_mode?: string;
+  lesson_mode?: "PRIVATE" | "DUO" | "GROUP" | string;
+  lesson_mode_label?: string | null;
+  sub_lessons?: string[];
+  default_title?: string | null;
 };
 
 export type AdminPackageFormOptions = {
   templates?: AdminPackageFormTemplate[];
+  lesson_mode_options?: Array<{ value: "PRIVATE" | "DUO" | "GROUP" | string; label: string; suggested_capacity: number }>;
   linkable_group_classes?: AdminSession[];
 };
 
@@ -164,14 +178,17 @@ export type AdminPackageAssignment = {
   package_id: string;
   trainer_id: string;
   is_active: boolean;
+  package_type?: string | null;
   package_title?: string | null;
   package_display_price?: string | number | null;
   package_service_name?: string | null;
   package_lesson_category?: string | null;
   package_capacity_label?: string | null;
   package_commission_label?: string | null;
+  package_is_active?: boolean | null;
   trainer_full_name?: string | null;
   trainer_email?: string | null;
+  trainer_is_active?: boolean | null;
 };
 
 export type TrainerAssignedPackage = {
@@ -185,6 +202,11 @@ export type TrainerAssignedPackage = {
   lesson_category_label?: string | null;
   package_type?: string | null;
   trainer_commission_rate?: number | null;
+
+  lesson_mode?: "PRIVATE" | "DUO" | "GROUP" | string | null;
+  sub_lessons?: string[];
+  session_duration_minutes?: number | null;
+  break_duration_minutes?: number | null;
 };
 
 export type TrainerOption = {
@@ -226,9 +248,13 @@ export type MemberPurchaseDraft = {
     package_price?: string | number | null;
     preferred_slots?: PurchaseDaySelection[];
     weekly_frequency?: number;
+    duo_partner_name?: string;
+    duo_partner_contact?: string;
   }>;
   trainer_id?: string;
   selected_sub_lesson?: string;
+  duo_partner_name?: string;
+  duo_partner_contact?: string;
   note?: string;
   availability_context?: {
     source: "MEMBER_AVAILABILITY";
@@ -296,6 +322,10 @@ export type TrainerScheduleEntry = {
   pending_schedule_change?: MemberScheduleChangeRequest | null;
   assignable_slots?: AssignableBookingSlot[] | null;
   is_group_class?: boolean | null;
+  is_duo?: boolean | null;
+  duo_partner_name?: string | null;
+  duo_partner_contact?: string | null;
+  duo_status?: string | null;
   lesson_name?: string | null;
   group_class_id?: string | null;
   recurrence_label?: string | null;
@@ -462,12 +492,20 @@ export type MemberOwnedPackage = {
   total_credits?: number | null;
   package_total_credits?: number | null;
   remaining_credits?: number | null;
-  status?: "ACTIVE" | "EXPIRED" | "UPCOMING";
+  status?: "ACTIVE" | "EXPIRED" | "UPCOMING" | "AWAITING_PARTNER_PAYMENT";
   starts_at?: string | null;
   expires_at?: string | null;
   created_at?: string | null;
   source_request_id?: string | null;
   package_snapshot?: Record<string, unknown> | null;
+  lesson_mode?: string | null;
+  is_duo?: boolean | null;
+  duo_status?: string | null;
+  duo_partner_name?: string | null;
+  duo_partner_contact?: string | null;
+  duo_invite_url?: string | null;
+  duo_invite_token?: string | null;
+  duo_payment_status?: string | null;
 
   linked_group_classes?: Array<{
     id?: string;
@@ -524,6 +562,11 @@ export type AdminApprovalItem = {
   notification_scope?: "SALON_MEMBERS" | "INVITED_MEMBERS" | null;
   invited_member_count?: number | null;
   joined_member_count?: number | null;
+  is_duo?: boolean | null;
+  duo_partner_name?: string | null;
+  duo_partner_contact?: string | null;
+  duo_payment_status?: string | null;
+  duo_payment_note?: string | null;
 };
 
 export type AdminNotificationLogItem = {
@@ -542,14 +585,19 @@ export type AdminNotificationLogItem = {
 
 export type AdminRiskMemberItem = {
   member_id?: string | null;
+  full_name?: string | null;
   member_full_name?: string | null;
   member_name?: string | null;
+  email?: string | null;
   risk_score?: number | null;
+  score?: number | null;
   level?: string | null;
   risk_label?: string | null;
   primary_reason?: string | null;
   reasom?: string | null;
+  reasons?: string[] | null;
   attendance_gap_days?: number | null;
+  days_since_attendance?: number | null;
   remaining_credits?: number | null;
   last_measurement_at?: string | null;
 };
@@ -666,11 +714,20 @@ export async function registerApi(input: {
   });
 }
 
-export async function loginApi(input: { email: string; password: string; tenantSlug?: string }) {
-  return httpRequest<SessionEnvelope>("/auth/login", {
+export async function loginApi(input: { email: string; password: string; tenantSlug?: string; role?: SessionRole; e2e?: boolean }) {
+  const { e2e, ...body } = input;
+  const useE2EEndpoint = e2e && typeof __DEV__ !== "undefined" && __DEV__;
+  return httpRequest<SessionEnvelope>(useE2EEndpoint ? "/internal/e2e/session" : "/auth/login", {
     method: "POST",
     auth: false,
-    body: input,
+    body,
+  });
+}
+
+export async function switchRoleApi(role: SessionRole) {
+  return httpRequest<SessionEnvelope>("/auth/switch-role", {
+    method: "POST",
+    body: { role },
   });
 }
 
@@ -793,6 +850,32 @@ export type AdminMemberDetail = {
   } | null;
 };
 
+export type AdminMemberPackage = {
+  id: string;
+  user_id: string;
+  package_id: string;
+  remaining_credits: number;
+  starts_at?: string | null;
+  expires_at?: string | null;
+  is_active: boolean;
+  purchase_price?: string | number | null;
+  latest_package_price?: string | number | null;
+  package_snapshot?: Record<string, unknown> | null;
+  source_request_id?: string | null;
+  is_expired?: boolean;
+  package_title?: string | null;
+  package_type?: string | null;
+  package_total_credits?: number | null;
+  package_duration_days?: number | null;
+  package_price?: number | null;
+  trainer_summary?: string | null;
+};
+
+export type AdminMemberPackagesResponse = {
+  data: AdminMemberPackage[];
+  totalRemainingCredits: number;
+};
+
 export type AdminTrainerEarnings = {
   daily_income?: number;
   weekly_income?: number;
@@ -862,6 +945,7 @@ export async function inviteAcceptApi(payload: {
   first_name: string;
   last_name: string;
   phone: string;
+  email?: string;
   password: string;
 }) {
   return httpRequest<any>("/public/invites/accept", {
@@ -1323,7 +1407,7 @@ export async function trainerRescheduleBookingApi(id: string, payload: BookingRe
 }
 
 export async function getTrainerRiskApi() {
-  return httpRequest<any>("/trainer/risk");
+  return httpRequest<any>("/trainer/risk/members");
 }
 
 export async function getAdminDashboardApi() {
@@ -1468,8 +1552,19 @@ export async function deleteAdminPackageApi(id: string) {
   });
 }
 
-export async function getAdminPackageAssignmentsApi() {
-  const response = await httpRequest<{ data?: AdminPackageAssignment[] } | AdminPackageAssignment[]>("/admin/package-trainers");
+export async function getAdminPackageAssignmentsApi(query?: {
+  trainer_id?: string;
+  package_id?: string;
+  is_active?: boolean;
+} | any) {
+  const search = new URLSearchParams();
+  if (query?.trainer_id) search.set("trainer_id", query.trainer_id);
+  if (query?.package_id) search.set("package_id", query.package_id);
+  if (query?.is_active !== undefined) search.set("is_active", String(query.is_active));
+  const qs = search.toString();
+  const response = await httpRequest<{ data?: AdminPackageAssignment[] } | AdminPackageAssignment[]>(
+    `/admin/package-trainers${qs ? `?${qs}` : ""}`
+  );
   if (Array.isArray(response)) return response;
   return Array.isArray(response?.data) ? response.data : [];
 }
@@ -1492,6 +1587,62 @@ export async function getAdminMemberDetailApi(id: string) {
   const response = await httpRequest<{ data?: AdminMemberDetail } | AdminMemberDetail>(`/admin/members/${encodeURIComponent(id)}`);
   const data = "data" in (response as any) ? (response as any).data || null : response;
   return data ? { ...data, role: "MEMBER" as const } : null;
+}
+
+export async function getAdminMemberPackagesApi(id: string) {
+  const response = await httpRequest<AdminMemberPackagesResponse>(
+    `/admin/members/${encodeURIComponent(id)}/packages`
+  );
+
+  return {
+    data: Array.isArray(response.data) ? response.data : [],
+    totalRemainingCredits: Number(response.totalRemainingCredits || 0),
+  };
+}
+
+export async function assignAdminMemberPackageApi(
+  id: string,
+  payload: {
+    package_id: string;
+    starts_at?: string;
+    expires_at?: string | null;
+  }
+) {
+  const response = await httpRequest<{ data?: AdminMemberPackage } | AdminMemberPackage>(
+    `/admin/members/${encodeURIComponent(id)}/packages`,
+    {
+      method: "POST",
+      body: payload,
+    }
+  );
+
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function adjustAdminMemberPackageCreditsApi(
+  userPackageId: string,
+  remaining_credits: number
+) {
+  const response = await httpRequest<{ data?: AdminMemberPackage } | AdminMemberPackage>(
+    `/admin/members/user-packages/${encodeURIComponent(userPackageId)}/credits`,
+    {
+      method: "PATCH",
+      body: { remaining_credits },
+    }
+  );
+
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function removeAdminMemberPackageApi(userPackageId: string) {
+  const response = await httpRequest<{ message?: string; data?: AdminMemberPackage }>(
+    `/admin/members/user-packages/${encodeURIComponent(userPackageId)}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return response;
 }
 
 export async function getAdminTrainerDetailApi(id: string) {

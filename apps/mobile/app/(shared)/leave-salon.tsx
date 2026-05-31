@@ -51,18 +51,18 @@ export default function LeaveSalonScreen() {
 });
 
   return (
-    <AppShell title="Salondan ayril" subtitle="Aktif paketlerin etkilenebilir ve planlanmis derslerin iptal olabilir." icon="risk">
+    <AppShell title="Salondan ayrıl" subtitle="Aktif paketlerin etkilenebilir ve planlanmış derslerin iptal olabilir." icon="risk">
       <View style={styles.metricsRow}>
-        <MetricCard label="Sonuc" value="Uyelik kapanir" hint="Salon bağlantısi biter" icon="risk" />
-        <MetricCard label="Sonraki adim" value="Yeni oneriler" hint="Tekrar seçim akışı" icon="salon" />
+        <MetricCard label="Sonuç" value="Üyelik kapanır" hint="Salon bağlantısı biter" icon="risk" />
+        <MetricCard label="Sonraki adım" value="Yeni öneriler" hint="Tekrar seçim akışı" icon="salon" />
       </View>
       <SurfaceCard tone="warning">
-        <Text style={styles.copy}>Bu işlem sonrasi baska salon önerileri tekrar acilacak. Mevcut haklar ve onayli dersler salon kurallarına göre güncellenebilir.</Text>
+        <Text style={styles.copy}>Bu işlem sonrası başka salon önerileri tekrar açılacak. Mevcut haklar ve onaylı dersler salon kurallarına göre güncellenebilir.</Text>
       </SurfaceCard>
       <SurfaceCard>
-        <Text style={styles.copy}>Eger aktif paketin veya planlanmış derslerin varsa, bunlar salon kurallarına göre iptal, iade veya yeniden planlama sürecine girebilir.</Text>
+        <Text style={styles.copy}>Eğer aktif paketin veya planlanmış derslerin varsa, bunlar salon kurallarına göre iptal, iade veya yeniden planlama sürecine girebilir.</Text>
       </SurfaceCard>
-      <ActionButton label="Salondan Ayril" icon="risk" variant="danger" onPress={() => mutation.mutate()} loading={mutation.isPending} />
+      <ActionButton label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => mutation.mutate()} loading={mutation.isPending} />
       <ActionButton label="Vazgeç" icon="spark" variant="ghost" onPress={() => safeBack(router, "/(member)/profile")} />
     </AppShell>
   );

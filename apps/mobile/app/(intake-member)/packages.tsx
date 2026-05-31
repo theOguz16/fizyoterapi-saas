@@ -16,8 +16,24 @@ import { SelectionChip } from "@/theme/components/selection-chip";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
 
-type PackageFilterKey = "ALL" | "GROUP" | "PT" | "SCOLIOSIS" | "PILATES" | "REFORMER";
-type PackageModeFilterKey = "ALL" | "SINGLE" | "DUO" | "GROUP";
+type PackageFilterKey =
+  | "ALL"
+  | "GROUP"
+  | "PT"
+  | "SCOLIOSIS"
+  | "PILATES"
+  | "REFORMER"
+  | "YOGA"
+  | "CHILD"
+  | "PREGNANCY"
+  | "MANUAL"
+  | "REHAB"
+  | "SPORTS"
+  | "POSTURE"
+  | "PAIN"
+  | "TRIAL"
+  | "STANDARD";
+type PackageModeFilterKey = "ALL" | "PRIVATE" | "DUO" | "GROUP";
 
 const FILTER_LABELS: Record<PackageFilterKey, string> = {
   ALL: "Tümü",
@@ -26,13 +42,23 @@ const FILTER_LABELS: Record<PackageFilterKey, string> = {
   SCOLIOSIS: "Skolyoz",
   PILATES: "Pilates",
   REFORMER: "Reformer",
+  YOGA: "Yoga",
+  CHILD: "Çocuk",
+  PREGNANCY: "Gebe / doğum sonrası",
+  MANUAL: "Manuel terapi",
+  REHAB: "Rehabilitasyon",
+  SPORTS: "Antrenman",
+  POSTURE: "Postür",
+  PAIN: "Bel-boyun",
+  TRIAL: "Deneme",
+  STANDARD: "Standart",
 };
 
 const MODE_FILTER_LABELS: Record<PackageModeFilterKey, string> = {
   ALL: "Tüm akışlar",
-  SINGLE: "Single",
-  DUO: "Duo",
-  GROUP: "Group",
+  PRIVATE: "Özel ders",
+  DUO: "İkili ders",
+  GROUP: "Grup dersi",
 };
 
 export default function PackageListScreen() {
@@ -47,11 +73,15 @@ export default function PackageListScreen() {
     queryFn: () => getPublicSalonPackagesApi(String(params.slug)),
   });
 
-  const packages = Array.isArray(packageQuery.data)
-    ? packageQuery.data
-    : Array.isArray((packageQuery.data as any)?.data)
-      ? (packageQuery.data as any).data
-      : [];
+  const packages = useMemo(
+    () =>
+      Array.isArray(packageQuery.data)
+        ? packageQuery.data
+        : Array.isArray((packageQuery.data as any)?.data)
+          ? (packageQuery.data as any).data
+          : [],
+    [packageQuery.data]
+  );
   const suggestedFilter = useMemo(() => deriveSuggestedFilter(memberIntent), [memberIntent]);
   const rankedPackages = useMemo(
     () =>
@@ -60,6 +90,10 @@ export default function PackageListScreen() {
       ),
     [memberIntent, packages, suggestedFilter]
   );
+  const recommendedPackageId = useMemo(() => {
+    const recommended = rankedPackages.find((pkg: any) => scorePackageForIntent(pkg, memberIntent, suggestedFilter) > 0);
+    return recommended ? String(recommended.id) : "";
+  }, [memberIntent, rankedPackages, suggestedFilter]);
   const availableFilters = useMemo(() => {
     const keys = new Set<PackageFilterKey>(["ALL"]);
     rankedPackages.forEach((pkg: any) => {
@@ -134,6 +168,8 @@ export default function PackageListScreen() {
         trainer_id: existingSelections.get(String(row.id))?.trainer_id || "",
         trainer_name: existingSelections.get(String(row.id))?.trainer_name || "",
         selected_sub_lesson: existingSelections.get(String(row.id))?.selected_sub_lesson || "",
+        duo_partner_name: existingSelections.get(String(row.id))?.duo_partner_name || "",
+        duo_partner_contact: existingSelections.get(String(row.id))?.duo_partner_contact || "",
       })),
       packageTitle: aggregateTitle,
       packagePrice: String(
@@ -192,7 +228,7 @@ export default function PackageListScreen() {
                 <Text style={styles.filterDescription}>
                   {suggestedFilter === "ALL"
                     ? "Tüm paketleri görebilirsin. İstersen ders tipine göre listeyi daralt."
-                    : `Onboarding cevabına göre ${FILTER_LABELS[suggestedFilter]} öne alındı, diğer paketleri de filtrelerle görebilirsin.`}
+                    : `Onboarding cevabına göre ${FILTER_LABELS[suggestedFilter]} paketleri en üste alındı, diğer paketleri de filtrelerle görebilirsin.`}
                 </Text>
               </View>
               {suggestedFilter !== "ALL" ? <StatusBadge label={`Öneri: ${FILTER_LABELS[suggestedFilter]}`} tone="info" /> : null}
@@ -237,20 +273,29 @@ export default function PackageListScreen() {
           icon="package"
         />
       ) : (
-        filteredPackages.map((pkg: any, index: number) => (
+        filteredPackages.map((pkg: any, index: number) => {
+          const isRecommended = recommendedPackageId === String(pkg.id);
+          return (
           <AnimatedEntrance key={pkg.id} delay={80 + index * 70}>
-            <SurfaceCard tone="primary" padding="hero">
+            <SurfaceCard
+              testID={isRecommended ? "intake-package-recommended-surface" : `intake-package-surface-${index}`}
+              tone="primary"
+              padding="hero"
+              style={isRecommended ? styles.recommendedPackageCard : undefined}
+            >
               <Pressable
                 testID={`intake-package-card-${index}`}
-                accessibilityLabel={String(pkg.title || "")}
+                accessibilityLabel={isRecommended ? `${String(pkg.title || "")}, Sana özel öneri` : String(pkg.title || "")}
                 onPress={() => togglePackageSelection(pkg)}
                 style={({ pressed }) => [styles.cardPressable, pressed ? styles.cardPressablePressed : null]}
               >
                 <View style={styles.cardHeader}>
                   <View style={styles.titleWrap}>
                     <Text style={styles.title}>{pkg.title}</Text>
-                    {suggestedFilter !== "ALL" && resolvePackageFilters(pkg).includes(suggestedFilter) ? (
-                      <StatusBadge label="Sana uygun olabilir" tone="success" />
+                    {isRecommended ? (
+                      <StatusBadge label="Sana özel öneri" tone="success" />
+                    ) : suggestedFilter !== "ALL" && resolvePackageFilters(pkg).includes(suggestedFilter) ? (
+                      <StatusBadge label="Profilinle uyumlu" tone="success" />
                     ) : null}
                     {submittedPackageIds.has(String(pkg.id)) ? (
                       <StatusBadge label="Onaya gönderildi" tone="warning" />
@@ -269,9 +314,6 @@ export default function PackageListScreen() {
                   <MetaPill icon="spark" label={`${pkg.session_duration_minutes || 45} dk`} />
                   {pkg.lesson_mode ? <MetaPill icon="package" label={formatLessonModeLabel(String(pkg.lesson_mode))} /> : null}
                 </View>
-                {Array.isArray(pkg.sub_lessons) && pkg.sub_lessons.length > 0 ? (
-                  <Text style={styles.copy}>Alt dersler: {pkg.sub_lessons.join(", ")}</Text>
-                ) : null}
               </Pressable>
               <ActionButton
                 testID={`intake-package-toggle-${index}`}
@@ -282,7 +324,8 @@ export default function PackageListScreen() {
               />
             </SurfaceCard>
           </AnimatedEntrance>
-        ))
+          );
+        })
       )}
       {selectedPackageIds.size > 0 ? (
         <ActionButton
@@ -317,33 +360,41 @@ export default function PackageListScreen() {
 }
 
 function deriveSuggestedFilter(memberIntent: { issue?: string; goal?: string; expectation?: string }): PackageFilterKey {
-  const issue = String(memberIntent.issue || "").toLocaleLowerCase("tr-TR");
-  const goal = String(memberIntent.goal || "").toLocaleLowerCase("tr-TR");
-  const expectation = String(memberIntent.expectation || "").toLocaleLowerCase("tr-TR");
+  const issue = normalizeMatchText(memberIntent.issue);
+  const goal = normalizeMatchText(memberIntent.goal);
+  const expectation = normalizeMatchText(memberIntent.expectation);
   const haystack = `${issue} ${goal} ${expectation}`;
 
   if (haystack.includes("skolyoz")) return "SCOLIOSIS";
+  if (haystack.includes("cocuk") || haystack.includes("pediatrik")) return "CHILD";
+  if (haystack.includes("gebe") || haystack.includes("gebelik") || haystack.includes("dogum")) return "PREGNANCY";
+  if (haystack.includes("sporcu") || haystack.includes("performans") || haystack.includes("antrenman") || haystack.includes("kondisyon")) return "SPORTS";
+  if (haystack.includes("manuel") || haystack.includes("lenf")) return "MANUAL";
+  if (haystack.includes("rehab") || haystack.includes("rehabilitasyon") || haystack.includes("ortopedik") || haystack.includes("norolojik")) return "REHAB";
+  if (haystack.includes("yoga")) return "YOGA";
   if (haystack.includes("grup")) return "GROUP";
   if (haystack.includes("birebir")) return "PT";
-  if (haystack.includes("duruş") || haystack.includes("duruş")) return "PILATES";
+  if (haystack.includes("durus") || haystack.includes("postur")) return "POSTURE";
   if (haystack.includes("reformer")) return "REFORMER";
-  if (haystack.includes("bel") || haystack.includes("boyun") || haystack.includes("sırt") || haystack.includes("ağrı")) return "PT";
+  if (haystack.includes("bel") || haystack.includes("boyun") || haystack.includes("sirt") || haystack.includes("agri")) return "PAIN";
   return "ALL";
 }
 
 function resolvePackageMode(pkg: any): PackageModeFilterKey | null {
   const rawMode = String(pkg?.lesson_mode || "").trim().toUpperCase();
-  if (rawMode === "SINGLE" || rawMode === "DUO" || rawMode === "GROUP") {
-    return rawMode;
-  }
+
+  if (rawMode === "PRIVATE" || rawMode === "SINGLE") return "PRIVATE";
+  if (rawMode === "DUO") return "DUO";
+  if (rawMode === "GROUP") return "GROUP";
+
   return null;
 }
 
 function formatLessonModeLabel(mode: string) {
   const normalized = mode.trim().toUpperCase();
-  if (normalized === "SINGLE") return "Single";
+  if (normalized === "PRIVATE" || normalized === "SINGLE") return "Özel";
   if (normalized === "DUO") return "Duo";
-  if (normalized === "GROUP") return "Group";
+  if (normalized === "GROUP") return "Grup";
   return mode;
 }
 
@@ -355,42 +406,53 @@ function scorePackageForIntent(
   let score = 0;
   const filters = resolvePackageFilters(pkg);
   const mode = resolvePackageMode(pkg);
-  const title = String(pkg?.title || "").toLocaleLowerCase("tr-TR");
-  const summary = String(pkg?.summary || "").toLocaleLowerCase("tr-TR");
-  const haystack = `${title} ${summary}`;
-  const issue = String(memberIntent.issue || "").toLocaleLowerCase("tr-TR");
-  const goal = String(memberIntent.goal || "").toLocaleLowerCase("tr-TR");
-  const expectation = String(memberIntent.expectation || "").toLocaleLowerCase("tr-TR");
-  const weeklyDays = String(memberIntent.weeklyDays || "").toLocaleLowerCase("tr-TR");
+  const packageText = getPackageSearchText(pkg);
+  const issue = normalizeMatchText(memberIntent.issue);
+  const goal = normalizeMatchText(memberIntent.goal);
+  const expectation = normalizeMatchText(memberIntent.expectation);
+  const weeklyDays = normalizeMatchText(memberIntent.weeklyDays);
 
   if (suggestedFilter !== "ALL" && filters.includes(suggestedFilter)) score += 100;
   if (expectation.includes("grup") && mode === "GROUP") score += 24;
-  if (expectation.includes("birebir") && mode === "SINGLE") score += 24;
-  if ((issue.includes("skolyoz") || goal.includes("duruş")) && filters.includes("SCOLIOSIS")) score += 32;
-  if ((issue.includes("ağrı") || issue.includes("bel") || issue.includes("boyun") || issue.includes("sırt")) && filters.includes("PT")) score += 28;
-  if (goal.includes("duruş") && (filters.includes("PILATES") || filters.includes("REFORMER"))) score += 20;
-  if (goal.includes("düzenli") && filters.includes("GROUP")) score += 12;
-  if (weeklyDays.includes("1 gün") && mode === "SINGLE") score += 8;
-  if ((weeklyDays.includes("3 gün") || weeklyDays.includes("4+")) && mode === "GROUP") score += 8;
-  if (haystack.includes("skolyoz")) score += issue.includes("skolyoz") ? 12 : 0;
-  if (haystack.includes("reformer")) score += goal.includes("duruş") ? 6 : 0;
-  if (haystack.includes("pilates")) score += goal.includes("duruş") ? 6 : 0;
+  if (expectation.includes("birebir") && mode === "PRIVATE") score += 24;
+  if ((issue.includes("skolyoz") || goal.includes("durus")) && filters.includes("SCOLIOSIS")) score += 32;
+  if ((issue.includes("agri") || issue.includes("bel") || issue.includes("boyun") || issue.includes("sirt")) && (filters.includes("PAIN") || filters.includes("PT") || filters.includes("REHAB"))) score += 32;
+  if ((goal.includes("durus") || issue.includes("postur")) && (filters.includes("POSTURE") || filters.includes("PILATES") || filters.includes("REFORMER"))) score += 24;
+  if ((goal.includes("cocuk") || issue.includes("cocuk") || issue.includes("pediatrik")) && filters.includes("CHILD")) score += 32;
+  if ((goal.includes("antrenman") || issue.includes("antrenman") || issue.includes("performans")) && filters.includes("SPORTS")) score += 28;
+  if ((issue.includes("gebe") || issue.includes("dogum")) && filters.includes("PREGNANCY")) score += 28;
+  if (goal.includes("duzenli") && filters.includes("GROUP")) score += 12;
+  if (weeklyDays.includes("1 gun") && mode === "PRIVATE") score += 8;
+  if ((weeklyDays.includes("3 gun") || weeklyDays.includes("4+")) && mode === "GROUP") score += 8;
+  if (packageText.includes("skolyoz")) score += issue.includes("skolyoz") ? 12 : 0;
+  if ((packageText.includes("bel") || packageText.includes("boyun") || packageText.includes("sirt")) && (issue.includes("agri") || issue.includes("bel") || issue.includes("boyun") || issue.includes("sirt"))) score += 12;
+  if (packageText.includes("reformer")) score += goal.includes("durus") ? 6 : 0;
+  if (packageText.includes("pilates")) score += goal.includes("durus") ? 6 : 0;
+  if (packageText.includes("yoga")) score += issue.includes("stres") || goal.includes("cocuk") ? 8 : 0;
 
   return score;
 }
 
 function resolvePackageFilters(pkg: any): PackageFilterKey[] {
-  const title = String(pkg?.title || "").toLocaleLowerCase("tr-TR");
-  const summary = String(pkg?.summary || "").toLocaleLowerCase("tr-TR");
+  const packageText = getPackageSearchText(pkg);
   const type = String(pkg?.type || "").toUpperCase();
-  const subLessons = Array.isArray(pkg?.sub_lessons) ? pkg.sub_lessons.map((row: string) => String(row).toLocaleLowerCase("tr-TR")) : [];
   const keys = new Set<PackageFilterKey>();
 
-  if (type === "GROUP" || title.includes("grup")) keys.add("GROUP");
-  if (type === "PT" || title.includes("pt") || title.includes("bireysel")) keys.add("PT");
-  if (type === "SCOLIOSIS" || title.includes("skolyoz") || summary.includes("skolyoz")) keys.add("SCOLIOSIS");
-  if (type === "REFORMER" || title.includes("reformer") || subLessons.some((row: string) => row.includes("reformer"))) keys.add("REFORMER");
-  if (title.includes("pilates") || subLessons.some((row: string) => row.includes("pilates")) || summary.includes("pilates")) keys.add("PILATES");
+  if (type === "GROUP" || packageText.includes("grup")) keys.add("GROUP");
+  if (type === "PT" || packageText.includes("pt") || packageText.includes("bireysel") || packageText.includes("kisisel")) keys.add("PT");
+  if (type === "SCOLIOSIS" || packageText.includes("skolyoz")) keys.add("SCOLIOSIS");
+  if (type === "REFORMER" || packageText.includes("reformer")) keys.add("REFORMER");
+  if (type === "MANUAL" || packageText.includes("manuel") || packageText.includes("lenf")) keys.add("MANUAL");
+  if (packageText.includes("bel") || packageText.includes("boyun") || packageText.includes("sirt") || packageText.includes("agri")) keys.add("PAIN");
+  if (packageText.includes("pilates")) keys.add("PILATES");
+  if (packageText.includes("yoga")) keys.add("YOGA");
+  if (packageText.includes("cocuk") || packageText.includes("pediatrik") || packageText.includes("ergen")) keys.add("CHILD");
+  if (packageText.includes("gebe") || packageText.includes("gebelik") || packageText.includes("dogum")) keys.add("PREGNANCY");
+  if (packageText.includes("rehab") || packageText.includes("rehabilitasyon") || packageText.includes("ortopedik") || packageText.includes("norolojik")) keys.add("REHAB");
+  if (packageText.includes("sporcu") || packageText.includes("performans") || packageText.includes("antrenman") || packageText.includes("kondisyon")) keys.add("SPORTS");
+  if (packageText.includes("postur") || packageText.includes("durus") || packageText.includes("denge")) keys.add("POSTURE");
+  if (packageText.includes("ucretsiz") || packageText.includes("deneme") || Number(pkg?.display_price || 0) === 0) keys.add("TRIAL");
+  if (packageText.includes("standart") || packageText.includes("standard")) keys.add("STANDARD");
 
   if (keys.size === 0) {
     if (String(pkg?.lesson_mode || "").toUpperCase() === "GROUP") {
@@ -401,6 +463,39 @@ function resolvePackageFilters(pkg: any): PackageFilterKey[] {
   }
 
   return Array.from(keys);
+}
+
+function getPackageSearchText(pkg: any) {
+  const rules = pkg?.rules && typeof pkg.rules === "object" ? pkg.rules : {};
+  const subLessons = Array.isArray(pkg?.sub_lessons) ? pkg.sub_lessons : Array.isArray(rules.sub_lessons) ? rules.sub_lessons : [];
+  return normalizeMatchText(
+    [
+      pkg?.title,
+      pkg?.summary,
+      pkg?.type,
+      pkg?.lesson_category,
+      pkg?.service_key,
+      pkg?.service_name,
+      rules.lesson_category,
+      rules.service_key,
+      rules.service_name,
+      rules.category_group,
+      ...subLessons,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function normalizeMatchText(value: unknown) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
 }
 
 function MetaPill({ icon, label }: { icon: "calendar" | "clock" | "spark" | "package"; label: string }) {
@@ -459,6 +554,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: tokens.spacing.sm,
+  },
+  recommendedPackageCard: {
+    borderWidth: 2,
+    borderColor: tokens.colors.success,
+    backgroundColor: "#F4FBF7",
+    shadowColor: tokens.colors.success,
+    shadowOpacity: 0.16,
   },
   filterHeader: {
     gap: tokens.spacing.sm,

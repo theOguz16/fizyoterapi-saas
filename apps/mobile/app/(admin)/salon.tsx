@@ -1,7 +1,9 @@
 // Bu sayfa mobil uygulamada admin akisindaki salon ekranini temsil eder.
 // Ekranin amaci ilgili roldeki kullaniciya bu adimda gereken veri, karar veya aksiyonu sunmaktir.
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import * as Linking from "expo-linking";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getAdminSettingsApi } from "@/lib/mobile-api";
@@ -15,8 +17,45 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
 
+type ManagedGrowthStatus = "PREPARING" | "WAITING_INFO" | "LIVE" | "OPTIMIZING";
+
+const growthStatusCopy: Record<ManagedGrowthStatus, { label: string; tone: "neutral" | "warning" | "success" | "premium"; copy: string }> = {
+  PREPARING: {
+    label: "Hazırlanıyor",
+    tone: "neutral",
+    copy: "Fizyoflow ekibi vitrin metni, görsel düzeni ve SEO alanlarını hazırlıyor.",
+  },
+  WAITING_INFO: {
+    label: "Eksik bilgi bekliyor",
+    tone: "warning",
+    copy: "Yayına almak için klinikten tamamlanması gereken bilgiler var.",
+  },
+  LIVE: {
+    label: "Yayında",
+    tone: "success",
+    copy: "Public klinik vitrininiz ziyaretçilere açık ve paylaşılabilir durumda.",
+  },
+  OPTIMIZING: {
+    label: "Optimizasyonda",
+    tone: "premium",
+    copy: "SEO, Maps, galeri ve CTA akışı Fizyoflow ekibi tarafından iyileştiriliyor.",
+  },
+};
+
+function normalizeGrowthStatus(value: unknown): ManagedGrowthStatus {
+  const status = String(value || "PREPARING").toUpperCase();
+  if (status === "WAITING_INFO" || status === "LIVE" || status === "OPTIMIZING") return status;
+  return "PREPARING";
+}
+
+function publicVitrineUrl(slug?: string | null) {
+  const cleanSlug = String(slug || "").trim().toLowerCase();
+  return cleanSlug ? `https://${cleanSlug}.fizyoflow.com` : "https://klinikadi.fizyoflow.com";
+}
+
 export default function AdminSalonScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const { logout } = useSession();
   const query = useQuery({
     queryKey: ["admin-settings"],
@@ -24,8 +63,14 @@ export default function AdminSalonScreen() {
   });
 
   const settings = query.data || {};
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const profile = settings.profile || settings;
   const location = profile.location || {};
+  const digitalBrief = profile.digital_brief || {};
+  const growthStatus = normalizeGrowthStatus(profile.managed_growth_status);
+  const growthCopy = growthStatusCopy[growthStatus];
+  const publicUrl = publicVitrineUrl(profile.slug || settings.tenant_slug);
+  const missingItems = Array.isArray(digitalBrief.missing_items) ? digitalBrief.missing_items.filter(Boolean) : [];
   const businessHours = resolveBusinessHours(
   [profile.business_hours, location.business_hours],
   {
@@ -41,7 +86,7 @@ export default function AdminSalonScreen() {
       icon="clinic"
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
-      onBack={() => router.replace("/(admin)/dashboard" as never)}
+      onBack={() => router.replace((backTo || "/(admin)/dashboard") as never)}
     >
       <SurfaceCard tone="primary">
         <Text style={styles.title}>{profile.hero_title || settings.tenant_name || "Salon profili"}</Text>
@@ -95,13 +140,57 @@ export default function AdminSalonScreen() {
         </View>
       </SurfaceCard>
 
+      <SurfaceCard tone={growthStatus === "LIVE" ? "success" : growthStatus === "WAITING_INFO" ? "warning" : "primary"} testID="admin-salon-digital-vitrine">
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleWrap}>
+            <Text style={styles.section}>Dijital vitrin</Text>
+            <Text style={styles.copy}>{growthCopy.copy}</Text>
+          </View>
+          <StatusBadge label={growthCopy.label} tone={growthCopy.tone} />
+        </View>
+        <View style={styles.vitrineUrlBox}>
+          <Text style={styles.summaryLabel}>Public link</Text>
+          <Text style={styles.vitrineUrl}>{publicUrl}</Text>
+        </View>
+        {missingItems.length ? (
+          <View style={styles.missingList}>
+            <Text style={styles.summaryLabel}>Eksik bilgiler</Text>
+            {missingItems.slice(0, 4).map((item: string) => (
+              <Text key={item} style={styles.missingItem}>• {item}</Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.copy}>Eksik bilgi görünmüyor. Public önizleme ve paylaşım için linki kullanabilirsiniz.</Text>
+        )}
+        <View style={styles.actionRow}>
+          <ActionButton
+            testID="admin-salon-open-public-vitrine"
+            label="Public vitrini aç"
+            icon="external"
+            fullWidth={false}
+            onPress={() => void Linking.openURL(publicUrl)}
+          />
+          <ActionButton
+            testID="admin-salon-copy-public-vitrine"
+            label="Linki kopyala"
+            icon="copy"
+            variant="ghost"
+            fullWidth={false}
+            onPress={async () => {
+              await Clipboard.setStringAsync(publicUrl);
+              showInfoAlert("Link kopyalandı", "Klinik vitrini bağlantısı panoya kopyalandı.");
+            }}
+          />
+        </View>
+      </SurfaceCard>
+
       <SurfaceCard>
         <Text style={styles.section}>Yönetim alanları</Text>
-        <ActionButton label="Salon profilini düzenle" icon="clinic" onPress={() => router.push("/(admin)/salon-profile" as never)} />
-        <ActionButton label="Çalışma saatleri" icon="clock" onPress={() => router.push("/(admin)/working-hours" as never)} />
-        <ActionButton label="Paketler" icon="package" variant="ghost" onPress={() => router.push("/(admin)/packages" as never)} />
-        <ActionButton label="Kampanyalar" icon="campaigns" variant="ghost" onPress={() => router.push("/(admin)/campaigns" as never)} />
-        <ActionButton label="Plan ve abonelik" icon="subscription" variant="ghost" onPress={() => router.push("/(admin)/subscription" as never)} />
+        <ActionButton label="Salon profilini düzenle" icon="clinic" onPress={() => router.push({ pathname: "/(admin)/salon-profile", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton label="Çalışma saatleri" icon="clock" onPress={() => router.push({ pathname: "/(admin)/working-hours", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton label="Paketler" icon="package" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/packages", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton label="Kampanyalar" icon="campaigns" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton testID="admin-salon-subscription" label="Plan ve abonelik" icon="subscription" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/subscription", params: { backTo: "/(admin)/salon" } } as never)} />
       </SurfaceCard>
 
       <SurfaceCard>
@@ -118,23 +207,17 @@ export default function AdminSalonScreen() {
   );
 }
 
-function hasConfiguredBusinessHours(value: unknown) {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as {
-    start_time?: unknown;
-    end_time?: unknown;
-    lunch_break_start?: unknown;
-    lunch_break_end?: unknown;
-    working_days?: unknown;
-  };
-  if (typeof candidate.start_time === "string" && candidate.start_time.trim()) return true;
-  if (typeof candidate.end_time === "string" && candidate.end_time.trim()) return true;
-  if (typeof candidate.lunch_break_start === "string" && candidate.lunch_break_start.trim()) return true;
-  if (typeof candidate.lunch_break_end === "string" && candidate.lunch_break_end.trim()) return true;
-  return Array.isArray(candidate.working_days) && candidate.working_days.length > 0;
-}
-
 const styles = StyleSheet.create({
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+  },
+  sectionTitleWrap: {
+    flex: 1,
+    gap: tokens.spacing.xs,
+  },
   metricsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -159,6 +242,40 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     fontSize: tokens.font.sm,
     fontFamily: tokens.fontFamily.regular,
+    lineHeight: tokens.lineHeight.normal,
+  },
+  vitrineUrlBox: {
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: "rgba(255,255,255,0.82)",
+    padding: tokens.spacing.sm + 2,
+    gap: 2,
+  },
+  vitrineUrl: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+    lineHeight: tokens.lineHeight.normal,
+  },
+  missingList: {
+    gap: tokens.spacing.xs,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.22)",
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.warningSoft,
+    padding: tokens.spacing.sm + 2,
+  },
+  missingItem: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.medium,
+    lineHeight: tokens.lineHeight.normal,
+  },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.spacing.sm,
   },
   summaryGrid: {
     gap: tokens.spacing.sm,

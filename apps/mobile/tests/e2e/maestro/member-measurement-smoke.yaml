@@ -1,10 +1,10 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "Clinerva"
-- openLink: "clinerva://e2e-reset"
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
@@ -17,17 +17,30 @@ appId: com.clinerva.mobile
     id: "login-identity-input"
     retryTapIfNoChange: true
 - inputText: "member@gmail.com"
-- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    point: "50%,25%"
 - assertVisible:
     id: "login-password-input"
 - tapOn:
     id: "login-password-input"
     retryTapIfNoChange: true
 - inputText: "member123"
-- tapOn: "Clinerva hesabınla devam et"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    point: "50%,25%"
 - tapOn:
     id: "login-submit-button"
 - assertVisible: "Kalan hak"
+- scrollUntilVisible:
+    element:
+      id: "member-home-measurements"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "member-home-measurements"
 - assertVisible: "Ölçümlerim"
@@ -37,22 +50,34 @@ appId: com.clinerva.mobile
 - tapOn:
     id: "measurement-height-input"
 - inputText: "178"
+- tapOn: "Done"
 - tapOn:
     id: "measurement-weight-input"
 - inputText: "74"
+- tapOn: "Done"
 - tapOn:
     id: "measurement-fat-input"
 - inputText: "18"
+- tapOn: "Done"
 - tapOn:
     id: "measurement-muscle-input"
 - inputText: "31"
+- tapOn: "Done"
 - tapOn:
     id: "measurement-note-input"
 - inputText: "Smoke test measurement"
+- tapOn: "Bitti"
+- scrollUntilVisible:
+    element:
+      id: "measurement-save-button"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
-    id: "measurement-save-button"
-- assertVisible: "Ölçümlerim"
-- assertVisible: "Gelişim Grafiği"
+    point: "50%,82%"
+- extendedWaitUntil:
+    visible: "Ölçümlerim"
+    timeout: 15000
+- assertVisible: "Özet & Grafik"
 - tapOn:
     id: "member-measurements-tab-HISTORY"
 - assertVisible: "Geçmiş Ölçümler"

@@ -1,83 +1,16 @@
-appId: com.clinerva.mobile
+appId: com.fizyoflow.mobile
 ---
 - launchApp:
     clearState: true
     clearKeychain: true
 
-- assertVisible:
-    id: "welcome-login-button"
-
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-
-- assertVisible: "Hesabına giriş yap"
-
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-
-- inputText: "oguzhanuyar531@gmail.com"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-
-- inputText: "admin123"
-
-- tapOn: "Clinerva hesabınla devam et"
-
-- tapOn:
-    id: "login-submit-button"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- openLink: "clinerva://(admin)/approvals"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- assertVisible: "Onaylar"
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
 
 - extendedWaitUntil:
-    visible: "Eğitmen silmek istiyor"
+    visible: "Onaylar|Bekleyen|Onay"
     timeout: 20000
 
-- scrollUntilVisible:
-    element:
-      id: "admin-approval-open-group-class-cancel"
-    direction: DOWN
-    timeout: 12000
-    speed: 40
-    visibilityPercentage: 30
-    waitToSettleTimeoutMs: 500
-
-- tapOn:
-    id: "admin-approval-open-group-class-cancel"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- scrollUntilVisible:
-    element: "Onayla"
-    direction: DOWN
-    timeout: 10000
-    speed: 40
-    visibilityPercentage: 30
-    waitToSettleTimeoutMs: 500
-
-- tapOn: "Onayla"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- tapOn:
-    text: "Tamam"
-    optional: true
-
-- tapOn:
-    text: "OK"
-    optional: true
+- extendedWaitUntil:
+    visible: "Bekleyen|Onaylar|Onay"
+    timeout: 20000

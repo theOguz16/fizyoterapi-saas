@@ -4,7 +4,7 @@ import * as SecureStore from "expo-secure-store";
 import { setAuthToken } from "@/lib/http-client";
 import { resetLocalPreferencesForE2E } from "@/lib/local-preferences";
 
-const TOKEN_KEY = "clinerva.access_token";
+const TOKEN_KEY = "fizyoflow.access_token";
 
 export default function E2EResetScreen() {
   useEffect(() => {

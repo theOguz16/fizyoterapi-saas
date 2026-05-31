@@ -14,6 +14,7 @@ function createQueryBuilderMock(result: {
     addSelect: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
+    setParameter: vi.fn().mockReturnThis(),
     getCount: vi.fn().mockResolvedValue(result.count ?? 0),
     getRawOne: vi.fn().mockResolvedValue(result.rawOne ?? null),
   };
@@ -67,6 +68,9 @@ describe("admin dashboard controller", () => {
         yearly_pack_4_count: "22",
       },
     });
+    const profileRepo = {
+      findOne: vi.fn().mockResolvedValue({ id: "salon-1", location: { timezone: "Europe/Istanbul" } }),
+    };
 
     vi.spyOn(RiskService, "listRiskMembers").mockResolvedValue({
       data: [{ member_id: "member-9", risk_score: 81 }],
@@ -78,6 +82,7 @@ describe("admin dashboard controller", () => {
       if (name.includes("Lead")) return leadRepo as any;
       if (name.includes("Package") && !name.includes("UserPackage")) return packageRepo as any;
       if (name.includes("UserPackage")) return { createQueryBuilder: vi.fn().mockReturnValue(userPackageQuery) } as any;
+      if (name.includes("SalonProfile")) return profileRepo as any;
       if (name.includes("User")) return userRepo as any;
       if (name.includes("Booking")) return { createQueryBuilder: vi.fn().mockReturnValue(bookingQuery) } as any;
       if (name.includes("ClassSession")) return { createQueryBuilder: vi.fn().mockReturnValue(sessionQuery) } as any;
@@ -92,6 +97,7 @@ describe("admin dashboard controller", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
       tenant_id: "tenant-1",
+      report_timezone: "Europe/Istanbul",
       kpis: {
         active_trainers: 3,
         active_members: 25,
@@ -123,6 +129,9 @@ describe("admin dashboard controller", () => {
       package_sales: {
         weekly_credits_sold: 24,
         monthly_credits_sold: 88,
+        weekly_package_count: 0,
+        monthly_package_count: 0,
+        yearly_package_count: 0,
         weekly_pack_8_count: 2,
         weekly_pack_4_count: 1,
         monthly_pack_8_count: 6,

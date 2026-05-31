@@ -2,13 +2,12 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { createMemberMeaşurementApi } from "@/lib/mobile-api";
+import { Keyboard, StyleSheet, Text, View } from "react-native";
+import { createMemberMeasurementApi } from "@/lib/mobile-api";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { FormField } from "@/theme/components/form-field";
 import { SurfaceCard } from "@/theme/components/surface-card";
-import { useQueryClient } from "@tanstack/react-query";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
 
@@ -23,11 +22,9 @@ export default function AddMeasurementScreen() {
     note: "",
   });
 
-  const queryClient = useQueryClient(); // Bunu sayfanın başına eklemelisin
-
   const mutation = useMutation({
   mutationFn: () =>
-    createMemberMeaşurementApi({
+    createMemberMeasurementApi({
       measured_at: form.measured_at,
       height_cm: form.height_cm,
       weight_kg: form.weight_kg,
@@ -75,6 +72,9 @@ export default function AddMeasurementScreen() {
           value={form.measured_at} 
           onChangeText={(value) => setForm((prev) => ({ ...prev, measured_at: value }))} 
           placeholder="YYYY-AA-GG" 
+          returnKeyType="done"
+          blurOnSubmit
+          onSubmitEditing={Keyboard.dismiss}
         />
       </SurfaceCard>
 
@@ -87,19 +87,59 @@ export default function AddMeasurementScreen() {
         {/* Yan yana iki form alanı için Row yapısı */}
         <View style={styles.formRow}>
           <View style={styles.halfWidth}>
-            <FormField inputId="measurement-height-input" label="Boy" value={form.height_cm} onChangeText={(value) => setForm((prev) => ({ ...prev, height_cm: value }))} placeholder="cm" keyboardType="numeric" />
+            <FormField
+              inputId="measurement-height-input"
+              label="Boy"
+              value={form.height_cm}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, height_cm: normalizeMeasurementNumber(value) }))}
+              placeholder="cm"
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+            />
           </View>
           <View style={styles.halfWidth}>
-            <FormField inputId="measurement-weight-input" label="Kilo" value={form.weight_kg} onChangeText={(value) => setForm((prev) => ({ ...prev, weight_kg: value }))} placeholder="kg" keyboardType="numeric" />
+            <FormField
+              inputId="measurement-weight-input"
+              label="Kilo"
+              value={form.weight_kg}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, weight_kg: normalizeMeasurementNumber(value) }))}
+              placeholder="kg"
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+            />
           </View>
         </View>
 
         <View style={styles.formRow}>
           <View style={styles.halfWidth}>
-            <FormField inputId="measurement-fat-input" label="Yağ Oranı" value={form.fat_percent} onChangeText={(value) => setForm((prev) => ({ ...prev, fat_percent: value }))} placeholder="%" keyboardType="numeric" />
+            <FormField
+              inputId="measurement-fat-input"
+              label="Yağ Oranı"
+              value={form.fat_percent}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, fat_percent: normalizeMeasurementNumber(value) }))}
+              placeholder="%"
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+            />
           </View>
           <View style={styles.halfWidth}>
-            <FormField inputId="measurement-muscle-input" label="Kas Kütlesi" value={form.muscle_kg} onChangeText={(value) => setForm((prev) => ({ ...prev, muscle_kg: value }))} placeholder="kg" keyboardType="numeric" />
+            <FormField
+              inputId="measurement-muscle-input"
+              label="Kas Kütlesi"
+              value={form.muscle_kg}
+              onChangeText={(value) => setForm((prev) => ({ ...prev, muscle_kg: normalizeMeasurementNumber(value) }))}
+              placeholder="kg"
+              keyboardType="decimal-pad"
+              returnKeyType="done"
+              blurOnSubmit
+              onSubmitEditing={Keyboard.dismiss}
+            />
           </View>
         </View>
       </SurfaceCard>
@@ -117,6 +157,9 @@ export default function AddMeasurementScreen() {
           placeholder="Kendin için bir not bırak... (Örn: Bu hafta diyete sadık kaldım)" 
           multiline 
           numberOfLines={3} 
+          returnKeyType="done"
+          blurOnSubmit
+          onSubmitEditing={Keyboard.dismiss}
         />
       </SurfaceCard>
 
@@ -131,11 +174,20 @@ export default function AddMeasurementScreen() {
         testID="measurement-save-button"
         label="Ölçümü Kaydet" 
         icon="measurements" 
-        onPress={() => mutation.mutate()} 
+        onPress={() => {
+          Keyboard.dismiss();
+          mutation.mutate();
+        }} 
         loading={mutation.isPending} 
       />
     </AppShell>
   );
+}
+
+function normalizeMeasurementNumber(value: string) {
+  const normalized = value.replace(",", ".").replace(/[^\d.]/g, "");
+  const [integer = "", ...decimalParts] = normalized.split(".");
+  return decimalParts.length ? `${integer}.${decimalParts.join("").slice(0, 2)}` : integer;
 }
 
 const styles = StyleSheet.create({

@@ -34,7 +34,7 @@ export class MemberBookingsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "booking",
       target_id: input.booking.id,
       metadata: {
@@ -103,17 +103,27 @@ export class MemberBookingsController {
       const sessionMap = new Map(sessions.map((row) => [row.id, row]));
 
       return res.json({
-        data: rows.map((row) => ({
-          ...row,
-          package_name: packageDisplayName((row.meta as Record<string, unknown> | undefined)?.package_title),
-          trainer_full_name: trainerMap.get(row.trainer_id) ?? null,
-          session_title: row.session_id ? sessionMap.get(String(row.session_id))?.title ?? null : null,
-          session_type: row.session_id ? sessionMap.get(String(row.session_id))?.type ?? null : null,
-          lesson_category: row.session_id ? sessionMap.get(String(row.session_id))?.lesson_category ?? null : null,
-          lesson_category_label: lessonCategoryLabel(
-            row.session_id ? sessionMap.get(String(row.session_id))?.lesson_category ?? null : null
-          ),
-        })),
+        data: rows.map((row) => {
+          const meta = (row.meta as Record<string, any> | undefined) ?? {};
+          const isDuo = Boolean(meta.is_duo || meta.duo);
+          return {
+            ...row,
+            package_name: packageDisplayName(meta.package_title),
+            trainer_full_name: trainerMap.get(row.trainer_id) ?? null,
+            session_title: row.session_id ? sessionMap.get(String(row.session_id))?.title ?? null : isDuo ? "Duo ders" : null,
+            session_type: row.session_id ? sessionMap.get(String(row.session_id))?.type ?? null : isDuo ? "DUO" : null,
+            lesson_category: row.session_id ? sessionMap.get(String(row.session_id))?.lesson_category ?? null : null,
+            lesson_category_label: isDuo
+              ? "İkili ders"
+              : lessonCategoryLabel(
+                  row.session_id ? sessionMap.get(String(row.session_id))?.lesson_category ?? null : null
+                ),
+            is_duo: isDuo,
+            duo_partner_name: meta.duo?.partner_name || null,
+            duo_partner_contact: meta.duo?.partner_contact || null,
+            duo_status: meta.duo?.status || null,
+          };
+        }),
       });
     } catch (error) {
       if (error instanceof AppError) throw error;
@@ -223,7 +233,7 @@ export class MemberBookingsController {
         type: "BOOKING_CANCELED",
         title: "Randevu iptal edildi",
         body: `${booking.starts_at.toLocaleString("tr-TR")} tarihli randevu iptal edildi.`,
-        deepLink: "clinerva://member/bookings",
+        deepLink: "fizyoflow://member/bookings",
         meta: {
           booking_id: booking.id,
           refund: false,
@@ -237,7 +247,7 @@ export class MemberBookingsController {
           type: "BOOKING_CANCELED",
           title: "Randevu iptali bildirimi",
           body: "Üye randevuyu iptal etti.",
-          deepLink: "clinerva://trainer/bookings",
+          deepLink: "fizyoflow://trainer/bookings",
           meta: {
             booking_id: booking.id,
             member_id: memberId,

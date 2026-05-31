@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Alert, StyleSheet, Text, View } from "react-native";
@@ -29,6 +29,11 @@ type PublicPackageRow = {
   id?: string;
   title?: string;
   summary?: string;
+  type?: string | null;
+  lesson_category?: string | null;
+  service_key?: string | null;
+  service_name?: string | null;
+  rules?: Record<string, unknown> | null;
   display_price?: string | number | null;
   total_credits?: string | number | null;
   weekly_class_hours?: string | number | null;
@@ -193,6 +198,14 @@ function statusMeta(pkg: MemberOwnedPackage) {
     };
   }
 
+  if (status === "AWAITING_PARTNER_PAYMENT") {
+    return {
+      label: "Partner bekleniyor",
+      tone: "warning" as const,
+      helper: "Partner daveti ve kalan ödeme tamamlanınca aktifleşir",
+    };
+  }
+
   return {
     label: "Kullanımda",
     tone: "success" as const,
@@ -200,10 +213,69 @@ function statusMeta(pkg: MemberOwnedPackage) {
   };
 }
 
+function normalizeMatchText(value: unknown) {
+  return String(value || "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+}
+
+function publicPackageSearchText(pkg: PublicPackageRow) {
+  const rules = pkg.rules && typeof pkg.rules === "object" ? pkg.rules : {};
+  const subLessons = Array.isArray(pkg.sub_lessons) ? pkg.sub_lessons : Array.isArray(rules.sub_lessons) ? rules.sub_lessons : [];
+  return normalizeMatchText(
+    [
+      pkg.title,
+      pkg.summary,
+      pkg.type,
+      pkg.lesson_category,
+      pkg.service_key,
+      pkg.service_name,
+      rules.lesson_category,
+      rules.service_key,
+      rules.service_name,
+      rules.category_group,
+      ...subLessons,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function scorePublicPackageForIntent(
+  pkg: PublicPackageRow,
+  intent: { issue?: string; goal?: string; expectation?: string; weeklyDays?: string }
+) {
+  const text = publicPackageSearchText(pkg);
+  const issue = normalizeMatchText(intent.issue);
+  const goal = normalizeMatchText(intent.goal);
+  const expectation = normalizeMatchText(intent.expectation);
+  const weeklyDays = normalizeMatchText(intent.weeklyDays);
+  const mode = String(pkg.lesson_mode || "").toUpperCase();
+  let score = 0;
+
+  if ((issue.includes("skolyoz") || goal.includes("skolyoz")) && text.includes("skolyoz")) score += 40;
+  if ((issue.includes("cocuk") || goal.includes("cocuk") || issue.includes("pediatrik")) && (text.includes("cocuk") || text.includes("pediatrik"))) score += 36;
+  if ((issue.includes("bel") || issue.includes("boyun") || issue.includes("sirt") || issue.includes("agri")) && (text.includes("bel") || text.includes("boyun") || text.includes("manuel") || text.includes("rehab"))) score += 34;
+  if ((goal.includes("performans") || issue.includes("sporcu") || goal.includes("antrenman")) && (text.includes("sporcu") || text.includes("performans") || text.includes("antrenman"))) score += 30;
+  if ((goal.includes("durus") || issue.includes("postur")) && (text.includes("postur") || text.includes("pilates") || text.includes("reformer"))) score += 24;
+  if ((issue.includes("gebe") || issue.includes("dogum")) && (text.includes("gebe") || text.includes("dogum"))) score += 28;
+  if (expectation.includes("grup") && mode === "GROUP") score += 18;
+  if ((expectation.includes("birebir") || expectation.includes("ozel")) && mode === "PRIVATE") score += 18;
+  if ((weeklyDays.includes("3") || weeklyDays.includes("4")) && mode === "GROUP") score += 8;
+  if (weeklyDays.includes("1") && mode === "PRIVATE") score += 8;
+
+  return score;
+}
+
 export default function MemberPackageScreen() {
   const router = useRouter();
   const { activeMembership } = useSession();
-  const { memberBookingDraft, setMemberBookingDraft } = useAppFlow();
+  const { memberBookingDraft, memberIntent, setMemberBookingDraft } = useAppFlow();
 
   const [tab, setTab] = useState<PackageTab>("PACKAGES");
 
@@ -247,6 +319,12 @@ export default function MemberPackageScreen() {
   );
 
   const purchasablePackages = publicPackages.filter((pkg) => !ownedPackageIds.has(String(pkg.id || "")));
+  const recommendedPurchasablePackageId = useMemo(() => {
+    const ranked = purchasablePackages
+      .map((pkg) => ({ pkg, score: scorePublicPackageForIntent(pkg, memberIntent) }))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0]?.score > 0 ? String(ranked[0].pkg.id || "") : "";
+  }, [memberIntent, purchasablePackages]);
   const activePackages = allPurchasedPackages.filter(isActiveOwnedPackage);
 
   const usage = homeQuery.data?.lesson_usage || {};
@@ -556,6 +634,15 @@ export default function MemberPackageScreen() {
 
                       {normalizeStatus(pkg.status) === "ACTIVE" ? renderUsageProgress(pkg) : null}
 
+                      {pkg.is_duo || pkg.duo_status ? (
+                        <View style={styles.linkedGroupBox}>
+                          <Text style={styles.linkedGroupTitle}>Duo partner akışı</Text>
+                          <Text style={styles.copy}>Partner: {pkg.duo_partner_name || "Davet bekleniyor"}</Text>
+                          <Text style={styles.copy}>Durum: {pkg.duo_status || pkg.duo_payment_status || "Partner ödemesi bekleniyor"}</Text>
+                          {pkg.duo_invite_url ? <Text style={styles.copy}>Davet linki: {pkg.duo_invite_url}</Text> : null}
+                        </View>
+                      ) : null}
+
                       <View style={styles.packageMetaRow}>
                         <View style={styles.metaPill}>
                           <AppIcon name="ticket" size="sm" tone="neutral" />
@@ -631,11 +718,16 @@ export default function MemberPackageScreen() {
               />
             ) : (
               <View style={styles.invoiceList}>
-                {purchasablePackages.slice(0, 3).map((pkg) => (
-                  <View key={String(pkg.id)} style={styles.listCard}>
+                {purchasablePackages.slice(0, 3).map((pkg) => {
+                  const isRecommended = recommendedPurchasablePackageId === String(pkg.id || "");
+                  return (
+                  <View key={String(pkg.id)} style={[styles.listCard, isRecommended ? styles.recommendedPackageCard : null]}>
                     <View style={styles.inlineBetween}>
                       <View style={styles.grow}>
-                        <Text style={styles.title}>{String(pkg.title || "Paket")}</Text>
+                        <View style={styles.titleBadgeRow}>
+                          <Text style={styles.title}>{String(pkg.title || "Paket")}</Text>
+                          {isRecommended ? <StatusBadge label="Sana özel" tone="success" /> : null}
+                        </View>
                         <Text style={styles.copy}>
                           {String(pkg.summary || "Bu paketi aynı üyelik altında satın alabilirsin.")}
                         </Text>
@@ -657,7 +749,8 @@ export default function MemberPackageScreen() {
 
                     <ActionButton label="Bu paketi satın al" icon="package" onPress={() => handleBuyAnotherPackage(pkg)} />
                   </View>
-                ))}
+                );
+                })}
 
                 {purchasablePackages.length > 3 ? (
                   <ActionButton
@@ -783,6 +876,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     padding: tokens.spacing.md,
     gap: tokens.spacing.sm,
+  },
+  recommendedPackageCard: {
+    borderColor: tokens.colors.success,
+    backgroundColor: "#F4FBF7",
+  },
+  titleBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: tokens.spacing.xs,
   },
   inlineBetween: {
     flexDirection: "row",

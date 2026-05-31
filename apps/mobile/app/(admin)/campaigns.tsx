@@ -61,7 +61,7 @@ export default function AdminCampaignsScreen() {
       title="Kampanyalar"
       subtitle="Referans, sadakat ve indirim kurallarını aktif veya pasif olarak yönet."
       icon="campaigns"
-      rightAction={<ActionButton label="Yeni" icon="spark" fullWidth={false} onPress={() => router.push("/(admin)/campaign-create" as never)} />}
+      rightAction={<ActionButton label="Yeni" icon="spark" fullWidth={false} onPress={() => router.push({ pathname: "/(admin)/campaign-create", params: { backTo: "/(admin)/campaigns" } } as never)} />}
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
     >
@@ -95,7 +95,12 @@ export default function AdminCampaignsScreen() {
                   icon="notes"
                   variant="ghost"
                   fullWidth={false}
-                  onPress={() => router.push(`/(admin)/campaign-create?id=${item.id}` as never)}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(admin)/campaign-create",
+                      params: { id: item.id, backTo: "/(admin)/campaigns" },
+                    } as never)
+                  }
                 />
                 <ActionButton
                   label={item.is_active === false ? "Aktifleştir" : "Pasife al"}

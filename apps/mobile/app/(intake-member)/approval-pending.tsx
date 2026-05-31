@@ -22,6 +22,7 @@ export default function ApprovalPendingScreen() {
   const submittedPackageIds = new Set(memberBookingDraft.submittedPackageIds || []);
   const submittedPackages = selectedPackages.filter((pkg) => submittedPackageIds.has(pkg.package_id));
   const remainingPackages = selectedPackages.filter((pkg) => !submittedPackageIds.has(pkg.package_id));
+  const duoPackages = submittedPackages.filter((pkg) => String(pkg.lesson_mode || "").toUpperCase() === "DUO");
   const packageProgressLabel =
     selectedPackages.length > 1 ? `${submittedPackages.length} / ${selectedPackages.length} paket gönderildi` : "Paket onaya gönderildi";
 
@@ -45,6 +46,8 @@ export default function ApprovalPendingScreen() {
           footnote={
             remainingPackages.length > 0
               ? "Bazı paketler hâlâ sırada görünüyor. Onaya gönderilen seçimler kayıtlı kaldı; kalanlar için akışa dönebilirsin."
+              : duoPackages.length > 0
+                ? "Duo paketlerde senin ödeme payın onaylanır; partner daveti ve ikinci ödeme tamamlanınca takvim aktifleşir."
               : "Şimdilik ek bir işlem yapmana gerek yok. Onay veya ödeme adımı netleştiğinde seni yönlendireceğiz."
           }
         />
@@ -91,7 +94,9 @@ export default function ApprovalPendingScreen() {
         <SurfaceCard>
           <Text style={styles.section}>Paket durumu</Text>
           {submittedPackages.map((pkg) => (
-            <Text key={pkg.package_id} style={styles.copy}>• {pkg.package_title || pkg.package_id}: onaya gönderildi</Text>
+            <Text key={pkg.package_id} style={styles.copy}>
+              • {pkg.package_title || pkg.package_id}: {String(pkg.lesson_mode || "").toUpperCase() === "DUO" ? "partner ve ödeme onayına gönderildi" : "onaya gönderildi"}
+            </Text>
           ))}
           {remainingPackages.map((pkg) => (
             <Text key={pkg.package_id} style={styles.copy}>• {pkg.package_title || pkg.package_id}: sırada bekliyor</Text>
@@ -105,6 +110,11 @@ export default function ApprovalPendingScreen() {
           <Text style={styles.copy}>Hedef: {memberIntent.goal || "-"}</Text>
           <Text style={styles.copy}>Beklenti: {memberIntent.expectation || "-"}</Text>
           <Text style={styles.copy}>Gönderilen paket sayısı: {submittedPackages.length || 1}</Text>
+          {duoPackages.map((pkg) => (
+            <Text key={`duo-${pkg.package_id}`} style={styles.copy}>
+              Duo partner: {pkg.duo_partner_name || "-"} • {pkg.duo_partner_contact || "-"}
+            </Text>
+          ))}
         </SurfaceCard>
       </AnimatedEntrance>
 

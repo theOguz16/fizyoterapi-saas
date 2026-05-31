@@ -11,6 +11,7 @@ export default function E2ELoginScreen() {
     password?: string | string[];
     redirect?: string | string[];
     skipAuth?: string | string[];
+    role?: string | string[];
   }>();
   const { login } = useSession();
   const [error, setError] = useState("");
@@ -19,6 +20,7 @@ export default function E2ELoginScreen() {
   const password = Array.isArray(params.password) ? params.password[0] : params.password;
   const redirect = Array.isArray(params.redirect) ? params.redirect[0] : params.redirect;
   const skipAuth = Array.isArray(params.skipAuth) ? params.skipAuth[0] : params.skipAuth;
+  const role = normalizeRole(params.role);
 
   useEffect(() => {
     if (!__DEV__) return;
@@ -31,13 +33,13 @@ export default function E2ELoginScreen() {
 
     void (async () => {
       try {
-        await login({ email, password });
+        await login({ email, password, role, e2e: true });
         router.replace((redirect || "/(auth)/welcome") as never);
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : "E2E login başarısız.");
       }
     })();
-  }, [email, login, password, redirect, router, skipAuth]);
+  }, [email, login, password, redirect, role, router, skipAuth]);
 
   if (!__DEV__) {
     return <Redirect href="/(auth)/welcome" />;
@@ -66,3 +68,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+function normalizeRole(value: string | string[] | undefined) {
+  const role = String(Array.isArray(value) ? value[0] : value || "").toUpperCase();
+  if (role === "ADMIN" || role === "TRAINER" || role === "MEMBER") return role;
+  return undefined;
+}

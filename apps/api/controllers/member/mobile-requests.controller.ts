@@ -6,14 +6,15 @@ import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AppError } from "../../errors/AppError";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../entities/tenant.entity";
 import { Account } from "../../entities/account.entity";
-import { User } from "../../entities/user.entity";
 import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
 import { SalonApplication, SalonApplicationSource, SalonApplicationStatus } from "../../entities/salon-application.entity";
 import { MembershipPaymentStatus, SalonMembership, SalonMembershipStatus } from "../../entities/salon-membership.entity";
 import { Package } from "../../entities/package.entity";
+import { User, UserRole } from "../../entities/user.entity";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
 import { MemberRequestCleanupService } from "../../services/member-request-cleanup.service";
 import { AuditLogService } from "../../services/audit-log.service";
+import { MobileNotificationService } from "../../services/mobile-notification.service";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 const MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
@@ -22,7 +23,67 @@ function eventMemberId(req: AuthenticatedRequest) {
   return req.auth?.linkedUserId || req.auth?.accountId || req.auth?.sub || "";
 }
 
+function resolvePackageLessonMode(pkg: Package) {
+  const rules = pkg.rules && typeof pkg.rules === "object" ? (pkg.rules as Record<string, unknown>) : {};
+  return String(rules.lesson_mode ?? (pkg.capacity > 2 ? "GROUP" : pkg.capacity === 2 ? "DUO" : "PRIVATE")).toUpperCase();
+}
+
+function splitDuoAmount(amount: number) {
+  const half = Number.isFinite(amount) ? Math.round((amount / 2) * 100) / 100 : 0;
+  return { primary: half, partner: half };
+}
+
+function readEventPayload(event: NotificationEvent | null | undefined): Record<string, any> {
+  try {
+    const payload = event?.payload;
+    if (!payload) return {};
+    return typeof payload === "string" ? JSON.parse(payload) : payload;
+  } catch {
+    return {};
+  }
+}
+
 export class MemberMobileRequestsController {
+  private static async safeQueuePush(input: Parameters<typeof MobileNotificationService.queuePush>[0]) {
+    try {
+      await MobileNotificationService.queuePush(input);
+    } catch (error) {
+      console.error("Member request push notification error:", error);
+    }
+  }
+
+  private static async notifyTenantAdmins(input: {
+    tenantId: string;
+    type: string;
+    title: string;
+    body: string;
+    deepLink: string;
+    meta?: Record<string, unknown>;
+  }) {
+    try {
+      const admins = await AppDataSource.getRepository(User).find({
+        where: { tenant_id: input.tenantId, role: UserRole.ADMIN, is_active: true } as any,
+        select: ["id"],
+      });
+      await Promise.all(
+        admins.map((admin) =>
+          MemberMobileRequestsController.safeQueuePush({
+            tenantId: input.tenantId,
+            userId: admin.id,
+            roleScope: "ADMIN",
+            type: input.type,
+            title: input.title,
+            body: input.body,
+            deepLink: input.deepLink,
+            meta: input.meta,
+          })
+        )
+      );
+    } catch (error) {
+      console.error("Admin request push notification error:", error);
+    }
+  }
+
   static async createPaymentRequest(req: AuthenticatedRequest, res: Response) {
     const accountId = req.auth?.accountId;
     const eventOwnerId = eventMemberId(req);
@@ -34,6 +95,8 @@ export class MemberMobileRequestsController {
     const normalizedPackageIds = Array.from(new Set([packageId, ...packageIds].filter(Boolean)));
     const trainerId = String(req.body?.trainer_id ?? "").trim();
     const selectedSubLesson = typeof req.body?.selected_sub_lesson === "string" ? req.body.selected_sub_lesson.trim() : null;
+    const duoPartnerName = typeof req.body?.duo_partner_name === "string" ? req.body.duo_partner_name.trim() : "";
+    const duoPartnerContact = typeof req.body?.duo_partner_contact === "string" ? req.body.duo_partner_contact.trim() : "";
     const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
     const selectedDays = Array.isArray(req.body?.selected_days) ? req.body.selected_days : [];
     const availabilityContext =
@@ -98,6 +161,19 @@ export class MemberMobileRequestsController {
       };
     });
     const totalAmount = selectedPackages.reduce((sum, item) => sum + Number(item.package_price || 0), 0);
+    const hasDuoPackage = packageRows.some((row) => resolvePackageLessonMode(row) === "DUO");
+    if (hasDuoPackage && (!duoPartnerName || !duoPartnerContact)) {
+      throw new AppError("DUO_PARTNER_REQUIRED", 422, "Duo paket için partner adı ve iletişim bilgisi zorunludur");
+    }
+    const duoPayment = hasDuoPackage
+      ? {
+          status: "AWAITING_PARTNER_PAYMENT",
+          primary_amount: splitDuoAmount(totalAmount).primary,
+          partner_amount: splitDuoAmount(totalAmount).partner,
+          currency: "TRY",
+          note: "Duo pakette ilk üye %50 payı için onaya girer. Partner daveti ve kalan %50 tamamlanınca paket aktifleşir.",
+        }
+      : null;
 
     let application = null as SalonApplication | null;
     if (!activeMembership) {
@@ -124,9 +200,14 @@ export class MemberMobileRequestsController {
       package_ids: normalizedPackageIds,
       package_title: selectedPackages[0]?.package_title || null,
       selected_packages: selectedPackages,
-      amount: totalAmount,
+      amount: duoPayment ? duoPayment.primary_amount : totalAmount,
+      total_package_amount: totalAmount,
       trainer_id: trainerId || null,
       selected_sub_lesson: selectedSubLesson,
+      lesson_mode: hasDuoPackage ? "DUO" : null,
+      duo_partner_name: hasDuoPackage ? duoPartnerName : null,
+      duo_partner_contact: hasDuoPackage ? duoPartnerContact : null,
+      duo_payment: duoPayment,
       selected_days: selectedDays,
       note,
       availability_context: availabilityContext,
@@ -161,6 +242,20 @@ export class MemberMobileRequestsController {
       },
     });
     await AppDataSource.getRepository(NotificationEvent).save(event);
+    await MemberMobileRequestsController.notifyTenantAdmins({
+      tenantId: tenant.id,
+      type: hasDuoPackage ? "DUO_PAYMENT_APPROVAL_REQUESTED" : "PAYMENT_APPROVAL_REQUESTED",
+      title: hasDuoPackage ? "Yeni duo ödeme onayı" : "Yeni ödeme onayı",
+      body: `${account.first_name || "Üye"} ${account.last_name || ""}`.trim()
+        ? `${`${account.first_name || "Üye"} ${account.last_name || ""}`.trim()} için ${selectedPackages[0]?.package_title || "paket"} ödeme onayı bekliyor.`
+        : `${selectedPackages[0]?.package_title || "Paket"} için ödeme onayı bekliyor.`,
+      deepLink: "fizyoflow://approvals",
+      meta: {
+        approval_id: `payment:${event.id}`,
+        package_id: normalizedPackageIds[0],
+        is_duo: hasDuoPackage,
+      },
+    });
     await AuditLogService.log({
       tenant_id: tenant.id,
       actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
@@ -174,7 +269,7 @@ export class MemberMobileRequestsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
         target_type: "notification_event",
         target_id: event.id,
         metadata: {
@@ -191,9 +286,11 @@ export class MemberMobileRequestsController {
         id: event.id,
         status: "PENDING",
         amount: payload.amount,
+        total_package_amount: payload.total_package_amount,
         currency: "TRY",
         package_id: normalizedPackageIds[0],
         trainer_id: trainerId || null,
+        duo_payment: duoPayment,
         note,
       },
     });
@@ -209,43 +306,58 @@ export class MemberMobileRequestsController {
     });
 
     return res.json({
-      data: rows.map((row) => ({
-        id: row.id,
-        status: String((row.payload?.decision as string) || (row.payload?.status as string) || (row.status === NotificationEventStatus.QUEUED ? "PENDING" : "PROCESSED")),
-        amount: typeof row.payload?.amount === "number" ? row.payload.amount : null,
-        currency: "TRY",
-        package_id: typeof row.payload?.package_id === "string" ? row.payload.package_id : null,
-        trainer_id: typeof row.payload?.trainer_id === "string" ? row.payload.trainer_id : null,
-        note: typeof row.payload?.note === "string" ? row.payload.note : null,
-      })),
+      data: rows.map((row) => {
+        const payload = readEventPayload(row);
+        const isDuo = Boolean(payload.duo_payment || payload.duo_partner_name || payload.duo_partner_contact);
+        return {
+          id: row.id,
+          status: String((payload.decision as string) || (payload.status as string) || (row.status === NotificationEventStatus.QUEUED ? "PENDING" : "PROCESSED")),
+          amount: typeof payload.amount === "number" ? payload.amount : null,
+          currency: "TRY",
+          package_id: typeof payload.package_id === "string" ? payload.package_id : null,
+          trainer_id: typeof payload.trainer_id === "string" ? payload.trainer_id : null,
+          note: typeof payload.note === "string" ? payload.note : null,
+          ...(isDuo
+            ? {
+                total_package_amount:
+                  typeof payload.total_package_amount === "number" ? payload.total_package_amount : null,
+                duo_partner_name: typeof payload.duo_partner_name === "string" ? payload.duo_partner_name : null,
+                duo_partner_contact:
+                  typeof payload.duo_partner_contact === "string" ? payload.duo_partner_contact : null,
+                duo_payment: payload.duo_payment || null,
+              }
+            : {}),
+        };
+      }),
     });
   }
 
   static async createChangeRequest(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.tenantId;
     const memberId = req.auth?.sub;
+    const ownerId = eventMemberId(req);
     const accountId = req.auth?.accountId || null;
     const type = String(req.body?.type ?? "").trim().toUpperCase();
     const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
     const packageId = typeof req.body?.package_id === "string" ? req.body.package_id.trim() : null;
     const trainerId = typeof req.body?.trainer_id === "string" ? req.body.trainer_id.trim() : null;
 
-    if (!tenantId || !memberId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadı");
+    if (!tenantId || !memberId || !ownerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadı");
     if (!["PACKAGE_RENEWAL", "PACKAGE_CANCEL", "TRAINER_CHANGE"].includes(type)) {
       throw new AppError("VALIDATION_ERROR", 422, "Geçersiz talep tipi");
     }
 
-    const duplicate = await AppDataSource.getRepository(NotificationEvent).findOne({
-      where: { tenant_id: tenantId, member_id: memberId, type: MEMBER_CHANGE_REQUEST, status: NotificationEventStatus.QUEUED } as any,
+    const pendingChangeRequests = await AppDataSource.getRepository(NotificationEvent).find({
+      where: { tenant_id: tenantId, member_id: ownerId, type: MEMBER_CHANGE_REQUEST, status: NotificationEventStatus.QUEUED } as any,
       order: { created_at: "DESC" },
     });
-    if (duplicate && String(duplicate.payload?.request_type || "") === type) {
+    if (pendingChangeRequests.some((event) => String(readEventPayload(event).request_type || "").toUpperCase() === type)) {
       throw new AppError("CHANGE_REQUEST_EXISTS", 409, "Aynı tipte bekleyen talebiniz zaten var");
     }
 
     const event = AppDataSource.getRepository(NotificationEvent).create({
       tenant_id: tenantId,
-      member_id: memberId,
+      member_id: ownerId,
       type: MEMBER_CHANGE_REQUEST,
       status: NotificationEventStatus.QUEUED,
       payload: {
@@ -259,6 +371,19 @@ export class MemberMobileRequestsController {
       },
     });
     await AppDataSource.getRepository(NotificationEvent).save(event);
+    await MemberMobileRequestsController.notifyTenantAdmins({
+      tenantId,
+      type: "CHANGE_APPROVAL_REQUESTED",
+      title: "Yeni üye talebi",
+      body: `${formatChangeRequestLabel(type)} için admin kararı bekleniyor.`,
+      deepLink: "fizyoflow://approvals",
+      meta: {
+        approval_id: `change:${event.id}`,
+        request_type: type,
+        package_id: packageId,
+        trainer_id: trainerId,
+      },
+    });
     await AuditLogService.log({
       tenant_id: tenantId,
       actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
@@ -272,7 +397,7 @@ export class MemberMobileRequestsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "notification_event",
       target_id: event.id,
       metadata: {
@@ -295,22 +420,32 @@ export class MemberMobileRequestsController {
 
   static async listChangeRequests(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.tenantId;
-    const memberId = req.auth?.sub;
-    if (!tenantId || !memberId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadı");
+    const ownerId = eventMemberId(req);
+    if (!tenantId || !ownerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadı");
 
     const rows = await AppDataSource.getRepository(NotificationEvent).find({
-      where: { tenant_id: tenantId, member_id: memberId, type: MEMBER_CHANGE_REQUEST } as any,
+      where: { tenant_id: tenantId, member_id: ownerId, type: MEMBER_CHANGE_REQUEST } as any,
       order: { created_at: "DESC" },
     });
 
     return res.json({
-      data: rows.map((row) => ({
-        id: row.id,
-        type: String(row.payload?.request_type || "PACKAGE_RENEWAL"),
-        status: String((row.payload?.decision as string) || (row.payload?.status as string) || (row.status === NotificationEventStatus.QUEUED ? "PENDING" : "PROCESSED")),
-        created_at: row.created_at,
-        reason: typeof row.payload?.note === "string" ? row.payload.note : null,
-      })),
+      data: rows.map((row) => {
+        const payload = readEventPayload(row);
+        return {
+          id: row.id,
+          type: String(payload.request_type || "PACKAGE_RENEWAL"),
+          status: String((payload.decision as string) || (payload.status as string) || (row.status === NotificationEventStatus.QUEUED ? "PENDING" : "PROCESSED")),
+          created_at: row.created_at,
+          reason: typeof payload.note === "string" ? payload.note : null,
+        };
+      }),
     });
   }
+}
+
+function formatChangeRequestLabel(type: string) {
+  if (type === "PACKAGE_RENEWAL") return "Paket yenileme";
+  if (type === "PACKAGE_CANCEL") return "Paket iptali";
+  if (type === "TRAINER_CHANGE") return "Eğitmen değişikliği";
+  return "Üye talebi";
 }

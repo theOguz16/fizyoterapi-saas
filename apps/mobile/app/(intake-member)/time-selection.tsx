@@ -133,8 +133,9 @@ export default function TimeSelectionScreen() {
   const totalRequiredSlots = packageStatus.reduce((sum, item) => sum + item.requiredPreferenceSlots, 0);
   const totalSelectedSlots = packageStatus.reduce((sum, item) => sum + item.selectedCount, 0);
   const currentSlotIds = activePackage ? selectedSlotIdsByPackage[activePackage.package_id] || [] : [];
+  const hasSelectableSlots = scopedSlots.length > 0;
 
-  const continueLabel = totalRemaining > 0 ? `${totalRemaining} saat daha seç` : "Özete geç";
+  const continueLabel = !hasSelectableSlots ? "Uygun saat bekleniyor" : totalRemaining > 0 ? `${totalRemaining} saat daha seç` : "Özete geç";
 
   const handleContinue = () => {
     const { nextSelectedPackages, flattenedSlots } = buildMemberBookingTimeSelectionResult({
@@ -186,7 +187,7 @@ export default function TimeSelectionScreen() {
           label={continueLabel}
           icon="calendar"
           onPress={handleContinue}
-          disabled={selectedPackages.length === 0 || totalRemaining > 0}
+          disabled={selectedPackages.length === 0 || !hasSelectableSlots || totalRemaining > 0}
         />
       }
     >

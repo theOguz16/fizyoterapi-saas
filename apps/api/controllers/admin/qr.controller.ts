@@ -18,7 +18,7 @@ export class AdminQrController {
   }
 
   private static buildClinicQr(slug: string) {
-    return `CLN-${slug.toUpperCase()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+    return `FYF-${slug.toUpperCase()}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
   }
 
   private static buildTrainerQr() {
@@ -46,7 +46,7 @@ export class AdminQrController {
 
       let clinicUpdated = false;
       if (!tenant.qr_code) {
-        tenant.qr_code = AdminQrController.buildClinicQr(tenant.slug || "CLINIC");
+        tenant.qr_code = AdminQrController.buildClinicQr(tenant.slug || "SALON");
         await tenantRepo.save(tenant);
         clinicUpdated = true;
       }

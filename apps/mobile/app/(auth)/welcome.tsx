@@ -45,7 +45,7 @@ export default function WelcomeScreen() {
     getSignupOnboardingRole().then((role) => role && setSelectedPersoma(role)).catch(() => null);
     getPendingSalonJoinSlug().then(setPendingSalonSlug).catch(() => setPendingSalonSlug(null));
     resetSignupFlow();
-  }, []);
+  }, [resetSignupFlow, setSelectedPersoma]);
 
   useEffect(() => {
     Animated.parallel([
@@ -171,7 +171,7 @@ export default function WelcomeScreen() {
             <SurfaceCard tone="primary" padding="compact">
               <Text style={styles.pendingSalonEyebrow}>QR ile devam ediyorsun</Text>
               <Text style={styles.pendingSalonTitle}>{pendingSalonSlug}</Text>
-              <Text style={styles.pendingSalonCopy}>Giris veya kayit sonrasinda bu salonun onboarding akisi acilacak.</Text>
+              <Text style={styles.pendingSalonCopy}>Giriş veya kayıt sonrasında bu salonun onboarding akışı açılacak.</Text>
             </SurfaceCard>
           </AnimatedEntrance>
         ) : null}
@@ -214,7 +214,7 @@ export default function WelcomeScreen() {
             <View style={styles.heroTopRow}>
               <View style={styles.brandPill}>
                 <AppIcon name="spark" size="sm" active />
-                <Text style={styles.brandPillText}>Clinerva</Text>
+                <Text style={styles.brandPillText}>FizyoFlow</Text>
               </View>
               <View style={styles.livePill}>
                 <View style={styles.liveDot} />

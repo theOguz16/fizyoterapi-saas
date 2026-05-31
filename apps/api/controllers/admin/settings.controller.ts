@@ -1,6 +1,7 @@
 // Bu controller admin tarafindaki settings.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import { In } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { NotificationTemplate, NotificationType } from "../../entities/notification-template.entity";
@@ -10,12 +11,16 @@ import {
   NotificationDeliveryStatus,
 } from "../../entities/notification-delivery.entity";
 import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
-import { SalonProfile } from "../../entities/salon-profile.entity";
+import { ManagedGrowthStatus, SalonProfile } from "../../entities/salon-profile.entity";
+import { AuditLog } from "../../entities/audit-log.entity";
+import { Lead } from "../../entities/lead.entity";
 import { Tenant } from "../../entities/tenant.entity";
 import { User, UserRole } from "../../entities/user.entity";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
 import { normalizeLessonCatalogServices } from "../../services/package.service";
+import { RiskService } from "../../services/risk.service";
+import { isReservedPublicSlug } from "../../constants/reserved-slugs";
 
 export class AdminSettingsController {
   private static async logSettingsAudit(
@@ -36,7 +41,7 @@ export class AdminSettingsController {
       success: true,
       request_id: req.requestId || null,
       ip_address: req.ip || null,
-      user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "settings",
       target_id: req.tenantId || req.auth?.tenantId || "settings",
       metadata: metadata ?? null,
@@ -190,6 +195,34 @@ export class AdminSettingsController {
     } as SalonProfile["location"];
   }
 
+  private static normalizeNullableText(value: unknown, maxLength: number) {
+    if (value === null) return null;
+    if (value === undefined) return undefined;
+    const text = String(value).trim();
+    if (!text) return null;
+    return text.slice(0, maxLength);
+  }
+
+  private static normalizeServiceArea(value: unknown) {
+    if (!Array.isArray(value)) return [] as string[];
+    return Array.from(
+      new Set(
+        value
+          .map((item) => String(item ?? "").trim())
+          .filter(Boolean)
+          .map((item) => item.slice(0, 80))
+      )
+    ).slice(0, 12);
+  }
+
+  private static normalizeManagedGrowthStatus(value: unknown) {
+    const status = String(value ?? "").trim().toUpperCase();
+    if (Object.values(ManagedGrowthStatus).includes(status as ManagedGrowthStatus)) {
+      return status as ManagedGrowthStatus;
+    }
+    return ManagedGrowthStatus.PREPARING;
+  }
+
   private static normalizeBusinessHours(value: unknown): SalonProfile["business_hours"] {
   const defaults: SalonProfile["business_hours"] = {
     timezone: "Europe/Istanbul",
@@ -284,6 +317,10 @@ export class AdminSettingsController {
       const startingPrice = Number(row.starting_price);
       const commissionRate = Number(row.trainer_commission_rate);
       const packageType = String(row.package_type ?? "").toUpperCase();
+      const lessonMode = String(row.lesson_mode ?? "").toUpperCase();
+      const categoryGroup = String(row.category_group ?? "").trim();
+      const sessionDurationMinutes = row.session_duration_minutes === undefined ? undefined : Number(row.session_duration_minutes);
+      const breakDurationMinutes = row.break_duration_minutes === undefined ? undefined : Number(row.break_duration_minutes);
 
       if (!title) {
         throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: başlık zorunludur`);
@@ -307,6 +344,31 @@ export class AdminSettingsController {
       }
       if (packageType && !["GROUP", "PT", "SCOLIOSIS", "REFORMER", "MANUAL", "OTHER"].includes(packageType)) {
         throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: paket tipi geçersiz`);
+      }
+      if (lessonMode && !["PRIVATE", "DUO", "GROUP", "SINGLE"].includes(lessonMode)) {
+        throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: ders akışı geçersiz`);
+      }
+
+      if (row.category_group !== undefined && !categoryGroup) {
+        throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: kategori grubu boş olamaz`);
+      }
+
+      if (row.sub_lessons !== undefined && !Array.isArray(row.sub_lessons)) {
+        throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: alt dersler dizi formatında olmalıdır`);
+      }
+
+      if (
+        sessionDurationMinutes !== undefined &&
+        (!Number.isFinite(sessionDurationMinutes) || sessionDurationMinutes < 30 || sessionDurationMinutes > 180)
+      ) {
+        throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: ders süresi 30-180 dakika arasında olmalıdır`);
+      }
+
+      if (
+        breakDurationMinutes !== undefined &&
+        (!Number.isFinite(breakDurationMinutes) || breakDurationMinutes < 0 || breakDurationMinutes > 60)
+      ) {
+        throw new AppError("VALIDATION_ERROR", 400, `Ders kataloğu #${index + 1}: ara süresi 0-60 dakika arasında olmalıdır`);
       }
     });
   }
@@ -342,6 +404,14 @@ export class AdminSettingsController {
       social_links: {},
       theme: "minimal",
       primary_color: "#111827",
+      seo_title: tenant?.name ? `${tenant.name} | Dijital Klinik Vitrini` : null,
+      seo_description: tenant?.name ? `${tenant.name} için Fizyoflow destekli dijital klinik vitrini.` : null,
+      google_business_url: null,
+      google_maps_url: null,
+      business_category: "Fizyoterapi Kliniği",
+      service_area: [],
+      digital_brief: {},
+      managed_growth_status: ManagedGrowthStatus.PREPARING,
       business_hours: AdminSettingsController.normalizeBusinessHours(undefined),
       is_published: false,
     });
@@ -395,6 +465,59 @@ export class AdminSettingsController {
     return templates;
   }
 
+  private static async getGrowthAnalytics(tenantId: string) {
+    const auditRepo = AppDataSource.getRepository(AuditLog);
+    const leadRepo = AppDataSource.getRepository(Lead);
+    const ctaEvents = [
+      "PUBLIC_SITE_WHATSAPP_CLICK",
+      "PUBLIC_SITE_PHONE_CLICK",
+      "PUBLIC_SITE_MAP_CLICK",
+      "PUBLIC_SITE_INSTAGRAM_CLICK",
+      "PUBLIC_SITE_REVIEW_CLICK",
+    ];
+    const since30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [page_views, cta_clicks, lead_count, byEventRows, last30Rows] = await Promise.all([
+      auditRepo.count({ where: { tenant_id: tenantId, event_type: "PUBLIC_SITE_PAGE_VIEW" } }),
+      auditRepo.count({
+        where: {
+          tenant_id: tenantId,
+          event_type: In(ctaEvents),
+        },
+      }),
+      leadRepo.count({ where: { tenant_id: tenantId } }),
+      auditRepo
+        .createQueryBuilder("log")
+        .select("log.event_type", "event_type")
+        .addSelect("COUNT(*)", "count")
+        .where("log.tenant_id = :tenantId", { tenantId })
+        .andWhere("log.event_type LIKE :prefix", { prefix: "PUBLIC_SITE_%" })
+        .groupBy("log.event_type")
+        .getRawMany<{ event_type: string; count: string }>(),
+      auditRepo
+        .createQueryBuilder("log")
+        .select("log.event_type", "event_type")
+        .addSelect("COUNT(*)", "count")
+        .where("log.tenant_id = :tenantId", { tenantId })
+        .andWhere("log.event_type LIKE :prefix", { prefix: "PUBLIC_SITE_%" })
+        .andWhere("log.created_at >= :since", { since: since30Days })
+        .groupBy("log.event_type")
+        .getRawMany<{ event_type: string; count: string }>(),
+    ]);
+
+    const by_event = Object.fromEntries(byEventRows.map((row) => [row.event_type, Number(row.count) || 0]));
+    const last_30_days = Object.fromEntries(last30Rows.map((row) => [row.event_type, Number(row.count) || 0]));
+    const conversion_rate = page_views > 0 ? Number(((lead_count / page_views) * 100).toFixed(1)) : 0;
+
+    return {
+      page_views,
+      cta_clicks,
+      lead_count,
+      conversion_rate,
+      by_event,
+      last_30_days,
+    };
+  }
+
   // --- GET /api/admin/settings ---
   static async get(req: AuthenticatedRequest, res: Response) {
     try {
@@ -403,9 +526,10 @@ export class AdminSettingsController {
         throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
       }
 
-      const [profile, templates] = await Promise.all([
+      const [profile, templates, growthAnalytics] = await Promise.all([
         AdminSettingsController.ensureProfile(tenantId),
         AdminSettingsController.ensureTemplates(tenantId),
+        AdminSettingsController.getGrowthAnalytics(tenantId),
       ]);
 
       profile.services = normalizeLessonCatalogServices(profile.services);
@@ -417,6 +541,7 @@ export class AdminSettingsController {
             location: AdminSettingsController.normalizeLocation(profile.location),
           },
           notification_templates: templates,
+          growth_analytics: growthAnalytics,
         },
       });
     } catch (error) {
@@ -447,13 +572,52 @@ export class AdminSettingsController {
       const profileInput = req.body?.profile as Partial<SalonProfile> | undefined;
 
       if (profileInput && typeof profileInput === "object") {
-        if (profileInput.slug !== undefined) profile.slug = String(profileInput.slug).trim();
+        if (profileInput.slug !== undefined) {
+          const nextSlug = String(profileInput.slug).trim().toLowerCase();
+          if (isReservedPublicSlug(nextSlug)) {
+            throw new AppError("RESERVED_SLUG", 422, "Bu klinik URL kodu sistem tarafından ayrılmıştır");
+          }
+          const [profileConflict, tenantConflict] = await Promise.all([
+            profileRepo.findOne({ where: { slug: nextSlug } }),
+            AppDataSource.getRepository(Tenant).findOne({ where: { slug: nextSlug } }),
+          ]);
+          if (
+            (profileConflict && profileConflict.id !== profile.id) ||
+            (tenantConflict && tenantConflict.id !== tenantId)
+          ) {
+            throw new AppError("SLUG_CONFLICT", 409, "Bu klinik URL kodu başka bir profil tarafından kullanılıyor");
+          }
+          profile.slug = nextSlug;
+        }
         if (profileInput.hero_title !== undefined) profile.hero_title = String(profileInput.hero_title);
         if (profileInput.hero_subtitle !== undefined) profile.hero_subtitle = String(profileInput.hero_subtitle);
         if (profileInput.hero_image_url !== undefined) profile.hero_image_url = String(profileInput.hero_image_url);
         if (profileInput.about_text !== undefined) profile.about_text = String(profileInput.about_text);
         if (profileInput.theme !== undefined) profile.theme = String(profileInput.theme);
         if (profileInput.primary_color !== undefined) profile.primary_color = String(profileInput.primary_color);
+        if (profileInput.seo_title !== undefined) profile.seo_title = AdminSettingsController.normalizeNullableText(profileInput.seo_title, 160);
+        if (profileInput.seo_description !== undefined) {
+          profile.seo_description = AdminSettingsController.normalizeNullableText(profileInput.seo_description, 240);
+        }
+        if (profileInput.google_business_url !== undefined) {
+          profile.google_business_url = AdminSettingsController.normalizeNullableText(profileInput.google_business_url, 260);
+        }
+        if (profileInput.google_maps_url !== undefined) {
+          profile.google_maps_url = AdminSettingsController.normalizeNullableText(profileInput.google_maps_url, 260);
+        }
+        if (profileInput.business_category !== undefined) {
+          profile.business_category = AdminSettingsController.normalizeNullableText(profileInput.business_category, 100);
+        }
+        if (profileInput.service_area !== undefined) profile.service_area = AdminSettingsController.normalizeServiceArea(profileInput.service_area);
+        if (profileInput.digital_brief !== undefined) {
+          profile.digital_brief =
+            profileInput.digital_brief && typeof profileInput.digital_brief === "object" && !Array.isArray(profileInput.digital_brief)
+              ? (profileInput.digital_brief as SalonProfile["digital_brief"])
+              : {};
+        }
+        if (profileInput.managed_growth_status !== undefined) {
+          profile.managed_growth_status = AdminSettingsController.normalizeManagedGrowthStatus(profileInput.managed_growth_status);
+        }
         if (profileInput.business_hours !== undefined) {
           const normalizedBusinessHours = AdminSettingsController.normalizeBusinessHours(profileInput.business_hours);
 
@@ -557,6 +721,7 @@ export class AdminSettingsController {
         where: { tenant_id: tenantId },
         order: { created_at: "ASC" },
       });
+      const growthAnalytics = await AdminSettingsController.getGrowthAnalytics(tenantId);
 
       return res.json({
         data: {
@@ -565,6 +730,7 @@ export class AdminSettingsController {
             location: AdminSettingsController.normalizeLocation(profile.location),
           },
           notification_templates: templates,
+          growth_analytics: growthAnalytics,
         },
       });
     } catch (error) {
@@ -595,18 +761,46 @@ export class AdminSettingsController {
         throw new AppError("NOTIFICATION_TEMPLATE_NOT_FOUND", 404, "Bildirim sablonu bulunamadi");
       }
 
-      const members = await AppDataSource.getRepository(User).find({
-        where: { tenant_id: tenantId, role: UserRole.MEMBER, is_active: true },
-        select: ["id"],
-        order: { created_at: "DESC" },
-        take: 500,
-      });
+      const audience = String(req.body?.audience ?? "ALL_MEMBERS").trim().toUpperCase();
+      const userRepo = AppDataSource.getRepository(User);
+      let members: User[] = [];
+
+      if (audience === "TRAINERS") {
+        members = await userRepo.find({
+          where: { tenant_id: tenantId, role: UserRole.TRAINER, is_active: true },
+          select: ["id", "first_name", "last_name", "email"],
+          order: { created_at: "DESC" },
+          take: 500,
+        });
+      } else if (audience === "AT_RISK") {
+        const riskResult = await RiskService.listRiskMembers({
+          tenantId,
+          riskSegment: "AT_RISK",
+          memberActivity: "ACTIVE",
+          limit: 500,
+        });
+        const memberIds = riskResult.data.map((row) => row.member_id);
+        members = memberIds.length
+          ? await userRepo.find({
+              where: memberIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.MEMBER })) as any,
+              select: ["id", "first_name", "last_name", "email"],
+            })
+          : [];
+      } else {
+        members = await userRepo.find({
+          where: { tenant_id: tenantId, role: UserRole.MEMBER, is_active: true },
+          select: ["id", "first_name", "last_name", "email"],
+          order: { created_at: "DESC" },
+          take: 500,
+        });
+      }
 
       const now = new Date();
       const eventRepo = AppDataSource.getRepository(NotificationEvent);
       const deliveryRepo = AppDataSource.getRepository(NotificationDelivery);
-      const events = members.map((member) =>
-        eventRepo.create({
+      const events = members.map((member) => {
+        const memberFullName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || member.email;
+        return eventRepo.create({
           tenant_id: tenantId,
           type: `TEMPLATE_${template.type}`,
           member_id: member.id,
@@ -614,14 +808,17 @@ export class AdminSettingsController {
             title: template.title,
             body: template.body,
             template_type: template.type,
+            audience,
+            member_full_name: memberFullName,
+            member_email: member.email,
             settings: template.settings ?? {},
             sent_via: "MOCK_PUSH",
           },
           status: NotificationEventStatus.PROCESSED,
           triggered_by_admin_id: adminId,
           processed_at: now,
-        })
-      );
+        });
+      });
       if (events.length > 0) {
         await eventRepo.save(events);
         await deliveryRepo.save(
@@ -641,6 +838,7 @@ export class AdminSettingsController {
       return res.json({
         data: {
           template_type: template.type,
+          audience,
           total_targeted: members.length,
           events_created: events.length,
           message: "Bildirim tetikleme islemi baslatildi (mock push)",
@@ -695,8 +893,8 @@ export class AdminSettingsController {
           processed_at: row.processed_at || null,
           error_message: row.error_message || null,
           member_id: row.member_id,
-          member_full_name: memberMap.get(row.member_id)?.full_name || null,
-          member_email: memberMap.get(row.member_id)?.email || null,
+          member_full_name: memberMap.get(row.member_id)?.full_name || String(row.payload?.member_full_name || "") || null,
+          member_email: memberMap.get(row.member_id)?.email || String(row.payload?.member_email || "") || null,
           title: String(row.payload?.title || row.payload?.template_type || row.type || "Bildirim"),
           body: String(row.payload?.body || row.payload?.message || ""),
         })),

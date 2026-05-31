@@ -9,7 +9,7 @@ export function errorMiddleware(
   err: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
   if (err instanceof AppError) {
     attachAuditError(res, err.code, messageForCode(err.code, err.message));

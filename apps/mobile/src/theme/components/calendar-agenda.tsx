@@ -87,9 +87,9 @@ export function formatCalendarDayLabel(value?: string | null) {
 }
 
 export function formatCalendarDayFullLabel(value?: string | null) {
-  if (!value) return "Secili gun";
+  if (!value) return "Seçili gün";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Secili gun";
+  if (Number.isNaN(date.getTime())) return "Seçili gün";
   return date.toLocaleDateString("tr-TR", {
     weekday: "long",
     day: "2-digit",
@@ -129,8 +129,8 @@ export function CalendarAgenda({
   stats = [],
   emptyTitle,
   emptyDescription,
-  dayEmptyTitle = "Bu gunde kayit yok",
-  dayEmptyDescription = "Baska bir gun sec veya liste gorunumuyle tum plani incele.",
+  dayEmptyTitle = "Bu günde kayıt yok",
+  dayEmptyDescription = "Başka bir gün seç veya liste görünümüyle tüm planı incele.",
 }: Props) {
   const [viewMode, setViewMode] = useState<"day" | "list">("day");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
@@ -207,7 +207,7 @@ export function CalendarAgenda({
       <SegmentedSwitch
         value={viewMode}
         options={[
-          { label: "Gunluk", value: "day" },
+          { label: "Günlük", value: "day" },
           { label: "Liste", value: "list" },
         ]}
         onChange={(value) => setViewMode(value as "day" | "list")}
@@ -233,11 +233,11 @@ export function CalendarAgenda({
           <SurfaceCard padding="regular">
             <View style={styles.dayHeader}>
               <Text style={styles.dayTitle}>
-                {dayOptions.find((day) => day.key === selectedDay)?.fullLabel || "Secili gun"}
+                {dayOptions.find((day) => day.key === selectedDay)?.fullLabel || "Seçili gün"}
               </Text>
               {selectedItems.length > 0 ? (
                 <StatusBadge
-                  label={`${selectedItems.length} kayit`}
+                  label={`${selectedItems.length} kayıt`}
                   tone="info"
                 />
               ) : null}

@@ -32,14 +32,10 @@ export async function runRouteChain(
     let nextCalled = false;
     let nextError: unknown;
 
-    try {
-      await step(req, res, (error?: unknown) => {
-        nextCalled = true;
-        nextError = error;
-      });
-    } catch (error) {
-      throw error;
-    }
+    await step(req, res, (error?: unknown) => {
+      nextCalled = true;
+      nextError = error;
+    });
 
     if (nextError) throw nextError;
     if (!nextCalled) break;

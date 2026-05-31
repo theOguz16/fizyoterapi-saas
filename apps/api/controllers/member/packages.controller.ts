@@ -18,6 +18,16 @@ const ACTIVE_BOOKING_STATUSES = [
   BookingStatus.RESCHEDULED,
 ];
 
+function readEventPayload(event: NotificationEvent): Record<string, any> {
+  try {
+    const payload = event.payload;
+    if (!payload) return {};
+    return typeof payload === "string" ? JSON.parse(payload) : payload;
+  } catch {
+    return {};
+  }
+}
+
 function pricesDiffer(previous: unknown, current: unknown) {
   if (previous === null || previous === undefined) return false;
   const prevNumber = Number(previous);
@@ -162,7 +172,7 @@ for (const booking of activeBookings as any[]) {
 }
 
   for (const event of pendingGroupEvents) {
-    const payload = event.payload || {};
+    const payload = readEventPayload(event);
     const packageId = String(payload.package_id || "");
     const selectedDays = Array.isArray(payload.selected_days)
     ? payload.selected_days
@@ -196,7 +206,10 @@ for (const booking of activeBookings as any[]) {
           const expiresAt = row.expires_at || null;
           const isUpcoming = startsAt ? new Date(startsAt).getTime() > now.getTime() : false;
           const isExpired = expiresAt ? new Date(expiresAt).getTime() < now.getTime() : false;
-          const status = isUpcoming ? "UPCOMING" : row.is_active && !isExpired ? "ACTIVE" : "EXPIRED";
+          const snapshot = row.package_snapshot || {};
+          const duo = snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? (snapshot as Record<string, any>).duo : null;
+          const isDuoAwaitingPartner = Boolean(duo) && String(duo?.status || "").toUpperCase() === "AWAITING_PARTNER_PAYMENT";
+          const status = isDuoAwaitingPartner ? "AWAITING_PARTNER_PAYMENT" : isUpcoming ? "UPCOMING" : row.is_active && !isExpired ? "ACTIVE" : "EXPIRED";
 
           return {
 
@@ -219,7 +232,18 @@ for (const booking of activeBookings as any[]) {
             expires_at: expiresAt,
             created_at: row.created_at,
             source_request_id: row.source_request_id || null,
-            package_snapshot: row.package_snapshot || {},
+            package_snapshot: snapshot,
+            lesson_mode:
+              typeof (snapshot as Record<string, any>)?.lesson_mode === "string"
+                ? (snapshot as Record<string, any>).lesson_mode
+                : String((row.packageDetails?.rules as Record<string, unknown> | undefined)?.lesson_mode || "").toUpperCase() || null,
+            is_duo: Boolean(duo),
+            duo_status: duo?.status || null,
+            duo_partner_name: duo?.partner_name || null,
+            duo_partner_contact: duo?.partner_contact || null,
+            duo_invite_url: duo?.invite_url || null,
+            duo_invite_token: duo?.invite_token || null,
+            duo_payment_status: duo?.payment?.status || null,
 
             linked_group_classes: groupClassesByPackageId.get(String(row.package_id)) || [],
 
