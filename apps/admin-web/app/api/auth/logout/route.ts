@@ -1,16 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getApiBase } from "@/lib/api-base";
+import { buildAuthCookieOptions } from "@/lib/auth-cookie";
 
 function clearCookie(response: NextResponse) {
-  const secure = process.env.NODE_ENV === "production";
-  response.cookies.set("accessToken", "", {
-    httpOnly: true,
-    secure,
-    sameSite: secure ? ("none" as const) : ("lax" as const),
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set("accessToken", "", buildAuthCookieOptions(0));
 }
 
 export async function POST() {
