@@ -12,3 +12,4 @@ authRoutes.post("/login", authLoginRateLimit, AuthController.login);
 authRoutes.post("/logout", AuthController.logout);
 authRoutes.post("/switch-role", authMiddleware, AuthController.switchRole);
 authRoutes.get("/me", authMiddleware, AuthController.me);
+authRoutes.delete("/account", authMiddleware, AuthController.deleteAccount);

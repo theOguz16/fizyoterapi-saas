@@ -936,6 +936,10 @@ export async function logoutApi() {
   return httpRequest<boolean>("/auth/logout", { method: "POST" });
 }
 
+export async function deleteAccountApi() {
+  return httpRequest<{ deleted: boolean }>("/auth/account", { method: "DELETE" });
+}
+
 export async function invitePreviewApi(token: string) {
   return httpRequest<any>(`/public/invites/${encodeURIComponent(token)}/preview`, { auth: false });
 }

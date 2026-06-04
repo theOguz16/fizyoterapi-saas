@@ -3,6 +3,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 async function loadHttpClientModule() {
   vi.resetModules();
+  vi.stubGlobal("__DEV__", false);
+  vi.doMock("expo-constants", () => ({
+    default: {
+      expoConfig: null,
+      manifest2: null,
+      manifest: null,
+      linkingUri: null,
+    },
+  }));
+
+  return import("@/lib/http-client");
+}
+
+async function loadDevHttpClientModule() {
+  vi.resetModules();
+  vi.stubGlobal("__DEV__", true);
   vi.doMock("expo-constants", () => ({
     default: {
       expoConfig: null,
@@ -35,7 +51,7 @@ describe("mobile http client", () => {
 
     expect(result).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:4949/api/member/home",
+      "https://api.fizyoflow.com/api/member/home",
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: "Bearer token-1",
@@ -43,6 +59,18 @@ describe("mobile http client", () => {
         }),
       })
     );
+  });
+
+  it("keeps localhost fallback only for development builds", async () => {
+    const { httpRequest } = await loadDevHttpClientModule();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ data: { ok: true } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(httpRequest<{ ok: boolean }>("/member/home")).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:4949/api/member/home", expect.any(Object));
   });
 
   it("supports raw payload mode without data unwrapping", async () => {

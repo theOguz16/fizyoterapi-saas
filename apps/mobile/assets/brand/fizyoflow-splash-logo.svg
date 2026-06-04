@@ -1,18 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="260" viewBox="0 0 900 260">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320">
   <defs>
-    <linearGradient id="mark" x1="48" y1="34" x2="220" y2="226" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#78A082"/>
-      <stop offset="1" stop-color="#4E805F"/>
+    <linearGradient id="bg" x1="42" y1="22" x2="276" y2="298" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6FAF3"/>
+      <stop offset="0.38" stop-color="#DCEADE"/>
+      <stop offset="0.72" stop-color="#9ABFA3"/>
+      <stop offset="1" stop-color="#5D936C"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="248" y1="16" x2="154" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.76"/>
+      <stop offset="1" stop-color="#7BAA84" stop-opacity="0.42"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="64" y1="60" x2="218" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.58" stop-color="#FBFDF9"/>
+      <stop offset="1" stop-color="#EDF5EB"/>
+    </linearGradient>
+    <linearGradient id="word" x1="360" y1="106" x2="824" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#32543D"/>
+      <stop offset="1" stop-color="#6E9A76"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#365A42" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="9" stdDeviation="9" flood-color="#274B35" flood-opacity="0.32"/>
+    </filter>
+    <filter id="ribbonShadow" x="-18%" y="-30%" width="136%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#315C40" flood-opacity="0.26"/>
     </filter>
   </defs>
-  <rect width="900" height="260" fill="#F7FAF6"/>
-  <g filter="url(#shadow)">
-    <path d="M64 55C64 35.67 79.67 20 99 20H247C264.397 20 278.5 34.103 278.5 51.5C278.5 68.897 264.397 83 247 83H132V130H217C234.397 130 248.5 144.103 248.5 161.5C248.5 178.897 234.397 193 217 193H132V214C132 236.644 113.644 255 91 255H64V55Z" fill="url(#mark)"/>
-    <path d="M64 230C64 214.812 76.312 202.5 91.5 202.5H105C118.807 202.5 130 213.693 130 227.5C130 241.307 118.807 252.5 105 252.5H84C72.954 252.5 64 243.546 64 230Z" fill="url(#mark)"/>
-    <circle cx="278" cy="138" r="19" fill="url(#mark)"/>
+  <rect width="960" height="320" fill="#F7FAF6"/>
+  <g transform="translate(40 24)">
+    <rect width="272" height="272" rx="56" fill="url(#bg)"/>
+    <path d="M24 258C75 197 127 196 168 158C206 122 244 86 264 21V211C264 240 240 264 211 264H31C28 264 26 262 24 258Z" fill="url(#panel)"/>
+    <path d="M26 242C66 198 104 186 147 176C188 167 225 145 258 101" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.78"/>
+    <g filter="url(#shadow)">
+      <path d="M52 76C52 65 61 56 71.5 56H172V75C172 84 164 92 155 92H86V120H139C148 120 155.5 128 155.5 137C155.5 146 148 154 139 154H86V184C86 194 78 203 67 203H52V76Z" fill="url(#mark)"/>
+      <path d="M117 142C117 132 126 123 136 123H225V141C225 150 217 157 208 157H147V170H200V185C200 194 192 202 183 202H147V220C147 230 139 239 129 239H117V142Z" fill="url(#mark)"/>
+      <circle cx="205" cy="97" r="12" fill="url(#mark)"/>
+    </g>
+    <path d="M74 203C110 134 162 100 208 109C225 112 239 107 250 95" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" filter="url(#ribbonShadow)"/>
+    <path d="M74 203C110 134 162 100 208 109C225 112 239 107 250 95" fill="none" stroke="#F6FAF3" stroke-width="8" stroke-linecap="round"/>
   </g>
-  <text x="350" y="156" fill="#5E8C6A" font-family="Poppins, Avenir Next, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="10">FIZYOFLOW</text>
+  <text x="360" y="184" fill="url(#word)" font-family="Poppins, Avenir Next, Arial, sans-serif" font-size="64" font-weight="800" letter-spacing="12">FIZYOFLOW</text>
 </svg>

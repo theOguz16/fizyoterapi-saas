@@ -1,26 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="128" y1="72" x2="896" y2="952" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#84A88E"/>
-      <stop offset="0.58" stop-color="#5F8F6D"/>
-      <stop offset="1" stop-color="#3F7153"/>
+    <linearGradient id="bg" x1="126" y1="52" x2="858" y2="948" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6FAF3"/>
+      <stop offset="0.36" stop-color="#DDEADF"/>
+      <stop offset="0.68" stop-color="#9FC2A6"/>
+      <stop offset="1" stop-color="#5E936D"/>
     </linearGradient>
-    <linearGradient id="mark" x1="307" y1="246" x2="718" y2="742" gradientUnits="userSpaceOnUse">
+    <linearGradient id="panel" x1="780" y1="58" x2="492" y2="812" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F9FCF6" stop-opacity="0.78"/>
+      <stop offset="0.58" stop-color="#D7E7DA" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#6EA27A" stop-opacity="0.42"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="232" y1="185" x2="686" y2="822" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="0.48" stop-color="#F8FBF7"/>
-      <stop offset="1" stop-color="#E9F0E7"/>
+      <stop offset="0.54" stop-color="#FBFDF9"/>
+      <stop offset="1" stop-color="#EEF5EC"/>
     </linearGradient>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#1A3325" flood-opacity="0.28"/>
+    <filter id="shadow" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#264B34" flood-opacity="0.34"/>
     </filter>
-    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="-6" stdDeviation="8" flood-color="#FFFFFF" flood-opacity="0.22"/>
+    <filter id="ribbonShadow" x="-18%" y="-30%" width="136%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#315C40" flood-opacity="0.26"/>
     </filter>
   </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <circle cx="786" cy="138" r="230" fill="#FFFFFF" opacity="0.10"/>
-  <circle cx="186" cy="850" r="260" fill="#244A34" opacity="0.16"/>
-  <path d="M290 277C290 238.34 321.34 207 360 207H693C727.794 207 756 235.206 756 270C756 304.794 727.794 333 693 333H426V442H627C661.794 442 690 470.206 690 505C690 539.794 661.794 568 627 568H426V625C426 670.287 389.287 707 344 707H290V277Z" fill="url(#mark)" filter="url(#softShadow)"/>
-  <path d="M290 762C290 731.624 314.624 707 345 707H379C405.51 707 427 728.49 427 755C427 781.51 405.51 803 379 803H331C308.356 803 290 784.644 290 762Z" fill="url(#mark)" filter="url(#innerGlow)"/>
-  <circle cx="733" cy="461" r="38" fill="url(#mark)" filter="url(#softShadow)"/>
+  <rect width="1024" height="1024" rx="204" fill="url(#bg)"/>
+  <path d="M92 968C282 738 476 733 628 591C773 456 911 321 986 78V792C986 899.143 899.143 986 792 986H116C105.361 986 96.806 978.06 92 968Z" fill="url(#panel)"/>
+  <path d="M96 914C246 750 388 703 553 664C704 628 841 548 967 382" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-opacity="0.78"/>
+  <g filter="url(#shadow)">
+    <path d="M194 285C194 244.683 226.683 212 267 212H644V284C644 318.794 615.794 347 581 347H322V453H520C554.794 453 583 481.206 583 516C583 550.794 554.794 579 520 579H322V691C322 729.66 290.66 761 252 761H194V285Z" fill="url(#mark)"/>
+    <path d="M439 535C439 494.683 471.683 462 512 462H845V528C845 562.794 816.794 591 782 591H553V637H749V695C749 729.794 720.794 758 686 758H553V824C553 862.66 521.66 894 483 894H439V535Z" fill="url(#mark)"/>
+    <circle cx="770" cy="363" r="43" fill="url(#mark)"/>
+  </g>
+  <path d="M276 761C414 504 605 374 781 409C845 421 896 402 936 358" fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" filter="url(#ribbonShadow)"/>
+  <path d="M276 761C414 504 605 374 781 409C845 421 896 402 936 358" fill="none" stroke="#F6FAF3" stroke-width="28" stroke-linecap="round"/>
 </svg>

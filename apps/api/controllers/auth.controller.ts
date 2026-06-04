@@ -331,6 +331,106 @@ export class AuthController {
     return res.json({ data: true });
   }
 
+  static async deleteAccount(req: Request, res: Response) {
+    const auth = (req as any).auth as JwtPayload | undefined;
+    if (!auth?.accountId || auth.loginScope !== "ACCOUNT") {
+      throw new AppError("ACCOUNT_SESSION_REQUIRED", 403, "Hesap oturumu gerekli");
+    }
+
+    const accountId = auth.accountId;
+    const deletedAt = new Date();
+    const deletedEmail = `deleted-${accountId}@deleted.fizyoflow.local`;
+    const deletedPhone = `deleted-${accountId.slice(0, 8)}`;
+
+    await AppDataSource.transaction(async (manager) => {
+      const accountRepo = manager.getRepository(Account);
+      const membershipRepo = manager.getRepository(SalonMembership);
+      const applicationRepo = manager.getRepository(SalonApplication);
+      const userRepo = manager.getRepository(User);
+      const tenantRepo = manager.getRepository(Tenant);
+
+      const account = await accountRepo.findOne({ where: { id: accountId } });
+      if (!account) {
+        throw new AppError("ACCOUNT_NOT_FOUND", 404, "Hesap bulunamadı");
+      }
+
+      const memberships = await membershipRepo.find({ where: { account_id: accountId } });
+      const linkedUserIds = memberships.map((membership) => membership.user_id).filter(Boolean) as string[];
+
+      account.email = deletedEmail;
+      account.phone = deletedPhone;
+      account.first_name = "Deleted";
+      account.last_name = "Account";
+      account.password_hash = `deleted:${accountId}`;
+      account.onboarding_profile = null;
+      account.is_active = false;
+      await accountRepo.save(account);
+
+      await membershipRepo
+        .createQueryBuilder()
+        .update(SalonMembership)
+        .set({ status: SalonMembershipStatus.LEFT, is_active_context: false, left_at: deletedAt })
+        .where("account_id = :accountId", { accountId })
+        .execute();
+
+      await applicationRepo
+        .createQueryBuilder()
+        .update(SalonApplication)
+        .set({ status: SalonApplicationStatus.CANCELLED, note: "Account deleted by user" })
+        .where("account_id = :accountId", { accountId })
+        .andWhere("status IN (:...statuses)", {
+          statuses: [SalonApplicationStatus.PENDING, SalonApplicationStatus.APPROVED],
+        })
+        .execute();
+
+      for (const userId of linkedUserIds) {
+        await userRepo.update(
+          { id: userId },
+          {
+            email: `deleted-${userId}@deleted.fizyoflow.local`,
+            phone: `deleted-${userId.slice(0, 8)}`,
+            first_name: "Deleted",
+            last_name: "Account",
+            password_hash: `deleted:${userId}`,
+            qr_code: () => "NULL",
+            is_active: false,
+          }
+        );
+      }
+
+      await tenantRepo
+        .createQueryBuilder()
+        .update(Tenant)
+        .set({ owner_account_id: null, is_public: false })
+        .where("owner_account_id = :accountId", { accountId })
+        .execute();
+    });
+
+    await AuditLogService.log({
+      tenant_id: auth.tenantId || null,
+      actor_user_id: auth.linkedUserId || null,
+      actor_account_id: accountId,
+      actor_role: auth.role || null,
+      event_type: "AUTH_ACCOUNT_DELETED",
+      action: "DELETE",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 200,
+      success: true,
+      request_id: (req as any).requestId || null,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+    });
+
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+    return res.json({ data: { deleted: true } });
+  }
+
   static async switchRole(req: Request, res: Response) {
     const auth = (req as any).auth as JwtPayload | undefined;
     const requestedRole = AuthController.normalizeRole((req.body as { role?: string })?.role);

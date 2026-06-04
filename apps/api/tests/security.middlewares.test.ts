@@ -5,6 +5,7 @@ import { activeAccountMiddleware } from "../middlewares/active-account.middlewar
 import { internalAdminMiddleware } from "../middlewares/internal-admin.middleware";
 import { requireRole } from "../middlewares/rbac.middleware";
 import { tenantMiddleware } from "../middlewares/tenant.middleware";
+import { AuditLogService } from "../services/audit-log.service";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
 
 describe("security middlewares", () => {
@@ -31,6 +32,7 @@ describe("security middlewares", () => {
         this.body = payload;
         return this;
       },
+      clearCookie: vi.fn(),
     };
   }
 
@@ -212,5 +214,87 @@ describe("security middlewares", () => {
       code: "ACCOUNT_INACTIVE",
       statusCode: 403,
     });
+  });
+
+  it("deletes an account without requiring email support", async () => {
+    const account = {
+      id: "account-1",
+      email: "member@example.com",
+      phone: "5551234567",
+      first_name: "Member",
+      last_name: "User",
+      password_hash: "hash",
+      onboarding_profile: { role: "MEMBER" },
+      is_active: true,
+    };
+    const accountRepo = {
+      findOne: vi.fn().mockResolvedValue(account),
+      save: vi.fn().mockResolvedValue(account),
+    };
+    const membershipRepo = {
+      find: vi.fn().mockResolvedValue([{ id: "membership-1", user_id: "user-1" }]),
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue({ affected: 1 }),
+      }),
+    };
+    const applicationRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue({ affected: 1 }),
+      }),
+    };
+    const userRepo = { update: vi.fn().mockResolvedValue({ affected: 1 }) };
+    const tenantRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue({ affected: 1 }),
+      }),
+    };
+    const manager = {
+      getRepository(entity: any) {
+        const name = entity?.name || "";
+        if (name.includes("Account")) return accountRepo;
+        if (name.includes("SalonMembership")) return membershipRepo;
+        if (name.includes("SalonApplication")) return applicationRepo;
+        if (name.includes("User")) return userRepo;
+        if (name.includes("Tenant")) return tenantRepo;
+        return {};
+      },
+    };
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) => callback(manager));
+    vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+
+    const req = {
+      method: "DELETE",
+      originalUrl: "/api/auth/account",
+      ip: "127.0.0.1",
+      headers: {},
+      auth: { accountId: "account-1", linkedUserId: "user-1", role: "MEMBER", loginScope: "ACCOUNT" },
+    } as any;
+    const res = createResponse();
+
+    await AuthController.deleteAccount(req, res as any);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ data: { deleted: true } });
+    expect(account.is_active).toBe(false);
+    expect(account.email).toBe("deleted-account-1@deleted.fizyoflow.local");
+    expect(account.onboarding_profile).toBeNull();
+    expect(userRepo.update).toHaveBeenCalledWith(
+      { id: "user-1" },
+      expect.objectContaining({
+        email: "deleted-user-1@deleted.fizyoflow.local",
+        is_active: false,
+        qr_code: expect.any(Function),
+      })
+    );
   });
 });

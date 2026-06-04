@@ -33,6 +33,7 @@ function readExpoHostCandidate() {
 function buildApiBase() {
   const configuredBase = (process.env.EXPO_PUBLIC_API_BASE || "").trim();
   const detectedHost = readExpoHostCandidate();
+  const isDevBuild = typeof __DEV__ !== "undefined" && __DEV__;
 
   if (configuredBase) {
     try {
@@ -56,7 +57,7 @@ function buildApiBase() {
     return `http://${detectedHost}:4949/api`;
   }
 
-  return "http://localhost:4949/api";
+  return isDevBuild ? "http://localhost:4949/api" : "https://api.fizyoflow.com/api";
 }
 
 const API_BASE = buildApiBase();

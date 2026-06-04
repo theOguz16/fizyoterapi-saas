@@ -5,7 +5,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAuthToken } from "@/lib/http-client";
-import { inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
+import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
 
@@ -73,6 +73,7 @@ type SessionContextType = {
   switchRole: (role: SessionRole) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   acceptInvite: (input: InviteAcceptInput) => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -192,6 +193,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return status;
   }
 
+  async function syncNotificationPermissionSafely(options?: { allowPromptScreen?: boolean }) {
+    try {
+      return await syncNotificationPermission(options);
+    } catch {
+      setPushToken(null);
+      return notificationPermissionStatus;
+    }
+  }
+
   async function dismissNotificationPermissionPrompt() {
     await setNotificationPermissionPromptState({
       hasSeenPrompt: true,
@@ -261,7 +271,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           return;
         }
         applySessionPayload(me as any);
-        await syncNotificationPermission();
+        await syncNotificationPermissionSafely();
       } catch {
         await clearSessionState();
       } finally {
@@ -314,7 +324,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
-    await syncNotificationPermission({ allowPromptScreen: true });
+    await syncNotificationPermissionSafely({ allowPromptScreen: true });
   };
 
   const switchRole = async (role: SessionRole) => {
@@ -332,7 +342,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
-    await syncNotificationPermission();
+    await syncNotificationPermissionSafely();
   };
 
   const register = async (input: RegisterInput) => {
@@ -347,7 +357,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
-    await syncNotificationPermission({ allowPromptScreen: true });
+    await syncNotificationPermissionSafely({ allowPromptScreen: true });
   };
 
   const logout = async () => {
@@ -363,6 +373,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // ignore API logout errors if token already invalid
     }
 
+    await clearSessionState();
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await unregisterPushDevice(pushToken);
+    } catch {
+      // ignore device unregister errors during account deletion
+    }
+
+    await deleteAccountApi();
     await clearSessionState();
   };
 
@@ -396,11 +417,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       clearPendingPostAuthScreen: () => setPendingPostAuthScreen(null),
       dismissNotificationPermissionPrompt,
       requestNotificationPermission,
-      refreshNotificationPermissionStatus: () => syncNotificationPermission(),
+      refreshNotificationPermissionStatus: () => syncNotificationPermissionSafely(),
       login,
       switchRole,
       register,
       logout,
+      deleteAccount,
       acceptInvite,
       refreshMe,
     }),

@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Alert, Linking, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
+import { ApiClientError } from "@/lib/api-error";
+import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
@@ -26,8 +29,50 @@ async function openExternalUrl(url: string) {
 
 export function AccountSecurityCard({ backTo }: AccountSecurityCardProps) {
   const router = useRouter();
+  const { deleteAccount } = useSession();
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const supportUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Fizyoflow hesap desteği")}`;
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Hesabı kalıcı sil",
+      "Hesabın kapatılacak, kişisel hesap bilgilerin silinecek ve bu cihazdaki oturumun kapatılacak. Bu işlem geri alınamaz.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Devam et",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert("Son onay", "Hesabını kalıcı olarak silmek istediğine emin misin?", [
+              { text: "Vazgeç", style: "cancel" },
+              {
+                text: "Hesabı sil",
+                style: "destructive",
+                onPress: () => {
+                  void (async () => {
+                    try {
+                      setIsDeletingAccount(true);
+                      await deleteAccount();
+                      Alert.alert("Hesap silindi", "Hesabın kalıcı olarak silindi.");
+                    } catch (error) {
+                      const message =
+                        error instanceof ApiClientError || error instanceof Error
+                          ? error.message
+                          : "Hesap silinemedi. Lütfen tekrar deneyin.";
+                      Alert.alert("Hesap silinemedi", message);
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  })();
+                },
+              },
+            ]);
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SurfaceCard>
@@ -58,14 +103,11 @@ export function AccountSecurityCard({ backTo }: AccountSecurityCardProps) {
           onPress={() => void openExternalUrl(`${WEB_BASE_URL}/kullanim-sartlari`)}
         />
         <ActionButton
-          label="Hesap silme talebi"
+          label="Hesabı kalıcı sil"
           icon="risk"
-          variant="ghost"
-          onPress={() =>
-            void openExternalUrl(
-              `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Fizyoflow hesap silme talebi")}`
-            )
-          }
+          variant="danger"
+          loading={isDeletingAccount}
+          onPress={handleDeleteAccount}
         />
       </View>
     </SurfaceCard>

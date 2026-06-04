@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
@@ -17,6 +17,8 @@ import { tokens } from "@/theme/tokens";
 
 const MONTHLY_PRICE_LABEL = "₺349.99";
 const ANNUAL_PRICE_LABEL = "₺3,499.90";
+const PRIVACY_POLICY_URL = "https://fizyoflow.com/privacy-policy";
+const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
 function formatDate(value?: string | null) {
   if (!value) return "Belirlenmedi";
@@ -239,6 +241,15 @@ export default function AdminSubscriptionScreen() {
           </View>
 
           <Text style={[styles.priceHint, packageQuery.isError ? styles.priceError : null]}>{priceHint}</Text>
+          <View style={styles.legalLinks} testID="admin-subscription-legal-links">
+            <Text style={styles.legalCopy}>
+              Abonelik otomatik yenilenir. Satın alarak{" "}
+              <LegalLink label="Privacy Policy" url={PRIVACY_POLICY_URL} />
+              {" "}ve{" "}
+              <LegalLink label="Terms of Use (EULA)" url={TERMS_OF_USE_URL} />
+              {" "}koşullarını kabul edersin.
+            </Text>
+          </View>
         </View>
 
         <ActionButton
@@ -336,6 +347,20 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
     </View>
+  );
+}
+
+function LegalLink({ label, url }: { label: string; url: string }) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={() => {
+        Linking.openURL(url).catch(() => null);
+      }}
+    >
+      <Text style={styles.legalLink}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -480,6 +505,23 @@ const styles = StyleSheet.create({
   priceError: {
     color: tokens.colors.danger,
     fontFamily: tokens.fontFamily.medium,
+  },
+  legalLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  legalCopy: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.compact,
+    fontFamily: tokens.fontFamily.regular,
+  },
+  legalLink: {
+    color: tokens.colors.primaryStrong,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.compact,
+    fontFamily: tokens.fontFamily.semibold,
+    textDecorationLine: "underline",
   },
   featureList: {
     gap: tokens.spacing.sm,
