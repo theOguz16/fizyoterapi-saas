@@ -11,6 +11,7 @@ import { LoggerService } from "./services/logger.service";
 import { RiskNotificationService } from "./services/risk-notification.service";
 import { SchemaMaintenanceService } from "./services/schema-maintenance.service";
 import { StartupConfigService } from "./services/startup-config.service";
+import { TrialSubscriptionReminderService } from "./services/trial-subscription-reminder.service";
 
 // HTTP sunucusu ve zamanlanmis batch isleri ayni process'te ayaga kalkiyor.
 // Bu dosya operasyonel bootstrap noktasi olarak davranir.
@@ -81,6 +82,21 @@ async function bootstrap() {
     setInterval(() => {
       GroupClassReminderService.triggerAllTenants().catch((error) =>
         LoggerService.error("group_class_reminder_interval_failed", error)
+      );
+    }, intervalMs);
+  }
+
+  if (process.env.ENABLE_TRIAL_SUBSCRIPTION_REMINDER_BATCH !== "false") {
+    const intervalMs = 30 * 60 * 1000;
+    const warmupMs = 35 * 1000;
+    setTimeout(() => {
+      TrialSubscriptionReminderService.triggerAllTenants().catch((error) =>
+        LoggerService.error("trial_subscription_reminder_warmup_failed", error)
+      );
+    }, warmupMs);
+    setInterval(() => {
+      TrialSubscriptionReminderService.triggerAllTenants().catch((error) =>
+        LoggerService.error("trial_subscription_reminder_interval_failed", error)
       );
     }, intervalMs);
   }

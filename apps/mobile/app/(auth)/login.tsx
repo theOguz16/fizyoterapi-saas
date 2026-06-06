@@ -22,7 +22,7 @@ const TRUST_SIGNALS = [
 export default function LoginScreen() {
   const router = useRouter();
   const { resetSignupFlow, resumeSignupFlow, setSelectedPersoma, startSignupFlow } = useAppFlow();
-  const { login } = useSession();
+  const { biometricAvailable, biometricEnabled, biometricLabel, login, loginWithBiometrics } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -62,6 +62,18 @@ export default function LoginScreen() {
       await login({ email: email.trim().toLowerCase(), password });
     } catch (err) {
       setError(getUserFacingMessage(err, "Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    try {
+      setLoading(true);
+      setError("");
+      await loginWithBiometrics();
+    } catch (err) {
+      setError(getUserFacingMessage(err, "Hızlı giriş tamamlanamadı. E-posta ve şifrenle giriş yapabilirsin."));
     } finally {
       setLoading(false);
     }
@@ -114,6 +126,16 @@ export default function LoginScreen() {
             autoComplete="password"
             textContentType="password"
           />
+          {biometricAvailable && biometricEnabled ? (
+            <ActionButton
+              testID="login-biometric-button"
+              label={`${biometricLabel} ile giriş yap`}
+              icon="shield"
+              variant="ghost"
+              onPress={handleBiometricLogin}
+              loading={loading}
+            />
+          ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.linksColumn}>
             <Pressable onPress={() => router.push("/(auth)/reset-password" as never)} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>

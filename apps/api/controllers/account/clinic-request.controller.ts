@@ -7,7 +7,7 @@ import { SalonApplication, SalonApplicationStatus } from "../../entities/salon-a
 import { MembershipPaymentStatus, SalonMembership, SalonMembershipStatus } from "../../entities/salon-membership.entity";
 import { SalonProfile } from "../../entities/salon-profile.entity";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../entities/tenant.entity";
-import { UserRole } from "../../entities/user.entity";
+import { User, UserRole } from "../../entities/user.entity";
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
@@ -42,6 +42,7 @@ export class AccountClinicRequestController {
     const tenantRepo = AppDataSource.getRepository(Tenant);
     const profileRepo = AppDataSource.getRepository(SalonProfile);
     const membershipRepo = AppDataSource.getRepository(SalonMembership);
+    const userRepo = AppDataSource.getRepository(User);
 
     const applicationRepo = AppDataSource.getRepository(SalonApplication);
     const [account, activeMembership, existingOwnedTenant, unresolvedApplication] = await Promise.all([
@@ -105,19 +106,21 @@ export class AccountClinicRequestController {
         name: clinic_name,
         timezone: "Europe/Istanbul",
         is_active: true,
-        review_status: TenantReviewStatus.PENDING_REVIEW,
+        review_status: TenantReviewStatus.PUBLISHED,
         subscription_status: TenantSubscriptionStatus.INACTIVE,
-        is_public: false,
+        is_public: true,
+        review_note: "Klinik sahibi mobil akıştan otomatik yayınlandı.",
+        reviewed_at: new Date(),
       });
     } else {
       tenant.slug = slug;
       tenant.name = clinic_name;
-      tenant.review_status = TenantReviewStatus.PENDING_REVIEW;
+      tenant.review_status = TenantReviewStatus.PUBLISHED;
       tenant.subscription_status = TenantSubscriptionStatus.INACTIVE;
-      tenant.review_note = null;
-      tenant.reviewed_at = null;
+      tenant.review_note = "Klinik sahibi mobil akıştan otomatik yayınlandı.";
+      tenant.reviewed_at = new Date();
       tenant.reviewed_by_account_id = null;
-      tenant.is_public = false;
+      tenant.is_public = true;
       tenant.trial_starts_at = null;
       tenant.trial_ends_at = null;
     }
@@ -157,7 +160,7 @@ export class AccountClinicRequestController {
           lunch_break_end: "13:30",
           slot_minutes: 60,
         },
-        is_published: false,
+        is_published: true,
         seo_title: `${clinic_name} | ${district} ${city} Fizyoterapi ve Klinik Hizmetleri`,
         seo_description: `${clinic_name}, ${city} ${district} bölgesinde fizyoterapi ve hareket odaklı klinik hizmetleri sunar. Bilgi ve randevu talebi için iletişime geçin.`,
         business_category: "Fizyoterapi Kliniği",
@@ -179,25 +182,61 @@ export class AccountClinicRequestController {
         profile.seo_description ||
         `${clinic_name}, ${city} ${district} bölgesinde fizyoterapi ve hareket odaklı klinik hizmetleri sunar. Bilgi ve randevu talebi için iletişime geçin.`;
       profile.business_category = profile.business_category || "Fizyoterapi Kliniği";
-      profile.is_published = false;
+      profile.is_published = true;
     }
     await profileRepo.save(profile);
+
+    let linkedUser = await userRepo.findOne({ where: { tenant_id: tenant.id, email: account.email, role: UserRole.ADMIN } as any });
+    if (!linkedUser) {
+      linkedUser = userRepo.create({
+        tenant_id: tenant.id,
+        email: account.email,
+        password_hash: account.password_hash,
+        first_name: account.first_name,
+        last_name: account.last_name,
+        phone: account.phone,
+        role: UserRole.ADMIN,
+        is_active: true,
+      });
+    } else {
+      linkedUser.password_hash = account.password_hash;
+      linkedUser.first_name = account.first_name;
+      linkedUser.last_name = account.last_name;
+      linkedUser.phone = account.phone;
+      linkedUser.role = UserRole.ADMIN;
+      linkedUser.is_active = true;
+    }
+    linkedUser = await userRepo.save(linkedUser);
 
     let membership = await membershipRepo.findOne({ where: { account_id: accountId, tenant_id: tenant.id, role: UserRole.ADMIN } });
     if (!membership) {
       membership = membershipRepo.create({
         account_id: accountId,
         tenant_id: tenant.id,
+        user_id: linkedUser.id,
         role: UserRole.ADMIN,
-        status: SalonMembershipStatus.PENDING,
-        is_active_context: false,
+        status: SalonMembershipStatus.ACTIVE,
+        payment_status: MembershipPaymentStatus.VERIFIED,
+        approved_at: new Date(),
+        joined_at: new Date(),
+        is_active_context: true,
       });
     } else {
+      membership.user_id = linkedUser.id;
       membership.role = UserRole.ADMIN;
-      membership.status = SalonMembershipStatus.PENDING;
-      membership.is_active_context = false;
+      membership.status = SalonMembershipStatus.ACTIVE;
+      membership.payment_status = MembershipPaymentStatus.VERIFIED;
+      membership.approved_at = membership.approved_at || new Date();
+      membership.joined_at = membership.joined_at || new Date();
+      membership.is_active_context = true;
       membership.left_at = null;
     }
+    await membershipRepo
+      .createQueryBuilder()
+      .update(SalonMembership)
+      .set({ is_active_context: false })
+      .where("account_id = :accountId AND id != :membershipId", { accountId, membershipId: membership.id || "00000000-0000-0000-0000-000000000000" })
+      .execute();
     await membershipRepo.save(membership);
 
     return res.status(201).json({

@@ -81,6 +81,9 @@ export function resolveAdminHome(onboardingState?: OnboardingState) {
   if (onboardingState === "NO_CLINIC") {
     return "/(admin)/salon/setup";
   }
+  if (onboardingState === "CLINIC_READ_ONLY") {
+    return "/(admin)/subscription";
+  }
 
   return "/(admin)/dashboard";
 }
@@ -140,6 +143,9 @@ export function resolveIndexRedirect(
   if (role === "ADMIN") {
     if (recommendedEntrySurface === "OWNER_SETUP" || onboardingState === "NO_CLINIC") {
       return "/(admin)/salon/setup";
+    }
+    if (onboardingState === "CLINIC_READ_ONLY") {
+      return "/(admin)/subscription";
     }
     return "/(admin)/dashboard";
   }

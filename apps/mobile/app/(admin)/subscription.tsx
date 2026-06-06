@@ -27,8 +27,7 @@ function formatDate(value?: string | null) {
 }
 
 function getPackageErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return "RevenueCat paket bilgisi alınamadı. Offering ve mağaza ürün eşleşmesini kontrol et.";
+  return "Plan bilgisi şu anda alınamadı. Birazdan tekrar deneyebilirsin.";
 }
 
 function resolvePrimaryAction(subscription?: AdminClinicSubscription | null) {
@@ -66,17 +65,20 @@ export default function AdminSubscriptionScreen() {
     queryFn: getAdminClinicSubscriptionApi,
   });
 
+  const subscription = query.data;
+  const revenueCatAppUserId = managedClinic?.id || subscription?.tenant_id || "";
+
   const packageQuery = useQuery({
-    queryKey: ["admin-clinic-revenuecat-package", managedClinic?.id || ""],
-    enabled: Boolean(managedClinic?.id),
-    queryFn: async () => getRevenueCatCurrentPackage(String(managedClinic?.id)),
+    queryKey: ["admin-clinic-revenuecat-package", revenueCatAppUserId],
+    enabled: Boolean(revenueCatAppUserId),
+    queryFn: async () => getRevenueCatCurrentPackage(revenueCatAppUserId),
     retry: false,
   });
 
   useEffect(() => {
-    if (!managedClinic?.id) return;
-    configureRevenueCat(managedClinic.id).catch(() => null);
-  }, [managedClinic?.id]);
+    if (!revenueCatAppUserId) return;
+    configureRevenueCat(revenueCatAppUserId).catch(() => null);
+  }, [revenueCatAppUserId]);
 
   const startTrialMutation = useMutation({
   mutationFn: startAdminClinicTrialApi,
@@ -95,7 +97,7 @@ export default function AdminSubscriptionScreen() {
 
     showInfoAlert(
       "Deneme başlatıldı",
-      "5 günlük deneme süresi aktif oldu. Sonraki adımda uygulama içi satın alma akışı RevenueCat ile devam edecek."
+      "5 günlük ücretsiz denemen aktif. Planını istediğin zaman bu ekrandan etkinleştirebilirsin."
     );
   },
 
@@ -108,7 +110,6 @@ export default function AdminSubscriptionScreen() {
   },
 });
 
-  const subscription = query.data;
   const canPurchase = Boolean(subscription?.can_purchase_in_app);
   const primaryAction = resolvePrimaryAction(subscription);
   const packageProduct = packageQuery.data?.product;
@@ -120,11 +121,11 @@ export default function AdminSubscriptionScreen() {
 
   const purchaseMutation = useMutation({
   mutationFn: async () => {
-    if (!managedClinic?.id) {
-      throw new Error("Salon kimliği bulunamadı.");
+    if (!revenueCatAppUserId) {
+      throw new Error("Salon bilgisi henüz hazır değil. Lütfen ekranı yenileyip tekrar dene.");
     }
 
-    return purchaseRevenueCatPackage(managedClinic.id, billingCycle);
+    return purchaseRevenueCatPackage(revenueCatAppUserId, billingCycle);
   },
 
   meta: {
@@ -140,7 +141,7 @@ export default function AdminSubscriptionScreen() {
 
     showInfoAlert(
       "Satın alma tamamlandı",
-      "Mağaza işlemi tamamlandı. Webhook geldikten sonra salon planı aktif duruma geçecek."
+      "Planın etkinleştiriliyor. Birkaç saniye içinde durum otomatik güncellenir; gerekirse ekranı yenileyebilirsin."
     );
   },
 
@@ -148,18 +149,18 @@ export default function AdminSubscriptionScreen() {
     showErrorAlert(
       "Satın alma başarısız",
       error,
-      "RevenueCat satın alma akışı tamamlanamadı."
+      "Satın alma tamamlanamadı. Lütfen tekrar dene."
     );
   },
 });
 
   const restoreMutation = useMutation({
   mutationFn: async () => {
-    if (!managedClinic?.id) {
-      throw new Error("Salon kimliği bulunamadı.");
+    if (!revenueCatAppUserId) {
+      throw new Error("Salon bilgisi henüz hazır değil. Lütfen ekranı yenileyip tekrar dene.");
     }
 
-    return restoreRevenueCatPurchases(managedClinic.id);
+    return restoreRevenueCatPurchases(revenueCatAppUserId);
   },
 
   meta: {
@@ -175,13 +176,13 @@ export default function AdminSubscriptionScreen() {
 
     showInfoAlert(
       "Satın almalar yenilendi",
-      "RevenueCat restore işlemi tamamlandı. Gerekirse webhook sonrası plan durumu güncellenecek."
+      "Satın alma bilgilerin yenilendi. Plan durumun kısa süre içinde güncellenir."
     );
   },
 
   onError: (error) => {
     showErrorAlert(
-      "Restore başarısız",
+      "Geri yükleme tamamlanamadı",
       error,
       "Satın alma kayıtları geri yüklenemedi."
     );

@@ -8,6 +8,7 @@ import { setAuthToken } from "@/lib/http-client";
 import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
+import { authenticateWithBiometrics, disableBiometricLogin, enableBiometricLoginIfAvailable, getBiometricState } from "@/lib/biometric-auth";
 
 const TOKEN_KEY = "fizyoflow.access_token";
 
@@ -65,11 +66,15 @@ type SessionContextType = {
   availableSurfaces: SessionEnvelope["available_surfaces"] | null;
   pendingPostAuthScreen: "NOTIFICATION_PERMISSION" | null;
   notificationPermissionStatus: PushPermissionStatus;
+  biometricAvailable: boolean;
+  biometricEnabled: boolean;
+  biometricLabel: string;
   clearPendingPostAuthScreen: () => void;
   dismissNotificationPermissionPrompt: () => Promise<void>;
   requestNotificationPermission: () => Promise<PushPermissionStatus>;
   refreshNotificationPermissionStatus: () => Promise<PushPermissionStatus>;
   login: (input: LoginInput) => Promise<void>;
+  loginWithBiometrics: () => Promise<void>;
   switchRole: (role: SessionRole) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -106,6 +111,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [availableSurfaces, setAvailableSurfaces] = useState<SessionEnvelope["available_surfaces"] | null>(null);
   const [pendingPostAuthScreen, setPendingPostAuthScreen] = useState<"NOTIFICATION_PERMISSION" | null>(null);
   const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<PushPermissionStatus>("undetermined");
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState("Biyometrik giriş");
 
   function applySessionPayload(payload: Partial<SessionEnvelope> & { user?: SessionUser | null | undefined; available_surfaces?: SessionEnvelope["available_surfaces"] | null | undefined }) {
     // Login, refresh ve bootstrap ayni session alanlarini guncelliyor.
@@ -160,10 +168,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAvailableSurfaces(null);
     setPendingPostAuthScreen(null);
     setNotificationPermissionStatus("undetermined");
+    setBiometricAvailable(false);
+    setBiometricEnabled(false);
 
     queryClient.clear();
 
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await disableBiometricLogin();
+  }
+
+  async function refreshBiometricState() {
+    const state = await getBiometricState();
+    setBiometricAvailable(state.available);
+    setBiometricEnabled(state.enabled);
+    setBiometricLabel(state.label);
+    return state;
   }
 
   async function syncNotificationPermission(options?: { allowPromptScreen?: boolean }) {
@@ -259,6 +278,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setAuthToken(null);
           setToken(null);
           applySessionPayload({});
+          await refreshBiometricState();
+          return;
+        }
+
+        const biometricState = await refreshBiometricState();
+        if (biometricState.available && biometricState.enabled) {
+          setAuthToken(null);
+          setToken(null);
+          applySessionPayload({});
           return;
         }
 
@@ -321,6 +349,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
 
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+    await enableBiometricLoginIfAvailable().then((state) => {
+      setBiometricAvailable(state.available);
+      setBiometricEnabled(state.enabled);
+      setBiometricLabel(state.label);
+    });
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
@@ -354,6 +387,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
 
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+    await enableBiometricLoginIfAvailable().then((state) => {
+      setBiometricAvailable(state.available);
+      setBiometricEnabled(state.enabled);
+      setBiometricLabel(state.label);
+    });
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
@@ -374,6 +412,41 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     await clearSessionState();
+  };
+
+  const loginWithBiometrics = async () => {
+    const state = await refreshBiometricState();
+    if (!state.available || !state.enabled) {
+      throw new Error("Bu cihazda hızlı giriş hazır değil. E-posta ve şifrenle giriş yapabilirsin.");
+    }
+
+    const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (!stored) {
+      await disableBiometricLogin();
+      await refreshBiometricState();
+      throw new Error("Hızlı giriş için önce e-posta ve şifrenle giriş yapman gerekiyor.");
+    }
+
+    const result = await authenticateWithBiometrics(state.label);
+    if (!result.success) {
+      throw new Error("Giriş onaylanmadı.");
+    }
+
+    try {
+      queryClient.clear();
+      setAuthToken(stored);
+      setToken(stored);
+      const me = await meApi();
+      if (me.available_surfaces?.mobile === false) {
+        await clearSessionState();
+        throw new Error("Bu rol mobil uygulamadan giriş yapamaz. Lütfen web paneli kullanın.");
+      }
+      applySessionPayload(me as any);
+      await syncNotificationPermissionSafely({ allowPromptScreen: true });
+    } catch (error) {
+      await clearSessionState();
+      throw error;
+    }
   };
 
   const deleteAccount = async () => {
@@ -414,11 +487,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       availableSurfaces,
       pendingPostAuthScreen,
       notificationPermissionStatus,
+      biometricAvailable,
+      biometricEnabled,
+      biometricLabel,
       clearPendingPostAuthScreen: () => setPendingPostAuthScreen(null),
       dismissNotificationPermissionPrompt,
       requestNotificationPermission,
       refreshNotificationPermissionStatus: () => syncNotificationPermissionSafely(),
       login,
+      loginWithBiometrics,
       switchRole,
       register,
       logout,
@@ -428,7 +505,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }),
     // Action functions intentionally stay outside the memo deps to keep the provider value stable between state updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, loading, token, onboardingState, membershipState, membershipStatus, recommendedEntrySurface, hasActiveMembership, hasPendingApplication, hasManagedClinic, availablePersonas, activeMembership, managedClinic, pendingApplication, pendingPaymentRequest, activeChangeRequests, availableMobileActions, scanCapabilities, availableSurfaces, pendingPostAuthScreen, notificationPermissionStatus]
+    [user, loading, token, onboardingState, membershipState, membershipStatus, recommendedEntrySurface, hasActiveMembership, hasPendingApplication, hasManagedClinic, availablePersonas, activeMembership, managedClinic, pendingApplication, pendingPaymentRequest, activeChangeRequests, availableMobileActions, scanCapabilities, availableSurfaces, pendingPostAuthScreen, notificationPermissionStatus, biometricAvailable, biometricEnabled, biometricLabel]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

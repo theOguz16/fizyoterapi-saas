@@ -1,9 +1,23 @@
 import { Alert } from "react-native";
 
+const TECHNICAL_ERROR_PATTERNS = [
+  /RevenueCat/i,
+  /webhook/i,
+  /SDK/i,
+  /offering/i,
+  /underlying error/i,
+  /configuration/i,
+  /API key/i,
+  /store product/i,
+  /native module/i,
+];
+
 export function getUserFacingMessage(error: unknown, fallback: string) {
-  if (typeof error === "string" && error.trim()) return error.trim();
-  if (error instanceof Error && error.message.trim()) return error.message.trim();
-  return fallback;
+  const message = typeof error === "string" ? error.trim() : error instanceof Error ? error.message.trim() : "";
+  if (!message) return fallback;
+  if (TECHNICAL_ERROR_PATTERNS.some((pattern) => pattern.test(message))) return fallback;
+  if (message.length > 220) return fallback;
+  return message;
 }
 
 export function showInfoAlert(title: string, message: string) {

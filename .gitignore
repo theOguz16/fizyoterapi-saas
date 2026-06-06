@@ -1,5 +1,6 @@
 node_modules
 .DS_Store
+/app.json
 .env
 .env.local
 .env.production
@@ -14,3 +15,9 @@ dist
 .next
 coverage
 uploads
+
+# Mobile build artifacts
+apps/mobile/build/
+apps/mobile/*.ipa
+*.xcarchive/
+*.dSYM/
