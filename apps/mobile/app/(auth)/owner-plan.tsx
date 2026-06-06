@@ -4,37 +4,17 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/theme/components/app-icon";
 import { ActionButton } from "@/theme/components/action-button";
+import { SUBSCRIPTION_PRICING, type BillingCycle } from "@/lib/subscription-pricing";
 import { tokens } from "@/theme/tokens";
-
-const PLANS = {
-  monthly: {
-    label: "Aylık plan",
-    price: "₺1.090",
-    comparePrice: "₺2.090",
-    discount: "%48 indirim",
-    badge: "Esnek başlangıç",
-    description: "Aylık ödeme ile salonunu yayına al, operasyonunu tek panelden yönet.",
-    bullets: ["Operasyon paneli", "Ekip ve üye akışı", "Temel kampanya modülleri"],
-  },
-  yearly: {
-    label: "Yıllık plan",
-    price: "₺10.900",
-    comparePrice: "₺20.900",
-    discount: "2 ay ücretsiz avantaj",
-    badge: "En avantajlı seçim",
-    description: "Daha düşük toplam maliyetle salon yönetimini yıl boyunca kesintisiz sürdür.",
-    bullets: ["2 ay avantajlı fiyatlama", "Öncelikli onboarding desteği", "Gelişmiş rapor ve otomasyon alanı"],
-  },
-} as const;
 
 export default function OwnerPlanScreen() {
   const router = useRouter();
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const heroOpacity = useState(() => new Animated.Value(0))[0];
   const heroTranslate = useState(() => new Animated.Value(18))[0];
   const cardOpacity = useState(() => new Animated.Value(0))[0];
   const cardTranslate = useState(() => new Animated.Value(24))[0];
-  const currentPlan = PLANS[billingCycle];
+  const currentPlan = SUBSCRIPTION_PRICING[billingCycle];
 
   useEffect(() => {
     Animated.sequence([
@@ -85,8 +65,8 @@ export default function OwnerPlanScreen() {
 
         <Animated.View style={[styles.contentStack, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
           <View style={styles.switchRow}>
-            <BillingChip label="Yıllık" active={billingCycle === "yearly"} onPress={() => setBillingCycle("yearly")} />
             <BillingChip label="Aylık" active={billingCycle === "monthly"} onPress={() => setBillingCycle("monthly")} />
+            <BillingChip label="Yıllık" active={billingCycle === "yearly"} onPress={() => setBillingCycle("yearly")} />
           </View>
 
           <View style={[styles.planCard, billingCycle === "yearly" ? styles.planCardFeatured : styles.planCardSecondary]}>
@@ -103,7 +83,7 @@ export default function OwnerPlanScreen() {
               <View style={styles.priceWrap}>
                 <Text style={styles.comparePrice}>{currentPlan.comparePrice}</Text>
                 <Text style={styles.price}>{currentPlan.price}</Text>
-                <Text style={styles.priceHint}>{billingCycle === "yearly" ? "/ yıl" : "/ ay"}</Text>
+                <Text style={styles.priceHint}>{currentPlan.period}</Text>
               </View>
             </View>
 

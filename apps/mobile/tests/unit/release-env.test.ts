@@ -36,6 +36,22 @@ describe("mobile release env", () => {
     });
   });
 
+  it("accepts an iOS-only RevenueCat release config", () => {
+    expect(
+      validateMobileReleaseEnv(
+        {
+          EXPO_PUBLIC_API_BASE: "https://api.example.com/api",
+          EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: "ios-key",
+        } as NodeJS.ProcessEnv,
+        { platform: "ios" }
+      )
+    ).toMatchObject({
+      ok: true,
+      platform: "ios",
+      revenuecat_checked: true,
+    });
+  });
+
   it("can validate non-RevenueCat release readiness", () => {
     expect(
       validateMobileReleaseEnv({

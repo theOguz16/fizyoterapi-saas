@@ -50,7 +50,7 @@ function normalizeGrowthStatus(value: unknown): ManagedGrowthStatus {
 
 function publicVitrineUrl(slug?: string | null) {
   const cleanSlug = String(slug || "").trim().toLowerCase();
-  return cleanSlug ? `https://${cleanSlug}.fizyoflow.com` : "https://klinikadi.fizyoflow.com";
+  return cleanSlug ? `https://${cleanSlug}.fizyoflow.com` : null;
 }
 
 export default function AdminSalonScreen() {
@@ -150,7 +150,9 @@ export default function AdminSalonScreen() {
         </View>
         <View style={styles.vitrineUrlBox}>
           <Text style={styles.summaryLabel}>Public link</Text>
-          <Text style={styles.vitrineUrl}>{publicUrl}</Text>
+          <Text style={[styles.vitrineUrl, !publicUrl ? styles.vitrineUrlPlaceholder : null]}>
+            {publicUrl || "URL kodu girilince public link burada oluşacak"}
+          </Text>
         </View>
         {missingItems.length ? (
           <View style={styles.missingList}>
@@ -168,7 +170,11 @@ export default function AdminSalonScreen() {
             label="Public vitrini aç"
             icon="external"
             fullWidth={false}
-            onPress={() => void Linking.openURL(publicUrl)}
+            disabled={!publicUrl}
+            onPress={() => {
+              if (!publicUrl) return;
+              void Linking.openURL(publicUrl);
+            }}
           />
           <ActionButton
             testID="admin-salon-copy-public-vitrine"
@@ -176,7 +182,9 @@ export default function AdminSalonScreen() {
             icon="copy"
             variant="ghost"
             fullWidth={false}
+            disabled={!publicUrl}
             onPress={async () => {
+              if (!publicUrl) return;
               await Clipboard.setStringAsync(publicUrl);
               showInfoAlert("Link kopyalandı", "Klinik vitrini bağlantısı panoya kopyalandı.");
             }}
@@ -257,6 +265,10 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     fontFamily: tokens.fontFamily.semibold,
     lineHeight: tokens.lineHeight.normal,
+  },
+  vitrineUrlPlaceholder: {
+    color: tokens.colors.textMuted,
+    fontFamily: tokens.fontFamily.medium,
   },
   missingList: {
     gap: tokens.spacing.xs,

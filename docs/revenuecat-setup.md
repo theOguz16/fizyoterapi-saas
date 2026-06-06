@@ -34,6 +34,16 @@ Bu repo tarafinda kod entegrasyonu hazirlandi. Dashboard ve store tarafinda su i
 - `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_...`
 - `EXPO_PUBLIC_API_BASE=http://localhost:4949/api`
 
+EAS production build icin bu iki public SDK key'i EAS environment'a eklenmeli:
+
+```bash
+eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_IOS_API_KEY --value appl_...
+eas env:create --environment production --name EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY --value goog_...
+```
+
+Bu key'ler build aninda native uygulamaya gomulur. App Store'daki mevcut build key'siz ciktiysa,
+EAS env tanimlandiktan sonra yeni build alinip TestFlight/App Store'a gonderilmelidir.
+
 ## Backend env
 
 - `REVENUECAT_WEBHOOK_AUTH=Bearer <secret>`

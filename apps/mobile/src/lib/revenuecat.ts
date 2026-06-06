@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import type { BillingCycle } from "./subscription-pricing";
 
 type RevenueCatPackage = {
   identifier?: string;
@@ -80,14 +81,32 @@ export async function getRevenueCatCurrentPackage(appUserId: string) {
   return current.monthly || current.annual || current.availablePackages?.[0] || null;
 }
 
-export async function purchaseRevenueCatCurrentPackage(appUserId: string) {
+export async function getRevenueCatPackageForPlan(appUserId: string, billingCycle: BillingCycle) {
+  const offerings = await getRevenueCatOfferings(appUserId);
+  const current = offerings.current;
+  if (!current) {
+    throw new Error("RevenueCat current offering bulunamadi.");
+  }
+
+  if (billingCycle === "yearly") {
+    return current.annual || current.availablePackages?.find((pkg) => pkg.packageType === "ANNUAL" || pkg.identifier === "annual") || null;
+  }
+
+  return current.monthly || current.availablePackages?.find((pkg) => pkg.packageType === "MONTHLY" || pkg.identifier === "monthly") || null;
+}
+
+export async function purchaseRevenueCatPackage(appUserId: string, billingCycle: BillingCycle) {
   const Purchases = getPurchasesModule();
-  const pkg = await getRevenueCatCurrentPackage(appUserId);
+  const pkg = await getRevenueCatPackageForPlan(appUserId, billingCycle);
   if (!pkg) {
     throw new Error("Satinalinabilir paket bulunamadi. RevenueCat offering ayarlarini kontrol edin.");
   }
 
   return Purchases.purchasePackage(pkg);
+}
+
+export async function purchaseRevenueCatCurrentPackage(appUserId: string) {
+  return purchaseRevenueCatPackage(appUserId, "monthly");
 }
 
 export async function restoreRevenueCatPurchases(appUserId: string) {

@@ -27,7 +27,9 @@ try {
     loadEnvFile(path.join(process.cwd(), fileName));
   }
 
-  const platform = (process.env.MOBILE_RELEASE_PLATFORM || "all") as MobileReleasePlatform;
+  const easBuildPlatform = String(process.env.EAS_BUILD_PLATFORM || "").trim().toLowerCase();
+  const inferredPlatform = easBuildPlatform === "ios" || easBuildPlatform === "android" ? easBuildPlatform : "all";
+  const platform = (process.env.MOBILE_RELEASE_PLATFORM || inferredPlatform) as MobileReleasePlatform;
   const result = validateMobileReleaseEnv(process.env, { platform });
   console.log(JSON.stringify({ event: "mobile_release_env_passed", ...result }));
 } catch (error) {

@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
-import { configureRevenueCat, getRevenueCatCurrentPackage, purchaseRevenueCatCurrentPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
+import { configureRevenueCat, getRevenueCatCurrentPackage, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
+import { SUBSCRIPTION_PRICING, type BillingCycle } from "@/lib/subscription-pricing";
 import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
@@ -15,8 +16,6 @@ import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
 
-const MONTHLY_PRICE_LABEL = "₺349.99";
-const ANNUAL_PRICE_LABEL = "₺3,499.90";
 const PRIVACY_POLICY_URL = "https://fizyoflow.com/privacy-policy";
 const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
@@ -59,6 +58,7 @@ export default function AdminSubscriptionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const { refreshMe, managedClinic } = useSession();
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   const query = useQuery({
@@ -112,8 +112,8 @@ export default function AdminSubscriptionScreen() {
   const canPurchase = Boolean(subscription?.can_purchase_in_app);
   const primaryAction = resolvePrimaryAction(subscription);
   const packageProduct = packageQuery.data?.product;
-  const monthlyPrice = packageQuery.isLoading ? "Fiyat yükleniyor..." : MONTHLY_PRICE_LABEL;
-  const planName = packageProduct?.title || "FizyoFlow Pro";
+  const selectedPlan = SUBSCRIPTION_PRICING[billingCycle];
+  const planName = packageProduct?.title || selectedPlan.label;
   const priceHint = packageQuery.isError
     ? getPackageErrorMessage(packageQuery.error)
     : "Ödeme App Store / Google Play tarafından güvenle tamamlanır.";
@@ -124,7 +124,7 @@ export default function AdminSubscriptionScreen() {
       throw new Error("Salon kimliği bulunamadı.");
     }
 
-    return purchaseRevenueCatCurrentPackage(managedClinic.id);
+    return purchaseRevenueCatPackage(managedClinic.id, billingCycle);
   },
 
   meta: {
@@ -222,33 +222,41 @@ export default function AdminSubscriptionScreen() {
           <View style={styles.priceHeader}>
             <View style={styles.priceCopy}>
               <Text style={styles.priceLabel}>{planName}</Text>
-              <Text style={styles.priceHintSmall}>Aylık veya yıllık planını seçerek devam et.</Text>
+              <Text style={styles.priceHintSmall}>Satın alma öncesi aylık veya yıllık planını seç.</Text>
             </View>
             <StatusBadge label="Yıllık 2 ay avantaj" tone="success" />
           </View>
 
           <View style={styles.planOptions}>
-            <View style={styles.planOption}>
-              <Text style={styles.planOptionLabel}>Aylık</Text>
-              <Text style={styles.priceValue}>{monthlyPrice}</Text>
-              <Text style={styles.planOptionHint}>Her ay yenilenir</Text>
-            </View>
-            <View style={[styles.planOption, styles.planOptionFeatured]}>
-              <Text style={styles.planOptionLabel}>Yıllık</Text>
-              <Text style={styles.priceValue}>{ANNUAL_PRICE_LABEL}</Text>
-              <Text style={styles.planOptionHint}>349.99 x 10</Text>
-            </View>
+            {(["monthly", "yearly"] as const).map((cycle) => {
+              const plan = SUBSCRIPTION_PRICING[cycle];
+              const selected = billingCycle === cycle;
+              return (
+                <Pressable
+                  key={cycle}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => setBillingCycle(cycle)}
+                  style={[styles.planOption, selected ? styles.planOptionSelected : null]}
+                >
+                  <View style={styles.planOptionTop}>
+                    <Text style={styles.planOptionLabel}>{plan.shortLabel}</Text>
+                    {selected ? <AppIcon name="checkin" size="sm" tone="success" /> : null}
+                  </View>
+                  <Text style={styles.priceValue}>{plan.price}</Text>
+                  <Text style={styles.planOptionHint}>{cycle === "yearly" ? "349.99 x 10" : "Her ay yenilenir"}</Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           <Text style={[styles.priceHint, packageQuery.isError ? styles.priceError : null]}>{priceHint}</Text>
           <View style={styles.legalLinks} testID="admin-subscription-legal-links">
-            <Text style={styles.legalCopy}>
-              Abonelik otomatik yenilenir. Satın alarak{" "}
-              <LegalLink label="Privacy Policy" url={PRIVACY_POLICY_URL} />
-              {" "}ve{" "}
-              <LegalLink label="Terms of Use (EULA)" url={TERMS_OF_USE_URL} />
-              {" "}koşullarını kabul edersin.
-            </Text>
+            <Text style={styles.legalCopy}>Abonelik otomatik yenilenir. Satın alarak aşağıdaki koşulları kabul edersin.</Text>
+            <View style={styles.legalLinkRow}>
+              <LegalLink label="Gizlilik Politikası" url={PRIVACY_POLICY_URL} />
+              <LegalLink label="Kullanım Koşulları" url={TERMS_OF_USE_URL} />
+            </View>
           </View>
         </View>
 
@@ -476,9 +484,16 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.sm,
     gap: tokens.spacing.xs,
   },
-  planOptionFeatured: {
-    borderColor: tokens.colors.success,
+  planOptionSelected: {
+    borderColor: tokens.colors.primaryStrong,
     backgroundColor: "#F3FBF6",
+  },
+  planOptionTop: {
+    minHeight: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.spacing.xs,
   },
   planOptionLabel: {
     color: tokens.colors.textMuted,
@@ -507,8 +522,7 @@ const styles = StyleSheet.create({
     fontFamily: tokens.fontFamily.medium,
   },
   legalLinks: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    gap: tokens.spacing.xs,
   },
   legalCopy: {
     color: tokens.colors.textMuted,
@@ -516,12 +530,22 @@ const styles = StyleSheet.create({
     lineHeight: tokens.lineHeight.compact,
     fontFamily: tokens.fontFamily.regular,
   },
+  legalLinkRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: tokens.spacing.xs,
+  },
   legalLink: {
+    borderWidth: 1,
+    borderColor: "rgba(111,146,116,0.22)",
+    borderRadius: tokens.radius.pill,
+    backgroundColor: "rgba(111,146,116,0.08)",
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: 6,
     color: tokens.colors.primaryStrong,
     fontSize: tokens.font.xs,
     lineHeight: tokens.lineHeight.compact,
     fontFamily: tokens.fontFamily.semibold,
-    textDecorationLine: "underline",
   },
   featureList: {
     gap: tokens.spacing.sm,

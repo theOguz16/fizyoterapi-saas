@@ -137,7 +137,12 @@ function joinLines(value?: string[]) {
 }
 
 function publicUrl(slug: string) {
-  return slug ? `https://${slug}.fizyoflow.com` : "https://klinikadi.fizyoflow.com";
+  const cleanSlug = slug.trim().toLowerCase();
+  return cleanSlug ? `https://${cleanSlug}.fizyoflow.com` : "";
+}
+
+function publicUrlLabel(slug: string) {
+  return publicUrl(slug) || "URL kodu girilince public link burada oluşacak";
 }
 
 function defaultForm() {
@@ -370,9 +375,11 @@ export default function AdminDigitalVitrinePage() {
         iconClassName="fa-solid fa-globe"
         actions={
           <>
-            <Button variant="outline" asChild>
-              <Link href={publicUrl(form.slug)} target="_blank">Public Önizleme</Link>
-            </Button>
+            {publicUrl(form.slug) ? (
+              <Button variant="outline" asChild>
+                <Link href={publicUrl(form.slug)} target="_blank">Public Önizleme</Link>
+              </Button>
+            ) : null}
             <Button onClick={() => saveBrief()} disabled={busy}>
               {busy ? "Kaydediliyor..." : "Brief'i Kaydet"}
             </Button>
@@ -416,7 +423,9 @@ export default function AdminDigitalVitrinePage() {
             </div>
             <div className="rounded-[var(--ui-radius-md)] border border-sky-200/70 bg-white/80 p-4 shadow-[var(--ui-shadow-soft)]">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Public URL</p>
-              <p className="mt-2 break-all text-sm font-semibold text-slate-900">{publicUrl(form.slug)}</p>
+              <p className={`mt-2 break-all text-sm font-semibold ${publicUrl(form.slug) ? "text-slate-900" : "text-slate-500"}`}>
+                {publicUrlLabel(form.slug)}
+              </p>
               <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs">
                 <span className="rounded-lg bg-sky-50 p-2 text-sky-700">{metrics.page_views} görüntülenme</span>
                 <span className="rounded-lg bg-emerald-50 p-2 text-emerald-700">{metrics.cta_clicks} CTA</span>
