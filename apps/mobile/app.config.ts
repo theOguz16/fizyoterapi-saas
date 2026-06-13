@@ -6,7 +6,7 @@ const config: ExpoConfig = {
   name: "FizyoFlow",
   slug: "fizyoflow-mobile",
   scheme: "fizyoflow",
-  version: "1.0.1",
+  version: "1.0.2",
   experiments: {
     typedRoutes: false,
   },

@@ -13,6 +13,14 @@ import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
 import { isReservedPublicSlug } from "../../constants/reserved-slugs";
 
+const OWNER_SETUP_TRIAL_DAYS = 5;
+
+function plusDays(days: number) {
+  const value = new Date();
+  value.setDate(value.getDate() + days);
+  return value;
+}
+
 function slugify(value: string) {
   return value
     .toLocaleLowerCase("tr-TR")
@@ -107,8 +115,10 @@ export class AccountClinicRequestController {
         timezone: "Europe/Istanbul",
         is_active: true,
         review_status: TenantReviewStatus.PUBLISHED,
-        subscription_status: TenantSubscriptionStatus.INACTIVE,
+        subscription_status: TenantSubscriptionStatus.TRIAL,
         is_public: true,
+        trial_starts_at: new Date(),
+        trial_ends_at: plusDays(OWNER_SETUP_TRIAL_DAYS),
         review_note: "Klinik sahibi mobil akıştan otomatik yayınlandı.",
         reviewed_at: new Date(),
       });
@@ -116,13 +126,13 @@ export class AccountClinicRequestController {
       tenant.slug = slug;
       tenant.name = clinic_name;
       tenant.review_status = TenantReviewStatus.PUBLISHED;
-      tenant.subscription_status = TenantSubscriptionStatus.INACTIVE;
+      tenant.subscription_status = TenantSubscriptionStatus.TRIAL;
       tenant.review_note = "Klinik sahibi mobil akıştan otomatik yayınlandı.";
       tenant.reviewed_at = new Date();
       tenant.reviewed_by_account_id = null;
       tenant.is_public = true;
-      tenant.trial_starts_at = null;
-      tenant.trial_ends_at = null;
+      tenant.trial_starts_at = tenant.trial_starts_at || new Date();
+      tenant.trial_ends_at = tenant.trial_ends_at || plusDays(OWNER_SETUP_TRIAL_DAYS);
     }
     tenant = await tenantRepo.save(tenant);
 

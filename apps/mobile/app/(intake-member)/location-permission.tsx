@@ -63,8 +63,8 @@ export default function LocationPermissionScreen() {
 
   return (
     <MarketingShell
-      title="Yakınındaki salonları gösterelim"
-      subtitle="Konumunu açarsan sana yakın salonları önce gösterir, ilk listeyi daha isabetli hazırlarız."
+      title="Yakınındaki salonları öne alalım"
+      subtitle="Konumunu açarsan sana yakın salonları ilk bölümde gösteririz. Yakında salon yoksa diğer salonlar yine listede kalır."
       icon="location"
       footer={
         <View style={styles.footer}>
@@ -78,8 +78,8 @@ export default function LocationPermissionScreen() {
         total={6}
         icon="location"
         eyebrow="İsteğe bağlı adım"
-        title="Yakın seçenekleri daha hızlı öne çıkaralım"
-        description="Konum izni verirsen şehir ve ilçe bazında daha tutarlı bir ilk liste hazırlarız. İzin vermezsen akış aynı şekilde devam eder."
+        title="Yakın salonlar üstte, diğerleri altta"
+        description="Konum izni verirsen şehir ve ilçe bazında en yakın salonları öne alırız. Diğer şehir ve ilçelerdeki salonları da saklamayız."
         badgeLabel="Hızlı keşif"
         badgeTone="success"
         summaryItems={[
@@ -87,20 +87,20 @@ export default function LocationPermissionScreen() {
           { label: "Durum", value: memberIntent.allowLocation ? "Açık" : "İsteğe bağlı" },
           { label: "Sonraki adım", value: "Salon listesi" },
         ]}
-        footnote="Konumu yalnız ilk keşif listesini iyileştirmek için kullanırız."
+        footnote="Salon kartlarında il ve ilçe bilgisini ayrıca göstermeye devam ederiz."
       />
 
       <SurfaceCard tone="primary" padding="hero">
         <View style={styles.featureGrid}>
-          <FeatureItem icon="location" title="Yakın salonlar önce gelir" description="Listeleme bulunduğun bölgeye göre daha anlamlı başlar." />
-          <FeatureItem icon="spark" title="Daha kısa ilk karşılaştırma" description="Sana uymayan uzak seçenekler geri planda kalır." />
+          <FeatureItem icon="location" title="Yakın salonlar önce gelir" description="Bursa / Karacabey gibi eşleşen konumlar ilk bölümde görünür." />
+          <FeatureItem icon="spark" title="Diğer salonlar da kalır" description="Yakında salon olmasa bile Manisa / Turgutlu gibi diğer seçenekleri görmeye devam edersin." />
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </SurfaceCard>
 
       <SurfaceCard>
         <Text style={styles.sectionTitle}>Veri kullanımı</Text>
-        <Text style={styles.note}>Konum bilgisi yalnızca keşif listesini iyileştirmek için kullanılır. Daha sonra cihaz ayarlarından bu izni yeniden açabilirsin.</Text>
+        <Text style={styles.note}>Konum bilgisi yalnızca salon listesini yakın ve diğer salonlar olarak düzenlemek için kullanılır. Daha sonra cihaz ayarlarından bu izni yeniden açabilirsin.</Text>
         <ActionButton label="Ayarları aç" icon="profile" variant="ghost" onPress={() => void Linking.openSettings()} />
       </SurfaceCard>
     </MarketingShell>

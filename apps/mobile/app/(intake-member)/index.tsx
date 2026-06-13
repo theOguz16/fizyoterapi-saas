@@ -61,7 +61,7 @@ const QUESTIONS: MemberQuestion[] = [
     icon: "salon",
     eyebrow: "Salon beklentisi",
     title: "Salon seçerken en çok neye bakarsın?",
-    subtitle: "İlk listeyi yakınlık, kalite, ortam ve ders tipi beklentine göre daha düzgün sıralayacağız.",
+    subtitle: "İlk listede yakın salonları öne alıp kalite, ortam ve ders tipiyle karşılaştırmanı sağlayacağız.",
     helperText: "Bu seçim keşif ekranındaki öncelik dilini belirler.",
     badgeLabel: "Tercih sinyali",
     options: [
@@ -93,7 +93,7 @@ const QUESTIONS: MemberQuestion[] = [
     icon: "clock",
     eyebrow: "Saat tercihi",
     title: "Tercih ettiğin saat aralığı nedir?",
-    subtitle: "Bir sonraki adımda sana bu saatlere daha uygun salon ve slotları göstereceğiz.",
+    subtitle: "Bir sonraki adımda konum izniyle yakın salonları öne alacağız; diğer salonlar da listede kalacak.",
     helperText: "Son seçimden sonra konum ve salon keşif aşamasına geçeceğiz.",
     badgeLabel: "Son adım",
     options: [

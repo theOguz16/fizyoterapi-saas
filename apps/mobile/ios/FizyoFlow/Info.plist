@@ -19,7 +19,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-	<string>1.0.1</string>
+	<string>1.0.2</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -33,7 +33,7 @@
       </dict>
     </array>
 	<key>CFBundleVersion</key>
-	<string>20</string>
+	<string>22</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -52,11 +52,11 @@
     <key>NSFaceIDUsageDescription</key>
     <string>FizyoFlow, hesabını güvenli tutmak için desteklenen cihazlarda Face ID kullanabilir.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>FizyoFlow, yalnızca uygulama açıkken konumunu yakın salon önerileri için kullanır.</string>
+    <string>FizyoFlow, yalnızca uygulama açıkken konumunu yakın salonları öne almak ve diğer salonları da göstermek için kullanır.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>FizyoFlow arka planda konum takibi yapmaz; bu izin sistem uyumluluğu için tanımlıdır.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>FizyoFlow, yakınındaki salonları göstermek ve konuma uygun öneriler sunmak için konumuna erişim ister.</string>
+    <string>FizyoFlow, salon keşfi sırasında yakın salonları öne almak ve diğer salonları da göstermek için konumuna erişim ister.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>FizyoFlow mikrofon kaydı yapmaz; kamera modülünün sistem gereksinimi için bu izin açıklaması tanımlıdır.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>

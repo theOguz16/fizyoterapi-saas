@@ -104,8 +104,10 @@ describe("account clinic request controller", () => {
     expect(tenantRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         review_status: "PUBLISHED",
-        subscription_status: "INACTIVE",
+        subscription_status: "TRIAL",
         is_public: true,
+        trial_starts_at: expect.any(Date),
+        trial_ends_at: expect.any(Date),
       })
     );
     expect(profileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ is_published: true }));
@@ -132,8 +134,10 @@ describe("account clinic request controller", () => {
       expect.objectContaining({
         id: "tenant-1",
         review_status: "PUBLISHED",
-        subscription_status: "INACTIVE",
+        subscription_status: "TRIAL",
         is_public: true,
+        trial_starts_at: expect.any(Date),
+        trial_ends_at: expect.any(Date),
       })
     );
   });

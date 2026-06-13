@@ -18,26 +18,46 @@ export default function IntakeSalonsScreen() {
   const router = useRouter();
   const { memberIntent, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
   const requestedCity = String(memberIntent.locationCity || "").trim();
+  const requestedDistrict = String(memberIntent.locationDistrict || "").trim();
   const salonsQuery = useQuery({
-    queryKey: ["intake-salons", requestedCity],
-    queryFn: () => getPublıcSalonsApi(requestedCity || undefined),
+    queryKey: ["intake-salons", "all"],
+    queryFn: () => getPublıcSalonsApi(),
   });
 
   const salons = useMemo(() => (Array.isArray(salonsQuery.data) ? salonsQuery.data : []), [salonsQuery.data]);
 
   const sections = useMemo(() => {
-    const boosted = salons.filter((salon) => salon.is_boosted);
-    const regular = salons.filter((salon) => !salon.is_boosted);
+    const requestedCityKey = normalizeLocationKey(requestedCity);
+    const requestedDistrictKey = normalizeLocationKey(requestedDistrict);
+    const hasLocationSignal = Boolean(requestedCityKey || requestedDistrictKey);
+    const sortSalons = (items: SalonDiscoverySummary[]) =>
+      [...items].sort((a, b) => {
+        if (a.is_boosted === b.is_boosted) return (a.tenant_name || a.name).localeCompare(b.tenant_name || b.name, "tr");
+        return a.is_boosted ? -1 : 1;
+      });
+
+    if (!hasLocationSignal) {
+      return [{ key: "all", title: "Tüm salonlar", data: sortSalons(salons), accent: undefined }];
+    }
+
+    const nearby = salons.filter((salon) => isNearbySalon(salon, requestedCityKey, requestedDistrictKey));
+    const nearbySlugs = new Set(nearby.map((salon) => salon.slug));
+    const other = salons.filter((salon) => !nearbySlugs.has(salon.slug));
+
     return [
-      { key: "boosted", title: "Öne çıkan salonlar", data: boosted, accent: "Önerilen seçim" as const },
-      { key: "regular", title: requestedCity ? `${requestedCity} için diğer seçenekler` : "Diğer seçenekler", data: regular, accent: undefined },
+      { key: "nearby", title: "Sana en yakın salonlar", data: sortSalons(nearby), accent: "Yakınında" as const },
+      { key: "other", title: nearby.length > 0 ? "Diğer salonlar" : "Diğer salonlar", data: sortSalons(other), accent: undefined },
     ].filter((section) => section.data.length > 0);
-  }, [requestedCity, salons]);
+  }, [requestedCity, requestedDistrict, salons]);
 
   return (
     <AppShell
       title="Salonunu seç"
-      subtitle={requestedCity ? `${requestedCity} çevresinde sana daha uygun görünen salonları öne aldık.` : "Salonları hedefin, beklentin ve akış uyumuna göre sıraladık."}
+      subtitle={
+        requestedCity
+          ? `${[requestedCity, requestedDistrict].filter(Boolean).join(" / ")} için yakındaki salonları öne aldık; diğer salonları da altta görebilirsin.`
+          : "Konum paylaşmadan devam ediyorsan tüm salonları tek listede görebilirsin."
+      }
       icon="salon"
       refreshing={salonsQuery.isRefetching}
       onRefresh={() => void salonsQuery.refetch()}
@@ -51,10 +71,10 @@ export default function IntakeSalonsScreen() {
           title="Sana en uygun başlangıç listesini hazırladık"
           description={
             requestedCity
-              ? `${requestedCity} çevresindeki seçenekleri önce öne aldık. Hedefin ve beklentine daha yakın salonları üstte görüyorsun.`
-              : "Hedefin, beklentin ve ritmine göre daha dengeli bir ilk liste hazırladık."
+              ? "Konumuna yakın salonları ilk bölümde gösteriyoruz. Yakında uygun salon yoksa diğer şehir ve ilçelerdeki seçenekleri yine listede tutuyoruz."
+              : "Konum izni vermeden devam ettiğin için tüm salonları gösteriyoruz. Karşılaştırırken her salonun il ve ilçe bilgisini kartın üstünde görebilirsin."
           }
-          badgeLabel={requestedCity || "Genel liste"}
+          badgeLabel={requestedCity ? [requestedCity, requestedDistrict].filter(Boolean).join(" / ") : "Tüm salonlar"}
           badgeTone="success"
           summaryItems={[
             { label: "Hedef", value: memberIntent.goal || "Belirtilmedi" },
@@ -96,6 +116,22 @@ export default function IntakeSalonsScreen() {
       )}
     </AppShell>
   );
+}
+
+function normalizeLocationKey(value: string) {
+  return value.trim().toLocaleLowerCase("tr");
+}
+
+function isNearbySalon(salon: SalonDiscoverySummary, requestedCityKey: string, requestedDistrictKey: string) {
+  const location = salon.location && typeof salon.location === "object" ? salon.location : null;
+  const salonCityKey = normalizeLocationKey(String(salon.city || location?.city || ""));
+  const salonDistrictKey = normalizeLocationKey(String(salon.district || location?.district || ""));
+
+  if (requestedDistrictKey && salonDistrictKey && salonDistrictKey === requestedDistrictKey) {
+    return true;
+  }
+
+  return Boolean(requestedCityKey && salonCityKey && salonCityKey === requestedCityKey);
 }
 
 function SalonCard({
