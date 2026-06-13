@@ -108,6 +108,8 @@ export class AccountClinicRequestController {
     }
 
     if (!tenant) {
+      const trialStartsAt = new Date();
+      const trialEndsAt = plusDays(OWNER_SETUP_TRIAL_DAYS);
       tenant = tenantRepo.create({
         owner_account_id: accountId,
         slug,
@@ -117,8 +119,10 @@ export class AccountClinicRequestController {
         review_status: TenantReviewStatus.PUBLISHED,
         subscription_status: TenantSubscriptionStatus.TRIAL,
         is_public: true,
-        trial_starts_at: new Date(),
-        trial_ends_at: plusDays(OWNER_SETUP_TRIAL_DAYS),
+        trial_starts_at: trialStartsAt,
+        trial_ends_at: trialEndsAt,
+        subscription_started_at: trialStartsAt,
+        subscription_current_period_ends_at: trialEndsAt,
         review_note: "Klinik sahibi mobil akıştan otomatik yayınlandı.",
         reviewed_at: new Date(),
       });
@@ -133,6 +137,8 @@ export class AccountClinicRequestController {
       tenant.is_public = true;
       tenant.trial_starts_at = tenant.trial_starts_at || new Date();
       tenant.trial_ends_at = tenant.trial_ends_at || plusDays(OWNER_SETUP_TRIAL_DAYS);
+      tenant.subscription_started_at = tenant.subscription_started_at || tenant.trial_starts_at;
+      tenant.subscription_current_period_ends_at = tenant.subscription_current_period_ends_at || tenant.trial_ends_at;
     }
     tenant = await tenantRepo.save(tenant);
 
@@ -288,6 +294,9 @@ export class AccountClinicRequestController {
       is_public: tenant.is_public,
       trial_starts_at: tenant.trial_starts_at || null,
       trial_ends_at: tenant.trial_ends_at || null,
+      subscription_started_at: tenant.subscription_started_at || null,
+      subscription_current_period_ends_at: tenant.subscription_current_period_ends_at || null,
+      subscription_last_event_at: tenant.subscription_last_event_at || null,
       review_note: tenant.review_note || null,
       is_boosted: TenantLifecycleService.isBoosted(tenant),
       city: String((profile?.location as any)?.city ?? "").trim() || null,

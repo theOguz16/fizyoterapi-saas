@@ -45,6 +45,28 @@ export class SchemaMaintenanceService {
     `);
 
     await dataSource.query(`
+      ALTER TABLE IF EXISTS tenants
+      ADD COLUMN IF NOT EXISTS subscription_started_at timestamptz,
+      ADD COLUMN IF NOT EXISTS subscription_current_period_ends_at timestamptz,
+      ADD COLUMN IF NOT EXISTS subscription_last_event_at timestamptz,
+      ADD COLUMN IF NOT EXISTS revenuecat_original_app_user_id varchar(120),
+      ADD COLUMN IF NOT EXISTS revenuecat_product_id varchar(160),
+      ADD COLUMN IF NOT EXISTS revenuecat_entitlement_id varchar(120),
+      ADD COLUMN IF NOT EXISTS revenuecat_store varchar(40),
+      ADD COLUMN IF NOT EXISTS revenuecat_last_event_type varchar(80)
+    `);
+
+    await dataSource.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_tenants_subscription_current_period_ends_at"
+      ON tenants (subscription_current_period_ends_at)
+    `);
+
+    await dataSource.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_tenants_subscription_last_event_at"
+      ON tenants (subscription_last_event_at)
+    `);
+
+    await dataSource.query(`
       DO $$
       DECLARE
         idx record;

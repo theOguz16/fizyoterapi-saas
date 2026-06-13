@@ -73,7 +73,11 @@ export class AdminClinicController {
   }
 
   private static serializeSubscription(tenant: Tenant) {
-    const trialEndsAt = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null;
+    const trialEndsAt = tenant.trial_ends_at
+      ? new Date(tenant.trial_ends_at)
+      : tenant.subscription_status === TenantSubscriptionStatus.TRIAL && tenant.subscription_current_period_ends_at
+      ? new Date(tenant.subscription_current_period_ends_at)
+      : null;
     const remainingMs = trialEndsAt ? trialEndsAt.getTime() - Date.now() : 0;
     const remainingDays = trialEndsAt ? Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000))) : 0;
     const hasTrialHistory = Boolean(tenant.trial_starts_at || tenant.trial_ends_at);
@@ -98,6 +102,9 @@ export class AdminClinicController {
       is_public: tenant.is_public,
       trial_starts_at: tenant.trial_starts_at || null,
       trial_ends_at: tenant.trial_ends_at || null,
+      subscription_started_at: tenant.subscription_started_at || null,
+      subscription_current_period_ends_at: tenant.subscription_current_period_ends_at || null,
+      subscription_last_event_at: tenant.subscription_last_event_at || null,
       trial_days_total: ADMIN_TRIAL_DAYS,
       trial_days_remaining: tenant.subscription_status === TenantSubscriptionStatus.TRIAL ? remainingDays : 0,
       has_trial_history: hasTrialHistory,

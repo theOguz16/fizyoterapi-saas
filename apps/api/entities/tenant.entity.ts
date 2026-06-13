@@ -64,6 +64,32 @@ export class Tenant extends BaseEntityWithTimestamps {
   @Column({ type: "timestamptz", nullable: true })
   trial_ends_at?: Date | null;
 
+  @Column({ type: "timestamptz", nullable: true })
+  subscription_started_at?: Date | null;
+
+  @Index()
+  @Column({ type: "timestamptz", nullable: true })
+  subscription_current_period_ends_at?: Date | null;
+
+  @Index()
+  @Column({ type: "timestamptz", nullable: true })
+  subscription_last_event_at?: Date | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  revenuecat_original_app_user_id?: string | null;
+
+  @Column({ type: "varchar", length: 160, nullable: true })
+  revenuecat_product_id?: string | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  revenuecat_entitlement_id?: string | null;
+
+  @Column({ type: "varchar", length: 40, nullable: true })
+  revenuecat_store?: string | null;
+
+  @Column({ type: "varchar", length: 80, nullable: true })
+  revenuecat_last_event_type?: string | null;
+
   @Index()
   @Column({ type: "timestamptz", nullable: true })
   boost_until?: Date | null;

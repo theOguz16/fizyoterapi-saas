@@ -36,6 +36,31 @@ describe("tenant lifecycle service", () => {
     expect(tenantRepo.save).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "READ_ONLY", is_public: false }));
   });
 
+  it("moves expired active subscription periods to read-only", async () => {
+    const tenant = {
+      id: "tenant-active-1",
+      name: "Salon",
+      review_status: "PUBLISHED",
+      subscription_status: "ACTIVE",
+      is_public: true,
+      subscription_current_period_ends_at: new Date(Date.now() - 60_000),
+    };
+    const tenantRepo = {
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === Tenant) return tenantRepo as any;
+      throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
+    });
+
+    await TenantLifecycleService.syncTenantState(tenant as any);
+
+    expect(tenant.subscription_status).toBe("READ_ONLY");
+    expect(tenant.is_public).toBe(false);
+    expect(tenantRepo.save).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "READ_ONLY", is_public: false }));
+  });
+
   it("queues one push warning for the next crossed trial expiry threshold", async () => {
     const tenant = {
       id: "tenant-1",

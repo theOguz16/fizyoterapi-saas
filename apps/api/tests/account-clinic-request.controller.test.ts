@@ -108,6 +108,8 @@ describe("account clinic request controller", () => {
         is_public: true,
         trial_starts_at: expect.any(Date),
         trial_ends_at: expect.any(Date),
+        subscription_started_at: expect.any(Date),
+        subscription_current_period_ends_at: expect.any(Date),
       })
     );
     expect(profileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ is_published: true }));

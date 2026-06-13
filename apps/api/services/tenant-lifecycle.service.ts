@@ -19,7 +19,12 @@ export class TenantLifecycleService {
   static async syncTenantState(tenant: Tenant | null | undefined) {
     if (!tenant) return null;
 
-    const trialEndsAt = tenant.trial_ends_at ? new Date(tenant.trial_ends_at) : null;
+    const trialEndsAt = tenant.trial_ends_at
+      ? new Date(tenant.trial_ends_at)
+      : tenant.subscription_status === TenantSubscriptionStatus.TRIAL && tenant.subscription_current_period_ends_at
+      ? new Date(tenant.subscription_current_period_ends_at)
+      : null;
+    const currentPeriodEndsAt = tenant.subscription_current_period_ends_at ? new Date(tenant.subscription_current_period_ends_at) : null;
     const now = Date.now();
 
     if (
@@ -27,6 +32,18 @@ export class TenantLifecycleService {
       tenant.subscription_status === TenantSubscriptionStatus.TRIAL &&
       trialEndsAt &&
       trialEndsAt.getTime() <= now
+    ) {
+      tenant.subscription_status = TenantSubscriptionStatus.READ_ONLY;
+      tenant.is_public = false;
+      await AppDataSource.getRepository(Tenant).save(tenant);
+      return tenant;
+    }
+
+    if (
+      tenant.review_status === TenantReviewStatus.PUBLISHED &&
+      tenant.subscription_status === TenantSubscriptionStatus.ACTIVE &&
+      currentPeriodEndsAt &&
+      currentPeriodEndsAt.getTime() <= now
     ) {
       tenant.subscription_status = TenantSubscriptionStatus.READ_ONLY;
       tenant.is_public = false;
