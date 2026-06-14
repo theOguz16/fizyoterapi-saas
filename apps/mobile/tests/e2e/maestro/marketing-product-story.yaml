@@ -1,0 +1,40 @@
+appId: com.fizyoflow.mobile
+name: Fizyoflow marketing product story
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- extendedWaitUntil:
+    visible: "Yönetim merkezi"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 2500
+
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fcalendar"
+- extendedWaitUntil:
+    visible: "Salon Takvimi"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 2500
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible: "Bugün|Takvimim|Dersler"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 2500
+- tapOn:
+    id: "trainer-home-qr-button"
+- waitForAnimationToEnd:
+    timeout: 2200
+- assertVisible: "Ders girişi"
+
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
+- extendedWaitUntil:
+    visible: "Paket ve Geçmiş|Paketlerim|Diğer paketleri gör"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000

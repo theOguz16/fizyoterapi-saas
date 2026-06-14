@@ -1,0 +1,34 @@
+# Fizyoflow
+
+> Fizyoflow, fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil akışta toplayan yönetim sistemidir.
+
+Fizyoflow; klinik sahibi, fizyoterapist ve danışanın aynı güncel operasyon verisiyle çalışmasını sağlar. Sistem; başvuru, takvim, paket hakkı, fizyoterapist check-in'i, ölçüm geçmişi, danışan mobil deneyimi ve rol bazlı erişim akışlarını bir araya getirir.
+
+## Ana Sayfalar
+
+- [Fizyoflow ana sayfa](https://fizyoflow.com/): Fizyoterapi klinikleri için mobil operasyon sistemi.
+- [Fizyoterapi klinik yönetim sistemi](https://fizyoflow.com/fizyoterapi-klinik-yonetim-sistemi): Klinik yönetimi, seans, paket, ekip ve danışan takibi.
+- [Seans ve paket takibi](https://fizyoflow.com/seans-paket-takibi): Paket hakkı, kalan hak, ödeme durumu ve yenileme takibi.
+- [Fizyoterapist check-in](https://fizyoflow.com/fizyoterapist-check-in): QR veya manuel kodla seans katılımı ve paket hakkı güncelleme.
+- [Danışan ve ölçüm takibi](https://fizyoflow.com/danisan-takibi-olcum): Danışan mobil deneyimi, kalan hak ve ölçüm geçmişi.
+
+## Ürün Özeti
+
+- Hedef kullanıcı: fizyoterapi klinikleri, klinik pilates hizmeti veren merkezler ve sağlık odaklı seans/paket takibi yapan ekipler.
+- Yönetici: günlük seansları, aktif danışanları, paket bitişlerini, ödeme durumunu ve ekip yoğunluğunu takip eder.
+- Fizyoterapist: günlük seanslarını görür, danışan check-in işlemini QR veya manuel kodla işler.
+- Danışan: yaklaşan seansını, kalan paket hakkını, grup derslerini ve ölçüm geçmişini mobil uygulamada görür.
+- Güven: rol bazlı erişim, KVKK ve gizlilik metinleri, yetkilendirilmiş ekip kullanımı.
+
+## Uygulama ve Güven
+
+- [App Store](https://apps.apple.com/tr/app/fizyoflow/id6771870032?l=tr): Fizyoflow iPhone uygulaması.
+- Google Play: Fizyoflow Android uygulaması yakında olarak konumlanır.
+- [KVKK](https://fizyoflow.com/kvkk): KVKK aydınlatma metni.
+- [Gizlilik Politikası](https://fizyoflow.com/gizlilik-politikasi): Türkçe gizlilik politikası.
+- [Privacy Policy](https://fizyoflow.com/privacy-policy): English privacy policy.
+- [Hesap Silme](https://fizyoflow.com/hesap-silme): Hesap silme talebi yönergeleri.
+
+## Daha Geniş Makine Okunabilir İçerik
+
+- [llms-full.txt](https://fizyoflow.com/llms-full.txt): Fizyoflow ürününün genişletilmiş açıklaması.

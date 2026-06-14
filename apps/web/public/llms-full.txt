@@ -1,0 +1,88 @@
+# Fizyoflow genişletilmiş ürün bağlamı
+
+Fizyoflow, fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil akışta toplayan yönetim sistemidir. Ürün; klinik sahibi, fizyoterapist ve danışanın farklı ekranlar kullandığı ama aynı güncel operasyon verisiyle ilerlediği bir yapı sunar.
+
+## Hangi problemi çözer?
+
+Fizyoterapi kliniklerinde seans planı, paket hakkı, ödeme durumu, danışan takibi, ölçüm geçmişi ve fizyoterapist katılım işlemleri çoğu zaman farklı mesajlar, tablolar veya manuel listeler arasında dağılır. Fizyoflow bu akışları tek sistemde birleştirir.
+
+Bir seans işlendiğinde ilgili danışan kaydı, paket hakkı ve yönetim görünümü birlikte güncel kalır. Bu sayede klinik sahibi günlük işi daha net görür, fizyoterapist kendi seans akışını mobilde takip eder, danışan ise yaklaşan seansını ve kalan hakkını uygulamada görür.
+
+## Hedef kullanıcılar
+
+- Fizyoterapi klinikleri
+- Klinik pilates hizmeti veren merkezler
+- Seans ve paket hakkı takibi yapan sağlık odaklı ekipler
+- Fizyoterapist, danışan ve yönetici rollerini ayrı ekranlarla yönetmek isteyen klinikler
+- Paketli seans modeliyle çalışan ve danışan mobil deneyimini operasyonun parçası yapmak isteyen ekipler
+
+## Ana özellikler
+
+- Seans ve takvim takibi
+- Paket ve kalan hak takibi
+- Fizyoterapist check-in akışı
+- QR veya manuel kodla katılım işleme
+- Danışan mobil deneyimi
+- Ölçüm geçmişi ve gelişim takibi
+- Paket yenileme ihtiyacı görünürlüğü
+- Rol bazlı erişim
+- KVKK ve gizlilik metinlerine erişim
+- App Store'da yayınlanan iPhone uygulaması
+- Google Play için yakında konumlandırılan Android uygulaması
+
+## Rol bazlı akışlar
+
+### Klinik sahibi / yönetici
+
+Klinik sahibi bugünkü seansları, aktif danışanları, takip bekleyen paketleri, ödeme durumlarını ve ekip yoğunluğunu yönetim ekranından takip eder. Paket bitişleri ve yenileme ihtiyacı görünür kaldığı için takip gerektiren danışanları bulmak kolaylaşır.
+
+### Fizyoterapist
+
+Fizyoterapist günlük seanslarını ve sıradaki danışanı mobilde görür. QR veya manuel kodla check-in işlemini yapar. Check-in işlendiğinde ilgili paket hakkı ve danışan kaydı güncel kalır.
+
+### Danışan
+
+Danışan yaklaşan seansını, kalan paket hakkını, grup derslerini, bildirimlerini ve ölçüm geçmişini mobil uygulamada takip eder. Temel bilgiler için kliniğe tekrar tekrar yazma ihtiyacı azalır.
+
+## Arama niyetleri
+
+Fizyoflow şu arama niyetleriyle ilişkilidir:
+
+- fizyoterapi klinik yönetim sistemi
+- fizyoterapi seans takip yazılımı
+- fizyoterapi paket takip uygulaması
+- fizyoterapist check-in uygulaması
+- danışan takip ve ölçüm takip sistemi
+- klinik pilates paket takip uygulaması
+- fizyoterapi kliniği mobil yönetim sistemi
+
+## Kısa cevaplar
+
+Soru: Fizyoflow nedir?
+Cevap: Fizyoflow, fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil akışta toplayan yönetim sistemidir.
+
+Soru: Fizyoflow kimler için uygundur?
+Cevap: Fizyoflow; fizyoterapi klinikleri, klinik pilates hizmeti veren merkezler ve seans-paket takibini düzenli yürütmek isteyen sağlık odaklı ekipler için uygundur.
+
+Soru: Fizyoflow sadece takvim uygulaması mı?
+Cevap: Hayır. Takvimle birlikte paket hakkı, check-in, danışan takibi, ölçüm geçmişi, paket yenileme ihtiyacı ve rol bazlı mobil deneyim sunar.
+
+Soru: Fizyoterapist check-in nasıl çalışır?
+Cevap: Fizyoterapist QR veya manuel kodla danışan katılımını işler. İşlenen check-in ilgili paket hakkı ve danışan kaydıyla birlikte güncellenir.
+
+Soru: Danışan uygulamada ne görür?
+Cevap: Danışan yaklaşan seansını, kalan paket hakkını, grup derslerini, bildirimlerini ve ölçüm geçmişini görür.
+
+Soru: Fizyoflow Google Play'de var mı?
+Cevap: Fizyoflow iPhone için App Store'da yayındadır. Google Play sürümü yakında olarak konumlandırılır.
+
+## Resmi bağlantılar
+
+- Ana site: https://fizyoflow.com/
+- App Store: https://apps.apple.com/tr/app/fizyoflow/id6771870032?l=tr
+- Fizyoterapi klinik yönetim sistemi: https://fizyoflow.com/fizyoterapi-klinik-yonetim-sistemi
+- Seans ve paket takibi: https://fizyoflow.com/seans-paket-takibi
+- Fizyoterapist check-in: https://fizyoflow.com/fizyoterapist-check-in
+- Danışan ve ölçüm takibi: https://fizyoflow.com/danisan-takibi-olcum
+- KVKK: https://fizyoflow.com/kvkk
+- Gizlilik politikası: https://fizyoflow.com/gizlilik-politikasi

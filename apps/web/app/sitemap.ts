@@ -21,6 +21,12 @@ async function getPublicSalons(): Promise<PublicSalon[]> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const seoPages = [
+    "fizyoterapi-klinik-yonetim-sistemi",
+    "seans-paket-takibi",
+    "fizyoterapist-check-in",
+    "danisan-takibi-olcum",
+  ];
   const baseRows: MetadataRoute.Sitemap = [
     {
       url: WEB_BASE,
@@ -28,6 +34,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1,
     },
+    ...seoPages.map((path) => ({
+      url: `${WEB_BASE}/${path}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.85,
+    })),
     {
       url: `${WEB_BASE}/ornek-klinik`,
       lastModified: now,

@@ -1,0 +1,56 @@
+appId: com.fizyoflow.mobile
+name: Fizyoflow trainer marketing screenshots
+---
+- launchApp: { clearState: true, clearKeychain: true }
+- openLink: "fizyoflow://e2e-reset"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil: { visible: "Bugün", timeout: 20000 }
+- waitForAnimationToEnd: { timeout: 1500 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-home"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Ftoday"
+- extendedWaitUntil: { visible: "Bugünkü akış hazır", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-today"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
+- extendedWaitUntil: { visible: "Takvimim", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-calendar"
+- tapOn: { text: ".*Danışan.*|.*Duo.*|.*Grup dersi.*", optional: true }
+- waitForAnimationToEnd: { timeout: 1000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-session-detail"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcheckin"
+- extendedWaitUntil: { visible: "Ders girişi", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-checkin"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fclients"
+- extendedWaitUntil: { visible: "Danışanlarım", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-clients"
+- tapOn: { text: ".*detayını aç", index: 0, optional: true }
+- waitForAnimationToEnd: { timeout: 1200 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-client-detail"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fnotes"
+- extendedWaitUntil: { visible: "Koç notları", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-notes"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fgroup-classes"
+- extendedWaitUntil: { visible: "Grup dersleri", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-group-classes"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fpackages"
+- extendedWaitUntil: { visible: "Verdiğim paketler", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-packages"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fearnings"
+- extendedWaitUntil: { visible: "Kazançlarım", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-earnings"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fqr"
+- extendedWaitUntil: { visible: "Eğitmen kimlik QR’ı", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-qr"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- extendedWaitUntil: { visible: "Profil", timeout: 20000 }
+- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/trainer-profile"

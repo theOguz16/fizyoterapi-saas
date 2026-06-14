@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Demo Talebiniz Alındı | Fizyoflow",
-  description: "Fizyoflow demo talebiniz alındı. Görüşme öncesi klinik akışınızı ve public vitrin ihtiyacınızı hazırlayın.",
+  description: "Fizyoflow demo talebiniz alındı. Görüşmede seans, paket, check-in ve danışan takip akışınız birlikte değerlendirilir.",
   alternates: { canonical: "/tesekkurler" },
 };
 
 const prepItems = [
   "Klinikte bugün en çok zaman alan takip işi",
-  "Randevu, paket, ekip veya web vitrini tarafındaki en acil ihtiyaç",
-  "Google Maps, Instagram ve WhatsApp üzerinden gelen talep akışı",
-  "Public klinik sayfasında görünmesini istediğiniz hizmetler",
+  "Seans, paket, ekip veya danışan takibinde en çok aksayan nokta",
+  "Fizyoterapistlerin check-in ve katılımı bugün nasıl işlediği",
+  "Danışanların kalan hak ve yaklaşan seans bilgisini nasıl takip ettiği",
 ];
 
 export default function ThanksPage() {
@@ -24,8 +24,8 @@ export default function ThanksPage() {
         <p className="eyebrow">Demo talebi alındı</p>
         <h1>Görüşmede kliniğiniz için net bir başlangıç planı çıkaracağız.</h1>
         <p className="lead">
-          Fizyoflow ekibi size kısa sürede dönüş yapacak. Görüşmede mobil operasyon, public klinik vitrini,
-          SEO/Maps görünürlüğü ve lead takibi birlikte netleşir.
+          Fizyoflow ekibi size kısa sürede dönüş yapacak. Görüşmede seans, paket, check-in, ekip ve danışan takip
+          akışınız birlikte netleşir.
         </p>
         <div className="thanks-grid">
           <div className="thanks-card">
@@ -34,8 +34,7 @@ export default function ThanksPage() {
           </div>
           <div className="thanks-card">
             <h2>Bu sırada bakabilirsiniz</h2>
-            <a href="/ornek-klinik">Örnek klinik vitrini</a>
-            <a href="/#growth">SEO + Maps modeli</a>
+            <a href="/#urun">Gerçek ürün ekranları</a>
             <a href="/#demo">Demo formuna dön</a>
           </div>
         </div>

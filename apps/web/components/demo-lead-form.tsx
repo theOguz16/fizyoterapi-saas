@@ -17,7 +17,7 @@ function getAttribution() {
     .slice(0, 160);
 }
 
-export function DemoLeadForm() {
+export function DemoLeadForm({ compact = false }: { compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -30,8 +30,11 @@ export function DemoLeadForm() {
 
     const form = event.currentTarget;
     const data = new FormData(form);
+    const firstName = String(data.get("first_name") || "").trim();
+    const lastName = String(data.get("last_name") || "").trim();
+    const fullName = String(data.get("full_name") || "").trim() || [firstName, lastName].filter(Boolean).join(" ");
     const payload = {
-      full_name: String(data.get("full_name") || ""),
+      full_name: fullName,
       clinic_name: String(data.get("clinic_name") || ""),
       phone: String(data.get("phone") || ""),
       city: String(data.get("city") || ""),
@@ -87,46 +90,54 @@ export function DemoLeadForm() {
     <form className="demo-lead-form" onSubmit={submit}>
       <input className="form-honeypot" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" />
       <label className="form-field">
-        <span>Ad Soyad</span>
-        <input name="full_name" placeholder="Adınız Soyadınız" required autoComplete="name" />
+        <span>Ad</span>
+        <input name="first_name" placeholder="Adınız" required autoComplete="given-name" />
       </label>
       <label className="form-field">
-        <span>Klinik / Stüdyo</span>
+        <span>Soyad</span>
+        <input name="last_name" placeholder="Soyadınız" required autoComplete="family-name" />
+      </label>
+      <label className="form-field">
+        <span>Klinik</span>
         <input name="clinic_name" placeholder="Klinik adınız" required autoComplete="organization" />
       </label>
       <label className="form-field">
         <span>Telefon</span>
         <input name="phone" placeholder="05xx xxx xx xx" required inputMode="tel" autoComplete="tel" />
       </label>
-      <label className="form-field">
-        <span>Şehir / İlçe</span>
-        <input name="city" placeholder="Kadıköy, İstanbul" autoComplete="address-level2" />
-      </label>
-      <label className="form-field">
-        <span>Klinik tipi</span>
-        <select name="clinic_type" defaultValue="">
-          <option value="" disabled>Seçin</option>
-          <option value="Fizyoterapi kliniği">Fizyoterapi kliniği</option>
-          <option value="Klinik pilates stüdyosu">Klinik pilates stüdyosu</option>
-          <option value="Rehabilitasyon merkezi">Rehabilitasyon merkezi</option>
-          <option value="Hareket / sağlık merkezi">Hareket / sağlık merkezi</option>
-        </select>
-      </label>
-      <label className="form-field">
-        <span>Öncelikli ihtiyaç</span>
-        <select name="primary_need" defaultValue="">
-          <option value="" disabled>Seçin</option>
-          <option value="Randevu ve paket düzeni">Randevu ve paket düzeni</option>
-          <option value="Public web vitrini">Public web vitrini</option>
-          <option value="SEO ve Maps görünürlüğü">SEO ve Maps görünürlüğü</option>
-          <option value="Lead ve WhatsApp takibi">Lead ve WhatsApp takibi</option>
-          <option value="Hepsi">Hepsi</option>
-        </select>
-      </label>
-      <label className="form-field wide">
-        <span>Kısa not</span>
-        <textarea name="note" rows={3} placeholder="Klinik yönetimi, dijital vitrin veya SEO ihtiyacınızı kısaca yazın" />
-      </label>
+      {!compact ? (
+        <>
+          <label className="form-field">
+            <span>Şehir / İlçe</span>
+            <input name="city" placeholder="Kadıköy, İstanbul" autoComplete="address-level2" />
+          </label>
+          <label className="form-field">
+            <span>Klinik tipi</span>
+            <select name="clinic_type" defaultValue="">
+              <option value="" disabled>Seçin</option>
+              <option value="Fizyoterapi kliniği">Fizyoterapi kliniği</option>
+              <option value="Klinik pilates hizmeti veren merkez">Klinik pilates hizmeti veren merkez</option>
+              <option value="Rehabilitasyon merkezi">Rehabilitasyon merkezi</option>
+              <option value="Hareket / sağlık merkezi">Hareket / sağlık merkezi</option>
+            </select>
+          </label>
+          <label className="form-field">
+            <span>Öncelikli ihtiyaç</span>
+            <select name="primary_need" defaultValue="">
+              <option value="" disabled>Seçin</option>
+              <option value="Seans ve takvim düzeni">Seans ve takvim düzeni</option>
+              <option value="Paket ve kalan hak takibi">Paket ve kalan hak takibi</option>
+              <option value="Fizyoterapist check-in akışı">Fizyoterapist check-in akışı</option>
+              <option value="Danışan mobil deneyimi">Danışan mobil deneyimi</option>
+              <option value="Tüm klinik operasyonu">Tüm klinik operasyonu</option>
+            </select>
+          </label>
+          <label className="form-field wide">
+            <span>Kısa not</span>
+            <textarea name="note" rows={3} placeholder="Bugün en çok zaman alan takip işinizi kısaca yazın" />
+          </label>
+        </>
+      ) : null}
       <label className="consent-row wide">
         <input name="consent" type="checkbox" required />
         <span>
@@ -140,7 +151,7 @@ export function DemoLeadForm() {
       {message && messageType === "success" ? (
         <div className="lead-next-step wide">
           <strong>Görüşmede netleşecekler</strong>
-          <span>Klinik akışınız, public vitrin ihtiyacı ve ilk kurulum adımı birlikte çıkarılır.</span>
+          <span>Seans, paket, check-in ve danışan takip akışınız birlikte çıkarılır.</span>
         </div>
       ) : null}
     </form>
