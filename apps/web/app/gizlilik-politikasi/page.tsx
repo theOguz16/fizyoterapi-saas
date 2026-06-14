@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BrandLockup } from "../../components/brand-lockup";
 
 export const metadata: Metadata = {
   title: "Gizlilik Politikası | Fizyoflow",
@@ -10,7 +11,9 @@ export default function PrivacyPage() {
   return (
     <main className="legal-page">
       <section className="container legal-panel">
-        <a className="brand" href="/"><span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span><span>Fizyoflow</span></a>
+        <a className="legal-brand" href="/" aria-label="Fizyoflow ana sayfa">
+          <BrandLockup />
+        </a>
         <p className="eyebrow">Gizlilik Politikası TR</p>
         <h1>Fizyoflow Gizlilik Politikası</h1>
         <p>

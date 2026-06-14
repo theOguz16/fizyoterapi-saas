@@ -2194,6 +2194,17 @@ h3 {
   box-shadow: 0 30px 80px -54px rgba(15, 23, 42, 0.48);
 }
 
+.legal-brand {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.legal-brand:focus-visible {
+  outline: 3px solid rgba(45, 119, 82, 0.24);
+  outline-offset: 5px;
+  border-radius: 6px;
+}
+
 .legal-panel h1 {
   margin: 16px 0 12px;
   font-size: clamp(2rem, 5vw, 3.4rem);
