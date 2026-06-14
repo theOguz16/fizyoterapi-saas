@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { BrandLockup } from "./brand-lockup";
+
 type SeoLandingFaq = {
   question: string;
   answer: string;
@@ -36,7 +39,7 @@ export function SeoLanding({ content }: { content: SeoLandingContent }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <header className="seo-nav">
         <a href="/" className="product-brand" aria-label="Fizyoflow ana sayfa">
-          <img src="/brand/fizyoflow-mobile-logo.svg" alt="Fizyoflow" />
+          <BrandLockup />
         </a>
         <a href="/#demo">Demo Talep Et</a>
       </header>
@@ -49,7 +52,14 @@ export function SeoLanding({ content }: { content: SeoLandingContent }) {
         </div>
         <div className="iphone seo-phone">
           <div className="iphone-island" />
-          <img src={content.image} alt={content.imageAlt} width="1206" height="2622" />
+          <Image
+            src={content.image}
+            alt={content.imageAlt}
+            width={1206}
+            height={2622}
+            sizes="(max-width: 620px) 68vw, 244px"
+            priority
+          />
         </div>
       </section>
 

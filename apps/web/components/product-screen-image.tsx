@@ -22,6 +22,7 @@ export function ProductScreenImage({ src, fallbackSrc, alt, priority }: ProductS
       width={1206}
       height={2622}
       sizes="(max-width: 620px) 66vw, 238px"
+      quality={68}
       onError={() => {
         if (imageSrc !== fallbackSrc) setImageSrc(fallbackSrc);
       }}

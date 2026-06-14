@@ -3,6 +3,9 @@ import type { Viewport } from "next";
 import { SiteAnalytics } from "../components/site-analytics";
 import "./globals.css";
 
+const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "";
+const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || "";
+
 export const metadata: Metadata = {
   title: "Fizyoflow | Fizyoterapi Klinikleri İçin Mobil Yönetim Sistemi",
   description: "Fizyoflow; fizyoterapi klinikleri için seans takibi, paket takibi, check-in, ekip yönetimi, ölçüm ve danışan takibini tek mobil akışta toplar.",
@@ -32,6 +35,10 @@ export const metadata: Metadata = {
     title: "Fizyoflow | Mobil Klinik Yönetimi",
     description: "Fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek akışta toplayan mobil sistem.",
     images: ["/brand/fizyoflow-og.svg"],
+  },
+  verification: {
+    ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+    ...(BING_SITE_VERIFICATION ? { other: { "msvalidate.01": [BING_SITE_VERIFICATION] } } : {}),
   },
 };
 

@@ -46,6 +46,8 @@ Sunucuda `.env.production.vds.example` dosyasını `.env.production` olarak kopy
 - `NEXT_PUBLIC_GA_ID` opsiyonel
 - `NEXT_PUBLIC_POSTHOG_KEY` opsiyonel
 - `NEXT_PUBLIC_POSTHOG_HOST` opsiyonel
+- `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` opsiyonel
+- `NEXT_PUBLIC_BING_SITE_VERIFICATION` opsiyonel
 
 Production compose lokal `.env` dosyasındaki development CORS değerlerini okumaması için `PRODUCTION_CORS_ORIGIN` kullanır.
 

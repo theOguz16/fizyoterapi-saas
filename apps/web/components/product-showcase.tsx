@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faPause, faPlay } from "@fortawesome/free-solid-svg-icons";
+import { trackMarketingEvent } from "./site-analytics";
 
 const storySteps = [
   {
@@ -95,9 +97,14 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
     { step: nextStep, position: "next" },
   ] as const;
 
-  const goToStep = (nextIndex: number, nextDirection: "next" | "prev" = "next") => {
+  const goToStep = (nextIndex: number, nextDirection: "next" | "prev" = "next", source = "control") => {
     setDirection(nextDirection);
     setStepIndex((nextIndex + storySteps.length) % storySteps.length);
+    trackMarketingEvent("product_gallery_interaction", {
+      source,
+      direction: nextDirection,
+      target_index: (nextIndex + storySteps.length) % storySteps.length,
+    });
   };
 
   useEffect(() => {
@@ -148,21 +155,30 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
                   className={`iphone showcase-phone-slide is-${position}`}
                   aria-hidden={position !== "active"}
                 >
-                  <img src={step.image} alt={position === "active" ? "Fizyoflow uygulama ekranı" : ""} />
+                  <Image
+                    src={step.image}
+                    alt={position === "active" ? "Fizyoflow uygulama ekranı" : ""}
+                    width={1206}
+                    height={2622}
+                    sizes={position === "active" ? "(max-width: 620px) 170px, 220px" : "(max-width: 620px) 125px, 165px"}
+                    priority={position === "active" && stepIndex === 0}
+                    loading={position === "active" && stepIndex === 0 ? undefined : "lazy"}
+                    quality={position === "active" ? 72 : 52}
+                  />
                 </div>
               ))}
             </div>
           ) : (
             <div className="showcase-phone-wrap" aria-live="polite">
               <div className="showcase-phone-shadow phone-shadow-left" aria-hidden="true">
-                <img src={previousStep.image} alt="" />
+                <Image src={previousStep.image} alt="" width={1206} height={2622} sizes="160px" loading="lazy" quality={52} />
               </div>
               <div className="showcase-phone-shadow phone-shadow-right" aria-hidden="true">
-                <img src={nextStep.image} alt="" />
+                <Image src={nextStep.image} alt="" width={1206} height={2622} sizes="160px" loading="lazy" quality={52} />
               </div>
               <div key={activeStep.image} className="iphone showcase-phone">
                 <div className="iphone-island" />
-                <img src={activeStep.image} alt="Fizyoflow uygulama ekranı" />
+                <Image src={activeStep.image} alt="Fizyoflow uygulama ekranı" width={1206} height={2622} sizes="244px" loading="lazy" quality={72} />
               </div>
             </div>
           )}
@@ -182,7 +198,7 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
             <button
               type="button"
               className={stepIndex === index ? "is-active" : ""}
-              onClick={() => goToStep(index, index >= stepIndex ? "next" : "prev")}
+              onClick={() => goToStep(index, index >= stepIndex ? "next" : "prev", "story_rail")}
               key={`${step.role}-${step.title}`}
               aria-label={hero ? `${index + 1}. ürün ekranı` : `${step.role}: ${step.title}`}
             >

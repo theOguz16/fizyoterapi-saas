@@ -1,0 +1,13 @@
+type BrandLockupProps = {
+  className?: string;
+  compact?: boolean;
+};
+
+export function BrandLockup({ className = "", compact = false }: BrandLockupProps) {
+  return (
+    <span className={`brand-lockup${compact ? " is-compact" : ""}${className ? ` ${className}` : ""}`}>
+      <img src="/brand/fizyoflow-mark.svg" alt="" aria-hidden="true" />
+      <strong>Fizyoflow</strong>
+    </span>
+  );
+}

@@ -3469,18 +3469,43 @@ button:disabled {
 }
 
 .product-brand {
-  display: block;
-  width: 190px;
-  height: 52px;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
 }
 
-.product-brand img,
-.product-footer img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: left center;
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--product-green-deep);
+  white-space: nowrap;
+}
+
+.brand-lockup img {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.brand-lockup strong {
+  font-size: 1.38rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.brand-lockup.is-compact {
+  gap: 9px;
+}
+
+.brand-lockup.is-compact img {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+}
+
+.brand-lockup.is-compact strong {
+  font-size: 1.16rem;
 }
 
 .product-nav nav {
@@ -3501,7 +3526,6 @@ button:disabled {
   transform: translateY(-2px);
 }
 
-.product-login,
 .product-primary,
 .product-secondary {
   min-height: 46px;
@@ -3513,7 +3537,6 @@ button:disabled {
   font-weight: 800;
 }
 
-.product-login,
 .product-primary {
   background: var(--product-green);
   color: #fff !important;
@@ -5003,10 +5026,9 @@ button:disabled {
 }
 
 .trust-card {
-  display: flex;
+  display: grid;
+  grid-template-rows: auto 1fr;
   min-height: 230px;
-  flex-direction: column;
-  justify-content: space-between;
   gap: 24px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
@@ -5049,8 +5071,13 @@ button:disabled {
   margin: 0;
 }
 
+.trust-card > div:last-child {
+  display: grid;
+  grid-template-rows: 2.56em 1fr;
+  align-content: start;
+}
+
 .trust-card h3 {
-  min-height: 2.56em;
   color: #fff;
   font-size: 1.12rem;
   line-height: 1.28;
@@ -6053,9 +6080,9 @@ button:disabled {
   gap: 24px;
 }
 
-.product-footer img {
-  width: 158px;
-  height: 46px;
+.product-footer-inner > a {
+  display: inline-flex;
+  align-items: center;
 }
 
 .product-footer nav {
@@ -6189,7 +6216,7 @@ button:disabled {
 }
 
 @media (max-width: 980px) {
-  .product-nav nav a:not(.product-login) { display: none; }
+  .product-nav nav { display: none; }
   .trust-copy {
     grid-template-columns: 1fr;
     gap: 18px;
@@ -6288,8 +6315,9 @@ button:disabled {
 @media (max-width: 620px) {
   .product-shell { width: min(100% - 28px, 1160px); }
   .product-nav { min-height: 64px; padding-inline: 14px; }
-  .product-brand { width: 154px; height: 44px; }
-  .product-login { min-height: 40px; padding: 9px 13px; }
+  .product-brand { min-height: 44px; }
+  .product-brand .brand-lockup img { width: 40px; height: 40px; flex-basis: 40px; }
+  .product-brand .brand-lockup strong { font-size: 1.2rem; }
   .product-hero { padding: 34px 0 18px; }
   .product-hero h1 { font-size: clamp(2.28rem, 11vw, 3.15rem); }
   .product-lead { margin-top: 16px; font-size: 0.96rem; line-height: 1.52; }
@@ -6417,6 +6445,9 @@ button:disabled {
     min-height: 0;
     gap: 18px;
     padding: 20px;
+  }
+  .trust-card > div:last-child {
+    grid-template-rows: auto auto;
   }
   .product-faq-grid > .product-section-heading {
     text-align: left;
@@ -7007,10 +7038,6 @@ button:disabled {
 @media (max-width: 620px) {
   .trust-grid {
     grid-template-columns: 1fr;
-  }
-
-  .trust-card h3 {
-    min-height: 0;
   }
 
   .clinic-product-orbit {

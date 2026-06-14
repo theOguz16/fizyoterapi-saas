@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { BrandLockup } from "../components/brand-lockup";
 import { DemoLeadForm } from "../components/demo-lead-form";
+import { MarketingFaqList } from "../components/marketing-faq-list";
+import { MarketingLink } from "../components/marketing-link";
 import { ProductScreenImage } from "../components/product-screen-image";
 import { ProductShowcase } from "../components/product-showcase";
+import { TrackedGallery } from "../components/tracked-gallery";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.fizyoflow.com";
 const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
 const APP_STORE_URL = "https://apps.apple.com/tr/app/fizyoflow/id6771870032?l=tr";
 const CANONICAL_DESCRIPTION = "Fizyoflow, fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil akışta toplayan yönetim sistemidir.";
@@ -249,7 +252,7 @@ export default function HomePage() {
 
       <div className="brand-intro" aria-hidden="true">
         <div className="brand-intro-inner">
-          <img src="/brand/fizyoflow-mobile-mark.png" alt="" />
+          <img src="/brand/fizyoflow-mark.svg" alt="" />
           <strong>Fizyoflow</strong>
           <span>Seans, paket ve danışan takibi tek akışta.</span>
         </div>
@@ -257,12 +260,11 @@ export default function HomePage() {
 
       <header className="product-nav">
         <a className="product-brand" href="/" aria-label="Fizyoflow ana sayfa">
-          <img src="/brand/fizyoflow-mobile-logo.svg" alt="Fizyoflow" />
+          <BrandLockup />
         </a>
         <nav>
           <a href="#urun">Ürün</a>
-          <a href="#demo">Demo</a>
-          <a className="product-login" href={`${APP_URL}/login`}>Giriş Yap</a>
+          <MarketingLink href="#demo" eventName="demo_section_click" eventSource="header">Demo</MarketingLink>
         </nav>
       </header>
 
@@ -276,10 +278,17 @@ export default function HomePage() {
               Fizyoflow; klinik sahibinin yönetim ekranını, fizyoterapistin günlük akışını ve danışanın mobil deneyimini aynı güncel kayıt üzerinde buluşturur.
             </p>
             <div className="product-store-actions" aria-label="Fizyoflow uygulama indirme bağlantıları">
-              <a className="store-button store-button-active" href={APP_STORE_URL} target="_blank" rel="noreferrer">
+              <MarketingLink
+                className="store-button store-button-active"
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noreferrer"
+                eventName="app_store_click"
+                eventSource="hero"
+              >
                 <span>App Store</span>
                 <strong>iPhone için indir</strong>
-              </a>
+              </MarketingLink>
               <span className="store-button store-button-soon" aria-disabled="true">
                 <span>Google Play</span>
                 <strong>Yakında</strong>
@@ -327,8 +336,8 @@ export default function HomePage() {
 
           <FeaturedScreens />
 
-          <div className="role-screen-gallery">
-            {screenGroups.map((group) => (
+          <TrackedGallery className="role-screen-gallery">
+            {screenGroups.map((group, groupIndex) => (
               <section className="role-screen-group" key={group.role} aria-label={`${group.role} ekranları`}>
                 <div className="role-screen-heading">
                   <span>{group.role}</span>
@@ -343,7 +352,7 @@ export default function HomePage() {
                           src={screen.image}
                           fallbackSrc={group.fallbackImage}
                           alt={`Fizyoflow ${group.role} rolünde ${screen.label} ekranı: ${screen.detail}`}
-                          priority={index === 0}
+                          priority={groupIndex === 0 && index === 0}
                         />
                       </div>
                       <div className="screen-caption">
@@ -355,7 +364,7 @@ export default function HomePage() {
                 </div>
               </section>
             ))}
-          </div>
+          </TrackedGallery>
         </div>
       </section>
 
@@ -390,25 +399,14 @@ export default function HomePage() {
             <h2>Fizyoflow’u arayan kişinin hızlıca cevap bulacağı kısa ürün özeti.</h2>
             <p>{CANONICAL_DESCRIPTION}</p>
           </div>
-          <div className="product-faq-list">
-            {faqItems.map((item, index) => (
-              <details className="product-faq-item" key={item.question} open={index === 0}>
-                <summary>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <h3>{item.question}</h3>
-                  <i aria-hidden="true" />
-                </summary>
-                <p>{item.answer}</p>
-              </details>
-            ))}
-          </div>
+          <MarketingFaqList items={faqItems} />
         </div>
       </section>
 
       <section id="demo" className="product-demo-section">
         <div className="product-shell product-demo-grid">
           <div className="product-demo-copy">
-            <img src="/brand/fizyoflow-mobile-mark.png" alt="" />
+            <img src="/brand/fizyoflow-mark.svg" alt="" />
             <p className="product-kicker">Kısa bir görüşmeyle başlayın</p>
             <h2>15 dakikada seans, paket ve check-in takibinin nerede koptuğunu birlikte çıkaralım.</h2>
             <p>Klinik akışınızı birlikte açarız: hangi takip WhatsApp’ta kalıyor, paket hakkı nerede kopuyor, check-in ve danışan bilgilendirmesi nasıl sadeleşir netleştiririz.</p>
@@ -419,7 +417,9 @@ export default function HomePage() {
 
       <footer className="product-footer">
         <div className="product-shell product-footer-inner">
-          <img src="/brand/fizyoflow-mobile-logo.svg" alt="Fizyoflow" />
+          <a href="/" aria-label="Fizyoflow ana sayfa">
+            <BrandLockup compact />
+          </a>
           <nav>
             <a href="/gizlilik-politikasi">Gizlilik</a>
             <a href="/kvkk">KVKK</a>
@@ -511,7 +511,7 @@ function OperationalFlowSection() {
             <span className="operational-role">Danışan</span>
           </div>
           <div className="operational-flow-core">
-            <img src="/brand/fizyoflow-mobile-mark.png" alt="" />
+            <img src="/brand/fizyoflow-mark.svg" alt="" />
             <strong>Fizyoflow</strong>
           </div>
           <div className="operational-flow-results">
