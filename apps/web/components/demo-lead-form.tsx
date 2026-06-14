@@ -36,6 +36,7 @@ export function DemoLeadForm({ compact = false }: { compact?: boolean }) {
     const payload = {
       full_name: fullName,
       clinic_name: String(data.get("clinic_name") || ""),
+      email: String(data.get("email") || ""),
       phone: String(data.get("phone") || ""),
       city: String(data.get("city") || ""),
       clinic_type: String(data.get("clinic_type") || ""),
@@ -104,6 +105,10 @@ export function DemoLeadForm({ compact = false }: { compact?: boolean }) {
       <label className="form-field">
         <span>Telefon</span>
         <input name="phone" placeholder="05xx xxx xx xx" required inputMode="tel" autoComplete="tel" />
+      </label>
+      <label className="form-field wide">
+        <span>E-posta</span>
+        <input name="email" type="email" placeholder="ornek@klinik.com" required autoComplete="email" />
       </label>
       {!compact ? (
         <>

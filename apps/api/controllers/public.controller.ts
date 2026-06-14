@@ -18,6 +18,7 @@ import { AuditLogService } from "../services/audit-log.service";
 import { GroupClassService } from "../services/group-class.service";
 import { UserPackage } from "../entities/user-package.entity";
 import { isReservedPublicSlug } from "../constants/reserved-slugs";
+import { DemoLeadEmailService } from "../services/demo-lead-email.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
@@ -432,6 +433,7 @@ export class PublicController {
 
     const fullName = String(req.body?.full_name ?? "").trim();
     const clinicName = String(req.body?.clinic_name ?? "").trim();
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
     const city = String(req.body?.city ?? "").trim();
     const note = String(req.body?.note ?? "").trim();
     const clinicType = String(req.body?.clinic_type ?? "").trim().slice(0, 80);
@@ -443,6 +445,7 @@ export class PublicController {
 
     if (fullName.length < 2) throw new AppError("VALIDATION_ERROR", 400, "Ad Soyad en az 2 karakter olmalıdır");
     if (clinicName.length < 2) throw new AppError("VALIDATION_ERROR", 400, "Klinik adı en az 2 karakter olmalıdır");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new AppError("VALIDATION_ERROR", 400, "Geçerli bir e-posta adresi girilmelidir");
     if (!phoneClean || phoneClean.length < 7 || phoneClean.length > 15) throw new AppError("VALIDATION_ERROR", 400, "Geçersiz telefon numarası");
     if (city.length > 100) throw new AppError("VALIDATION_ERROR", 400, "Şehir/ilçe alanı çok uzun");
     if (note.length > 1200) throw new AppError("VALIDATION_ERROR", 400, "Not çok uzun");
@@ -465,6 +468,7 @@ export class PublicController {
         source: "PRODUCT_SITE_DEMO",
         full_name: fullName,
         clinic_name: clinicName,
+        email,
         phone: phoneClean,
         city: city || null,
         note: note || null,
@@ -472,6 +476,41 @@ export class PublicController {
         primary_need: primaryNeed || null,
         attribution: attribution || null,
         page_path: pagePath || null,
+      },
+    });
+
+    const emailDelivery = await DemoLeadEmailService.send({
+      fullName,
+      email,
+      clinicName,
+      phone: phoneClean,
+      city: city || null,
+      clinicType: clinicType || null,
+      primaryNeed: primaryNeed || null,
+      note: note || null,
+      attribution: attribution || null,
+      pagePath: pagePath || null,
+    });
+    if (emailDelivery.errors.length > 0) {
+      console.error("Demo lead email delivery error:", emailDelivery.errors.join("; "));
+    }
+
+    await AuditLogService.log({
+      tenant_id: null,
+      actor_role: "SYSTEM",
+      event_type: "PRODUCT_SITE_DEMO_LEAD_EMAIL",
+      action: "PRODUCT_SITE_DEMO_LEAD_EMAIL",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 200,
+      success: emailDelivery.adminDelivered && emailDelivery.applicantDelivered,
+      target_type: "product_demo_lead",
+      metadata: {
+        email,
+        smtp_configured: emailDelivery.configured,
+        admin_delivered: emailDelivery.adminDelivered,
+        applicant_delivered: emailDelivery.applicantDelivered,
+        errors: emailDelivery.errors,
       },
     });
 

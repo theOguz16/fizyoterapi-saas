@@ -5,6 +5,7 @@ import { SalonProfile, ManagedGrowthStatus } from "../entities/salon-profile.ent
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entities/tenant.entity";
 import { AppError } from "../errors/AppError";
 import { AuditLogService } from "../services/audit-log.service";
+import { DemoLeadEmailService } from "../services/demo-lead-email.service";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
 import { createMockResponse } from "./helpers/route-chain";
 
@@ -110,6 +111,12 @@ describe("public managed growth controller", () => {
 
   it("accepts product site demo leads without tenant context", async () => {
     const auditSpy = vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+    const emailSpy = vi.spyOn(DemoLeadEmailService, "send").mockResolvedValue({
+      configured: true,
+      adminDelivered: true,
+      applicantDelivered: true,
+      errors: [],
+    });
     const res = createMockResponse();
 
     await PublicController.createDemoLead(
@@ -121,6 +128,7 @@ describe("public managed growth controller", () => {
         body: {
           full_name: "Ayşe Yılmaz",
           clinic_name: "Denge Fizyo",
+          email: "ayse@dengefizyo.com",
           phone: "0555 111 22 33",
           city: "Kadıköy",
           note: "Demo almak istiyoruz",
@@ -131,6 +139,10 @@ describe("public managed growth controller", () => {
     );
 
     expect(res.statusCode).toBe(202);
+    expect(emailSpy).toHaveBeenCalledWith(expect.objectContaining({
+      email: "ayse@dengefizyo.com",
+      clinicName: "Denge Fizyo",
+    }));
     expect(auditSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         tenant_id: null,
@@ -138,6 +150,7 @@ describe("public managed growth controller", () => {
         metadata: expect.objectContaining({
           source: "PRODUCT_SITE_DEMO",
           clinic_name: "Denge Fizyo",
+          email: "ayse@dengefizyo.com",
           phone: "05551112233",
         }),
       })

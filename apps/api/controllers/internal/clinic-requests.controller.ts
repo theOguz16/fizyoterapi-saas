@@ -102,6 +102,7 @@ export class InternalClinicRequestsController {
           created_at: row.created_at,
           full_name: String(metadata.full_name || ""),
           clinic_name: String(metadata.clinic_name || ""),
+          email: String(metadata.email || ""),
           phone: String(metadata.phone || ""),
           city: String(metadata.city || ""),
           note: String(metadata.note || ""),
