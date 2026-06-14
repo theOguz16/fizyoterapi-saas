@@ -56,14 +56,33 @@ export default function OwnerPlanScreen() {
         <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }}>
           <View style={styles.hero}>
             <Text style={styles.eyebrow}>Salon sahipleri için plan</Text>
-            <Text style={styles.title}>Salon planını seç, kurulumunu başlat.</Text>
+            <Text style={styles.title}>Önce ücretsiz dene, sonra planını etkinleştir.</Text>
             <Text style={styles.subtitle}>
-              5 gün ücretsiz deneme ile salon yönetimini test et. Salon oluşturup kullanıma açmak için plan seçimi ve ödeme adımı zorunludur.
+              5 gün ücretsiz deneme ile salon yönetimini test et. Deneme süresinde salonunu kurabilir, ekibini hazırlayabilir ve hazır olduğunda planını etkinleştirebilirsin.
             </Text>
           </View>
         </Animated.View>
 
         <Animated.View style={[styles.contentStack, { opacity: cardOpacity, transform: [{ translateY: cardTranslate }] }]}>
+          <View style={styles.journeyCard}>
+            <Text style={styles.journeyTitle}>Başlangıç sırası</Text>
+            {[
+              ["1", "Salon bilgileri", "Hesabını oluştur ve salonunun temel bilgilerini tamamla."],
+              ["2", "Ücretsiz deneme veya ödeme", "Önce 5 günlük denemeyi başlat ya da planını doğrudan etkinleştir."],
+              ["3", "Kullanıma başla", "Salonun otomatik açılır; ekip, paket ve rezervasyon yönetimine geçersin."],
+            ].map(([step, title, description]) => (
+              <View key={step} style={styles.journeyRow}>
+                <View style={styles.journeyStep}>
+                  <Text style={styles.journeyStepText}>{step}</Text>
+                </View>
+                <View style={styles.journeyCopyWrap}>
+                  <Text style={styles.journeyRowTitle}>{title}</Text>
+                  <Text style={styles.journeyCopy}>{description}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
           <View style={styles.switchRow}>
             <BillingChip label="Aylık" active={billingCycle === "monthly"} onPress={() => setBillingCycle("monthly")} />
             <BillingChip label="Yıllık" active={billingCycle === "yearly"} onPress={() => setBillingCycle("yearly")} />
@@ -114,7 +133,7 @@ export default function OwnerPlanScreen() {
           </View>
 
           <View style={styles.footer}>
-            <ActionButton testID="owner-plan-start-trial" label="5 gün ücretsiz denemeyi başlat" icon="subscription" onPress={() => router.push("/(auth)/register" as never)} />
+            <ActionButton testID="owner-plan-start-trial" label="Deneme için hesap oluştur" icon="subscription" onPress={() => router.push("/(auth)/register" as never)} />
           </View>
         </Animated.View>
         </ScrollView>
@@ -173,6 +192,52 @@ const styles = StyleSheet.create({
   },
   contentStack: {
     gap: tokens.spacing.md,
+  },
+  journeyCard: {
+    gap: tokens.spacing.md,
+    padding: tokens.spacing.lg,
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+  },
+  journeyTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.md,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  journeyRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: tokens.spacing.sm,
+  },
+  journeyStep: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: tokens.radius.sm,
+    backgroundColor: tokens.colors.primarySoft,
+  },
+  journeyStepText: {
+    color: tokens.colors.primaryStrong,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  journeyCopyWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  journeyRowTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  journeyCopy: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
   },
   billingChip: {
     flex: 1,

@@ -14,11 +14,14 @@ export function SelectionChip({ label, active = false, onPress, testID }: Props)
   return (
     <Pressable
       testID={testID}
+      accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [styles.base, active ? styles.active : null, pressed ? styles.pressed : null]}
     >
-      <Text style={[styles.label, active ? styles.labelActive : null]}>{label}</Text>
+      <Text style={[styles.label, active ? styles.labelActive : null]} maxFontSizeMultiplier={1.4}>{label}</Text>
     </Pressable>
   );
 }

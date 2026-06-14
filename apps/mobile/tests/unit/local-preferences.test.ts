@@ -23,10 +23,17 @@ describe("notification preferences storage", () => {
     await expect(getNotificationPreferences()).resolves.toEqual({
       classReminderThreeHours: true,
       classReminderOneHour: true,
+      subscriptionTrialFortyEightHours: true,
+      subscriptionTrialTwentyFourHours: true,
+      subscriptionTrialTwelveHours: true,
+      subscriptionTrialFourHours: true,
       campaignAlerts: true,
       weeklySummary: true,
       packageEndingAlerts: true,
       measurementReminders: true,
+      quietHoursEnabled: false,
+      quietHoursStart: "22:00",
+      quietHoursEnd: "08:00",
     });
   });
 
@@ -36,19 +43,33 @@ describe("notification preferences storage", () => {
     await setNotificationPreferences({
       classReminderThreeHours: false,
       classReminderOneHour: true,
+      subscriptionTrialFortyEightHours: true,
+      subscriptionTrialTwentyFourHours: false,
+      subscriptionTrialTwelveHours: true,
+      subscriptionTrialFourHours: false,
       campaignAlerts: true,
       weeklySummary: false,
       packageEndingAlerts: true,
       measurementReminders: false,
+      quietHoursEnabled: true,
+      quietHoursStart: "23:00",
+      quietHoursEnd: "07:00",
     });
 
     await expect(getNotificationPreferences()).resolves.toEqual({
       classReminderThreeHours: false,
       classReminderOneHour: true,
+      subscriptionTrialFortyEightHours: true,
+      subscriptionTrialTwentyFourHours: false,
+      subscriptionTrialTwelveHours: true,
+      subscriptionTrialFourHours: false,
       campaignAlerts: true,
       weeklySummary: false,
       packageEndingAlerts: true,
       measurementReminders: false,
+      quietHoursEnabled: true,
+      quietHoursStart: "23:00",
+      quietHoursEnd: "07:00",
     });
   });
 

@@ -15,6 +15,7 @@ import { TenantLifecycleService } from "../../services/tenant-lifecycle.service"
 import { MemberRequestCleanupService } from "../../services/member-request-cleanup.service";
 import { AuditLogService } from "../../services/audit-log.service";
 import { MobileNotificationService } from "../../services/mobile-notification.service";
+import { Booking, BookingStatus } from "../../entities/booking.entity";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 const MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
@@ -44,6 +45,43 @@ function readEventPayload(event: NotificationEvent | null | undefined): Record<s
 }
 
 export class MemberMobileRequestsController {
+  static async listScheduleChangeRequests(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const memberId = req.auth?.sub;
+    if (!tenantId || !memberId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
+    const rows = await AppDataSource.getRepository(NotificationEvent).find({
+      where: { tenant_id: tenantId, member_id: memberId, type: "TRAINER_SCHEDULE_CHANGE_REQUEST" } as any,
+      order: { created_at: "DESC" },
+    });
+    return res.json({ data: rows.map((row) => ({ id: row.id, created_at: row.created_at, ...readEventPayload(row) })) });
+  }
+
+  static async resolveScheduleChangeRequest(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const memberId = req.auth?.sub;
+    const requestId = String(req.params.id || "");
+    const decision = String(req.body?.decision || "").toUpperCase();
+    if (!tenantId || !memberId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
+    if (decision !== "APPROVE" && decision !== "REJECT") throw new AppError("VALIDATION_ERROR", 400, "Karar APPROVE veya REJECT olmalidir");
+    const eventRepo = AppDataSource.getRepository(NotificationEvent);
+    const event = await eventRepo.findOne({ where: { tenant_id: tenantId, member_id: memberId, id: requestId, type: "TRAINER_SCHEDULE_CHANGE_REQUEST" } as any });
+    if (!event) throw new AppError("REQUEST_NOT_FOUND", 404, "Ders degisikligi talebi bulunamadi");
+    const payload = readEventPayload(event);
+    if (String(payload.status || "PENDING") !== "PENDING") throw new AppError("REQUEST_RESOLVED", 409, "Bu talep daha once sonuclandirildi");
+    if (decision === "APPROVE") {
+      const booking = await AppDataSource.getRepository(Booking).findOne({ where: { tenant_id: tenantId, id: String(payload.booking_id), member_id: memberId } });
+      if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
+      booking.starts_at = new Date(String(payload.proposed_starts_at));
+      booking.ends_at = new Date(String(payload.proposed_ends_at));
+      booking.status = BookingStatus.RESCHEDULED;
+      await AppDataSource.getRepository(Booking).save(booking);
+    }
+    event.payload = { ...payload, status: decision === "APPROVE" ? "APPROVED" : "REJECTED", resolved_at: new Date().toISOString() };
+    event.status = NotificationEventStatus.PROCESSED;
+    event.processed_at = new Date();
+    await eventRepo.save(event);
+    return res.json({ data: { id: event.id, ...event.payload } });
+  }
   private static async safeQueuePush(input: Parameters<typeof MobileNotificationService.queuePush>[0]) {
     try {
       await MobileNotificationService.queuePush(input);

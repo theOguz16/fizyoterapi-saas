@@ -19,6 +19,10 @@ export function ToggleRow({ label, description, value, onValueChange, disabled =
         <Text style={[styles.description, disabled ? styles.textDisabled : null]}>{description}</Text>
       </View>
       <Switch
+        accessibilityRole="switch"
+        accessibilityLabel={label}
+        accessibilityHint={description}
+        accessibilityState={{ checked: value, disabled }}
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}

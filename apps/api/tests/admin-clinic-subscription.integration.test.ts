@@ -66,16 +66,16 @@ describe("admin clinic subscription integration", () => {
     );
   });
 
-  it("starts a five-day trial for a published inactive clinic", async () => {
+  it("starts a five-day trial and publishes an inactive clinic without manual review", async () => {
     process.env.JWT_SECRET = "test-secret";
     const tenant = {
       id: "tenant-1",
       slug: "salon",
       name: "Salon",
       is_active: true,
-      review_status: "PUBLISHED",
+      review_status: "PENDING_REVIEW",
       subscription_status: "INACTIVE",
-      is_public: true,
+      is_public: false,
       trial_starts_at: null as Date | null,
       trial_ends_at: null as Date | null,
     };
@@ -105,6 +105,8 @@ describe("admin clinic subscription integration", () => {
     );
 
     expect(response.statusCode).toBe(200);
+    expect(tenant.review_status).toBe("PUBLISHED");
+    expect(tenant.is_public).toBe(true);
     expect(tenant.subscription_status).toBe("TRIAL");
     expect(tenant.trial_starts_at).toBeInstanceOf(Date);
     expect(tenant.trial_ends_at).toBeInstanceOf(Date);

@@ -24,6 +24,7 @@ import { MobilePurchaseSyncService } from "../../services/mobile-purchase-sync.s
 import { AuditLogService } from "../../services/audit-log.service";
 import { AvailabilityProjectionService } from "../../services/availability-projection.service";
 import { TrainerScopeService } from "../../services/trainer-scope.service";
+import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
 import {
   ensureMinimumAdvanceHours,
   parseBookingDate,
@@ -49,6 +50,92 @@ type SlotParams = {
 type CalendarBusinessHours = SlotValidationContract;
 
 export class TrainerBookingsController {
+  static async listScheduleChangeRequests(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const trainerId = req.auth?.sub;
+    if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
+    const rows = await AppDataSource.getRepository(NotificationEvent).find({
+      where: { tenant_id: tenantId, type: "TRAINER_SCHEDULE_CHANGE_REQUEST" } as any,
+      order: { created_at: "DESC" },
+      take: 100,
+    });
+    return res.json({
+      data: rows
+        .map((row) => ({ id: row.id, created_at: row.created_at, ...((row.payload || {}) as Record<string, unknown>) }))
+        .filter((row: any) => String(row.trainer_id || "") === trainerId),
+    });
+  }
+
+  static async createScheduleChangeRequest(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const trainerId = req.auth?.sub;
+    const bookingId = String(req.params.id || "");
+    if (!tenantId || !trainerId || !bookingId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, auth veya rezervasyon bilgisi bulunamadi");
+    const booking = await AppDataSource.getRepository(Booking).findOne({ where: { tenant_id: tenantId, id: bookingId, trainer_id: trainerId } });
+    if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
+    const startsAt = parseBookingDate(req.body?.starts_at, "starts_at");
+    const endsAt = parseBookingDate(req.body?.ends_at, "ends_at");
+    if (endsAt <= startsAt) throw new AppError("VALIDATION_ERROR", 400, "Ders bitis saati baslangictan sonra olmalidir");
+
+    const payload = {
+      trainer_id: trainerId,
+      member_id: booking.member_id,
+      booking_id: booking.id,
+      current_starts_at: booking.starts_at,
+      current_ends_at: booking.ends_at,
+      proposed_starts_at: startsAt,
+      proposed_ends_at: endsAt,
+      note: String(req.body?.note || "").trim() || null,
+      status: "PENDING",
+    };
+    const eventRepo = AppDataSource.getRepository(NotificationEvent);
+    const row = await eventRepo.save(eventRepo.create({
+      tenant_id: tenantId,
+      member_id: booking.member_id,
+      type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
+      payload,
+      status: NotificationEventStatus.QUEUED,
+    }));
+    await MobileNotificationService.queuePush({
+      tenantId,
+      userId: booking.member_id,
+      roleScope: "MEMBER",
+      type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
+      title: "Ders değişikliği talebi",
+      body: `${startsAt.toLocaleString("tr-TR")} için yeni ders saati önerildi.`,
+      deepLink: "/(member)/calendar",
+      meta: { request_id: row.id, booking_id: booking.id },
+    });
+    return res.status(201).json({ data: { request_id: row.id, ...payload } });
+  }
+
+  static async sendBulkNotification(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const trainerId = req.auth?.sub;
+    if (!tenantId || !trainerId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
+    const memberIds: string[] = Array.isArray(req.body?.member_ids)
+      ? Array.from(new Set<string>(req.body.member_ids.map((value: unknown) => String(value)).filter(Boolean)))
+      : [];
+    const title = String(req.body?.title || "Eğitmeninden mesaj").trim();
+    const body = String(req.body?.body || "").trim();
+    if (!memberIds.length || !body) throw new AppError("VALIDATION_ERROR", 400, "En az bir uye ve mesaj metni zorunludur");
+    const members = await AppDataSource.getRepository(User).find({ where: memberIds.map((id) => ({ tenant_id: tenantId, id, role: UserRole.MEMBER, is_active: true })) });
+    const results = await Promise.all(members.map(async (member) => ({
+      member_id: member.id,
+      member_name: `${member.first_name} ${member.last_name}`.trim(),
+      result: await MobileNotificationService.queuePush({
+        tenantId,
+        userId: member.id,
+        roleScope: "MEMBER",
+        type: "TRAINER_BULK_MESSAGE",
+        title,
+        body,
+        deepLink: "/(member)/home",
+        meta: { trainer_id: trainerId },
+      }),
+    })));
+    return res.status(201).json({ data: { requested: memberIds.length, delivered: results.filter((row) => row.result.queued).length, results } });
+  }
   private static sanitizeClientMeta(input: Record<string, unknown>) {
     const allowedKeys = [
       "package_id",

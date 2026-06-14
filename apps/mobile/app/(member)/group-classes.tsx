@@ -1,6 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
-import { leaveMemberGroupClassApi, getMemberGroupClassesApi, joinMemberGroupClassApi } from "@/lib/mobile-api";
+import {
+  getMemberGroupClassWaitlistApi,
+  joinMemberGroupClassWaitlistApi,
+  leaveMemberGroupClassWaitlistApi,
+  leaveMemberGroupClassApi,
+  getMemberGroupClassesApi,
+  joinMemberGroupClassApi,
+} from "@/lib/mobile-api";
 import { formatGroupClassDateTime, formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassDisplayName, getGroupClassScheduleLabel } from "@/lib/group-classes";
 import { AppShell } from "@/theme/components/app-shell";
 import { EmptyState } from "@/theme/components/empty-state";
@@ -22,6 +29,43 @@ function getJoinLabel(state?: string | null) {
   if (normalized === "JOINED") return "Katıldın";
   if (normalized === "PENDING") return "Onay bekliyor";
   return "Açık";
+}
+
+function WaitlistActions({ sessionId, full }: { sessionId: string; full: boolean }) {
+  const query = useQuery({
+    queryKey: ["member-group-class-waitlist", sessionId],
+    queryFn: () => getMemberGroupClassWaitlistApi(sessionId),
+    enabled: Boolean(sessionId),
+  });
+  const join = useMutation({
+    mutationFn: () => joinMemberGroupClassWaitlistApi(sessionId),
+    onSuccess: () => void query.refetch(),
+  });
+  const leave = useMutation({
+    mutationFn: () => leaveMemberGroupClassWaitlistApi(sessionId),
+    onSuccess: () => void query.refetch(),
+  });
+  const state = query.data;
+  if (!full && !state?.joined) return null;
+
+  return (
+    <View style={styles.waitlistBox}>
+      <View style={styles.header}>
+        <View style={styles.grow}>
+          <Text style={styles.waitlistTitle}>{state?.joined ? `Bekleme sırasında ${state.position || "-"}. kişisin` : "Ders dolu"}</Text>
+          <Text style={styles.copy}>{state?.joined ? "Yer açıldığında bildirim alacaksın." : `${state?.count || 0} kişi bekleme listesinde.`}</Text>
+        </View>
+        <StatusBadge label={state?.joined ? "Sıradasın" : "Bekleme listesi"} tone="warning" />
+      </View>
+      <ActionButton
+        label={state?.joined ? "Bekleme listesinden çık" : "Bekleme listesine gir"}
+        icon="notifications"
+        variant={state?.joined ? "ghost" : "primary"}
+        loading={join.isPending || leave.isPending}
+        onPress={() => (state?.joined ? leave.mutate() : join.mutate())}
+      />
+    </View>
+  );
 }
 
 export default function MemberGroupClassesScreen() {
@@ -102,6 +146,9 @@ export default function MemberGroupClassesScreen() {
             const isBusy =
               (joinMutation.isPending && joinMutation.variables === row.id) ||
               (leaveMutation.isPending && leaveMutation.variables === row.id);
+            const capacity = Number(row.capacity || 0);
+            const joinedCount = Number(row.joined_member_count || 0);
+            const full = capacity > 0 && joinedCount >= capacity;
             return (
               <SurfaceCard key={row.id || index} tone="primary">
                 <View style={styles.header}>
@@ -115,11 +162,11 @@ export default function MemberGroupClassesScreen() {
                 <Text style={styles.copy}>Paket: {row.package_title || "Grup paketi"}</Text>
                 <Text style={styles.copy}>Ücret: {formatGroupClassPrice(row.price)}</Text>
                 <Text style={styles.copy}>Bildirim: {getGroupClassAudienceLabel(row.notification_scope)}</Text>
-                <Text style={styles.copy}>Katılım: {row.joined_member_count || 0}/{row.capacity || "-"}</Text>
+                <Text style={styles.copy}>Katılım: {joinedCount}/{capacity || "-"}</Text>
                 <Text style={styles.copy}>Eğitmen payı: %{Number(row.trainer_commission_rate || 0)}</Text>
                 <ActionButton
                   testID={`member-group-class-action-${index}`}
-                  label={joinState === "OPEN" ? "Katılım talebi gönder" : "Kaydı kaldır"}
+                  label={joinState === "OPEN" ? (full ? "Kontenjan dolu" : "Katılım talebi gönder") : "Kaydı kaldır"}
                   icon="calendar"
                   variant={joinState === "OPEN" ? "primary" : "ghost"}
                   onPress={() => {
@@ -130,7 +177,9 @@ export default function MemberGroupClassesScreen() {
                     leaveMutation.mutate(String(row.id));
                   }}
                   loading={isBusy}
+                  disabled={joinState === "OPEN" && full}
                 />
+                {joinState === "OPEN" ? <WaitlistActions sessionId={String(row.id)} full={full} /> : null}
               </SurfaceCard>
             );
           })}
@@ -163,5 +212,18 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     lineHeight: tokens.lineHeight.normal,
     fontFamily: tokens.fontFamily.regular,
+  },
+  waitlistBox: {
+    gap: tokens.spacing.sm,
+    padding: tokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    borderRadius: tokens.radius.md,
+    backgroundColor: tokens.colors.warningSoft,
+  },
+  waitlistTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
   },
 });

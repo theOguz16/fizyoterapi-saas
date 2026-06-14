@@ -7,6 +7,8 @@ import { MetricCard } from "@/theme/components/metric-card";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { ToggleRow } from "@/theme/components/toggle-row";
 import { ActionButton } from "@/theme/components/action-button";
+import { FormField } from "@/theme/components/form-field";
+import { getMobileNotificationPreferencesApi, updateMobileNotificationPreferencesApi, type MobileNotificationPreferences } from "@/lib/mobile-api";
 import { getNotificationPreferences, setNotificationPreferences, type NotificationPreferences } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
 import { useSession } from "@/providers/auth-session";
@@ -14,20 +16,90 @@ import { useSession } from "@/providers/auth-session";
 const DEFAULT_PREFS: NotificationPreferences = {
   classReminderThreeHours: true,
   classReminderOneHour: true,
+  subscriptionTrialFortyEightHours: true,
+  subscriptionTrialTwentyFourHours: true,
+  subscriptionTrialTwelveHours: true,
+  subscriptionTrialFourHours: true,
   campaignAlerts: true,
   weeklySummary: true,
   packageEndingAlerts: true,
   measurementReminders: true,
+  quietHoursEnabled: false,
+  quietHoursStart: "22:00",
+  quietHoursEnd: "08:00",
 };
+
+function fromApiPreferences(value: MobileNotificationPreferences | null | undefined): NotificationPreferences {
+  if (!value) return DEFAULT_PREFS;
+  return {
+    classReminderThreeHours: value.class_reminders?.three_hours ?? DEFAULT_PREFS.classReminderThreeHours,
+    classReminderOneHour: value.class_reminders?.one_hour ?? DEFAULT_PREFS.classReminderOneHour,
+    subscriptionTrialFortyEightHours: value.subscription_trial_reminders?.forty_eight_hours ?? DEFAULT_PREFS.subscriptionTrialFortyEightHours,
+    subscriptionTrialTwentyFourHours: value.subscription_trial_reminders?.twenty_four_hours ?? DEFAULT_PREFS.subscriptionTrialTwentyFourHours,
+    subscriptionTrialTwelveHours: value.subscription_trial_reminders?.twelve_hours ?? DEFAULT_PREFS.subscriptionTrialTwelveHours,
+    subscriptionTrialFourHours: value.subscription_trial_reminders?.four_hours ?? DEFAULT_PREFS.subscriptionTrialFourHours,
+    campaignAlerts: value.campaign_alerts ?? DEFAULT_PREFS.campaignAlerts,
+    weeklySummary: value.weekly_summary ?? DEFAULT_PREFS.weeklySummary,
+    packageEndingAlerts: value.package_expiry_reminders ?? DEFAULT_PREFS.packageEndingAlerts,
+    measurementReminders: value.measurement_reminders ?? DEFAULT_PREFS.measurementReminders,
+    quietHoursEnabled: value.quiet_hours?.enabled ?? DEFAULT_PREFS.quietHoursEnabled,
+    quietHoursStart: value.quiet_hours?.start ?? DEFAULT_PREFS.quietHoursStart,
+    quietHoursEnd: value.quiet_hours?.end ?? DEFAULT_PREFS.quietHoursEnd,
+  };
+}
+
+function toApiPreferences(value: NotificationPreferences): MobileNotificationPreferences {
+  return {
+    class_reminders: {
+      three_hours: value.classReminderThreeHours,
+      one_hour: value.classReminderOneHour,
+    },
+    subscription_trial_reminders: {
+      forty_eight_hours: value.subscriptionTrialFortyEightHours,
+      twenty_four_hours: value.subscriptionTrialTwentyFourHours,
+      twelve_hours: value.subscriptionTrialTwelveHours,
+      four_hours: value.subscriptionTrialFourHours,
+    },
+    package_expiry_reminders: value.packageEndingAlerts,
+    campaign_alerts: value.campaignAlerts,
+    weekly_summary: value.weeklySummary,
+    measurement_reminders: value.measurementReminders,
+    quiet_hours: {
+      enabled: value.quietHoursEnabled,
+      start: value.quietHoursStart,
+      end: value.quietHoursEnd,
+    },
+  };
+}
 
 export default function NotificationSettingsScreen() {
   const { notificationPermissionStatus, requestNotificationPermission, refreshNotificationPermissionStatus } = useSession();
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [permissionLoading, setPermissionLoading] = useState(false);
+  const [syncingPreferences, setSyncingPreferences] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getNotificationPreferences().then(setPreferences).catch(() => setPreferences(DEFAULT_PREFS));
+    let mounted = true;
+    async function loadPreferences() {
+      try {
+        const [localPrefs, remotePrefs] = await Promise.all([
+          getNotificationPreferences().catch(() => DEFAULT_PREFS),
+          getMobileNotificationPreferencesApi().catch(() => null),
+        ]);
+        if (!mounted) return;
+        const next = remotePrefs ? fromApiPreferences(remotePrefs) : localPrefs;
+        setPreferences(next);
+        await setNotificationPreferences(next);
+      } catch {
+        if (mounted) setPreferences(DEFAULT_PREFS);
+      }
+    }
+
+    void loadPreferences();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -49,6 +121,25 @@ export default function NotificationSettingsScreen() {
     const next = { ...preferences, [key]: value };
     setPreferences(next);
     await setNotificationPreferences(next);
+    try {
+      setSyncingPreferences(true);
+      await updateMobileNotificationPreferencesApi(toApiPreferences(next));
+    } catch {
+      setError("Tercihin cihazında kaydedildi. Sunucu eşitlemesi için bağlantı gelince tekrar deneyebilirsin.");
+    } finally {
+      setSyncingPreferences(false);
+    }
+  }
+
+  function commitQuietHour(key: "quietHoursStart" | "quietHoursEnd", value: string) {
+    const match = /^(\d{2}):(\d{2})$/.exec(value);
+    if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) {
+      setError("Sessiz saatleri 24 saat formatında gir. Örnek: 22:00");
+      setPreferences((current) => ({ ...current, [key]: key === "quietHoursStart" ? "22:00" : "08:00" }));
+      return;
+    }
+    setError("");
+    void updatePreference(key, value);
   }
 
   const handleEnableNotifications = useCallback(async () => {
@@ -70,7 +161,7 @@ export default function NotificationSettingsScreen() {
     <AppShell title="Bildirim tercihleri" subtitle="Randevu, kampanya, ölçüm ve paket bitiş bildirimlerini cihazında yönet." icon="notifications">
       <View style={styles.metricsRow}>
         <MetricCard label="Sistem izni" value={pushEnabled ? "Açık" : notificationPermissionStatus === "denied" ? "Kapalı" : "Bekliyor"} hint="Cihaz düzeyi" icon="notifications" />
-        <MetricCard label="Tercihler" value={Object.values(preferences).filter(Boolean).length + "/6"} hint="Uygulama içi seçim" icon="calendar" />
+        <MetricCard label="Tercihler" value={Object.values(preferences).filter((item) => item === true).length + "/10"} hint={syncingPreferences ? "Eşitleniyor" : "Sunucu eşli"} icon="calendar" />
       </View>
 
       <SurfaceCard tone={pushEnabled ? "success" : notificationPermissionStatus === "denied" ? "warning" : "primary"}>
@@ -111,6 +202,34 @@ export default function NotificationSettingsScreen() {
           disabled={!pushEnabled}
         />
         <ToggleRow
+          label="48 saat kala"
+          description="Deneme veya abonelik bitiş uyarısı"
+          value={preferences.subscriptionTrialFortyEightHours}
+          onValueChange={(value) => void updatePreference("subscriptionTrialFortyEightHours", value)}
+          disabled={!pushEnabled}
+        />
+        <ToggleRow
+          label="24 saat kala"
+          description="Deneme veya abonelik bitiş uyarısı"
+          value={preferences.subscriptionTrialTwentyFourHours}
+          onValueChange={(value) => void updatePreference("subscriptionTrialTwentyFourHours", value)}
+          disabled={!pushEnabled}
+        />
+        <ToggleRow
+          label="12 saat kala"
+          description="Deneme veya abonelik bitiş uyarısı"
+          value={preferences.subscriptionTrialTwelveHours}
+          onValueChange={(value) => void updatePreference("subscriptionTrialTwelveHours", value)}
+          disabled={!pushEnabled}
+        />
+        <ToggleRow
+          label="4 saat kala"
+          description="Deneme veya abonelik bitiş uyarısı"
+          value={preferences.subscriptionTrialFourHours}
+          onValueChange={(value) => void updatePreference("subscriptionTrialFourHours", value)}
+          disabled={!pushEnabled}
+        />
+        <ToggleRow
           label="Kampanya"
           description="Referans ve indirim sinyalleri"
           value={preferences.campaignAlerts}
@@ -138,6 +257,37 @@ export default function NotificationSettingsScreen() {
           onValueChange={(value) => void updatePreference("measurementReminders", value)}
           disabled={!pushEnabled}
         />
+        <ToggleRow
+          label="Sessiz saatler"
+          description={`${preferences.quietHoursStart} - ${preferences.quietHoursEnd} arasında bildirimleri sınırlamak için`}
+          value={preferences.quietHoursEnabled}
+          onValueChange={(value) => void updatePreference("quietHoursEnabled", value)}
+          disabled={!pushEnabled}
+        />
+        {preferences.quietHoursEnabled ? (
+          <View style={styles.quietHoursFields}>
+            <FormField
+              label="Sessiz saat başlangıcı"
+              value={preferences.quietHoursStart}
+              placeholder="22:00"
+              maxLength={5}
+              keyboardType="numbers-and-punctuation"
+              helper="24 saat formatında gir. Örnek: 22:00"
+              onChangeText={(value) => setPreferences((current) => ({ ...current, quietHoursStart: value }))}
+              onEndEditing={() => commitQuietHour("quietHoursStart", preferences.quietHoursStart)}
+            />
+            <FormField
+              label="Sessiz saat bitişi"
+              value={preferences.quietHoursEnd}
+              placeholder="08:00"
+              maxLength={5}
+              keyboardType="numbers-and-punctuation"
+              helper="Gece yarısını aşan aralıklar desteklenir."
+              onChangeText={(value) => setPreferences((current) => ({ ...current, quietHoursEnd: value }))}
+              onEndEditing={() => commitQuietHour("quietHoursEnd", preferences.quietHoursEnd)}
+            />
+          </View>
+        ) : null}
       </SurfaceCard>
 
       <SurfaceCard>
@@ -168,6 +318,10 @@ const styles = StyleSheet.create({
   actions: {
     gap: tokens.spacing.sm,
     marginTop: tokens.spacing.xs,
+  },
+  quietHoursFields: {
+    gap: tokens.spacing.sm,
+    paddingTop: tokens.spacing.xs,
   },
   error: {
     color: tokens.colors.danger,

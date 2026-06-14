@@ -6,6 +6,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getMemberAttendanceApi, getMemberMeasurementsApi } from "@/lib/mobile-api";
 import {
   buildMemberProgressMetrics,
+  buildMeasurementTrend,
+  buildPackageUsageForecast,
   formatAttendanceResult,
   formatMeasurementValue,
   getLatestMeasurement,
@@ -39,6 +41,9 @@ export default function MemberProgressScreen() {
   const measurementRows = Array.isArray(measurementsQuery.data) ? measurementsQuery.data : [];
   const latestMeasurement = getLatestMeasurement(measurementRows);
   const metrics = buildMemberProgressMetrics(summary);
+  const weightTrend = buildMeasurementTrend(measurementRows, "weight_kg");
+  const fatTrend = buildMeasurementTrend(measurementRows, "fat_percent");
+  const muscleTrend = buildMeasurementTrend(measurementRows, "muscle_kg");
 
   return (
     <AppShell
@@ -96,21 +101,39 @@ export default function MemberProgressScreen() {
       </SurfaceCard>
 
       <SurfaceCard>
+        <SectionTitle title="Dönem karşılaştırması" subtitle="İlk ve son ölçüm arasındaki değişimi birlikte değerlendir." />
+        <View style={styles.measurementGrid}>
+          <TrendTile label="Kilo" trend={weightTrend} suffix=" kg" />
+          <TrendTile label="Yağ" trend={fatTrend} suffix="%" />
+          <TrendTile label="Kas" trend={muscleTrend} suffix=" kg" positiveUp />
+        </View>
+        <Text style={styles.trendCopy}>{buildTrendNarrative(weightTrend, fatTrend, muscleTrend)}</Text>
+      </SurfaceCard>
+
+      <SurfaceCard>
         <SectionTitle title="Paket kullanım özeti" subtitle="Paket bazında toplam, kullanılan ve kalan haklarını gör." />
         {packageBalances.length === 0 ? (
           <EmptyPanel title="Aktif paket görünmüyor" description="Paket tanımlandığında kullanım kartları burada listelenir." iconName="package" iconTone="warning" />
         ) : (
           <ScrollPanel>
-            {packageBalances.map((row: any) => (
-              <View key={row.user_package_id} style={styles.rowCard}>
+            {packageBalances.map((row: any) => {
+              const forecast = buildPackageUsageForecast({
+                remainingCredits: row.remaining_credits,
+                upcomingBookingCount: attendanceQuery.data?.upcoming_bookings?.length || 0,
+                weeklyUsage: Math.max(1, Math.round((summary?.total_attendance_count || 0) / 4)),
+              });
+              return <View key={row.user_package_id} style={styles.rowCard}>
                 <Text style={styles.title}>{row.package_name || row.package_title || "Paket"}</Text>
                 <View style={styles.detailPanel}>
                   <DetailRow label="Toplam hak" value={row.total_credits ?? "-"} />
                   <DetailRow label="Kullanılan hak" value={row.used_credits ?? "-"} />
                   <DetailRow label="Kalan hak" value={row.remaining_credits ?? "-"} />
+                  <DetailRow label="Rezervasyon sonrası" value={`${forecast.availableAfterReservations} hak`} />
+                  <DetailRow label="Tahmini bitiş" value={forecast.estimatedEnd.toLocaleDateString("tr-TR")} />
                 </View>
-              </View>
-            ))}
+                {forecast.shouldRenewSoon ? <Text style={styles.renewalHint}>Paketin mevcut kullanım hızına göre yakında bitebilir. Yenileme seçeneklerini inceleyebilirsin.</Text> : null}
+              </View>;
+            })}
           </ScrollPanel>
         )}
       </SurfaceCard>
@@ -136,6 +159,23 @@ export default function MemberProgressScreen() {
       </SurfaceCard>
     </AppShell>
   );
+}
+
+function TrendTile({ label, trend, suffix, positiveUp = false }: { label: string; trend: ReturnType<typeof buildMeasurementTrend>; suffix: string; positiveUp?: boolean }) {
+  const favorable = trend ? (positiveUp ? trend.delta >= 0 : trend.delta <= 0) : false;
+  return (
+    <View style={styles.measurementCard}>
+      <Text style={styles.measurementLabel}>{label}</Text>
+      <Text style={styles.measurementValue}>{trend ? `${trend.delta > 0 ? "+" : ""}${trend.delta.toFixed(1)}${suffix}` : "-"}</Text>
+      <Text style={[styles.trendState, trend && favorable ? styles.trendPositive : null]}>{trend ? (trend.direction === "STABLE" ? "Sabit" : favorable ? "Hedefle uyumlu" : "Takip edilmeli") : "En az iki ölçüm gerekli"}</Text>
+    </View>
+  );
+}
+
+function buildTrendNarrative(weight: ReturnType<typeof buildMeasurementTrend>, fat: ReturnType<typeof buildMeasurementTrend>, muscle: ReturnType<typeof buildMeasurementTrend>) {
+  if (!weight && !fat && !muscle) return "Karşılaştırma için en az iki ölçüm kaydı gerekiyor.";
+  const favorable = [weight?.delta !== undefined && weight.delta <= 0, fat?.delta !== undefined && fat.delta <= 0, muscle?.delta !== undefined && muscle.delta >= 0].filter(Boolean).length;
+  return favorable >= 2 ? "Genel eğilim hedef odaklı ilerliyor. Aynı ritmi koruyup ölçümleri düzenli güncelle." : "Değişim tek başına sonuç değildir. Eğitmeninle birlikte dönem hedefini ve ders ritmini yeniden değerlendirebilirsin.";
 }
 
 const styles = StyleSheet.create({
@@ -202,6 +242,26 @@ const styles = StyleSheet.create({
     color: tokens.colors.text,
     fontSize: tokens.font.md,
     fontFamily: tokens.fontFamily.bold,
+  },
+  trendState: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  trendPositive: {
+    color: tokens.colors.success,
+  },
+  trendCopy: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.sm,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
+  },
+  renewalHint: {
+    color: tokens.colors.warning,
+    fontSize: tokens.font.xs,
+    lineHeight: 18,
+    fontFamily: tokens.fontFamily.medium,
   },
   rowCard: {
     gap: tokens.spacing.sm,

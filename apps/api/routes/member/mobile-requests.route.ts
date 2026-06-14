@@ -17,3 +17,7 @@ memberMobileRequestsRoutes.get("/purchase-requests", MemberMobileRequestsControl
 memberMobileRequestsRoutes.use("/change-requests", authMiddleware, tenantMiddleware, requireRole(["MEMBER"]));
 memberMobileRequestsRoutes.post("/change-requests", MemberMobileRequestsController.createChangeRequest);
 memberMobileRequestsRoutes.get("/change-requests", MemberMobileRequestsController.listChangeRequests);
+
+memberMobileRequestsRoutes.use("/schedule-change-requests", authMiddleware, tenantMiddleware, requireRole(["MEMBER"]));
+memberMobileRequestsRoutes.get("/schedule-change-requests", MemberMobileRequestsController.listScheduleChangeRequests);
+memberMobileRequestsRoutes.patch("/schedule-change-requests/:id", MemberMobileRequestsController.resolveScheduleChangeRequest);

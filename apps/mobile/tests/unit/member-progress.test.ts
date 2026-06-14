@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMeasurementTrend,
   buildMemberProgressMetrics,
+  buildPackageUsageForecast,
   formatAttendanceResult,
   formatMeasurementValue,
   getLatestMeasurement,
@@ -24,6 +26,27 @@ describe("member progress helpers", () => {
       totalAttendance: 12,
       groupAttendance: 5,
       remainingCredits: 8,
+    });
+  });
+
+  it("forecasts package usage after upcoming reservations", () => {
+    const result = buildPackageUsageForecast({
+      remainingCredits: 8,
+      upcomingBookingCount: 3,
+      weeklyUsage: 2,
+      now: new Date("2026-06-01T00:00:00.000Z"),
+    });
+    expect(result.availableAfterReservations).toBe(5);
+    expect(result.weeksRemaining).toBe(4);
+    expect(result.estimatedEnd.toISOString().slice(0, 10)).toBe("2026-06-29");
+  });
+
+  it("compares the latest and oldest measurement", () => {
+    expect(buildMeasurementTrend([{ weight_kg: 70 }, { weight_kg: 74 }], "weight_kg")).toEqual({
+      latest: 70,
+      previous: 74,
+      delta: -4,
+      direction: "DOWN",
     });
   });
 

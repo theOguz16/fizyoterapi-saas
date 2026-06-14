@@ -81,6 +81,25 @@ export async function getRevenueCatCurrentPackage(appUserId: string) {
   return current.monthly || current.annual || current.availablePackages?.[0] || null;
 }
 
+export async function getRevenueCatPlanPackages(appUserId: string) {
+  const offerings = await getRevenueCatOfferings(appUserId);
+  const current = offerings.current;
+  if (!current) {
+    throw new Error("RevenueCat current offering bulunamadi.");
+  }
+
+  const monthly =
+    current.monthly ||
+    current.availablePackages?.find((pkg) => pkg.packageType === "MONTHLY" || pkg.identifier === "monthly" || pkg.identifier === "$rc_monthly") ||
+    null;
+  const yearly =
+    current.annual ||
+    current.availablePackages?.find((pkg) => pkg.packageType === "ANNUAL" || pkg.identifier === "annual" || pkg.identifier === "$rc_annual") ||
+    null;
+
+  return { monthly, yearly };
+}
+
 export async function getRevenueCatPackageForPlan(appUserId: string, billingCycle: BillingCycle) {
   const offerings = await getRevenueCatOfferings(appUserId);
   const current = offerings.current;

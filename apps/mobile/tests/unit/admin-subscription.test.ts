@@ -15,10 +15,10 @@ describe("admin subscription helpers", () => {
       buildSubscriptionHeadline({
         review_status: "PENDING",
         subscription_status: "INACTIVE",
-        can_start_trial: false,
+        can_start_trial: true,
         trial_days_remaining: 0,
       })
-    ).toBe("Salon incelemesi tamamlandığında deneme ve satın alma adımı burada açılacak.");
+    ).toBe("5 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.");
     expect(
       buildSubscriptionHeadline({
         review_status: "PUBLISHED",

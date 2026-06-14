@@ -12,7 +12,7 @@ type Props = {
 
 export function EmptyState({ title, description, icon = "spark" }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={styles.card} accessibilityRole="summary" accessibilityLabel={`${title}. ${description}`}>
       <AppIcon name={icon} size="lg" />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>

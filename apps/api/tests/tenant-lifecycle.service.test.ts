@@ -166,4 +166,38 @@ describe("tenant lifecycle service", () => {
 
     expect(queuePush).not.toHaveBeenCalled();
   });
+
+  it("queues subscription period warnings for active clinics", async () => {
+    const notificationRepo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation((input) => input),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === SalonMembership) return { findOne: vi.fn().mockResolvedValue({ user_id: "admin-user-1" }) } as any;
+      if (entity === NotificationEvent) return notificationRepo as any;
+      throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
+    });
+    const queuePush = vi.spyOn(MobileNotificationService, "queuePush").mockResolvedValue({ queued: true } as any);
+
+    await TenantLifecycleService.syncTenantState({
+      id: "tenant-active-warning",
+      name: "Owner Fizyo",
+      review_status: "PUBLISHED",
+      subscription_status: "ACTIVE",
+      is_public: true,
+      subscription_current_period_ends_at: new Date(Date.now() + 11 * 60 * 60 * 1000),
+    } as any);
+
+    expect(queuePush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "ADMIN_SUBSCRIPTION_EXPIRING_12H",
+        title: "Abonelik dönemin yenilenmek üzere",
+        deepLink: "/(admin)/subscription",
+      })
+    );
+    expect(notificationRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "ADMIN_SUBSCRIPTION_EXPIRING_12H" })
+    );
+  });
 });

@@ -32,6 +32,8 @@ export default function TrainerLayout() {
       <Tabs.Screen name="home" options={{ title: "Ana Sayfa" }} />
       <Tabs.Screen name="earnings" options={{ title: "Kazanç" }} />
       <Tabs.Screen name="profile" options={{ title: "Profil" }} />
+      <Tabs.Screen name="request-center" options={{ href: null }} />
+      <Tabs.Screen name="bulk-notification" options={{ href: null }} />
       <Tabs.Screen name="today" options={{ href: null }} />
       <Tabs.Screen name="packages" options={{ href: null }} />
       <Tabs.Screen name="qr" options={{ href: null }} />

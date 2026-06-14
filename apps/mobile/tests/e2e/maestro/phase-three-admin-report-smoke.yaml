@@ -1,0 +1,11 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Frevenue-report"
+- extendedWaitUntil:
+    visible: "Gelir raporu"
+    timeout: 20000
+- assertVisible: "Rapor aralığı"
+- assertVisible: "CSV dışa aktar"

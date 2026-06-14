@@ -69,6 +69,8 @@ type SessionContextType = {
   biometricAvailable: boolean;
   biometricEnabled: boolean;
   biometricLabel: string;
+  enableBiometricLogin: () => Promise<void>;
+  disableBiometricLogin: () => Promise<void>;
   clearPendingPostAuthScreen: () => void;
   dismissNotificationPermissionPrompt: () => Promise<void>;
   requestNotificationPermission: () => Promise<PushPermissionStatus>;
@@ -201,6 +203,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       return status;
     }
 
+    if (pushToken) {
+      await unregisterPushDevice(pushToken).catch(() => null);
+    }
     setPushToken(null);
     const promptState = await getNotificationPermissionPromptState();
     await setNotificationPermissionPromptState({
@@ -232,6 +237,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   async function requestNotificationPermission() {
     const result = await requestPushPermissionAndRegister();
+    if (result.status !== "granted" && pushToken) {
+      await unregisterPushDevice(pushToken).catch(() => null);
+    }
     setNotificationPermissionStatus(result.status);
     setPushToken(result.token);
     await setNotificationPermissionPromptState({
@@ -327,6 +335,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         void refreshMe().catch(() => null);
+        void syncNotificationPermissionSafely().catch(() => null);
       }
     });
 
@@ -349,11 +358,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
 
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
-    await enableBiometricLoginIfAvailable().then((state) => {
-      setBiometricAvailable(state.available);
-      setBiometricEnabled(state.enabled);
-      setBiometricLabel(state.label);
-    });
+    await refreshBiometricState();
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
@@ -387,11 +392,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
 
     await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
-    await enableBiometricLoginIfAvailable().then((state) => {
-      setBiometricAvailable(state.available);
-      setBiometricEnabled(state.enabled);
-      setBiometricLabel(state.label);
-    });
+    await refreshBiometricState();
     setAuthToken(data.accessToken);
     setToken(data.accessToken);
     applySessionPayload(data);
@@ -464,6 +465,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await inviteAcceptApi(input);
   };
 
+  const enableBiometricLogin = async () => {
+    const state = await enableBiometricLoginIfAvailable();
+    setBiometricAvailable(state.available);
+    setBiometricEnabled(state.enabled);
+    setBiometricLabel(state.label);
+    if (!state.available) {
+      throw new Error("Bu cihazda Face ID veya Touch ID hazır değil.");
+    }
+  };
+
+  const disableBiometricLoginAction = async () => {
+    await disableBiometricLogin();
+    await refreshBiometricState();
+  };
+
   const value = useMemo<SessionContextType>(
     () => ({
       user,
@@ -490,6 +506,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       biometricAvailable,
       biometricEnabled,
       biometricLabel,
+      enableBiometricLogin,
+      disableBiometricLogin: disableBiometricLoginAction,
       clearPendingPostAuthScreen: () => setPendingPostAuthScreen(null),
       dismissNotificationPermissionPrompt,
       requestNotificationPermission,

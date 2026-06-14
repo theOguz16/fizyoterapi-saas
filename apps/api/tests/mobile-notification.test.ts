@@ -1,10 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppDataSource } from "../data-source";
-import { MobileNotificationService } from "../services/mobile-notification.service";
+import { isWithinQuietHours, MobileNotificationService } from "../services/mobile-notification.service";
 
 describe("MobileNotificationService", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("detects overnight quiet hours in the tenant timezone", () => {
+    expect(
+      isWithinQuietHours(
+        { enabled: true, start: "22:00", end: "08:00" },
+        new Date("2026-06-14T20:30:00.000Z"),
+        "Europe/Istanbul"
+      )
+    ).toBe(true);
+    expect(
+      isWithinQuietHours(
+        { enabled: true, start: "22:00", end: "08:00" },
+        new Date("2026-06-14T09:00:00.000Z"),
+        "Europe/Istanbul"
+      )
+    ).toBe(false);
   });
 
   it("returns NO_ACTIVE_DEVICE when no token exists", async () => {

@@ -57,6 +57,11 @@ export class SchemaMaintenanceService {
     `);
 
     await dataSource.query(`
+      ALTER TABLE IF EXISTS accounts
+      ADD COLUMN IF NOT EXISTS notification_preferences jsonb
+    `);
+
+    await dataSource.query(`
       CREATE INDEX IF NOT EXISTS "IDX_tenants_subscription_current_period_ends_at"
       ON tenants (subscription_current_period_ends_at)
     `);

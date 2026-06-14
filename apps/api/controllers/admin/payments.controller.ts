@@ -7,11 +7,128 @@ import { Booking, BookingPaymentStatus } from "../../entities/booking.entity";
 import { ClassSession } from "../../entities/class-session.entity";
 import { Package } from "../../entities/package.entity";
 import { User } from "../../entities/user.entity";
+import { UserPackage } from "../../entities/user-package.entity";
+import { PackageTrainerAssignment } from "../../entities/package-trainer-assignment.entity";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
 import { normalizePaymentNote, resolveBookingPaymentStatus } from "./payment-helpers";
 
 export class AdminPaymentsController {
+  private static resolveDateRange(req: AuthenticatedRequest) {
+    const now = new Date();
+    const from = typeof req.query.from === "string" && req.query.from ? new Date(req.query.from) : new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+    const to = typeof req.query.to === "string" && req.query.to ? new Date(req.query.to) : now;
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      throw new AppError("VALIDATION_ERROR", 400, "Gecersiz tarih araligi");
+    }
+    return { from, to };
+  }
+
+  private static async buildRevenueRows(req: AuthenticatedRequest) {
+    const tenantId = req.tenantId;
+    if (!tenantId) {
+      throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+    }
+    const { from, to } = AdminPaymentsController.resolveDateRange(req);
+    const packageId = typeof req.query.package_id === "string" ? req.query.package_id.trim() : "";
+    const trainerId = typeof req.query.trainer_id === "string" ? req.query.trainer_id.trim() : "";
+
+    const qb = AppDataSource.getRepository(UserPackage)
+      .createQueryBuilder("up")
+      .innerJoin(Package, "p", "p.id = up.package_id AND p.tenant_id = up.tenant_id")
+      .leftJoin(User, "u", "u.id = up.user_id AND u.tenant_id = up.tenant_id")
+      .select("up.id", "id")
+      .addSelect("up.created_at", "created_at")
+      .addSelect("up.user_id", "member_id")
+      .addSelect("CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))", "member_name")
+      .addSelect("up.package_id", "package_id")
+      .addSelect("p.title", "package_title")
+      .addSelect("p.type", "package_type")
+      .addSelect("COALESCE(up.purchase_price::numeric, up.latest_package_price::numeric, p.display_price::numeric, 0)", "amount")
+      .addSelect("p.total_credits", "credits")
+      .where("up.tenant_id = :tenantId", { tenantId })
+      .andWhere("up.deleted_at IS NULL")
+      .andWhere("up.created_at >= :from AND up.created_at <= :to", { from, to })
+      .orderBy("up.created_at", "DESC");
+
+    if (packageId) {
+      qb.andWhere("up.package_id = :packageId", { packageId });
+    }
+    if (trainerId) {
+      qb.innerJoin(PackageTrainerAssignment, "pta", "pta.package_id = up.package_id AND pta.tenant_id = up.tenant_id AND pta.is_active = true");
+      qb.andWhere("pta.trainer_id = :trainerId", { trainerId });
+    }
+
+    return {
+      from,
+      to,
+      rows: await qb.getRawMany<{
+        id: string;
+        created_at: Date;
+        member_id: string;
+        member_name: string;
+        package_id: string;
+        package_title: string;
+        package_type: string;
+        amount: string;
+        credits: string;
+      }>(),
+    };
+  }
+
+  // --- GET /api/admin/payments/revenue/report ---
+  static async revenueReport(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { from, to, rows } = await AdminPaymentsController.buildRevenueRows(req);
+      const total = rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const byPackage = new Map<string, { package_id: string; package_title: string; amount: number; count: number }>();
+      for (const row of rows) {
+        const key = row.package_id || "unknown";
+        const current = byPackage.get(key) || { package_id: key, package_title: row.package_title || "Paket", amount: 0, count: 0 };
+        current.amount += Number(row.amount || 0);
+        current.count += 1;
+        byPackage.set(key, current);
+      }
+
+      return res.json({
+        data: {
+          from: from.toISOString(),
+          to: to.toISOString(),
+          total_revenue: total,
+          sale_count: rows.length,
+          average_sale: rows.length ? total / rows.length : 0,
+          by_package: Array.from(byPackage.values()).sort((a, b) => b.amount - a.amount),
+          rows,
+        },
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Admin revenue report error:", error);
+      throw new AppError("ADMIN_REVENUE_REPORT_ERROR", 500, "Gelir raporu getirilemedi");
+    }
+  }
+
+  // --- GET /api/admin/payments/revenue/export.csv ---
+  static async revenueExportCsv(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { rows } = await AdminPaymentsController.buildRevenueRows(req);
+      const escapeCsv = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const header = ["created_at", "member_name", "package_title", "package_type", "amount", "credits"];
+      const body = rows.map((row) =>
+        [row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at, row.member_name, row.package_title, row.package_type, row.amount, row.credits]
+          .map(escapeCsv)
+          .join(",")
+      );
+      res.setHeader("content-type", "text/csv; charset=utf-8");
+      res.setHeader("content-disposition", "attachment; filename=\"fizyoflow-revenue.csv\"");
+      return res.send([header.join(","), ...body].join("\n"));
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Admin revenue CSV error:", error);
+      throw new AppError("ADMIN_REVENUE_CSV_ERROR", 500, "Gelir raporu disa aktarilamadi");
+    }
+  }
+
   // --- GET /api/admin/payments/requests ---
   static async listRequests(req: AuthenticatedRequest, res: Response) {
     try {

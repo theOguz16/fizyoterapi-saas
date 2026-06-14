@@ -29,8 +29,9 @@ async function openExternalUrl(url: string) {
 
 export function AccountSecurityCard({ backTo }: AccountSecurityCardProps) {
   const router = useRouter();
-  const { deleteAccount } = useSession();
+  const { biometricAvailable, biometricEnabled, biometricLabel, deleteAccount, disableBiometricLogin, enableBiometricLogin } = useSession();
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isUpdatingBiometric, setIsUpdatingBiometric] = useState(false);
 
   const supportUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Fizyoflow hesap desteği")}`;
 
@@ -74,6 +75,26 @@ export function AccountSecurityCard({ backTo }: AccountSecurityCardProps) {
     );
   };
 
+  const handleBiometricToggle = () => {
+    void (async () => {
+      try {
+        setIsUpdatingBiometric(true);
+        if (biometricEnabled) {
+          await disableBiometricLogin();
+          Alert.alert("Hızlı giriş kapatıldı", `${biometricLabel} ile giriş bu cihazda kapatıldı.`);
+          return;
+        }
+        await enableBiometricLogin();
+        Alert.alert("Hızlı giriş açıldı", `Sonraki girişlerinde ${biometricLabel} kullanabilirsin.`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Hızlı giriş ayarı güncellenemedi.";
+        Alert.alert("Hızlı giriş", message);
+      } finally {
+        setIsUpdatingBiometric(false);
+      }
+    })();
+  };
+
   return (
     <SurfaceCard>
       <Text style={styles.section}>Hesap ve güvenlik</Text>
@@ -84,6 +105,15 @@ export function AccountSecurityCard({ backTo }: AccountSecurityCardProps) {
           icon="notifications"
           onPress={() => router.push({ pathname: "/(shared)/notification-settings", params: { backTo } } as never)}
         />
+        {biometricAvailable ? (
+          <ActionButton
+            label={`${biometricLabel} ${biometricEnabled ? "kapat" : "aç"}`}
+            icon="shield"
+            variant="ghost"
+            loading={isUpdatingBiometric}
+            onPress={handleBiometricToggle}
+          />
+        ) : null}
         <ActionButton
           label="Şifre yenileme desteği"
           icon="settings"

@@ -82,17 +82,16 @@ export class AdminClinicController {
     const remainingDays = trialEndsAt ? Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000))) : 0;
     const hasTrialHistory = Boolean(tenant.trial_starts_at || tenant.trial_ends_at);
 
-    let recommendedAction = "WAIT_REVIEW";
-    if (tenant.review_status === TenantReviewStatus.PUBLISHED) {
-      if (tenant.subscription_status === TenantSubscriptionStatus.INACTIVE && !hasTrialHistory) {
-        recommendedAction = "START_TRIAL";
-      } else if (tenant.subscription_status === TenantSubscriptionStatus.TRIAL) {
-        recommendedAction = "PURCHASE_IN_APP";
-      } else if (tenant.subscription_status === TenantSubscriptionStatus.READ_ONLY) {
-        recommendedAction = "PURCHASE_IN_APP";
-      } else if (tenant.subscription_status === TenantSubscriptionStatus.ACTIVE) {
-        recommendedAction = "MANAGE_PLAN";
-      }
+    let recommendedAction = "WAIT_SETUP";
+    if (tenant.subscription_status === TenantSubscriptionStatus.INACTIVE && !hasTrialHistory) {
+      recommendedAction = "START_TRIAL";
+    } else if (
+      tenant.subscription_status === TenantSubscriptionStatus.TRIAL ||
+      tenant.subscription_status === TenantSubscriptionStatus.READ_ONLY
+    ) {
+      recommendedAction = "PURCHASE_IN_APP";
+    } else if (tenant.subscription_status === TenantSubscriptionStatus.ACTIVE) {
+      recommendedAction = "MANAGE_PLAN";
     }
 
     return {
@@ -108,16 +107,23 @@ export class AdminClinicController {
       trial_days_total: ADMIN_TRIAL_DAYS,
       trial_days_remaining: tenant.subscription_status === TenantSubscriptionStatus.TRIAL ? remainingDays : 0,
       has_trial_history: hasTrialHistory,
-      can_start_trial:
-        tenant.review_status === TenantReviewStatus.PUBLISHED &&
-        tenant.subscription_status === TenantSubscriptionStatus.INACTIVE &&
-        !hasTrialHistory,
-      can_purchase_in_app:
-        tenant.review_status === TenantReviewStatus.PUBLISHED &&
-        [TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.READ_ONLY].includes(tenant.subscription_status),
+      can_start_trial: tenant.subscription_status === TenantSubscriptionStatus.INACTIVE && !hasTrialHistory,
+      can_purchase_in_app: [TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.READ_ONLY].includes(
+        tenant.subscription_status
+      ),
       purchase_provider: "REVENUECAT",
       purchase_mode: "IN_APP_PURCHASE",
       recommended_action: recommendedAction,
+      sync_state: "IDLE",
+      subscription_history_summary: {
+        last_event_type: tenant.revenuecat_last_event_type || null,
+        last_event_at: tenant.subscription_last_event_at || null,
+        product_id: tenant.revenuecat_product_id || null,
+        store: tenant.revenuecat_store || null,
+      },
+      store_products: {
+        provider: "REVENUECAT",
+      },
     };
   }
 
@@ -185,6 +191,64 @@ export class AdminClinicController {
     }
   }
 
+  // --- GET /api/admin/clinic/subscription/history ---
+  static async getSubscriptionHistory(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId;
+      if (!tenantId) {
+        throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+      }
+
+      const tenant = await AppDataSource.getRepository(Tenant).findOne({ where: { id: tenantId } });
+      if (!tenant) {
+        throw new AppError("TENANT_NOT_FOUND", 404, "Klinik bulunamadi");
+      }
+
+      const events = [
+        tenant.trial_starts_at
+          ? {
+              type: "TRIAL_STARTED",
+              occurred_at: tenant.trial_starts_at,
+              title: "Deneme başladı",
+              description: "5 günlük ücretsiz deneme aktifleşti.",
+            }
+          : null,
+        tenant.trial_ends_at
+          ? {
+              type: "TRIAL_ENDS",
+              occurred_at: tenant.trial_ends_at,
+              title: "Deneme bitişi",
+              description: "Deneme süresinin planlanan bitiş zamanı.",
+            }
+          : null,
+        tenant.subscription_started_at
+          ? {
+              type: "SUBSCRIPTION_STARTED",
+              occurred_at: tenant.subscription_started_at,
+              title: "Plan aktifleşti",
+              description: tenant.revenuecat_product_id || "Uygulama içi satın alma ile plan aktifleşti.",
+            }
+          : null,
+        tenant.subscription_last_event_at
+          ? {
+              type: tenant.revenuecat_last_event_type || "REVENUECAT_EVENT",
+              occurred_at: tenant.subscription_last_event_at,
+              title: "RevenueCat olayı",
+              description: [tenant.revenuecat_store, tenant.revenuecat_product_id].filter(Boolean).join(" • ") || "Son abonelik olayı işlendi.",
+            }
+          : null,
+      ]
+        .filter(Boolean)
+        .sort((a: any, b: any) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+
+      return res.json({ data: events });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Admin clinic subscription history error:", error);
+      throw new AppError("ADMIN_CLINIC_SUBSCRIPTION_HISTORY_ERROR", 500, "Abonelik geçmişi getirilemedi");
+    }
+  }
+
   // --- POST /api/admin/clinic/subscription/start-trial ---
   static async startTrial(req: AuthenticatedRequest, res: Response) {
     try {
@@ -198,9 +262,6 @@ export class AdminClinicController {
       if (!tenant) {
         throw new AppError("TENANT_NOT_FOUND", 404, "Klinik bulunamadi");
       }
-      if (tenant.review_status !== TenantReviewStatus.PUBLISHED) {
-        throw new AppError("CLINIC_REVIEW_NOT_COMPLETED", 409, "Deneme suresi yalnizca onaylanan salonlar icin baslatilabilir");
-      }
       if (tenant.subscription_status !== TenantSubscriptionStatus.INACTIVE) {
         throw new AppError("TRIAL_ALREADY_STARTED", 409, "Bu salon icin deneme veya plan sureci zaten baslatilmis");
       }
@@ -209,7 +270,10 @@ export class AdminClinicController {
       }
 
       tenant.subscription_status = TenantSubscriptionStatus.TRIAL;
+      tenant.review_status = TenantReviewStatus.PUBLISHED;
       tenant.is_public = true;
+      tenant.reviewed_at = tenant.reviewed_at || new Date();
+      tenant.review_note = tenant.review_note || "Mobil deneme baslatildiginda otomatik yayina alindi.";
       tenant.trial_starts_at = new Date();
       tenant.trial_ends_at = plusDays(ADMIN_TRIAL_DAYS);
       await repo.save(tenant);

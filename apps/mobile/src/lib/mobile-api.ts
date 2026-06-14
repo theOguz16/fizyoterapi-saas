@@ -1,6 +1,7 @@
 // Bu helper modulu mobil tarafta mobile api ile ilgili veri donusumu, is kurali veya API erisimini toplar.
 // Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
 import { httpRequest } from "./http-client";
+import { isE2EModeEnabled } from "./e2e-mode";
 
 // Mobil uygulamanin backend ile sozlesme katmani.
 // Type tanimlari ve endpoint fonksiyonlari burada tutuluyor ki ekranlar
@@ -654,6 +655,9 @@ export type SessionEnvelope = {
     is_public: boolean;
     trial_starts_at?: string | null;
     trial_ends_at?: string | null;
+    subscription_started_at?: string | null;
+    subscription_current_period_ends_at?: string | null;
+    subscription_last_event_at?: string | null;
     review_note?: string | null;
     is_boosted?: boolean;
     city?: string | null;
@@ -681,6 +685,9 @@ export type AdminClinicSubscription = {
   is_public: boolean;
   trial_starts_at?: string | null;
   trial_ends_at?: string | null;
+  subscription_started_at?: string | null;
+  subscription_current_period_ends_at?: string | null;
+  subscription_last_event_at?: string | null;
   trial_days_total: number;
   trial_days_remaining: number;
   has_trial_history: boolean;
@@ -688,7 +695,84 @@ export type AdminClinicSubscription = {
   can_purchase_in_app: boolean;
   purchase_provider: "REVENUECAT";
   purchase_mode: "IN_APP_PURCHASE";
-  recommended_action: "WAIT_REVIEW" | "START_TRIAL" | "PURCHASE_IN_APP" | "MANAGE_PLAN";
+  recommended_action: "WAIT_REVIEW" | "WAIT_SETUP" | "START_TRIAL" | "PURCHASE_IN_APP" | "MANAGE_PLAN";
+  sync_state?: "IDLE" | "PENDING_SYNC" | "SYNCED" | "FAILED";
+  subscription_history_summary?: {
+    last_event_type?: string | null;
+    last_event_at?: string | null;
+    product_id?: string | null;
+    store?: string | null;
+  } | null;
+  store_products?: {
+    provider?: "REVENUECAT" | string;
+    monthly_product_id?: string | null;
+    yearly_product_id?: string | null;
+  } | null;
+};
+
+export type MobileNotificationPreferences = {
+  class_reminders: {
+    three_hours: boolean;
+    one_hour: boolean;
+  };
+  subscription_trial_reminders: {
+    forty_eight_hours: boolean;
+    twenty_four_hours: boolean;
+    twelve_hours: boolean;
+    four_hours: boolean;
+  };
+  package_expiry_reminders: boolean;
+  campaign_alerts: boolean;
+  weekly_summary: boolean;
+  measurement_reminders: boolean;
+  quiet_hours: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+};
+
+export type AdminSubscriptionHistoryItem = {
+  type: string;
+  occurred_at: string;
+  title: string;
+  description: string;
+};
+
+export type AdminRevenueReport = {
+  from: string;
+  to: string;
+  total_revenue: number;
+  sale_count: number;
+  average_sale: number;
+  by_package: Array<{
+    package_id: string;
+    package_title: string;
+    amount: number;
+    count: number;
+  }>;
+  rows: Array<Record<string, unknown>>;
+};
+
+export type MemberGroupClassWaitlist = {
+  session_id: string;
+  count?: number;
+  joined: boolean;
+  position?: number | null;
+  removed?: boolean;
+};
+
+export type TrainerRequestCenterItem = {
+  id: string;
+  booking_id: string;
+  member_id: string;
+  current_starts_at: string;
+  current_ends_at?: string | null;
+  proposed_starts_at: string;
+  proposed_ends_at?: string | null;
+  note?: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
 };
 
 // Auth endpointleri SessionEnvelope donduruyor.
@@ -716,7 +800,7 @@ export async function registerApi(input: {
 
 export async function loginApi(input: { email: string; password: string; tenantSlug?: string; role?: SessionRole; e2e?: boolean }) {
   const { e2e, ...body } = input;
-  const useE2EEndpoint = e2e && typeof __DEV__ !== "undefined" && __DEV__;
+  const useE2EEndpoint = e2e && isE2EModeEnabled();
   return httpRequest<SessionEnvelope>(useE2EEndpoint ? "/internal/e2e/session" : "/auth/login", {
     method: "POST",
     auth: false,
@@ -1430,6 +1514,94 @@ export async function startAdminClinicTrialApi() {
   return httpRequest<AdminClinicSubscription>("/admin/clinic/subscription/start-trial", {
     method: "POST",
   });
+}
+
+export async function getAdminSubscriptionHistoryApi() {
+  const response = await httpRequest<{ data?: AdminSubscriptionHistoryItem[] } | AdminSubscriptionHistoryItem[]>(
+    "/admin/clinic/subscription/history"
+  );
+  if (Array.isArray(response)) return response;
+  return Array.isArray((response as any)?.data) ? (response as any).data : [];
+}
+
+export async function getAdminRevenueReportApi(query?: { from?: string; to?: string; package_id?: string; trainer_id?: string }) {
+  const search = new URLSearchParams();
+  if (query?.from) search.set("from", query.from);
+  if (query?.to) search.set("to", query.to);
+  if (query?.package_id) search.set("package_id", query.package_id);
+  if (query?.trainer_id) search.set("trainer_id", query.trainer_id);
+  const qs = search.toString();
+  const response = await httpRequest<{ data?: AdminRevenueReport } | AdminRevenueReport>(
+    `/admin/revenue/report${qs ? `?${qs}` : ""}`
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function getAdminRevenueCsvApi(query?: { from?: string; to?: string; package_id?: string; trainer_id?: string }) {
+  const search = new URLSearchParams();
+  if (query?.from) search.set("from", query.from);
+  if (query?.to) search.set("to", query.to);
+  if (query?.package_id) search.set("package_id", query.package_id);
+  if (query?.trainer_id) search.set("trainer_id", query.trainer_id);
+  const { getApiBase, getAuthToken } = await import("./http-client");
+  const response = await fetch(`${getApiBase()}/admin/revenue/export.csv?${search.toString()}`, {
+    headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {},
+  });
+  if (!response.ok) throw new Error("Gelir raporu dışa aktarılamadı.");
+  return response.text();
+}
+
+export async function getMobileNotificationPreferencesApi() {
+  const response = await httpRequest<{ data?: MobileNotificationPreferences } | MobileNotificationPreferences>(
+    "/mobile/notification-preferences"
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function updateMobileNotificationPreferencesApi(payload: MobileNotificationPreferences) {
+  const response = await httpRequest<{ data?: MobileNotificationPreferences } | MobileNotificationPreferences>(
+    "/mobile/notification-preferences",
+    {
+      method: "PUT",
+      body: payload,
+    }
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function getMemberGroupClassWaitlistApi(id: string) {
+  const response = await httpRequest<{ data?: MemberGroupClassWaitlist } | MemberGroupClassWaitlist>(
+    `/member/group-classes/${encodeURIComponent(id)}/waitlist`
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function joinMemberGroupClassWaitlistApi(id: string) {
+  const response = await httpRequest<{ data?: MemberGroupClassWaitlist } | MemberGroupClassWaitlist>(
+    `/member/group-classes/${encodeURIComponent(id)}/waitlist`,
+    { method: "POST" }
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function leaveMemberGroupClassWaitlistApi(id: string) {
+  const response = await httpRequest<{ data?: MemberGroupClassWaitlist } | MemberGroupClassWaitlist>(
+    `/member/group-classes/${encodeURIComponent(id)}/waitlist`,
+    { method: "DELETE" }
+  );
+  return "data" in (response as any) ? (response as any).data || null : response;
+}
+
+export async function getTrainerScheduleChangeRequestsApi() {
+  const response = await httpRequest<{ data?: TrainerRequestCenterItem[] } | TrainerRequestCenterItem[]>(
+    "/trainer/bookings/schedule-change-requests"
+  );
+  if (Array.isArray(response)) return response;
+  return Array.isArray((response as any)?.data) ? (response as any).data : [];
+}
+
+export async function sendTrainerBulkNotificationApi(payload: { member_ids: string[]; title: string; body: string }) {
+  return httpRequest<any>("/trainer/bookings/bulk-notifications", { method: "POST", body: payload });
 }
 
 export async function getAdminBookingsApi(query?: {

@@ -1,0 +1,16 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frequest-center"
+- extendedWaitUntil:
+    visible: "Değişiklik merkezi"
+    timeout: 20000
+- assertVisible: "Bekleyen"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fbulk-notification"
+- extendedWaitUntil:
+    visible: "Toplu bildirim"
+    timeout: 20000
+- assertVisible: "Mesaj şablonu"
+- assertVisible: "Danışanlar"

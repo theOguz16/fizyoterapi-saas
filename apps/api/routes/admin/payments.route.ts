@@ -10,6 +10,8 @@ export const adminPaymentsRoutes = Router();
 
 adminPaymentsRoutes.use(authMiddleware, tenantMiddleware, requireRole(["ADMIN"]));
 
+adminPaymentsRoutes.get("/revenue/report", AdminPaymentsController.revenueReport);
+adminPaymentsRoutes.get("/revenue/export.csv", AdminPaymentsController.revenueExportCsv);
 adminPaymentsRoutes.get("/requests", AdminPaymentsController.listRequests);
 adminPaymentsRoutes.patch("/requests/:bookingId/approve", AdminPaymentsController.approveRequest);
 adminPaymentsRoutes.patch("/requests/:bookingId/reject", AdminPaymentsController.rejectRequest);

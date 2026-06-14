@@ -25,10 +25,17 @@ const RESETTABLE_KEYS = [
 export type NotificationPreferences = {
   classReminderThreeHours: boolean;
   classReminderOneHour: boolean;
+  subscriptionTrialFortyEightHours: boolean;
+  subscriptionTrialTwentyFourHours: boolean;
+  subscriptionTrialTwelveHours: boolean;
+  subscriptionTrialFourHours: boolean;
   campaignAlerts: boolean;
   weeklySummary: boolean;
   packageEndingAlerts: boolean;
   measurementReminders: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
 };
 
 export type NotificationPermissionPromptState = {
@@ -40,10 +47,17 @@ export type NotificationPermissionPromptState = {
 const DEFAULTS: NotificationPreferences = {
   classReminderThreeHours: true,
   classReminderOneHour: true,
+  subscriptionTrialFortyEightHours: true,
+  subscriptionTrialTwentyFourHours: true,
+  subscriptionTrialTwelveHours: true,
+  subscriptionTrialFourHours: true,
   campaignAlerts: true,
   weeklySummary: true,
   packageEndingAlerts: true,
   measurementReminders: true,
+  quietHoursEnabled: false,
+  quietHoursStart: "22:00",
+  quietHoursEnd: "08:00",
 };
 
 const DEFAULT_PERMISSION_PROMPT_STATE: NotificationPermissionPromptState = {
@@ -60,10 +74,17 @@ export async function getNotificationPreferences(): Promise<NotificationPreferen
     return {
       classReminderThreeHours: parsed.classReminderThreeHours ?? DEFAULTS.classReminderThreeHours,
       classReminderOneHour: parsed.classReminderOneHour ?? DEFAULTS.classReminderOneHour,
+      subscriptionTrialFortyEightHours: parsed.subscriptionTrialFortyEightHours ?? DEFAULTS.subscriptionTrialFortyEightHours,
+      subscriptionTrialTwentyFourHours: parsed.subscriptionTrialTwentyFourHours ?? DEFAULTS.subscriptionTrialTwentyFourHours,
+      subscriptionTrialTwelveHours: parsed.subscriptionTrialTwelveHours ?? DEFAULTS.subscriptionTrialTwelveHours,
+      subscriptionTrialFourHours: parsed.subscriptionTrialFourHours ?? DEFAULTS.subscriptionTrialFourHours,
       campaignAlerts: parsed.campaignAlerts ?? DEFAULTS.campaignAlerts,
       weeklySummary: parsed.weeklySummary ?? DEFAULTS.weeklySummary,
       packageEndingAlerts: parsed.packageEndingAlerts ?? DEFAULTS.packageEndingAlerts,
       measurementReminders: parsed.measurementReminders ?? DEFAULTS.measurementReminders,
+      quietHoursEnabled: parsed.quietHoursEnabled ?? DEFAULTS.quietHoursEnabled,
+      quietHoursStart: parsed.quietHoursStart ?? DEFAULTS.quietHoursStart,
+      quietHoursEnd: parsed.quietHoursEnd ?? DEFAULTS.quietHoursEnd,
     };
   } catch {
     return DEFAULTS;

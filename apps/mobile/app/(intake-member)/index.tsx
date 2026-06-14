@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { safeBack } from "@/lib/navigation";
 import { useAppFlow } from "@/providers/app-flow";
 import { OnboardingQuestionStage, type OnboardingOption } from "@/theme/components/onboarding-question-stage";
 import type { AppIconName } from "@/theme/components/app-icon";
+import { getStoredSignupOnboardingProfile } from "@/lib/local-preferences";
+import { mapSignupProfileToMemberIntentDefaults } from "@/lib/signup-onboarding";
 
 type MemberQuestion = {
   key: "goal" | "issue" | "expectation" | "weeklyDays" | "timePreference";
@@ -112,6 +114,26 @@ export default function IntakeQuestionFlowScreen() {
   const current = QUESTIONS[step];
   const isLast = step === QUESTIONS.length - 1;
   const activeValue = memberIntent[current.key];
+
+  useEffect(() => {
+    let mounted = true;
+    void getStoredSignupOnboardingProfile("MEMBER").then((profile) => {
+      if (!mounted || !profile) return;
+      const defaults = mapSignupProfileToMemberIntentDefaults(profile);
+      setMemberIntent({
+        ...memberIntent,
+        goal: memberIntent.goal || defaults.goal,
+        issue: memberIntent.issue || defaults.issue,
+        expectation: memberIntent.expectation || defaults.expectation,
+        weeklyDays: memberIntent.weeklyDays || defaults.weeklyDays,
+      });
+    });
+    return () => {
+      mounted = false;
+    };
+    // Stored onboarding answers should hydrate the intake only once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function moveNext() {
     if (isLast) {

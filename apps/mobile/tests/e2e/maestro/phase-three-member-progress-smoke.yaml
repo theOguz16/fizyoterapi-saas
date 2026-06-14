@@ -1,0 +1,11 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fprogress"
+- extendedWaitUntil:
+    visible: "Gelişim"
+    timeout: 20000
+- assertVisible: "Dönem karşılaştırması"
+- assertVisible: "Paket kullanım özeti"

@@ -1,6 +1,7 @@
 // Bu servis deneme aboneligi bitis bildirimlerini process icindeki periyodik batch'e baglar.
 // Eşik ve duplicate kontrolu TenantLifecycleService tarafinda tutulur.
 import { AppDataSource } from "../data-source";
+import { In } from "typeorm";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entities/tenant.entity";
 import { JobLockService } from "./job-lock.service";
 import { TenantLifecycleService } from "./tenant-lifecycle.service";
@@ -12,7 +13,7 @@ export class TrialSubscriptionReminderService {
         where: {
           is_active: true,
           review_status: TenantReviewStatus.PUBLISHED,
-          subscription_status: TenantSubscriptionStatus.TRIAL,
+          subscription_status: In([TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.ACTIVE]),
         },
       });
 

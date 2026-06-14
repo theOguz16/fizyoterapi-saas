@@ -8,25 +8,7 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible:
-    id: "welcome-login-button"
-- tapOn:
-    id: "welcome-login-button"
-    retryTapIfNoChange: true
-- tapOn:
-    id: "login-identity-input"
-    retryTapIfNoChange: true
-- inputText: "member@gmail.com"
-- tapOn: "Hesabına giriş yap"
-- tapOn:
-    id: "login-password-input"
-    retryTapIfNoChange: true
-- inputText: "member123"
-- tapOn:
-    id: "login-submit-button"
-- waitForAnimationToEnd:
-    timeout: 5000
-- openLink: "fizyoflow://(member)/package"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
 - waitForAnimationToEnd:
     timeout: 5000
 - assertVisible: "Paketlerim"

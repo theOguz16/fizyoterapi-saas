@@ -7,7 +7,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getAdminMembersApi, getAdminTrainersApi, type AdminCompactMember } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
+import { QueryState } from "@/theme/components/query-state";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { EmptyState } from "@/theme/components/empty-state";
@@ -157,11 +158,18 @@ export default function AdminMembersScreen() {
           </View>
         </View>
       </SurfaceCard>
-      {items.length === 0 ? (
+      {query.isLoading && !query.data ? (
+        <QueryState mode="loading" title="Kişiler hazırlanıyor" />
+      ) : query.isError && !query.data ? (
+        <QueryState mode="error" onRetry={() => void query.refetch()} />
+      ) : items.length === 0 ? (
         <EmptyState title="Liste boş" description="Filtreye uyan üye veya eğitmen bulunduğunda burada listelenecek." icon="members" />
       ) : (
-        <ScrollPanel maxHeight={480} contentContainerStyle={styles.stack}>
-          {items.map((item, index: number) => (
+        <VirtualListPanel
+          data={items}
+          maxHeight={520}
+          keyExtractor={(item) => item.id}
+          renderItem={(item, index) => (
             <SurfaceCard key={item.id} testID={`admin-person-card-${item.role.toLowerCase()}-${index}`}>
               <View style={styles.row}>
                 <View style={styles.titleWrap}>
@@ -201,8 +209,8 @@ export default function AdminMembersScreen() {
                 }
               />
             </SurfaceCard>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       )}
     </AppShell>
   );

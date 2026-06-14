@@ -74,7 +74,7 @@ export default function RoleAssessmentScreen() {
       return;
     }
     if (nextPersona === "TRAINER") {
-      router.replace("/(auth)/invite-accept" as never);
+      router.replace("/(auth)/trainer-invite-guide" as never);
       return;
     }
     router.replace({ pathname: "/(auth)/register", params: { role: nextPersona } } as never);

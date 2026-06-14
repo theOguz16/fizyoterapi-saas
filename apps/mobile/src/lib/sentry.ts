@@ -65,6 +65,22 @@ export function captureMobileException(error: unknown, context?: Record<string, 
   });
 }
 
+export function addMobileBreadcrumb(input: { category: string; message: string; level?: "info" | "warning" | "error"; data?: Record<string, unknown> }) {
+  if (!initialized) return;
+  Sentry.addBreadcrumb({
+    category: input.category,
+    message: input.message,
+    level: input.level || "info",
+    data: input.data,
+  });
+}
+
+export function setSentryScreenContext(screen: string) {
+  if (!initialized) return;
+  Sentry.setTag("screen", screen || "unknown");
+  addMobileBreadcrumb({ category: "navigation", message: screen || "unknown" });
+}
+
 export function setSentryUserContext(user: SessionUser | null | undefined) {
   if (!initialized) return;
 
@@ -72,12 +88,11 @@ export function setSentryUserContext(user: SessionUser | null | undefined) {
     Sentry.setUser(null);
     Sentry.setTag("role", undefined);
     Sentry.setTag("tenant_id", undefined);
-    Sentry.setTag("tenant_slug", undefined);
+    Sentry.setTag("tenant_context", undefined);
     return;
   }
 
   Sentry.setUser({ id: user.id });
   Sentry.setTag("role", String(user.role || "UNKNOWN"));
-  Sentry.setTag("tenant_id", user.tenantId || "none");
-  Sentry.setTag("tenant_slug", user.tenantSlug || "none");
+  Sentry.setTag("tenant_context", user.tenantId ? "available" : "none");
 }

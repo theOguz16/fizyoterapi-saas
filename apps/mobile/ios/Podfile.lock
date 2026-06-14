@@ -53,6 +53,8 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (8.0.12):
     - ExpoModulesCore
+  - ExpoLocalAuthentication (17.0.8):
+    - ExpoModulesCore
   - ExpoLocalization (17.0.9):
     - ExpoModulesCore
   - ExpoLocation (19.0.8):
@@ -2173,6 +2175,7 @@ DEPENDENCIES:
   - "ExpoHead (from `../../../node_modules/.pnpm/expo-router@6.0.24_avngmumpnfva6hlasxryzfi4wq/node_modules/expo-router/ios`)"
   - "ExpoKeepAwake (from `../../../node_modules/.pnpm/expo-keep-awake@15.0.8_expo@54.0.35_react@19.1.0/node_modules/expo-keep-awake/ios`)"
   - "ExpoLinking (from `../../../node_modules/.pnpm/expo-linking@8.0.12_expo@54.0.35_react-native@0.81.5_@babel+core@7.29.0_@react-native+metro-c_o7l7bnkcd4rit7hluqauvfuvkm/node_modules/expo-linking/ios`)"
+  - "ExpoLocalAuthentication (from `../../../node_modules/.pnpm/expo-local-authentication@17.0.8_expo@54.0.35/node_modules/expo-local-authentication/ios`)"
   - "ExpoLocalization (from `../../../node_modules/.pnpm/expo-localization@17.0.9_expo@54.0.35_react@19.1.0/node_modules/expo-localization/ios`)"
   - "ExpoLocation (from `../../../node_modules/.pnpm/expo-location@19.0.8_expo@54.0.35/node_modules/expo-location/ios`)"
   - "ExpoMediaLibrary (from `../../../node_modules/.pnpm/expo-media-library@18.2.1_expo@54.0.35_react-native@0.81.5_@babel+core@7.29.0_@react-native+m_uileiklizzezkxsyvqyiwskmuu/node_modules/expo-media-library/ios`)"
@@ -2297,6 +2300,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/.pnpm/expo-keep-awake@15.0.8_expo@54.0.35_react@19.1.0/node_modules/expo-keep-awake/ios"
   ExpoLinking:
     :path: "../../../node_modules/.pnpm/expo-linking@8.0.12_expo@54.0.35_react-native@0.81.5_@babel+core@7.29.0_@react-native+metro-c_o7l7bnkcd4rit7hluqauvfuvkm/node_modules/expo-linking/ios"
+  ExpoLocalAuthentication:
+    :path: "../../../node_modules/.pnpm/expo-local-authentication@17.0.8_expo@54.0.35/node_modules/expo-local-authentication/ios"
   ExpoLocalization:
     :path: "../../../node_modules/.pnpm/expo-localization@17.0.9_expo@54.0.35_react@19.1.0/node_modules/expo-localization/ios"
   ExpoLocation:
@@ -2482,6 +2487,7 @@ SPEC CHECKSUMS:
   ExpoHead: 33924c5829f9a3f98a5bd432d23c0e02ef64afcc
   ExpoKeepAwake: 55f75eca6499bb9e4231ebad6f3e9cb8f99c0296
   ExpoLinking: 2ef632ad5013e3f1568fae9408d56ab9af5efc55
+  ExpoLocalAuthentication: 8a31808565da7af926dd9b595e98594d8b1553b6
   ExpoLocalization: d936ff63557366e2e487264f5b495b1f0637fabd
   ExpoLocation: d5b61cb4970fa982e39ca94246a206a0c3b812ca
   ExpoMediaLibrary: a3093b04365b245bb23b25b6eba84eb6ab55fecb

@@ -20,7 +20,9 @@ import { subscribeToMemberRealtime } from "@/lib/member-realtime";
 import { getPendingSalonJoinSlug, setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { extractSalonSlugFromQrPayload } from "@/lib/salon-qr";
 import { detourConfig, isDetourConfigured } from "@/lib/detour";
-import { initMobileSentry, setSentryUserContext, wrapMobileRoot } from "@/lib/sentry";
+import { isE2EModeEnabled } from "@/lib/e2e-mode";
+import { resolveInternalHrefFromIncomingUrl } from "@/lib/incoming-link";
+import { initMobileSentry, setSentryScreenContext, setSentryUserContext, wrapMobileRoot } from "@/lib/sentry";
 import { tokens } from "@/theme/tokens";
 
 initMobileSentry();
@@ -45,8 +47,12 @@ function RootGate() {
   }, [user]);
 
   useEffect(() => {
+    setSentryScreenContext(segments.join("/") || "index");
+  }, [segments]);
+
+  useEffect(() => {
     async function handleIncomingUrl(rawUrl: string | null | undefined) {
-      const internalHref = resolveInternalHrefFromIncomingUrl(rawUrl);
+      const internalHref = resolveInternalHrefFromIncomingUrl(rawUrl, { allowE2E: isE2EModeEnabled() });
 
       if (internalHref) {
         router.replace(internalHref as never);
@@ -109,7 +115,7 @@ function RootGate() {
         : selectedPersoma === "ADMIN"
           ? ["owner-plan", "register"]
           : selectedPersoma === "TRAINER"
-            ? ["invite-accept"]
+            ? ["trainer-invite-guide", "invite-accept"]
             : ["register"];
 
     if (inE2EResetRoute || inE2ELoginRoute) {
@@ -303,31 +309,6 @@ function resolvePendingSalonHome(input: {
   }
 
   return "/(member)/home";
-}
-
-function resolveInternalHrefFromIncomingUrl(rawUrl: string | null | undefined) {
-  const normalized = String(rawUrl || "").trim();
-  if (!normalized) return null;
-
-  try {
-    const url = new URL(normalized);
-    if (url.protocol !== "fizyoflow:") return null;
-
-    const host = String(url.hostname || "").trim().toLowerCase();
-    const pathname = String(url.pathname || "").trim();
-
-    // Salon onboarding linkleri internal route gibi açılmasın.
-    // Bunları extractSalonSlugFromQrPayload yakalayıp pending salon akışına sokacak.
-    if (host === "join" || pathname.startsWith("/join/")) return null;
-    if (host === "salons" || pathname.startsWith("/salons/")) return null;
-
-    const routePath = pathname && pathname !== "/" ? pathname : host ? `/${host}` : "";
-    if (!routePath) return null;
-
-    return `${routePath}${url.search}` || null;
-  } catch {
-    return null;
-  }
 }
 
 function RootLayout() {

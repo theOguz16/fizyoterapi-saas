@@ -32,7 +32,10 @@ export function ActionButton({
   return (
     <Pressable
       testID={testID}
+      accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: locked, busy: loading }}
+      hitSlop={4}
       onPress={onPress}
       disabled={locked}
       style={({ pressed }) => [
@@ -60,7 +63,7 @@ export function ActionButton({
               active={variant !== "ghost"}
             />
           ) : null}
-          <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+          <Text style={[styles.label, { color: labelColor }]} maxFontSizeMultiplier={1.5}>{label}</Text>
         </>
       )}
     </Pressable>

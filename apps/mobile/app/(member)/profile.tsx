@@ -18,10 +18,17 @@ import { tokens } from "@/theme/tokens";
 const DEFAULT_PREFS: NotificationPreferences = {
   classReminderThreeHours: true,
   classReminderOneHour: true,
+  subscriptionTrialFortyEightHours: true,
+  subscriptionTrialTwentyFourHours: true,
+  subscriptionTrialTwelveHours: true,
+  subscriptionTrialFourHours: true,
   campaignAlerts: true,
   weeklySummary: true,
   packageEndingAlerts: true,
   measurementReminders: true,
+  quietHoursEnabled: false,
+  quietHoursStart: "22:00",
+  quietHoursEnd: "08:00",
 };
 
 export default function MemberProfileScreen() {

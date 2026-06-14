@@ -10,9 +10,6 @@ export function formatSubscriptionStatus(value?: string) {
 
 export function buildSubscriptionHeadline(subscription?: Pick<AdminClinicSubscription, "review_status" | "subscription_status" | "can_start_trial" | "trial_days_remaining">) {
   if (!subscription) return "Salonunu profesyonel mobil yönetim akışına taşımak için planını buradan başlat.";
-  if (subscription.review_status !== "PUBLISHED") {
-    return "Salon incelemesi tamamlandığında deneme ve satın alma adımı burada açılacak.";
-  }
   if (subscription.subscription_status === "TRIAL") {
     return `FizyoFlow Pro denemen aktif. Kalan süre: ${subscription.trial_days_remaining || 0} gün.`;
   }
@@ -23,7 +20,7 @@ export function buildSubscriptionHeadline(subscription?: Pick<AdminClinicSubscri
     return "Deneme süren bitti. Satın alma ile salon akışlarını tekrar tam erişime açabilirsin.";
   }
   if (subscription.can_start_trial) {
-    return "5 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullan.";
+    return "5 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.";
   }
   return "Plan durumunu buradan takip edebilir, uygun olduğunda satın alma adımına geçebilirsin.";
 }

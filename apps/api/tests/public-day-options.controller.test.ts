@@ -3,8 +3,10 @@ import { PublicController } from "../controllers/public.controller";
 import { AppDataSource } from "../data-source";
 import { SalonProfile } from "../entities/salon-profile.entity";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entities/tenant.entity";
-import { PackageType } from "../entities/package.entity";
+import { Package, PackageType } from "../entities/package.entity";
 import { LessonCategory, SessionStatus, SessionType } from "../entities/class-session.entity";
+import { User, UserRole } from "../entities/user.entity";
+import { TrainerSkill } from "../entities/trainer-skill.entity";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
 import { createMockResponse } from "./helpers/route-chain";
 
@@ -37,7 +39,7 @@ describe("public day options controller", () => {
     } as SalonProfile;
 
     const groupPackage = {
-      id: "pkg-1",
+      id: "9e11693a-0e90-4fc6-8272-b4accb5f8292",
       tenant_id: tenant.id,
       type: PackageType.GROUP,
       capacity: 8,
@@ -106,7 +108,7 @@ describe("public day options controller", () => {
 
     const req = {
       params: { slug: "demo-salon" },
-      query: { package_ids: "pkg-1" },
+      query: { package_ids: "9e11693a-0e90-4fc6-8272-b4accb5f8292" },
     } as any;
     const res = createMockResponse();
 
@@ -116,7 +118,7 @@ describe("public day options controller", () => {
       where: [
         {
           tenant_id: "tenant-1",
-          id: "pkg-1",
+          id: "9e11693a-0e90-4fc6-8272-b4accb5f8292",
           is_active: true,
           is_public: true,
           is_visible: true,
@@ -133,6 +135,48 @@ describe("public day options controller", () => {
           capacity: 8,
         }),
       ],
+    });
+  });
+
+  it("ignores malformed public package ids before querying UUID columns", async () => {
+    const tenant = {
+      id: "6b0f5f13-19df-4bca-9bfb-3998f8ce7929",
+      slug: "demo-salon",
+      is_active: true,
+      is_public: true,
+      review_status: TenantReviewStatus.PUBLISHED,
+      subscription_status: TenantSubscriptionStatus.ACTIVE,
+    } as Tenant;
+    const profile = { tenant_id: tenant.id, slug: tenant.slug, is_published: true, business_hours: {} } as SalonProfile;
+    const trainer = {
+      id: "1f790a91-729f-40f9-a055-4fc9a6e905ef",
+      tenant_id: tenant.id,
+      role: UserRole.TRAINER,
+      is_active: true,
+      first_name: "Elisa",
+      last_name: "Uyar",
+    } as User;
+    const packageFindOne = vi.fn();
+
+    vi.spyOn(TenantLifecycleService, "syncTenantState").mockImplementation(async (row) => row as any);
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === SalonProfile) return { findOne: vi.fn().mockResolvedValue(profile) } as any;
+      if (entity === Tenant) return { findOne: vi.fn().mockResolvedValue(tenant) } as any;
+      if (entity === User) return { find: vi.fn().mockResolvedValue([trainer]) } as any;
+      if (entity === TrainerSkill) return { find: vi.fn().mockResolvedValue([]) } as any;
+      if (entity === Package) return { findOne: packageFindOne } as any;
+      throw new Error(`Unexpected repository request: ${String(entity?.name || entity)}`);
+    });
+
+    const res = createMockResponse();
+    await PublicController.getSalonTrainerOptions(
+      { params: { slug: "demo-salon" }, query: { package_id: "e2e-group-8" } } as any,
+      res as any
+    );
+
+    expect(packageFindOne).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      data: [expect.objectContaining({ id: trainer.id, compatibility_note: "Salon için uygun eğitmen." })],
     });
   });
 });

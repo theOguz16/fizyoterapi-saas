@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { ActionButton } from "@/theme/components/action-button";
 import { getAdminDashboardApi } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
@@ -139,6 +141,7 @@ function SummaryItem({
 }
 
 export default function AdminRevenueDetailScreen() {
+  const router = useRouter();
   const { data, isRefetching, refetch } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: getAdminDashboardApi,
@@ -237,6 +240,7 @@ export default function AdminRevenueDetailScreen() {
       }}
       showBackButton
     >
+      <ActionButton label="Filtreli rapor ve CSV" icon="earnings" variant="ghost" onPress={() => router.push("/(admin)/revenue-report" as never)} />
       <SurfaceCard style={styles.heroCard} padding="hero">
         <View style={styles.heroRow}>
           <View style={styles.heroTextBlock}>

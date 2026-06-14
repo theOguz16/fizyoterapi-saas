@@ -6,7 +6,7 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
 - extendedWaitUntil:
-    visible: "Bugün|Takvimim|Dersler|FizyoFlow"
+    visible: "Bugün|Takvimim|Dersler"
     timeout: 20000
 - assertVisible:
-    text: "Bugün|Takvimim|Dersler|FizyoFlow"
+    text: "Bugün|Takvimim|Dersler"

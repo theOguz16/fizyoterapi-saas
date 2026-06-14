@@ -4,5 +4,7 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - assertVisible: "FizyoFlow"
-- openLink: "fizyoflow://(intake-member)/packages?slug=demo-salon"
+- openLink: "fizyoflow:///(intake-member)/packages?slug=demo-salon"
+- waitForAnimationToEnd:
+    timeout: 5000
 - assertVisible: "Paket seç"

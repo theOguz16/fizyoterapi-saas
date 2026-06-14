@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSyntheticSignupOnboarding,
   getDefaultSignupProfile,
+  mapSignupProfileToMemberIntentDefaults,
   summarizeSignupOnboarding,
 } from "@/lib/signup-onboarding";
 
@@ -41,5 +42,20 @@ describe("signup onboarding helpers", () => {
     expect(getDefaultSignupProfile("MEMBER")).toEqual(createSyntheticSignupOnboarding("MEMBER", "MEMBER"));
     expect(getDefaultSignupProfile("TRAINER")).toEqual(createSyntheticSignupOnboarding("TRAINER", "TRAINER"));
     expect(getDefaultSignupProfile("ADMIN")).toEqual(createSyntheticSignupOnboarding("ADMIN", "ADMIN"));
+  });
+
+  it("maps member signup answers into intake defaults", () => {
+    expect(
+      mapSignupProfileToMemberIntentDefaults({
+        primaryGoal: "body",
+        rhythm: "intense",
+        supportStyle: "guided",
+      })
+    ).toEqual({
+      goal: "Kilo / yağ / kas takibi istiyorum",
+      issue: "Kilo kontrolü",
+      expectation: "Birebir ilgi",
+      weeklyDays: "4+ gün",
+    });
   });
 });

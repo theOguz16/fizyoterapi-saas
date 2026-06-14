@@ -11,10 +11,6 @@ appId: com.fizyoflow.mobile
 - assertVisible: "FizyoFlow"
 - assertVisible:
     id: "admin-subscription-hero"
-- scrollUntilVisible:
-    element: "₺349.99"
-    direction: DOWN
-    timeout: 10000
-- assertVisible: "₺349.99"
-- assertVisible: "₺3,499.90"
+- assertVisible: "Plan aktif"
+- assertVisible: "Fizyoflow Plus Monthly"
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/mobile/appstore-screenshots/raw/admin-subscription-paywall"

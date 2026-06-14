@@ -11,8 +11,10 @@ import { SalonMembership, SalonMembershipStatus } from "../../entities/salon-mem
 import { GroupClassService } from "../../services/group-class.service";
 import { Attendance, AttendanceResult } from "../../entities/attendance.entity";
 import { UserPackage } from "../../entities/user-package.entity";
+import { MobileNotificationService } from "../../services/mobile-notification.service";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
+const GROUP_CLASS_WAITLIST = "GROUP_CLASS_WAITLIST";
 const ACTIVE_BOOKING_STATUSES = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
 
 function readEventOwnerId(req: AuthenticatedRequest) {
@@ -184,6 +186,137 @@ export class MemberGroupClassesController {
       if (error instanceof AppError) throw error;
       console.error("Member group classes list error:", error);
       throw new AppError("MEMBER_GROUP_CLASSES_LIST_ERROR", 500, "Grup dersleri getirilemedi");
+    }
+  }
+
+  static async waitlist(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId;
+      const memberId = req.auth?.sub;
+      const sessionId = String(req.params.id || "");
+      if (!tenantId || !memberId || !sessionId) {
+        throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, auth veya seans bilgisi bulunamadi");
+      }
+
+      const rows = await AppDataSource.getRepository(NotificationEvent).find({
+        where: {
+          tenant_id: tenantId,
+          type: GROUP_CLASS_WAITLIST,
+          status: NotificationEventStatus.QUEUED,
+        } as any,
+        order: { created_at: "ASC" },
+      });
+      const sessionRows = rows.filter((row) => String(readEventPayload(row).session_id || "") === sessionId);
+      const myIndex = sessionRows.findIndex((row) => row.member_id === memberId);
+
+      return res.json({
+        data: {
+          session_id: sessionId,
+          count: sessionRows.length,
+          joined: myIndex >= 0,
+          position: myIndex >= 0 ? myIndex + 1 : null,
+        },
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Member group class waitlist get error:", error);
+      throw new AppError("GROUP_CLASS_WAITLIST_GET_ERROR", 500, "Bekleme listesi getirilemedi");
+    }
+  }
+
+  static async joinWaitlist(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId;
+      const memberId = req.auth?.sub;
+      const sessionId = String(req.params.id || "");
+      if (!tenantId || !memberId || !sessionId) {
+        throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, auth veya seans bilgisi bulunamadi");
+      }
+
+      const session = await AppDataSource.getRepository(ClassSession).findOne({ where: { id: sessionId, tenant_id: tenantId } });
+      if (!session) {
+        throw new AppError("SESSION_NOT_FOUND", 404, "Grup dersi bulunamadi");
+      }
+
+      const eventRepo = AppDataSource.getRepository(NotificationEvent);
+      const existingRows = await eventRepo.find({
+        where: {
+          tenant_id: tenantId,
+          type: GROUP_CLASS_WAITLIST,
+          status: NotificationEventStatus.QUEUED,
+        } as any,
+        order: { created_at: "ASC" },
+      });
+      const sessionRows = existingRows.filter((row) => String(readEventPayload(row).session_id || "") === sessionId);
+      const existing = sessionRows.find((row) => row.member_id === memberId);
+      if (existing) {
+        return res.status(200).json({
+          data: {
+            session_id: sessionId,
+            joined: true,
+            position: sessionRows.findIndex((row) => row.id === existing.id) + 1,
+          },
+        });
+      }
+
+      const row = await eventRepo.save(
+        eventRepo.create({
+          tenant_id: tenantId,
+          member_id: memberId,
+          type: GROUP_CLASS_WAITLIST,
+          payload: {
+            session_id: sessionId,
+            session_title: session.title,
+            starts_at: session.starts_at?.toISOString?.() || null,
+          },
+          status: NotificationEventStatus.QUEUED,
+        })
+      );
+
+      return res.status(201).json({
+        data: {
+          id: row.id,
+          session_id: sessionId,
+          joined: true,
+          position: sessionRows.length + 1,
+        },
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Member group class waitlist join error:", error);
+      throw new AppError("GROUP_CLASS_WAITLIST_JOIN_ERROR", 500, "Bekleme listesine girilemedi");
+    }
+  }
+
+  static async leaveWaitlist(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId;
+      const memberId = req.auth?.sub;
+      const sessionId = String(req.params.id || "");
+      if (!tenantId || !memberId || !sessionId) {
+        throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, auth veya seans bilgisi bulunamadi");
+      }
+
+      const eventRepo = AppDataSource.getRepository(NotificationEvent);
+      const rows = await eventRepo.find({
+        where: {
+          tenant_id: tenantId,
+          member_id: memberId,
+          type: GROUP_CLASS_WAITLIST,
+          status: NotificationEventStatus.QUEUED,
+        } as any,
+      });
+      const match = rows.find((row) => String(readEventPayload(row).session_id || "") === sessionId);
+      if (!match) {
+        return res.json({ data: { removed: false, session_id: sessionId } });
+      }
+
+      await eventRepo.remove(match);
+      return res.json({ data: { removed: true, session_id: sessionId } });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Member group class waitlist leave error:", error);
+      throw new AppError("GROUP_CLASS_WAITLIST_LEAVE_ERROR", 500, "Bekleme listesinden cikilamadi");
     }
   }
 
@@ -443,6 +576,31 @@ export class MemberGroupClassesController {
         bookings.length ? AppDataSource.getRepository(Booking).save(bookings) : Promise.resolve(),
         removableEvents.length ? AppDataSource.getRepository(NotificationEvent).save(removableEvents) : Promise.resolve(),
       ]);
+
+      if (bookings.length > 0 || removableEvents.length > 0) {
+        const waitlistRows = await AppDataSource.getRepository(NotificationEvent).find({
+          where: { tenant_id: tenantId, type: GROUP_CLASS_WAITLIST, status: NotificationEventStatus.QUEUED } as any,
+          order: { created_at: "ASC" },
+        });
+        const nextWaitlistEntry = waitlistRows.find((row) => String(readEventPayload(row).session_id || "") === sessionId);
+        if (nextWaitlistEntry) {
+          const payload = readEventPayload(nextWaitlistEntry);
+          await MobileNotificationService.queuePush({
+            tenantId,
+            userId: nextWaitlistEntry.member_id,
+            roleScope: "MEMBER",
+            type: "GROUP_CLASS_WAITLIST_AVAILABLE",
+            title: "Grup dersinde yer açıldı",
+            body: `${String(payload.session_title || "Grup dersi")} için kontenjan açıldı. Yerini almak için uygulamadan katılım talebi gönderebilirsin.`,
+            deepLink: "/(member)/group-classes",
+            meta: { session_id: sessionId },
+          });
+          nextWaitlistEntry.status = NotificationEventStatus.PROCESSED;
+          nextWaitlistEntry.processed_at = new Date();
+          nextWaitlistEntry.payload = { ...payload, availability_notified_at: new Date().toISOString() };
+          await AppDataSource.getRepository(NotificationEvent).save(nextWaitlistEntry);
+        }
+      }
 
       return res.json({
       data: {

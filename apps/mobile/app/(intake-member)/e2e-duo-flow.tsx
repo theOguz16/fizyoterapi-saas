@@ -18,6 +18,7 @@ import {
   loginApi,
 } from "@/lib/mobile-api";
 import { setAuthToken } from "@/lib/http-client";
+import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { tokens } from "@/theme/tokens";
 
 const ADMIN_EMAIL = "oguzhanuyar531@gmail.com";
@@ -55,7 +56,7 @@ export default function E2EDuoFlowScreen() {
   }, [done, error]);
 
   useEffect(() => {
-    if (!__DEV__) return;
+    if (!isE2EModeEnabled()) return;
     let cancelled = false;
 
     const updateStep = (key: string, status: StepStatus, detail?: string) => {

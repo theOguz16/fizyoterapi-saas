@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
-import { configureRevenueCat, getRevenueCatCurrentPackage, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
+import { configureRevenueCat, getRevenueCatPlanPackages, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
 import { SUBSCRIPTION_PRICING, type BillingCycle } from "@/lib/subscription-pricing";
 import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
@@ -26,15 +26,12 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("tr-TR");
 }
 
-function getPackageErrorMessage(error: unknown) {
+function getPackageErrorMessage(_error: unknown) {
   return "Plan bilgisi şu anda alınamadı. Birazdan tekrar deneyebilirsin.";
 }
 
 function resolvePrimaryAction(subscription?: AdminClinicSubscription | null) {
   if (!subscription) return { label: "Plan bilgisi yükleniyor", icon: "subscription" as AppIconName, disabled: true, action: "NONE" as const };
-  if (subscription.review_status !== "PUBLISHED") {
-    return { label: "Salon onayı bekleniyor", icon: "approvals" as AppIconName, disabled: true, action: "NONE" as const };
-  }
   if (subscription.can_start_trial) {
     return { label: "5 günlük ücretsiz denemeyi başlat", icon: "spark" as AppIconName, disabled: false, action: "TRIAL" as const };
   }
@@ -58,6 +55,7 @@ export default function AdminSubscriptionScreen() {
   const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const { refreshMe, managedClinic } = useSession();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [purchaseSyncStartedAt, setPurchaseSyncStartedAt] = useState<number | null>(null);
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
 
   const query = useQuery({
@@ -67,11 +65,12 @@ export default function AdminSubscriptionScreen() {
 
   const subscription = query.data;
   const revenueCatAppUserId = managedClinic?.id || subscription?.tenant_id || "";
+  const isPurchaseSyncing = purchaseSyncStartedAt !== null && subscription?.subscription_status !== "ACTIVE";
 
   const packageQuery = useQuery({
-    queryKey: ["admin-clinic-revenuecat-package", revenueCatAppUserId],
+    queryKey: ["admin-clinic-revenuecat-packages", revenueCatAppUserId],
     enabled: Boolean(revenueCatAppUserId),
-    queryFn: async () => getRevenueCatCurrentPackage(revenueCatAppUserId),
+    queryFn: async () => getRevenueCatPlanPackages(revenueCatAppUserId),
     retry: false,
   });
 
@@ -79,6 +78,25 @@ export default function AdminSubscriptionScreen() {
     if (!revenueCatAppUserId) return;
     configureRevenueCat(revenueCatAppUserId).catch(() => null);
   }, [revenueCatAppUserId]);
+
+  useEffect(() => {
+    if (!purchaseSyncStartedAt) return;
+    if (subscription?.subscription_status === "ACTIVE") {
+      setPurchaseSyncStartedAt(null);
+      return;
+    }
+
+    const refreshStatus = () => {
+      void Promise.all([query.refetch(), refreshMe()]);
+    };
+    const interval = setInterval(refreshStatus, 2500);
+    const timeout = setTimeout(() => setPurchaseSyncStartedAt(null), 30_000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [purchaseSyncStartedAt, query, refreshMe, subscription?.subscription_status]);
 
   const startTrialMutation = useMutation({
   mutationFn: startAdminClinicTrialApi,
@@ -112,10 +130,18 @@ export default function AdminSubscriptionScreen() {
 
   const canPurchase = Boolean(subscription?.can_purchase_in_app);
   const primaryAction = resolvePrimaryAction(subscription);
-  const packageProduct = packageQuery.data?.product;
+  const visiblePrimaryAction = isPurchaseSyncing
+    ? { label: "Plan etkinleştiriliyor", icon: "progress" as AppIconName, disabled: true, action: "NONE" as const }
+    : primaryAction;
+  const selectedPackage = billingCycle === "yearly" ? packageQuery.data?.yearly : packageQuery.data?.monthly;
+  const packageProduct = selectedPackage?.product;
   const selectedPlan = SUBSCRIPTION_PRICING[billingCycle];
   const planName = packageProduct?.title || selectedPlan.label;
-  const priceHint = packageQuery.isError
+  const planPrice = packageProduct?.priceString || selectedPlan.price;
+  const planPeriod = billingCycle === "yearly" ? "/ yıl" : "/ ay";
+  const priceHint = isPurchaseSyncing
+    ? "Satın alma tamamlandı. Planın etkinleştiriliyor; durum otomatik kontrol ediliyor."
+    : packageQuery.isError
     ? getPackageErrorMessage(packageQuery.error)
     : "Ödeme App Store / Google Play tarafından güvenle tamamlanır.";
 
@@ -137,11 +163,12 @@ export default function AdminSubscriptionScreen() {
   },
 
   onSuccess: async () => {
-    await refreshMe();
+    setPurchaseSyncStartedAt(Date.now());
+    await Promise.all([refreshMe(), query.refetch()]);
 
     showInfoAlert(
       "Satın alma tamamlandı",
-      "Planın etkinleştiriliyor. Birkaç saniye içinde durum otomatik güncellenir; gerekirse ekranı yenileyebilirsin."
+      "Planın etkinleştiriliyor. Bu ekranda kalabilir veya daha sonra tekrar açabilirsin."
     );
   },
 
@@ -172,11 +199,12 @@ export default function AdminSubscriptionScreen() {
   },
 
   onSuccess: async () => {
-    await refreshMe();
+    setPurchaseSyncStartedAt(Date.now());
+    await Promise.all([refreshMe(), query.refetch()]);
 
     showInfoAlert(
       "Satın almalar yenilendi",
-      "Satın alma bilgilerin yenilendi. Plan durumun kısa süre içinde güncellenir."
+      "Satın alma bilgilerin yenilendi. Planın etkinleştiriliyor."
     );
   },
 
@@ -201,7 +229,7 @@ export default function AdminSubscriptionScreen() {
       onBack={backTo ? () => router.replace(backTo as never) : undefined}
     >
       <View style={styles.metricsRow}>
-        <MetricCard label="Plan durumu" value={formatSubscriptionStatus(subscription?.subscription_status)} hint={subscription?.review_status === "PUBLISHED" ? "Satın almaya hazır" : "İnceleme bekleniyor"} icon="subscription" />
+        <MetricCard label="Plan durumu" value={isPurchaseSyncing ? "Etkinleştiriliyor" : formatSubscriptionStatus(subscription?.subscription_status)} hint={subscription?.can_start_trial || subscription?.can_purchase_in_app ? "Satın almaya hazır" : "Plan bilgisi"} icon="subscription" />
         <MetricCard label="Deneme" value={`${subscription?.trial_days_remaining ?? subscription?.trial_days_total ?? 5} gün`} hint={subscription?.subscription_status === "TRIAL" ? "Kalan süre" : "Ücretsiz başlangıç"} icon="calendar" />
       </View>
 
@@ -244,13 +272,16 @@ export default function AdminSubscriptionScreen() {
                     <Text style={styles.planOptionLabel}>{plan.shortLabel}</Text>
                     {selected ? <AppIcon name="checkin" size="sm" tone="success" /> : null}
                   </View>
-                  <Text style={styles.priceValue}>{plan.price}</Text>
-                  <Text style={styles.planOptionHint}>{cycle === "yearly" ? "349.99 x 10" : "Her ay yenilenir"}</Text>
+                  <Text style={styles.priceValue}>
+                    {(cycle === "yearly" ? packageQuery.data?.yearly?.product?.priceString : packageQuery.data?.monthly?.product?.priceString) || plan.price}
+                  </Text>
+                  <Text style={styles.planOptionHint}>{cycle === "yearly" ? "Yıllık yenilenir" : "Her ay yenilenir"}</Text>
                 </Pressable>
               );
             })}
           </View>
 
+          <Text style={styles.selectedPriceSummary}>{planPrice} {planPeriod}</Text>
           <Text style={[styles.priceHint, packageQuery.isError ? styles.priceError : null]}>{priceHint}</Text>
           <View style={styles.legalLinks} testID="admin-subscription-legal-links">
             <Text style={styles.legalCopy}>Abonelik otomatik yenilenir. Satın alarak aşağıdaki koşulları kabul edersin.</Text>
@@ -262,17 +293,17 @@ export default function AdminSubscriptionScreen() {
         </View>
 
         <ActionButton
-          testID={primaryAction.action === "TRIAL" ? "admin-subscription-start-trial" : "admin-subscription-purchase"}
-          label={primaryAction.label}
-          icon={primaryAction.icon}
+          testID={visiblePrimaryAction.action === "TRIAL" ? "admin-subscription-start-trial" : "admin-subscription-purchase"}
+          label={visiblePrimaryAction.label}
+          icon={visiblePrimaryAction.icon}
           loading={isBusy}
-          disabled={primaryAction.disabled || isBusy || query.isLoading}
+          disabled={visiblePrimaryAction.disabled || isBusy || query.isLoading}
           onPress={() => {
-            if (primaryAction.action === "TRIAL") {
+            if (visiblePrimaryAction.action === "TRIAL") {
               startTrialMutation.mutate();
               return;
             }
-            if (primaryAction.action === "PURCHASE") {
+            if (visiblePrimaryAction.action === "PURCHASE") {
               purchaseMutation.mutate();
             }
           }}
@@ -313,6 +344,15 @@ export default function AdminSubscriptionScreen() {
           }
         />
         <ActionButton
+          testID="admin-subscription-refresh-status"
+          label="Plan durumunu yenile"
+          icon="progress"
+          variant="ghost"
+          loading={query.isRefetching}
+          disabled={isPurchaseSyncing}
+          onPress={() => void Promise.all([query.refetch(), refreshMe()])}
+        />
+        <ActionButton
           testID="admin-subscription-restore"
           label="Satın almaları geri yükle"
           icon="progress"
@@ -320,7 +360,7 @@ export default function AdminSubscriptionScreen() {
           loading={restoreMutation.isPending}
           onPress={() => restoreMutation.mutate()}
         />
-        {primaryAction.action !== "TRIAL" ? null : (
+        {visiblePrimaryAction.action !== "TRIAL" ? null : (
           <ActionButton
             testID="admin-subscription-purchase-secondary"
             label="Satın alma adımını kontrol et"
@@ -511,6 +551,11 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.xs,
     lineHeight: tokens.lineHeight.compact,
     fontFamily: tokens.fontFamily.medium,
+  },
+  selectedPriceSummary: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
   },
   priceHint: {
     color: tokens.colors.textMuted,

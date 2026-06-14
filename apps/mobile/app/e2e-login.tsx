@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useSession } from "@/providers/auth-session";
+import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { tokens } from "@/theme/tokens";
 
 export default function E2ELoginScreen() {
+  const e2eEnabled = isE2EModeEnabled();
   const router = useRouter();
   const params = useLocalSearchParams<{
     email?: string | string[];
@@ -23,7 +25,7 @@ export default function E2ELoginScreen() {
   const role = normalizeRole(params.role);
 
   useEffect(() => {
-    if (!__DEV__) return;
+    if (!e2eEnabled) return;
     if (skipAuth === "1") {
       router.replace((redirect || "/(auth)/welcome") as never);
       return;
@@ -39,9 +41,9 @@ export default function E2ELoginScreen() {
         setError(nextError instanceof Error ? nextError.message : "E2E login başarısız.");
       }
     })();
-  }, [email, login, password, redirect, role, router, skipAuth]);
+  }, [e2eEnabled, email, login, password, redirect, role, router, skipAuth]);
 
-  if (!__DEV__) {
+  if (!e2eEnabled) {
     return <Redirect href="/(auth)/welcome" />;
   }
 

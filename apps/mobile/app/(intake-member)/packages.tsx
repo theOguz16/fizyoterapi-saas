@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -67,6 +67,7 @@ export default function PackageListScreen() {
   const { memberIntent, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
   const [activeFilter, setActiveFilter] = useState<PackageFilterKey>("ALL");
   const [activeModeFilter, setActiveModeFilter] = useState<PackageModeFilterKey>("ALL");
+  const appliedSuggestedFilter = useRef(false);
 
   const packageQuery = useQuery({
     queryKey: ["public-packages", params.slug],
@@ -111,6 +112,12 @@ export default function PackageListScreen() {
     });
     return Array.from(keys);
   }, [rankedPackages]);
+
+  useEffect(() => {
+    if (appliedSuggestedFilter.current || suggestedFilter === "ALL" || !availableFilters.includes(suggestedFilter)) return;
+    appliedSuggestedFilter.current = true;
+    setActiveFilter(suggestedFilter);
+  }, [availableFilters, suggestedFilter]);
   const filteredPackages = useMemo(() => {
     return rankedPackages.filter((pkg: any) => {
       const matchesService = activeFilter === "ALL" || resolvePackageFilters(pkg).includes(activeFilter);
@@ -275,6 +282,7 @@ export default function PackageListScreen() {
       ) : (
         filteredPackages.map((pkg: any, index: number) => {
           const isRecommended = recommendedPackageId === String(pkg.id);
+          const decisionBadges = buildPackageDecisionBadges(pkg, memberIntent, suggestedFilter, isRecommended);
           return (
           <AnimatedEntrance key={pkg.id} delay={80 + index * 70}>
             <SurfaceCard
@@ -297,6 +305,9 @@ export default function PackageListScreen() {
                     ) : suggestedFilter !== "ALL" && resolvePackageFilters(pkg).includes(suggestedFilter) ? (
                       <StatusBadge label="Profilinle uyumlu" tone="success" />
                     ) : null}
+                    {decisionBadges.map((badge) => (
+                      <StatusBadge key={badge} label={badge} tone="info" />
+                    ))}
                     {submittedPackageIds.has(String(pkg.id)) ? (
                       <StatusBadge label="Onaya gönderildi" tone="warning" />
                     ) : currentPackageId === String(pkg.id) ? (
@@ -372,6 +383,9 @@ function deriveSuggestedFilter(memberIntent: { issue?: string; goal?: string; ex
   if (haystack.includes("manuel") || haystack.includes("lenf")) return "MANUAL";
   if (haystack.includes("rehab") || haystack.includes("rehabilitasyon") || haystack.includes("ortopedik") || haystack.includes("norolojik")) return "REHAB";
   if (haystack.includes("yoga")) return "YOGA";
+  if (haystack.includes("kilo") || haystack.includes("kas") || haystack.includes("form")) return "SPORTS";
+  if (haystack.includes("duzenli egzersiz") || haystack.includes("aliskanlik")) return "GROUP";
+  if (haystack.includes("saglikli hisset") || haystack.includes("iyi hisset")) return "PILATES";
   if (haystack.includes("grup")) return "GROUP";
   if (haystack.includes("birebir")) return "PT";
   if (haystack.includes("durus") || haystack.includes("postur")) return "POSTURE";
@@ -396,6 +410,28 @@ function formatLessonModeLabel(mode: string) {
   if (normalized === "DUO") return "Duo";
   if (normalized === "GROUP") return "Grup";
   return mode;
+}
+
+function buildPackageDecisionBadges(
+  pkg: any,
+  memberIntent: { weeklyDays?: string; expectation?: string },
+  suggestedFilter: PackageFilterKey,
+  isRecommended: boolean
+) {
+  const badges = new Set<string>();
+  const price = Number(pkg?.display_price || 0);
+  const credits = Number(pkg?.total_credits || 0);
+  const mode = resolvePackageMode(pkg);
+  const weeklyDays = normalizeMatchText(memberIntent.weeklyDays);
+  const expectation = normalizeMatchText(memberIntent.expectation);
+
+  if (isRecommended || suggestedFilter !== "ALL") badges.add("Başlangıç için uygun");
+  if (credits > 0 && price > 0 && price / credits <= 500) badges.add("Ekonomik kullanım");
+  if (weeklyDays.includes("3") || weeklyDays.includes("4") || weeklyDays.includes("5")) badges.add("Yoğun tempo");
+  if (expectation.includes("grup") && mode === "GROUP") badges.add("Grup akışına uygun");
+  if (expectation.includes("birebir") && mode === "PRIVATE") badges.add("Birebir ilerleme");
+
+  return Array.from(badges).slice(0, 2);
 }
 
 function scorePackageForIntent(

@@ -35,8 +35,8 @@ export function ConnectivityBanner() {
           <AppIcon name="risk" size="sm" tone="danger" />
         </View>
         <View style={styles.copyWrap}>
-          <Text style={styles.title}>Bağlantı yok</Text>
-          <Text style={styles.message}>{snapshot.message || "İnternetini kontrol edip tekrar deneyebilirsin."}</Text>
+          <Text style={styles.title}>Çevrimdışısın</Text>
+          <Text style={styles.message}>{snapshot.message || "Son başarılı veriler gösteriliyor. Bağlantı gelince ekranlar otomatik yenilenecek."}</Text>
         </View>
         <Pressable
           accessibilityRole="button"

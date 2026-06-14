@@ -226,7 +226,10 @@ export default function TrainerClientDetailScreen() {
 
   const detail = detailQuery.data;
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
-  const attendance = Array.isArray(attendanceQuery.data) ? attendanceQuery.data : [];
+  const attendance = useMemo(
+    () => (Array.isArray(attendanceQuery.data) ? attendanceQuery.data : []),
+    [attendanceQuery.data]
+  );
   const measurements = useMemo(
     () => (Array.isArray(measurementsQuery.data) ? measurementsQuery.data : []),
     [measurementsQuery.data]
@@ -263,6 +266,13 @@ export default function TrainerClientDetailScreen() {
       supportStyle: detail.onboarding_profile.support_style,
     });
   }, [detail?.onboarding_profile]);
+  const coachingInsight = useMemo(() => {
+    if (!measurements.length && !attendance.length) return "Ölçüm ve katılım verisi oluştuğunda gelişim yorumu burada görünür.";
+    const recentAttendance = attendance.filter((row) => Date.now() - new Date(row.created_at).getTime() <= 28 * 86400000).length;
+    if (measurements.length >= 2 && recentAttendance >= 4) return "Düzenli katılım ile ölçüm geçmişi birlikte ilerliyor. Mevcut programın etkisini dönem karşılaştırmasıyla takip edebilirsin.";
+    if (recentAttendance < 4) return "Son 28 günlük katılım düşük görünüyor. Ölçüm hedefinden önce ders devamlılığını güçlendirmek daha anlamlı olabilir.";
+    return "Katılım düzenli; ölçüm karşılaştırmasını güçlendirmek için yeni bir ölçüm kaydı planlanabilir.";
+  }, [attendance, measurements]);
 
   async function handleRefresh() {
     await Promise.all([
@@ -345,6 +355,11 @@ export default function TrainerClientDetailScreen() {
       </View>
 
       {onboardingSummary ? <OnboardingSummaryCard summary={onboardingSummary} compact /> : null}
+
+      <SurfaceCard tone="primary">
+        <Text style={styles.section}>Katılım ve ölçüm ilişkisi</Text>
+        <Text style={styles.copy}>{coachingInsight}</Text>
+      </SurfaceCard>
 
       <SegmentedSwitch
         value={tab}

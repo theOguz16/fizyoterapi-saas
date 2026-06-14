@@ -71,6 +71,8 @@ export default function AdminProfileScreen() {
         <ActionButton label="Bildirim merkezi" icon="notifications" onPress={() => router.push({ pathname: "/(admin)/notifications", params: { backTo: "/(admin)/profile" } } as never)} />
         <ActionButton label="Salon QR kodu" icon="qr" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/clinic-qr", params: { backTo: "/(admin)/profile" } } as never)} />
         <ActionButton label="Plan ve fiyatlar" icon="subscription" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/subscription", params: { backTo: "/(admin)/profile" } } as never)} />
+        <ActionButton label="Abonelik geçmişi" icon="progress" variant="ghost" onPress={() => router.push("/(admin)/subscription-history" as never)} />
+        <ActionButton label="Gelişmiş gelir raporu" icon="earnings" variant="ghost" onPress={() => router.push("/(admin)/revenue-report" as never)} />
         <ActionButton label="Salon ayarları" icon="settings" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/salon", params: { backTo: "/(admin)/profile" } } as never)} />
       </SurfaceCard>
 

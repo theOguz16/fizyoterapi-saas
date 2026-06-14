@@ -48,6 +48,7 @@ export default function BookingSummaryScreen() {
   const selectedTrainer = requiresTrainer
     ? trainers.find((item: any) => String(item.id) === String(memberBookingDraft.trainerId)) || trainers.find((item: any) => item.is_available !== false) || trainers[0]
     : null;
+  const trainerWasAutoSelected = requiresTrainer && Boolean(selectedTrainer?.id) && !memberBookingDraft.trainerId && !currentPackage?.trainer_id;
   const requiredPreferenceSlots = memberBookingDraft.requiredPreferenceSlots || 0;
   const requiredTrainerFreeSlots = memberBookingDraft.requiredTrainerFreeSlots || 0;
   const normalizedSelectedSlotCount = selectedDaysForCurrentPackage.length;
@@ -219,7 +220,7 @@ export default function BookingSummaryScreen() {
                   ? `${memberBookingDraft.selectedPackages.length} paket`
                   : memberBookingDraft.packageTitle || "-",
             },
-            { label: "Akış", value: requiresTrainer ? selectedTrainer?.full_name || memberBookingDraft.trainerName || "-" : "Grup dersi katılımı" },
+            { label: "Akış", value: requiresTrainer ? `${selectedTrainer?.full_name || memberBookingDraft.trainerName || "-"}${trainerWasAutoSelected ? " (öneri)" : ""}` : "Grup dersi katılımı" },
           ]}
           footnote={isGroupFlow ? "Talep gönderildiğinde ilgili seans için katılım isteğin oluşturulur; onay ve ücret bilgisi salon tarafından netleştirilir." : isDuoFlow ? "Bu başvuru senin %50 ödeme payınla açılır; partner payı tamamlanmadan paket aktif ders akışına alınmaz." : "Göndermeden önce saat seçimlerini ve ihtiyaç özetini son kez kontrol et."}
         />
@@ -304,7 +305,13 @@ export default function BookingSummaryScreen() {
           {requiresTrainer && selectedTrainer ? (
             <>
               <Text style={styles.value}>{selectedTrainer.full_name}</Text>
-              <Text style={styles.copy}>{isDuoFlow ? "Bu eğitmen tek slotta iki kişilik duo dersi planlayacak." : selectedTrainer.compatibility_note || "Seçtiğin paket için uygun görünüyor."}</Text>
+              <Text style={styles.copy}>
+                {trainerWasAutoSelected
+                  ? "Henüz manuel eğitmen seçmediğin için sistem ilk uygun eğitmeni önerdi. Salon onayında uygunluk tekrar kontrol edilir."
+                  : isDuoFlow
+                  ? "Bu eğitmen tek slotta iki kişilik duo dersi planlayacak."
+                  : selectedTrainer.compatibility_note || "Seçtiğin paket için uygun görünüyor."}
+              </Text>
               <StatusBadge label="Onay Bekliyor" tone="warning" />
             </>
           ) : !requiresTrainer ? (

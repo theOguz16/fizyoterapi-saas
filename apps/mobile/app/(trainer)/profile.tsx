@@ -20,10 +20,17 @@ import { AppIcon } from "@/theme/components/app-icon";
 const DEFAULT_PREFS: NotifıcationPreferences = {
   classReminderThreeHours: true,
   classReminderOneHour: true,
+  subscriptionTrialFortyEightHours: true,
+  subscriptionTrialTwentyFourHours: true,
+  subscriptionTrialTwelveHours: true,
+  subscriptionTrialFourHours: true,
   campaignAlerts: true,
   weeklySummary: true,
   packageEndingAlerts: true,
   measurementReminders: true,
+  quietHoursEnabled: false,
+  quietHoursStart: "22:00",
+  quietHoursEnd: "08:00",
 };
 
 export default function TrainerProfileScreen() {
@@ -123,6 +130,12 @@ export default function TrainerProfileScreen() {
             </View>
           </View>
         </View>
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <Text style={styles.section}>Operasyon araçları</Text>
+        <ActionButton label="Değişiklik ve iptal merkezi" icon="calendar" onPress={() => router.push("/(trainer)/request-center" as never)} />
+        <ActionButton label="Toplu bildirim gönder" icon="notifications" variant="ghost" onPress={() => router.push("/(trainer)/bulk-notification" as never)} />
       </SurfaceCard>
 
       <RoleSwitchActions />

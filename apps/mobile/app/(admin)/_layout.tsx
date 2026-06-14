@@ -46,6 +46,8 @@ export default function AdminLayout() {
       <Tabs.Screen name="pricing" options={{ href: null }} />
       <Tabs.Screen name="packages" options={{ href: null }} />
       <Tabs.Screen name="subscription" options={{ href: null }} />
+      <Tabs.Screen name="subscription-history" options={{ href: null }} />
+      <Tabs.Screen name="revenue-report" options={{ href: null }} />
       <Tabs.Screen name="salon-profile" options={{ href: null }} />
       <Tabs.Screen name="clinic-qr" options={{ href: null }} />
       <Tabs.Screen name="salon/setup" options={{ href: null }} />

@@ -16,6 +16,9 @@ export class Account extends BaseEntityWithTimestamps {
       }
     | null;
 
+  @Column({ type: "jsonb", nullable: true })
+  notification_preferences?: Record<string, unknown> | null;
+
   @Index({ unique: true })
   @Column({ type: "varchar", length: 140 })
   email!: string;

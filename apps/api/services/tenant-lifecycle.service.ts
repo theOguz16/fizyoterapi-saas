@@ -10,6 +10,7 @@ import { MobileNotificationService } from "./mobile-notification.service";
 const HOUR_MS = 60 * 60 * 1000;
 const TRIAL_EXPIRY_WARNING_HOURS = [48, 24, 12, 4] as const;
 const TRIAL_EXPIRY_WARNING_EVENT = "ADMIN_TRIAL_EXPIRING";
+const SUBSCRIPTION_EXPIRY_WARNING_EVENT = "ADMIN_SUBSCRIPTION_EXPIRING";
 
 export class TenantLifecycleService {
   static isBoosted(tenant: Tenant | null | undefined) {
@@ -60,10 +61,48 @@ export class TenantLifecycleService {
       await TenantLifecycleService.queueTrialExpiryWarning(tenant, trialEndsAt, trialEndsAt.getTime() - now);
     }
 
+    if (
+      tenant.review_status === TenantReviewStatus.PUBLISHED &&
+      tenant.subscription_status === TenantSubscriptionStatus.ACTIVE &&
+      currentPeriodEndsAt &&
+      currentPeriodEndsAt.getTime() - now <= TRIAL_EXPIRY_WARNING_HOURS[0] * HOUR_MS
+    ) {
+      await TenantLifecycleService.queueExpiryWarning({
+        tenant,
+        endsAt: currentPeriodEndsAt,
+        remainingMs: currentPeriodEndsAt.getTime() - now,
+        eventPrefix: SUBSCRIPTION_EXPIRY_WARNING_EVENT,
+        title: "Abonelik dönemin yenilenmek üzere",
+        body: (hours) => `${tenant.name} için mevcut abonelik dönemin ${hours} saat içinde sona eriyor. Yenileme durumunu plan ekranından kontrol edebilirsin.`,
+        payloadKey: "subscription_period_ends_at",
+      });
+    }
+
     return tenant;
   }
 
   private static async queueTrialExpiryWarning(tenant: Tenant, trialEndsAt: Date, remainingMs: number) {
+    return TenantLifecycleService.queueExpiryWarning({
+      tenant,
+      endsAt: trialEndsAt,
+      remainingMs,
+      eventPrefix: TRIAL_EXPIRY_WARNING_EVENT,
+      title: "Deneme süren bitmek üzere",
+      body: (hours) => `${tenant.name} için FizyoFlow denemen ${hours} saat içinde bitecek. Erişimin kesilmemesi için planını etkinleştir.`,
+      payloadKey: "trial_ends_at",
+    });
+  }
+
+  private static async queueExpiryWarning(input: {
+    tenant: Tenant;
+    endsAt: Date;
+    remainingMs: number;
+    eventPrefix: string;
+    title: string;
+    body: (hours: number) => string;
+    payloadKey: "trial_ends_at" | "subscription_period_ends_at";
+  }) {
+    const { tenant, endsAt, remainingMs, eventPrefix, title, body, payloadKey } = input;
     let thresholdHours: (typeof TRIAL_EXPIRY_WARNING_HOURS)[number] | null = null;
     for (const hours of TRIAL_EXPIRY_WARNING_HOURS) {
       if (remainingMs <= hours * HOUR_MS) {
@@ -84,7 +123,7 @@ export class TenantLifecycleService {
     if (!membership?.user_id) return;
 
     const eventRepo = AppDataSource.getRepository(NotificationEvent);
-    const eventType = `${TRIAL_EXPIRY_WARNING_EVENT}_${thresholdHours}H`;
+    const eventType = `${eventPrefix}_${thresholdHours}H`;
     const existing = await eventRepo.findOne({
       where: {
         tenant_id: tenant.id,
@@ -94,34 +133,36 @@ export class TenantLifecycleService {
     });
     if (existing) return;
 
-    const warningEvent = await eventRepo.save(
+    const pushResult = await MobileNotificationService.queuePush({
+      tenantId: tenant.id,
+      userId: membership.user_id,
+      roleScope: "ADMIN",
+      type: eventType,
+      title,
+      body: body(thresholdHours),
+      deepLink: "/(admin)/subscription",
+      meta: {
+        [payloadKey]: endsAt.toISOString(),
+        threshold_hours: thresholdHours,
+      },
+    });
+
+    if (pushResult.reason === "QUIET_HOURS") return;
+
+    await eventRepo.save(
       eventRepo.create({
         tenant_id: tenant.id,
         member_id: membership.user_id,
         type: eventType,
         payload: {
-          trial_ends_at: trialEndsAt.toISOString(),
+          [payloadKey]: endsAt.toISOString(),
           tenant_name: tenant.name,
           threshold_hours: thresholdHours,
+          delivery_result: pushResult,
         },
         status: NotificationEventStatus.PROCESSED,
         processed_at: new Date(),
       })
     );
-
-    await MobileNotificationService.queuePush({
-      tenantId: tenant.id,
-      userId: membership.user_id,
-      roleScope: "ADMIN",
-      type: eventType,
-      title: "Deneme süren bitmek üzere",
-      body: `${tenant.name} için FizyoFlow denemen ${thresholdHours} saat içinde bitecek. Erişimin kesilmemesi için planını etkinleştir.`,
-      deepLink: "/(admin)/subscription",
-      meta: {
-        event_id: warningEvent.id,
-        trial_ends_at: trialEndsAt.toISOString(),
-        threshold_hours: thresholdHours,
-      },
-    });
   }
 }

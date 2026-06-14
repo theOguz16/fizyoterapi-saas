@@ -1,5 +1,7 @@
 appId: com.fizyoflow.mobile
 ---
+- runFlow: trainer-group-classes-full-smoke.yaml
+
 - launchApp:
     clearState: true
     clearKeychain: true

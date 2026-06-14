@@ -13,7 +13,8 @@ import { SelectionChip } from "@/theme/components/selection-chip";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { EmptyState } from "@/theme/components/empty-state";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
+import { QueryState } from "@/theme/components/query-state";
 import { tokens } from "@/theme/tokens";
 
 export default function TrainerClientsScreen() {
@@ -68,13 +69,23 @@ export default function TrainerClientsScreen() {
         <SelectionChip label="Riskli" active={filter === "RISK"} onPress={() => setFilter("RISK")} />
       </View>
 
-      {items.length === 0 ? (
+      {result.isLoading && !result.data ? (
+        <QueryState mode="loading" title="Danışanlar hazırlanıyor" />
+      ) : result.isError && !result.data ? (
+        <QueryState mode="error" onRetry={() => void result.refetch()} />
+      ) : items.length === 0 ? (
         <EmptyState title="Danışan bulunamadı" description="Arama veya filtreyi değiştirerek listeyi yeniden daraltabilirsin." icon="clients" />
       ) : (
-        <ScrollPanel maxHeight={480} contentContainerStyle={styles.stack}>
-          {items.map((item: any) => (
+        <VirtualListPanel
+          data={items}
+          maxHeight={520}
+          keyExtractor={(item: any) => String(item.id)}
+          renderItem={(item: any) => (
             <Pressable
               key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.full_name || "Danışan"} detayını aç`}
+              hitSlop={4}
               style={styles.rowCard}
               onPress={() =>
                 router.push({
@@ -113,8 +124,8 @@ export default function TrainerClientsScreen() {
                 Paket durumu, katılım geçmişi, ölçüm kayıtları ve koç notlarını detay ekranında inceleyebilirsin.
               </Text>
             </Pressable>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       )}
     </AppShell>
   );

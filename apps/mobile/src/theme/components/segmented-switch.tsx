@@ -34,7 +34,10 @@ export function SegmentedSwitch({ value, options, onChange, testID }: Props) {
           <Pressable
             key={option.value}
             testID={testID ? `${testID}-${option.value}` : undefined}
+            accessibilityRole="tab"
             accessibilityLabel={option.label}
+            accessibilityState={{ selected }}
+            hitSlop={4}
             onPress={() => handleChange(option.value)}
             style={({ pressed }) => [styles.item, selected ? styles.selected : null, pressed ? styles.pressed : null]}
           >

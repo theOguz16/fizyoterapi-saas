@@ -15,6 +15,7 @@ import {
   type AdminPackage,
 } from "@/lib/mobile-api";
 import { ApiClientError } from "@/lib/api-error";
+import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { setAuthToken } from "@/lib/http-client";
 import { tokens } from "@/theme/tokens";
 
@@ -54,7 +55,7 @@ export default function E2EReleaseEdgeCasesScreen() {
   }, [done, error]);
 
   useEffect(() => {
-    if (!__DEV__) return;
+    if (!isE2EModeEnabled()) return;
     let cancelled = false;
 
     const updateStep = (key: string, status: StepStatus, detail?: string) => {

@@ -10,5 +10,8 @@ export const memberGroupClassesRoutes = Router();
 memberGroupClassesRoutes.use(authMiddleware, tenantMiddleware, requireRole(["MEMBER"]));
 
 memberGroupClassesRoutes.get("/", MemberGroupClassesController.list);
+memberGroupClassesRoutes.get("/:id/waitlist", MemberGroupClassesController.waitlist);
+memberGroupClassesRoutes.post("/:id/waitlist", MemberGroupClassesController.joinWaitlist);
+memberGroupClassesRoutes.delete("/:id/waitlist", MemberGroupClassesController.leaveWaitlist);
 memberGroupClassesRoutes.post("/:id/join", MemberGroupClassesController.join);
 memberGroupClassesRoutes.delete("/:id/leave", MemberGroupClassesController.leave);

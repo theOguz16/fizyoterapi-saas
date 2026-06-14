@@ -225,3 +225,33 @@ export function createSyntheticSignupOnboarding(role: SignupOnboardingRole, seed
 export function getDefaultSignupProfile(role: SignupOnboardingRole) {
   return createSyntheticSignupOnboarding(role, role);
 }
+
+export function mapSignupProfileToMemberIntentDefaults(profile: SignupOnboardingProfile) {
+  const goalMap: Record<string, string> = {
+    fitness: "Düzenli egzersiz alışkanlığı kazanmak istiyorum",
+    body: "Kilo / yağ / kas takibi istiyorum",
+    recovery: "Daha sağlıklı hissetmek istiyorum",
+  };
+  const issueMap: Record<string, string> = {
+    fitness: "Hareketsizlik",
+    body: "Kilo kontrolü",
+    recovery: "Stres / gerginlik",
+  };
+  const rhythmMap: Record<string, string> = {
+    light: "2 gün",
+    steady: "3 gün",
+    intense: "4+ gün",
+  };
+  const expectationMap: Record<string, string> = {
+    guided: "Birebir ilgi",
+    balanced: "Eğitmen kalitesi önemli",
+    "self-serve": "Uygun fiyatlı olsun",
+  };
+
+  return {
+    goal: goalMap[profile.primaryGoal] || "",
+    issue: issueMap[profile.primaryGoal] || "",
+    expectation: expectationMap[profile.supportStyle] || "",
+    weeklyDays: rhythmMap[profile.rhythm] || "",
+  };
+}

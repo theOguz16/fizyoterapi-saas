@@ -22,6 +22,7 @@ import { DemoLeadEmailService } from "../services/demo-lead-email.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
+  private static readonly UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   private static normalizeCampaigns(raw: unknown) {
     const defaults = {
@@ -297,7 +298,7 @@ export class PublicController {
           where: trainers.map((row) => ({ tenant_id: tenant.id, trainer_id: row.id, is_active: true })) as any,
         })
       : [];
-    const packageRow = packageId
+    const packageRow = packageId && PublicController.UUID_PATTERN.test(packageId)
       ? await AppDataSource.getRepository(Package).findOne({
           where: { tenant_id: tenant.id, id: packageId, is_active: true, is_public: true, is_visible: true },
         })
@@ -1026,7 +1027,7 @@ export class PublicController {
     return raw
       .split(",")
       .map((row) => row.trim())
-      .filter(Boolean);
+      .filter((row) => PublicController.UUID_PATTERN.test(row));
   }
 
   private static async buildGroupClassDayOptions(tenantId: string, packages: Package[], businessHours?: Record<string, unknown>) {

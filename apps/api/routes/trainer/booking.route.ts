@@ -12,7 +12,10 @@ trainerBookingsRoutes.use(authMiddleware, tenantMiddleware, requireRole(["TRAINE
 
 trainerBookingsRoutes.get("/availabilities", TrainerBookingsController.listAvailabilities);
 trainerBookingsRoutes.get("/form-options", TrainerBookingsController.formOptions);
+trainerBookingsRoutes.get("/schedule-change-requests", TrainerBookingsController.listScheduleChangeRequests);
+trainerBookingsRoutes.post("/bulk-notifications", TrainerBookingsController.sendBulkNotification);
 trainerBookingsRoutes.get("/", TrainerBookingsController.list);
+trainerBookingsRoutes.post("/:id/schedule-change-request", TrainerBookingsController.createScheduleChangeRequest);
 trainerBookingsRoutes.get("/:id", TrainerBookingsController.getById);
 trainerBookingsRoutes.patch("/:id/reschedule", TrainerBookingsController.reschedule);
 trainerBookingsRoutes.patch("/:id/status", TrainerBookingsController.setStatus);
