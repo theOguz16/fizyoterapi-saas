@@ -316,7 +316,7 @@ export default async function SalonPublicPage({ params }: PageProps) {
         <div className="clinic-hero-overlay" />
         <div className="container clinic-hero-content">
           <a className="brand on-hero" href="/">
-            <span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span>
+            <span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span>
             <span>Fizyoflow</span>
           </a>
           <p className="eyebrow">{[data.business_category || "Fizyoterapi Kliniği", data.location?.district, data.location?.city].filter(Boolean).join(" · ")}</p>
@@ -360,7 +360,7 @@ export default async function SalonPublicPage({ params }: PageProps) {
               <strong>{whatsapp ? "WhatsApp + Harita" : "Form + Telefon"}</strong>
             </div>
             <div className="orbit-card orbit-card-brand">
-              <img src="/brand/fizyoflow-mark.svg" alt="" />
+              <img src="/brand/fizyoflow-current-mark.png" alt="" />
               <strong>Fizyoflow ile yayında</strong>
             </div>
           </div>
@@ -441,7 +441,7 @@ export default async function SalonPublicPage({ params }: PageProps) {
           </div>
           <aside className="contact-card">
             <div className="contact-card-brand">
-              <img src="/brand/fizyoflow-mark.svg" alt="" />
+              <img src="/brand/fizyoflow-current-mark.png" alt="" />
               <span>Fizyoflow lead formu</span>
             </div>
             <p className="eyebrow">Hızlı İletişim</p>

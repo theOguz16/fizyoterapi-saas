@@ -3,7 +3,7 @@ export default function NotFound() {
     <main className="not-found-page">
       <section className="container not-found-panel">
         <a className="brand" href="/">
-          <span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span>
+          <span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span>
           <span>Fizyoflow</span>
         </a>
         <p className="eyebrow">Sayfa bulunamadı</p>

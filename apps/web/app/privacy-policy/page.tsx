@@ -10,7 +10,7 @@ export default function PrivacyPolicyEnPage() {
   return (
     <main className="legal-page">
       <section className="container legal-panel">
-        <a className="brand" href="/"><span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span><span>Fizyoflow</span></a>
+        <a className="brand" href="/"><span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span><span>Fizyoflow</span></a>
         <p className="eyebrow">Privacy Policy EN</p>
         <h1>Fizyoflow Privacy Policy</h1>
         <p>

@@ -252,7 +252,7 @@ export default function HomePage() {
 
       <div className="brand-intro" aria-hidden="true">
         <div className="brand-intro-inner">
-          <img src="/brand/fizyoflow-mark.svg" alt="" />
+          <img src="/brand/fizyoflow-current-mark.png" alt="" />
           <strong>Fizyoflow</strong>
           <span>Seans, paket ve danışan takibi tek akışta.</span>
         </div>
@@ -406,7 +406,7 @@ export default function HomePage() {
       <section id="demo" className="product-demo-section">
         <div className="product-shell product-demo-grid">
           <div className="product-demo-copy">
-            <img src="/brand/fizyoflow-mark.svg" alt="" />
+            <img src="/brand/fizyoflow-current-mark.png" alt="" />
             <p className="product-kicker">Kısa bir görüşmeyle başlayın</p>
             <h2>15 dakikada seans, paket ve check-in takibinin nerede koptuğunu birlikte çıkaralım.</h2>
             <p>Klinik akışınızı birlikte açarız: hangi takip WhatsApp’ta kalıyor, paket hakkı nerede kopuyor, check-in ve danışan bilgilendirmesi nasıl sadeleşir netleştiririz.</p>
@@ -511,7 +511,7 @@ function OperationalFlowSection() {
             <span className="operational-role">Danışan</span>
           </div>
           <div className="operational-flow-core">
-            <img src="/brand/fizyoflow-mark.svg" alt="" />
+            <img src="/brand/fizyoflow-current-mark.png" alt="" />
             <strong>Fizyoflow</strong>
           </div>
           <div className="operational-flow-results">

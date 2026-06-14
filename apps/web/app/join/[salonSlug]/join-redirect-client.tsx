@@ -60,7 +60,7 @@ export function JoinRedirectClient({
     <main className="join-page">
       <section className="container join-panel">
         <a className="brand" href="/">
-          <span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span>
+          <span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span>
           <span>Fizyoflow</span>
         </a>
         <div className="join-grid">

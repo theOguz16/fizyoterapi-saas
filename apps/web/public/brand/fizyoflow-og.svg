@@ -5,18 +5,7 @@
   <path d="M0 0H1200V630H0V0Z" fill="url(#bg)"/>
   <path d="M780 -80C990 18 1135 173 1200 387V630H532C583 465 651 321 736 198C786 126 801 35 780 -80Z" fill="#EDF5EE"/>
   <path d="M-80 535C86 419 254 393 424 458C545 505 666 489 786 410C893 339 1039 329 1224 380" stroke="#DDEBDE" stroke-width="2"/>
-  <g filter="url(#shadow)">
-    <rect x="82" y="82" width="152" height="152" rx="48" fill="#F7FAF7"/>
-    <rect x="82" y="82" width="152" height="152" rx="48" stroke="#DDEBDE" stroke-width="4"/>
-    <rect x="118" y="118" width="28" height="28" rx="9" fill="#EAF4EC" stroke="#CFE3D2" stroke-width="5"/>
-    <rect x="174" y="118" width="28" height="28" rx="9" fill="#EAF4EC" stroke="#CFE3D2" stroke-width="5"/>
-    <rect x="118" y="174" width="28" height="28" rx="9" fill="#EAF4EC" stroke="#CFE3D2" stroke-width="5"/>
-    <rect x="174" y="174" width="28" height="28" rx="9" fill="#6F9274"/>
-    <path d="M131 174C131 151 150 139 164 155C178 171 190 153 190 135" stroke="#6F9274" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M131 146C142 158 153 163 164 163C175 163 185 158 196 146" stroke="#5DADE2" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="164" cy="155" r="8" fill="#F8B84E"/>
-    <path d="M183 189L190 196L204 180" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+  <image href="/brand/fizyoflow-current-mark.png" x="82" y="82" width="152" height="152"/>
   <text x="82" y="318" fill="#1F2937" font-family="Poppins, Inter, Arial, sans-serif" font-size="70" font-weight="800" letter-spacing="0">Fizyoflow</text>
   <text x="86" y="380" fill="#496C4F" font-family="Poppins, Inter, Arial, sans-serif" font-size="31" font-weight="700" letter-spacing="0">Fizyoterapi klinikleri için dijital klinik altyapısı</text>
   <text x="88" y="446" fill="#6B7280" font-family="Poppins, Inter, Arial, sans-serif" font-size="24" font-weight="500" letter-spacing="0">Mobil yönetim, public klinik vitrini, SEO, Maps ve lead akışı tek platformda.</text>

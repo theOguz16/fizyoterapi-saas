@@ -120,7 +120,7 @@ export default function SampleClinicPage() {
         <div className="clinic-hero-overlay" />
         <div className="container clinic-hero-content">
           <a className="brand on-hero" href="/">
-            <span className="brand-mark"><img src="/brand/fizyoflow-mark.svg" alt="" /></span>
+            <span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span>
             <span>Fizyoflow</span>
           </a>
           <p className="eyebrow">Fizyoterapi Kliniği · Kadıköy · İstanbul</p>
@@ -154,7 +154,7 @@ export default function SampleClinicPage() {
               <strong>WhatsApp + Harita</strong>
             </div>
             <div className="orbit-card orbit-card-brand">
-              <img src="/brand/fizyoflow-mark.svg" alt="" />
+              <img src="/brand/fizyoflow-current-mark.png" alt="" />
               <strong>Fizyoflow ile yayında</strong>
             </div>
           </div>
@@ -206,7 +206,7 @@ export default function SampleClinicPage() {
           </div>
           <aside id="lead" className="contact-card">
             <div className="contact-card-brand">
-              <img src="/brand/fizyoflow-mark.svg" alt="" />
+              <img src="/brand/fizyoflow-current-mark.png" alt="" />
               <span>Fizyoflow lead formu</span>
             </div>
             <h3>Bilgi Talebi</h3>
@@ -282,7 +282,7 @@ export default function SampleClinicPage() {
             <img key={image} src={image} alt="Atlas Fizyo örnek galeri" />
           ))}
           <div className="gallery-product-card">
-            <img src="/brand/fizyoflow-mark.svg" alt="" />
+            <img src="/brand/fizyoflow-current-mark.png" alt="" />
             <span>Paylaşılabilir klinik linki</span>
             <strong>atlasfizyo.fizyoflow.com</strong>
           </div>
