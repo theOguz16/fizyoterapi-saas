@@ -5050,6 +5050,7 @@ button:disabled {
 }
 
 .trust-card h3 {
+  min-height: 2.56em;
   color: #fff;
   font-size: 1.12rem;
   line-height: 1.28;
@@ -7006,6 +7007,10 @@ button:disabled {
 @media (max-width: 620px) {
   .trust-grid {
     grid-template-columns: 1fr;
+  }
+
+  .trust-card h3 {
+    min-height: 0;
   }
 
   .clinic-product-orbit {
