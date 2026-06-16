@@ -37,10 +37,12 @@ export async function tenantMiddleware(req: AuthenticatedRequest, res: Response,
     });
   }
 
-  if (
-    syncedTenant.subscription_status === TenantSubscriptionStatus.READ_ONLY &&
-    !["GET", "HEAD", "OPTIONS"].includes(req.method.toUpperCase())
-  ) {
+  const method = req.method.toUpperCase();
+  const path = req.originalUrl || req.path || "";
+  const allowsReadOnlySubscriptionSync =
+    auth.role === "ADMIN" && method === "POST" && /\/admin\/clinic\/subscription\/sync(?:\?|$)/.test(path);
+
+  if (syncedTenant.subscription_status === TenantSubscriptionStatus.READ_ONLY && !["GET", "HEAD", "OPTIONS"].includes(method) && !allowsReadOnlySubscriptionSync) {
     attachAuditError(res, "TENANT_READ_ONLY", "Deneme süresi dolduğu için klinik salt-okunur moda geçti.");
     return res.status(403).json({
       error: {

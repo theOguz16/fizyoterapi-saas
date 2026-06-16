@@ -8,6 +8,7 @@ import {
   getAdminMobileApprovalsApi,
   getAdminCampaignsApi,
   getAdminClinicQrApi,
+  syncAdminClinicSubscriptionApi,
   getSalonDayOptionsApi,
   getAdminPackagesApi,
   getMemberMeasurementsApi,
@@ -231,7 +232,7 @@ describe("mobile api contract helpers", () => {
     });
   });
 
-  it("loads admin clinic qr payload and sends salon entry scan requests", async () => {
+  it("loads admin clinic qr payload, syncs subscription and sends salon entry scan requests", async () => {
     httpRequest
       .mockResolvedValueOnce({
         data: {
@@ -240,9 +241,11 @@ describe("mobile api contract helpers", () => {
           qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
         },
       })
+      .mockResolvedValueOnce({ data: { subscription_status: "ACTIVE", sync_state: "SYNCED" } })
       .mockResolvedValueOnce({ data: { success: true } });
 
     const clinicQr = await getAdminClinicQrApi();
+    const syncResult = await syncAdminClinicSubscriptionApi();
     const scanResult = await adminSalonEntryScanApi({ manual_code: "MEM-ABCD1234" });
 
     expect(clinicQr).toEqual({
@@ -252,9 +255,13 @@ describe("mobile api contract helpers", () => {
         qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
       },
     });
+    expect(syncResult).toEqual({ data: { subscription_status: "ACTIVE", sync_state: "SYNCED" } });
     expect(scanResult).toEqual({ data: { success: true } });
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/admin/clinic/qr");
-    expect(httpRequest).toHaveBeenNthCalledWith(2, "/admin/qr/scan-entry", {
+    expect(httpRequest).toHaveBeenNthCalledWith(2, "/admin/clinic/subscription/sync", {
+      method: "POST",
+    });
+    expect(httpRequest).toHaveBeenNthCalledWith(3, "/admin/qr/scan-entry", {
       method: "POST",
       body: { manual_code: "MEM-ABCD1234" },
     });

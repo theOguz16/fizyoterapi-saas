@@ -79,6 +79,62 @@ describe("security middlewares", () => {
     expect(req.tenantId).toBe("tenant-1");
   });
 
+  it("allows admin subscription sync for read-only tenants", async () => {
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = entity?.name || "";
+      if (name.includes("Tenant")) {
+        return { findOne: vi.fn().mockResolvedValue({ id: "tenant-1" }) } as any;
+      }
+      if (name.includes("User")) {
+        return { findOne: vi.fn().mockResolvedValue({ id: "admin-1", is_active: true }) } as any;
+      }
+      return {} as any;
+    });
+    vi.spyOn(TenantLifecycleService, "syncTenantState").mockResolvedValue({
+      id: "tenant-1",
+      is_active: true,
+      subscription_status: "READ_ONLY",
+    } as any);
+
+    const req = {
+      method: "POST",
+      originalUrl: "/api/admin/clinic/subscription/sync",
+      auth: { sub: "admin-1", tenantId: "tenant-1", role: "ADMIN" },
+    } as any;
+    const res = createResponse();
+    const next = vi.fn();
+
+    await tenantMiddleware(req, res as any, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(req.tenantId).toBe("tenant-1");
+  });
+
+  it("keeps other read-only tenant writes blocked", async () => {
+    vi.spyOn(AppDataSource, "getRepository").mockReturnValue({
+      findOne: vi.fn().mockResolvedValue({ id: "tenant-1" }),
+    } as any);
+    vi.spyOn(TenantLifecycleService, "syncTenantState").mockResolvedValue({
+      id: "tenant-1",
+      is_active: true,
+      subscription_status: "READ_ONLY",
+    } as any);
+
+    const req = {
+      method: "POST",
+      originalUrl: "/api/admin/packages",
+      auth: { sub: "admin-1", tenantId: "tenant-1", role: "ADMIN" },
+    } as any;
+    const res = createResponse();
+    const next = vi.fn();
+
+    await tenantMiddleware(req, res as any, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.code).toBe("TENANT_READ_ONLY");
+  });
+
   it("rejects inactive tenants", async () => {
     vi.spyOn(AppDataSource, "getRepository").mockReturnValue({
       findOne: vi.fn().mockResolvedValue({ id: "tenant-1" }),

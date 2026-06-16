@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, type AdminClinicSubscription } from "@/lib/mobile-api";
+import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, syncAdminClinicSubscriptionApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import { configureRevenueCat, getRevenueCatPlanPackages, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
@@ -164,6 +164,7 @@ export default function AdminSubscriptionScreen() {
 
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
+    await syncAdminClinicSubscriptionApi().catch(() => null);
     await Promise.all([refreshMe(), query.refetch()]);
 
     showInfoAlert(
@@ -200,6 +201,7 @@ export default function AdminSubscriptionScreen() {
 
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
+    await syncAdminClinicSubscriptionApi().catch(() => null);
     await Promise.all([refreshMe(), query.refetch()]);
 
     showInfoAlert(
@@ -217,7 +219,7 @@ export default function AdminSubscriptionScreen() {
   },
 });
 
-  const isBusy = startTrialMutation.isPending || purchaseMutation.isPending;
+  const isBusy = startTrialMutation.isPending || purchaseMutation.isPending || restoreMutation.isPending;
 
   return (
     <AppShell

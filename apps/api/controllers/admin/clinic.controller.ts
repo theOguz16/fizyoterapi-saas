@@ -9,11 +9,24 @@ import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
 
 const ADMIN_TRIAL_DAYS = 5;
+const REVENUECAT_API_BASE_URL = "https://api.revenuecat.com/v1";
 
 function plusDays(days: number) {
   const value = new Date();
   value.setDate(value.getDate() + days);
   return value;
+}
+
+function parseRevenueCatDate(value: unknown) {
+  if (!value || typeof value !== "string") return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function pickLatestDate(...dates: Array<Date | null | undefined>) {
+  const valid = dates.filter((date): date is Date => Boolean(date && Number.isFinite(date.getTime())));
+  if (!valid.length) return null;
+  return new Date(Math.max(...valid.map((date) => date.getTime())));
 }
 
 export class AdminClinicController {
@@ -72,7 +85,7 @@ export class AdminClinicController {
     return `${baseUrl}?${params.toString()}`;
   }
 
-  private static serializeSubscription(tenant: Tenant) {
+  private static serializeSubscription(tenant: Tenant, syncState: "IDLE" | "PENDING_SYNC" | "SYNCED" | "FAILED" = "IDLE") {
     const trialEndsAt = tenant.trial_ends_at
       ? new Date(tenant.trial_ends_at)
       : tenant.subscription_status === TenantSubscriptionStatus.TRIAL && tenant.subscription_current_period_ends_at
@@ -114,7 +127,7 @@ export class AdminClinicController {
       purchase_provider: "REVENUECAT",
       purchase_mode: "IN_APP_PURCHASE",
       recommended_action: recommendedAction,
-      sync_state: "IDLE",
+      sync_state: syncState,
       subscription_history_summary: {
         last_event_type: tenant.revenuecat_last_event_type || null,
         last_event_at: tenant.subscription_last_event_at || null,
@@ -125,6 +138,100 @@ export class AdminClinicController {
         provider: "REVENUECAT",
       },
     };
+  }
+
+  private static async fetchRevenueCatSubscriber(appUserId: string) {
+    const apiKey = String(process.env.REVENUECAT_REST_API_KEY || "").trim();
+    if (!apiKey) return null;
+
+    const response = await fetch(`${REVENUECAT_API_BASE_URL}/subscribers/${encodeURIComponent(appUserId)}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new AppError("REVENUECAT_SYNC_FAILED", 502, "RevenueCat abonelik bilgisi doğrulanamadı");
+    }
+
+    return (await response.json()) as {
+      subscriber?: {
+        original_app_user_id?: string | null;
+        entitlements?: Record<
+          string,
+          {
+            expires_date?: string | null;
+            purchase_date?: string | null;
+            product_identifier?: string | null;
+          }
+        >;
+        subscriptions?: Record<
+          string,
+          {
+            expires_date?: string | null;
+            purchase_date?: string | null;
+            store?: string | null;
+          }
+        >;
+      };
+    };
+  }
+
+  private static applyRevenueCatSubscriberSync(tenant: Tenant, payload: Awaited<ReturnType<typeof AdminClinicController.fetchRevenueCatSubscriber>>) {
+    const subscriber = payload?.subscriber;
+    const expectedEntitlement = String(process.env.REVENUECAT_ENTITLEMENT_ID || "clinic_pro").trim();
+    const entitlement = expectedEntitlement ? subscriber?.entitlements?.[expectedEntitlement] : Object.values(subscriber?.entitlements || {})[0];
+    const productId = entitlement?.product_identifier || null;
+    const subscription = productId ? subscriber?.subscriptions?.[productId] : null;
+    const entitlementExpiresAt = parseRevenueCatDate(entitlement?.expires_date);
+    const subscriptionExpiresAt = parseRevenueCatDate(subscription?.expires_date);
+    const expiresAt = pickLatestDate(entitlementExpiresAt, subscriptionExpiresAt);
+    const purchasedAt = pickLatestDate(
+      parseRevenueCatDate(entitlement?.purchase_date),
+      parseRevenueCatDate(subscription?.purchase_date)
+    );
+    const hasActiveEntitlement = Boolean(entitlement && (!expiresAt || expiresAt.getTime() > Date.now()));
+    const hasExpiredEntitlement = Boolean(entitlement && expiresAt && expiresAt.getTime() <= Date.now());
+
+    if (hasActiveEntitlement) {
+      tenant.subscription_status = TenantSubscriptionStatus.ACTIVE;
+      tenant.review_status = TenantReviewStatus.PUBLISHED;
+      tenant.is_public = true;
+      tenant.reviewed_at = tenant.reviewed_at || new Date();
+      tenant.review_note = tenant.review_note || "RevenueCat doğrulaması ile otomatik yayına alındı.";
+      tenant.subscription_started_at = purchasedAt || tenant.subscription_started_at || new Date();
+      tenant.subscription_current_period_ends_at = expiresAt || null;
+      tenant.subscription_last_event_at = new Date();
+      tenant.revenuecat_original_app_user_id = subscriber?.original_app_user_id || tenant.revenuecat_original_app_user_id || null;
+      tenant.revenuecat_product_id = productId || tenant.revenuecat_product_id || null;
+      tenant.revenuecat_entitlement_id = expectedEntitlement || tenant.revenuecat_entitlement_id || null;
+      tenant.revenuecat_store = subscription?.store || tenant.revenuecat_store || null;
+      tenant.revenuecat_last_event_type = "SYNC";
+      return "SYNCED" as const;
+    }
+
+    if (
+      hasExpiredEntitlement &&
+      tenant.review_status === TenantReviewStatus.PUBLISHED &&
+      [TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.ACTIVE, TenantSubscriptionStatus.READ_ONLY].includes(
+        tenant.subscription_status
+      )
+    ) {
+      tenant.subscription_status = TenantSubscriptionStatus.READ_ONLY;
+      tenant.is_public = false;
+      tenant.subscription_current_period_ends_at = expiresAt || tenant.subscription_current_period_ends_at || new Date();
+      tenant.subscription_last_event_at = new Date();
+      tenant.revenuecat_original_app_user_id = subscriber?.original_app_user_id || tenant.revenuecat_original_app_user_id || null;
+      tenant.revenuecat_product_id = productId || tenant.revenuecat_product_id || null;
+      tenant.revenuecat_entitlement_id = expectedEntitlement || tenant.revenuecat_entitlement_id || null;
+      tenant.revenuecat_store = subscription?.store || tenant.revenuecat_store || null;
+      tenant.revenuecat_last_event_type = "SYNC_EXPIRED";
+      return "SYNCED" as const;
+    }
+
+    return "PENDING_SYNC" as const;
   }
 
   // --- GET /api/admin/clinic/qr ---
@@ -309,6 +416,86 @@ export class AdminClinicController {
       if (error instanceof AppError) throw error;
       console.error("Admin clinic start trial error:", error);
       throw new AppError("ADMIN_CLINIC_START_TRIAL_ERROR", 500, "Deneme suresi baslatilamadi");
+    }
+  }
+
+  // --- POST /api/admin/clinic/subscription/sync ---
+  static async syncSubscription(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId;
+      if (!tenantId) {
+        throw new AppError("NO_TENANT", 400, "Tenant bilgisi bulunamadi");
+      }
+
+      const repo = AppDataSource.getRepository(Tenant);
+      const tenant = await repo.findOne({ where: { id: tenantId } });
+      if (!tenant) {
+        throw new AppError("TENANT_NOT_FOUND", 404, "Klinik bulunamadi");
+      }
+
+      const revenueCatPayload = await AdminClinicController.fetchRevenueCatSubscriber(tenant.id);
+      if (!revenueCatPayload) {
+        await AuditLogService.log({
+          tenant_id: tenant.id,
+          actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
+          actor_account_id: req.auth?.accountId || null,
+          actor_role: req.auth?.role || null,
+          event_type: "ADMIN_CLINIC_SUBSCRIPTION_SYNC_PENDING",
+          action: "SYNC_REVENUECAT",
+          method: req.method,
+          path: req.originalUrl,
+          status_code: 202,
+          success: true,
+          request_id: req.requestId || null,
+          ip_address: req.ip || null,
+          user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+          target_type: "tenant",
+          target_id: tenant.id,
+          metadata: { reason: "REVENUECAT_REST_API_KEY_MISSING" },
+        });
+
+        return res.status(202).json({
+          data: AdminClinicController.serializeSubscription(tenant, "PENDING_SYNC"),
+        });
+      }
+
+      const syncState = AdminClinicController.applyRevenueCatSubscriberSync(tenant, revenueCatPayload);
+      if (syncState === "SYNCED") {
+        await repo.save(tenant);
+      }
+
+      await AuditLogService.log({
+        tenant_id: tenant.id,
+        actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
+        actor_account_id: req.auth?.accountId || null,
+        actor_role: req.auth?.role || null,
+        event_type: "ADMIN_CLINIC_SUBSCRIPTION_SYNCED",
+        action: "SYNC_REVENUECAT",
+        method: req.method,
+        path: req.originalUrl,
+        status_code: syncState === "SYNCED" ? 200 : 202,
+        success: true,
+        request_id: req.requestId || null,
+        ip_address: req.ip || null,
+        user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        target_type: "tenant",
+        target_id: tenant.id,
+        metadata: {
+          sync_state: syncState,
+          subscription_status: tenant.subscription_status,
+          revenuecat_product_id: tenant.revenuecat_product_id || null,
+          revenuecat_entitlement_id: tenant.revenuecat_entitlement_id || null,
+          revenuecat_store: tenant.revenuecat_store || null,
+        },
+      });
+
+      return res.status(syncState === "SYNCED" ? 200 : 202).json({
+        data: AdminClinicController.serializeSubscription(tenant, syncState),
+      });
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      console.error("Admin clinic subscription sync error:", error);
+      throw new AppError("ADMIN_CLINIC_SUBSCRIPTION_SYNC_ERROR", 500, "Abonelik durumu senkronize edilemedi");
     }
   }
 }

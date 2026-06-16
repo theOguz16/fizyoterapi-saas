@@ -48,11 +48,19 @@ EAS env tanimlandiktan sonra yeni build alinip TestFlight/App Store'a gonderilme
 
 - `REVENUECAT_WEBHOOK_AUTH=Bearer <secret>`
 - `REVENUECAT_ENTITLEMENT_ID=clinic_pro`
+- `REVENUECAT_REST_API_KEY=<RevenueCat secret API key>`
 
 ## Webhook
 
 - URL: `POST /api/billing/revenuecat/webhook`
 - Auth header: `Authorization: Bearer <secret>`
+
+## Admin sync
+
+- URL: `POST /api/admin/clinic/subscription/sync`
+- Mobil uygulama purchase veya restore tamamlanınca bu endpoint'i çağırır.
+- Backend `appUserID = tenant.id` ile RevenueCat REST API'den entitlement durumunu doğrular.
+- `REVENUECAT_REST_API_KEY` yoksa endpoint satın almayı aktif saymaz, `PENDING_SYNC` döner ve webhook beklenir.
 
 ## Beklenen event etkileri
 

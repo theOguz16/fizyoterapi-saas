@@ -14,6 +14,7 @@ function routeSignatures(router: any) {
 describe("phase four API contracts", () => {
   it("keeps critical mobile roadmap endpoints registered", () => {
     expect(routeSignatures(adminClinicRoutes)).toContain("GET /subscription/history");
+    expect(routeSignatures(adminClinicRoutes)).toContain("POST /subscription/sync");
     expect(routeSignatures(adminRevenueRoutes)).toEqual(expect.arrayContaining(["GET /report", "GET /export.csv"]));
     expect(routeSignatures(mobileNotificationPreferencesRoutes)).toEqual(expect.arrayContaining(["GET /", "PUT /"]));
     expect(routeSignatures(memberGroupClassesRoutes)).toEqual(expect.arrayContaining(["GET /:id/waitlist", "POST /:id/waitlist", "DELETE /:id/waitlist"]));

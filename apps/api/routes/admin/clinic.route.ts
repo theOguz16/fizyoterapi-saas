@@ -13,3 +13,4 @@ adminClinicRoutes.get("/qr", AdminClinicController.getClinicQr);
 adminClinicRoutes.get("/subscription", AdminClinicController.getSubscription);
 adminClinicRoutes.get("/subscription/history", AdminClinicController.getSubscriptionHistory);
 adminClinicRoutes.post("/subscription/start-trial", AdminClinicController.startTrial);
+adminClinicRoutes.post("/subscription/sync", AdminClinicController.syncSubscription);

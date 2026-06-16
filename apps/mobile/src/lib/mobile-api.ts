@@ -1516,6 +1516,12 @@ export async function startAdminClinicTrialApi() {
   });
 }
 
+export async function syncAdminClinicSubscriptionApi() {
+  return httpRequest<AdminClinicSubscription>("/admin/clinic/subscription/sync", {
+    method: "POST",
+  });
+}
+
 export async function getAdminSubscriptionHistoryApi() {
   const response = await httpRequest<{ data?: AdminSubscriptionHistoryItem[] } | AdminSubscriptionHistoryItem[]>(
     "/admin/clinic/subscription/history"
