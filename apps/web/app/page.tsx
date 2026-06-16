@@ -473,6 +473,14 @@ function FeaturedScreens() {
     <div className="featured-screens" aria-label="Fizyoflow öne çıkan ürün ekranları">
       {featuredScreens.map((screen) => (
         <article className="featured-screen-card" key={screen.title}>
+          <div className="iphone featured-screen-phone" aria-hidden="true">
+            <ProductScreenImage
+              src={screen.image}
+              fallbackSrc={screen.fallbackImage}
+              alt=""
+              priority={false}
+            />
+          </div>
           <div>
             <span>{screen.role}</span>
             <h3>{screen.title}</h3>

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const WEB_BASE = process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com";
+const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -27,6 +27,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: `${WEB_BASE.replace(/\/$/, "")}/sitemap.xml`,
+    sitemap: `${WEB_BASE}/sitemap.xml`,
   };
 }

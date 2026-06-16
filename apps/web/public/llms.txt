@@ -11,6 +11,7 @@ Fizyoflow; klinik sahibi, fizyoterapist ve danışanın aynı güncel operasyon 
 - [Seans ve paket takibi](https://fizyoflow.com/seans-paket-takibi): Paket hakkı, kalan hak, ödeme durumu ve yenileme takibi.
 - [Fizyoterapist check-in](https://fizyoflow.com/fizyoterapist-check-in): QR veya manuel kodla seans katılımı ve paket hakkı güncelleme.
 - [Danışan ve ölçüm takibi](https://fizyoflow.com/danisan-takibi-olcum): Danışan mobil deneyimi, kalan hak ve ölçüm geçmişi.
+- [Örnek klinik sayfası](https://fizyoflow.com/ornek-klinik): Fizyoflow ile yayınlanan örnek klinik profil deneyimi.
 
 ## Ürün Özeti
 
@@ -19,6 +20,7 @@ Fizyoflow; klinik sahibi, fizyoterapist ve danışanın aynı güncel operasyon 
 - Fizyoterapist: günlük seanslarını görür, danışan check-in işlemini QR veya manuel kodla işler.
 - Danışan: yaklaşan seansını, kalan paket hakkını, grup derslerini ve ölçüm geçmişini mobil uygulamada görür.
 - Güven: rol bazlı erişim, KVKK ve gizlilik metinleri, yetkilendirilmiş ekip kullanımı.
+- Ürün ekranları: yönetici dashboard, salon takvimi, paket yönetimi, gelir detayı, fizyoterapist check-in, fizyoterapist danışan detayı, danışan paket ekranı ve ölçüm geçmişi.
 
 ## Uygulama ve Güven
 

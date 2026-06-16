@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { seoLandingPages } from "./seo-content";
 
 const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "http://localhost:4949/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "";
 
 type PublicSalon = {
   slug: string;
@@ -9,6 +10,8 @@ type PublicSalon = {
 };
 
 async function getPublicSalons(): Promise<PublicSalon[]> {
+  if (!API_BASE) return [];
+
   try {
     const response = await fetch(`${API_BASE}/public/salons`, { next: { revalidate: 3600 } });
     if (!response.ok) return [];
@@ -21,12 +24,7 @@ async function getPublicSalons(): Promise<PublicSalon[]> {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const seoPages = [
-    "fizyoterapi-klinik-yonetim-sistemi",
-    "seans-paket-takibi",
-    "fizyoterapist-check-in",
-    "danisan-takibi-olcum",
-  ];
+  const seoPages = Object.values(seoLandingPages);
   const baseRows: MetadataRoute.Sitemap = [
     {
       url: WEB_BASE,
@@ -34,8 +32,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 1,
     },
-    ...seoPages.map((path) => ({
-      url: `${WEB_BASE}/${path}`,
+    ...seoPages.map((page) => ({
+      url: `${WEB_BASE}/${page.slug}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.85,

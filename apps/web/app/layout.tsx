@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   description: "Fizyoflow; fizyoterapi klinikleri için seans takibi, paket takibi, check-in, ekip yönetimi, ölçüm ve danışan takibini tek mobil akışta toplar.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com"),
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
   openGraph: {
     title: "Fizyoflow | Fizyoterapi Klinikleri İçin Mobil Yönetim Sistemi",
