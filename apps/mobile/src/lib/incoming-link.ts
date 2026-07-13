@@ -1,6 +1,13 @@
+import { extractSalonSlugFromQrPayload } from "./salon-qr";
+
 type IncomingLinkOptions = {
   allowE2E?: boolean;
 };
+
+export type IncomingLinkAction =
+  | { type: "internal"; href: string }
+  | { type: "salon"; slug: string }
+  | { type: "none" };
 
 const ROUTE_GROUP_PATTERN = /^\([a-z0-9-]+\)$/i;
 
@@ -36,6 +43,23 @@ export function resolveInternalHrefFromIncomingUrl(
   } catch {
     return null;
   }
+}
+
+export function resolveIncomingLinkAction(
+  rawUrl: string | null | undefined,
+  options: IncomingLinkOptions = {}
+): IncomingLinkAction {
+  const internalHref = resolveInternalHrefFromIncomingUrl(rawUrl, options);
+  if (internalHref) {
+    return { type: "internal", href: internalHref };
+  }
+
+  const salonSlug = extractSalonSlugFromQrPayload(String(rawUrl || ""));
+  if (salonSlug) {
+    return { type: "salon", slug: salonSlug };
+  }
+
+  return { type: "none" };
 }
 
 function normalizePathname(value: string) {

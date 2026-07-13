@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveInternalHrefFromIncomingUrl } from "@/lib/incoming-link";
+import { resolveIncomingLinkAction, resolveInternalHrefFromIncomingUrl } from "@/lib/incoming-link";
 
 describe("incoming mobile links", () => {
   it("normalizes current and legacy route-group links", () => {
@@ -15,5 +15,25 @@ describe("incoming mobile links", () => {
   it("only exposes test routes when the E2E build flag is enabled", () => {
     expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-reset")).toBeNull();
     expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-reset", { allowE2E: true })).toBe("/e2e-reset");
+  });
+
+  it("classifies internal routes, salon links and invalid input for the root hook", () => {
+    expect(resolveIncomingLinkAction("fizyoflow:///(member)/calendar")).toEqual({
+      type: "internal",
+      href: "/(member)/calendar",
+    });
+    expect(resolveIncomingLinkAction("fizyoflow://join/demo-salon")).toEqual({
+      type: "salon",
+      slug: "demo-salon",
+    });
+    expect(resolveIncomingLinkAction("https://example.com/unrelated")).toEqual({ type: "none" });
+  });
+
+  it("keeps E2E action classification behind the build flag", () => {
+    expect(resolveIncomingLinkAction("fizyoflow://e2e-reset")).toEqual({ type: "none" });
+    expect(resolveIncomingLinkAction("fizyoflow://e2e-reset", { allowE2E: true })).toEqual({
+      type: "internal",
+      href: "/e2e-reset",
+    });
   });
 });

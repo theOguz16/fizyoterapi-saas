@@ -8,7 +8,7 @@ type RouterLike = {
 type Role = "ADMIN" | "TRAINER" | "MEMBER";
 
 type SessionLikeUser = {
-  role?: Role | string;
+  role?: Role | string | null;
 };
 
 type AvailableSurfaces = {
@@ -40,6 +40,27 @@ type OnboardingState =
   | string
   | null
   | undefined;
+
+type RootNavigationUser = {
+  role?: Role | string | null;
+  tenantSlug?: string | null;
+} | null;
+
+type RootNavigationInput = {
+  loading: boolean;
+  pendingSalonSlug: string | null | undefined;
+  user: RootNavigationUser;
+  onboardingState?: OnboardingState;
+  mobileAvailable?: boolean;
+  pendingPostAuthScreen?: "NOTIFICATION_PERMISSION" | null;
+  signupFlowState: "idle" | "assessment" | "post-assessment";
+  selectedPersona?: Role | null;
+  segments: readonly string[];
+};
+
+export type RootNavigationDecision =
+  | { type: "none"; reason: string }
+  | { type: "replace"; href: string; reason: string };
 
 export function safeBack(router: RouterLike, fallbackHref: string, mode: "push" | "replace" = "replace") {
   if (mode === "push") {
@@ -122,6 +143,133 @@ export function resolveRoleHome(role: Role, onboardingState?: OnboardingState, _
   }
 
   return "/(auth)/welcome";
+}
+
+function normalizeSlugValue(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+export function resolvePendingSalonHome(input: {
+  pendingSalonSlug: string | null | undefined;
+  user: RootNavigationUser;
+  onboardingState?: OnboardingState;
+}) {
+  const pendingSlug = normalizeSlugValue(input.pendingSalonSlug);
+  if (!pendingSlug) return null;
+
+  if (!input.user) {
+    return `/(intake-member)/salons/${pendingSlug}`;
+  }
+
+  if (input.user.role !== "MEMBER") {
+    return null;
+  }
+
+  if (input.onboardingState !== "ACTIVE_SALON") {
+    return `/(intake-member)/salons/${pendingSlug}`;
+  }
+
+  return "/(member)/home";
+}
+
+export function resolveRootNavigation(input: RootNavigationInput): RootNavigationDecision {
+  if (input.loading || input.pendingSalonSlug === undefined) {
+    return { type: "none", reason: "BOOTSTRAP_PENDING" };
+  }
+
+  const currentGroup = input.segments[0];
+  const currentRoute = input.segments.join("/");
+  const authLeaf = input.segments.at(1);
+  const sharedLeaf = input.segments.at(1);
+  const inAuthGroup = currentGroup === "(auth)";
+  const inIntakeGroup = currentGroup === "(intake-member)";
+  const inSharedGroup = currentGroup === "(shared)";
+
+  if (currentRoute === "e2e-reset" || currentRoute === "e2e-login") {
+    return { type: "none", reason: "E2E_ROUTE" };
+  }
+
+  const allowedSignupLeaves =
+    input.signupFlowState === "assessment"
+      ? ["role-assessment"]
+      : input.selectedPersona === "ADMIN"
+        ? ["owner-plan", "register"]
+        : input.selectedPersona === "TRAINER"
+          ? ["trainer-invite-guide", "invite-accept"]
+          : ["register"];
+
+  if (!input.user && !inAuthGroup && !inIntakeGroup) {
+    return { type: "replace", href: "/(auth)/welcome", reason: "AUTH_REQUIRED" };
+  }
+
+  if (!input.user) {
+    if (input.signupFlowState !== "idle" && !allowedSignupLeaves.includes(authLeaf || "")) {
+      return {
+        type: "replace",
+        href: `/(auth)/${allowedSignupLeaves[0]}`,
+        reason: "SIGNUP_FLOW_GUARD",
+      };
+    }
+
+    return { type: "none", reason: "UNAUTHENTICATED_ROUTE_ALLOWED" };
+  }
+
+  if (input.mobileAvailable === false) {
+    return { type: "replace", href: "/(auth)/welcome", reason: "MOBILE_SURFACE_DISABLED" };
+  }
+
+  const role = input.user.role as Role;
+  const pendingSalonHome = resolvePendingSalonHome({
+    pendingSalonSlug: input.pendingSalonSlug,
+    user: input.user,
+    onboardingState: input.onboardingState,
+  });
+  const expectedGroup = resolveRoleGroup(role, input.onboardingState, input.user);
+  const nextHome = pendingSalonHome || resolveRoleHome(role, input.onboardingState, input.user);
+  const allowMemberConnectionAuthFlow =
+    role === "MEMBER" &&
+    input.onboardingState === "NO_SALON" &&
+    inAuthGroup &&
+    ["scan-salon-qr", "invite-accept"].includes(authLeaf || "");
+  const allowMemberPurchaseFlow =
+    role === "MEMBER" &&
+    inIntakeGroup &&
+    input.onboardingState === "ACTIVE_SALON" &&
+    !pendingSalonHome;
+  const allowSharedUtilityFlow =
+    inSharedGroup && ["notification-settings", "leave-salon", "invite-join"].includes(sharedLeaf || "");
+
+  if (
+    inAuthGroup &&
+    input.pendingPostAuthScreen === "NOTIFICATION_PERMISSION" &&
+    authLeaf !== "notification-permission"
+  ) {
+    return {
+      type: "replace",
+      href: "/(auth)/notification-permission",
+      reason: "NOTIFICATION_PERMISSION_REQUIRED",
+    };
+  }
+
+  if (inAuthGroup && input.pendingPostAuthScreen === "NOTIFICATION_PERMISSION") {
+    return { type: "none", reason: "NOTIFICATION_PERMISSION_ACTIVE" };
+  }
+
+  if (inAuthGroup && authLeaf !== "notification-permission" && !allowMemberConnectionAuthFlow) {
+    return { type: "replace", href: nextHome, reason: "AUTH_FLOW_COMPLETE" };
+  }
+
+  if (
+    currentGroup &&
+    currentGroup !== expectedGroup &&
+    !allowMemberPurchaseFlow &&
+    !allowSharedUtilityFlow &&
+    !allowMemberConnectionAuthFlow
+  ) {
+    return { type: "replace", href: nextHome, reason: "ROLE_GROUP_MISMATCH" };
+  }
+
+  return { type: "none", reason: "CURRENT_ROUTE_ALLOWED" };
 }
 
 export function resolveIndexRedirect(

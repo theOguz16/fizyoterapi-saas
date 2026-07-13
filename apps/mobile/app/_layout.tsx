@@ -3,25 +3,21 @@
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { ActivityIndicator, Animated, Easing, Linking, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFonts } from "expo-font";
-import * as Notifications from "expo-notifications";
 import { useQueryClient } from "@tanstack/react-query";
 import { DetourProvider } from "@swmansion/react-native-detour";
 import { SessionProvider, useSession } from "@/providers/auth-session";
 import { AppFlowProvider, useAppFlow } from "@/providers/app-flow";
 import { MobileQueryProvider } from "@/providers/query-provider";
 import { DetourLinkHandler } from "@/providers/detour-link-handler";
+import { useRootDeepLinkRouting } from "@/providers/root-deep-link-routing";
+import { useRootNotificationRouting } from "@/providers/root-notification-routing";
+import { useMemberRealtimeSync } from "@/providers/member-realtime-sync";
 import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
-import { resolveRoleGroup, resolveRoleHome } from "@/lib/navigation";
-import { resolveNotificationResponseHref } from "@/lib/push";
-import { subscribeToMemberRealtime } from "@/lib/member-realtime";
-import { getPendingSalonJoinSlug, setPendingSalonJoinSlug } from "@/lib/local-preferences";
-import { extractSalonSlugFromQrPayload } from "@/lib/salon-qr";
+import { resolveRootNavigation } from "@/lib/navigation";
 import { detourConfig, isDetourConfigured } from "@/lib/detour";
-import { isE2EModeEnabled } from "@/lib/e2e-mode";
-import { resolveInternalHrefFromIncomingUrl } from "@/lib/incoming-link";
 import { initMobileSentry, setSentryScreenContext, setSentryUserContext, wrapMobileRoot } from "@/lib/sentry";
 import { initializeProductAnalytics } from "@/lib/product-analytics";
 import { tokens } from "@/theme/tokens";
@@ -34,14 +30,22 @@ function RootGate() {
   const segments = useSegments();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const lastHandledNotificationIdRef = useRef<string | null>(null);
-  const [pendingSalonSlug, setPendingSalonSlug] = useState<string | null | undefined>(undefined);
+  const { pendingSalonSlug, setPendingSalonSlug, resolvePendingRoute } = useRootDeepLinkRouting({
+    user,
+    onboardingState,
+  });
 
-  useEffect(() => {
-    void getPendingSalonJoinSlug().then((slug) => {
-      setPendingSalonSlug(slug);
-    });
-  }, []);
+  useRootNotificationRouting({
+    enabled: !loading && Boolean(user),
+    role: user?.role,
+    onboardingState,
+  });
+
+  useMemberRealtimeSync({
+    enabled: !loading && user?.role === "MEMBER",
+    queryClient,
+    refreshSession: refreshMe,
+  });
 
   useEffect(() => {
     setSentryUserContext(user);
@@ -52,130 +56,20 @@ function RootGate() {
   }, [segments]);
 
   useEffect(() => {
-    async function handleIncomingUrl(rawUrl: string | null | undefined) {
-      const internalHref = resolveInternalHrefFromIncomingUrl(rawUrl, { allowE2E: isE2EModeEnabled() });
-
-      if (internalHref) {
-        router.replace(internalHref as never);
-        return;
-      }
-
-      const slug = extractSalonSlugFromQrPayload(String(rawUrl || ""));
-      if (!slug) return;
-
-      await setPendingSalonJoinSlug(slug);
-      setPendingSalonSlug(slug);
-
-      const nextRoute = resolvePendingSalonHome({
-        pendingSalonSlug: slug,
-        user,
-        onboardingState,
-      });
-
-      if (nextRoute) {
-        router.replace(nextRoute as never);
-      }
-    }
-
-    void Linking.getInitialURL().then((url) => {
-      if (url) void handleIncomingUrl(url);
-    });
-
-    const subscription = Linking.addEventListener("url", ({ url }) => {
-      void handleIncomingUrl(url);
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [onboardingState, router, user]);
-
-  useEffect(() => {
-    if (loading || pendingSalonSlug === undefined) return;
-
-    const currentGroup = segments[0];
-    const currentRoute = segments.join("/");
-    const inE2EResetRoute = currentRoute === "e2e-reset";
-    const inE2ELoginRoute = currentRoute === "e2e-login";
-    const inAuthGroup = currentGroup === "(auth)";
-    const inIntakeGroup = currentGroup === "(intake-member)";
-    const inSharedGroup = currentGroup === "(shared)";
-    const sharedLeaf = segments.at(1);
-    const authLeaf = segments.at(1);
-    const allowMemberConnectionAuthFlow =
-      user?.role === "MEMBER" &&
-      onboardingState === "NO_SALON" &&
-      inAuthGroup &&
-      ["scan-salon-qr", "invite-accept"].includes(authLeaf || "");
-    const allowedUnauthedGroups = inAuthGroup || inE2ELoginRoute;
-
-    const pendingSalonHome = resolvePendingSalonHome({
+    const decision = resolveRootNavigation({
+      loading,
       pendingSalonSlug,
       user,
       onboardingState,
+      mobileAvailable: availableSurfaces?.mobile,
+      pendingPostAuthScreen,
+      signupFlowState,
+      selectedPersona: selectedPersoma,
+      segments,
     });
 
-    const allowedSignupLeaves =
-      signupFlowState === "assessment"
-        ? ["role-assessment"]
-        : selectedPersoma === "ADMIN"
-          ? ["owner-plan", "register"]
-          : selectedPersoma === "TRAINER"
-            ? ["trainer-invite-guide", "invite-accept"]
-            : ["register"];
-
-    if (inE2EResetRoute || inE2ELoginRoute) {
-      return;
-    }
-
-    if (!user && !allowedUnauthedGroups && !inIntakeGroup) {
-      router.replace("/(auth)/welcome");
-      return;
-    }
-
-    if (!user) {
-      if (signupFlowState !== "idle" && !allowedSignupLeaves.includes(authLeaf || "")) {
-        const fallbackRoute = `/(auth)/${allowedSignupLeaves[0]}`;
-        router.replace(fallbackRoute as never);
-      }
-
-      return;
-    }
-
-    if (availableSurfaces?.mobile === false) {
-      router.replace("/(auth)/welcome");
-      return;
-    }
-
-    const expectedGroup = resolveRoleGroup(user.role as "TRAINER" | "MEMBER" | "ADMIN", onboardingState, user);
-    const nextHome =
-      pendingSalonHome || resolveRoleHome(user.role as "TRAINER" | "MEMBER" | "ADMIN", onboardingState, user);
-
-    const allowMemberPurchaseFlow =
-      user.role === "MEMBER" &&
-      currentGroup === "(intake-member)" &&
-      onboardingState === "ACTIVE_SALON" &&
-      !pendingSalonHome;
-    const allowSharedUtilityFlow =
-      inSharedGroup &&
-      ["notification-settings", "leave-salon", "invite-join"].includes(sharedLeaf || "");
-
-    if (inAuthGroup && pendingPostAuthScreen === "NOTIFICATION_PERMISSION" && authLeaf !== "notification-permission") {
-      router.replace("/(auth)/notification-permission" as never);
-      return;
-    }
-
-    if (inAuthGroup && pendingPostAuthScreen === "NOTIFICATION_PERMISSION") {
-      return;
-    }
-
-    if (inAuthGroup && authLeaf !== "notification-permission" && !allowMemberConnectionAuthFlow) {
-      router.replace(nextHome as never);
-      return;
-    }
-
-    if (currentGroup && currentGroup !== expectedGroup && !allowMemberPurchaseFlow && !allowSharedUtilityFlow && !allowMemberConnectionAuthFlow) {
-      router.replace(nextHome as never);
+    if (decision.type === "replace") {
+      router.replace(decision.href as never);
     }
   }, [
     loading,
@@ -190,63 +84,6 @@ function RootGate() {
     selectedPersoma,
   ]);
 
-  useEffect(() => {
-    if (loading || !user) return;
-
-    const userRole = user.role;
-
-    function openNotificationRoute(response: Notifications.NotificationResponse | null | undefined) {
-      const identifier = response?.notification?.request?.identifier || null;
-
-      if (!response || !identifier || lastHandledNotificationIdRef.current === identifier) {
-        return;
-      }
-
-      const href = resolveNotificationResponseHref(response, {
-        role: userRole,
-        onboardingState,
-      });
-
-      if (!href) return;
-
-      lastHandledNotificationIdRef.current = identifier;
-      router.push(href as never);
-    }
-
-    void Notifications.getLastNotificationResponseAsync().then((response) => {
-      openNotificationRoute(response);
-    });
-
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      openNotificationRoute(response);
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, [loading, onboardingState, router, user]);
-
-  useEffect(() => {
-    if (loading || !user || user.role !== "MEMBER") return;
-
-    return subscribeToMemberRealtime((payload) => {
-      const type = String(payload.data?.type || "").toLowerCase();
-      const entity = String(payload.data?.entity || "").toLowerCase();
-
-      if (payload.event !== "connected" && type !== "calendar_sync" && entity !== "calendar") return;
-
-      if (type === "calendar_sync" || entity === "calendar") {
-        void refreshMe().catch(() => null);
-      }
-
-      void queryClient.invalidateQueries({ queryKey: ["member-bookings-calendar"] });
-      void queryClient.invalidateQueries({ queryKey: ["member-availability-calendar"] });
-      void queryClient.invalidateQueries({ queryKey: ["member-home-calendar"] });
-      void queryClient.invalidateQueries({ queryKey: ["member-home"] });
-      void queryClient.invalidateQueries({ queryKey: ["member-availability"] });
-    });
-  }, [loading, queryClient, refreshMe, user]);
-
   if (loading || pendingSalonSlug === undefined) {
     return (
       <View style={styles.loadingWrap}>
@@ -260,13 +97,7 @@ function RootGate() {
       {isDetourConfigured() ? (
         <DetourLinkHandler
           onPendingSalonSlug={setPendingSalonSlug}
-          resolveRoute={(slug) =>
-            resolvePendingSalonHome({
-              pendingSalonSlug: slug,
-              user,
-              onboardingState,
-            })
-          }
+          resolveRoute={resolvePendingRoute}
         />
       ) : null}
 
@@ -274,47 +105,6 @@ function RootGate() {
       <ConnectivityBanner />
     </>
   );
-}
-
-function normalizeSlugValue(value: unknown) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function resolveUserActiveSalonSlug(user: { tenantSlug?: string | null } | null | undefined) {
-  return normalizeSlugValue(user?.tenantSlug);
-}
-
-function resolvePendingSalonHome(input: {
-  pendingSalonSlug: string | null | undefined;
-  user: { role?: string | null; tenantSlug?: string | null } | null | undefined;
-  onboardingState?: string | null;
-}) {
-  const pendingSlug = normalizeSlugValue(input.pendingSalonSlug);
-  if (!pendingSlug) return null;
-
-  if (!input.user) {
-    return `/(intake-member)/salons/${pendingSlug}`;
-  }
-
-  if (input.user.role !== "MEMBER") {
-    return null;
-  }
-
-  if (input.onboardingState !== "ACTIVE_SALON") {
-    return `/(intake-member)/salons/${pendingSlug}`;
-  }
-
-  const activeSalonSlug = resolveUserActiveSalonSlug(input.user);
-
-  if (!activeSalonSlug) {
-    return "/(member)/home";
-  }
-
-  if (activeSalonSlug === pendingSlug) {
-    return "/(member)/home";
-  }
-
-  return "/(member)/home";
 }
 
 function RootLayout() {
