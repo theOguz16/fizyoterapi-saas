@@ -9,7 +9,7 @@ import { TrackedGallery } from "../components/tracked-gallery";
 
 const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
 const APP_STORE_URL = "https://apps.apple.com/tr/app/fizyoflow/id6771870032?l=tr";
-const CANONICAL_DESCRIPTION = "Fizyoflow, fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil akışta toplayan yönetim sistemidir.";
+const CANONICAL_DESCRIPTION = "Fizyoflow, fizyoterapi ve klinik pilates merkezleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil akışta birleştiren klinik yönetim platformudur.";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 const screenGroups = [
   {
-    role: "Yönetici",
+    role: "Klinik yönetimi",
     fallbackImage: "/product-screens/admin-dashboard.png",
     summary: "Klinik sahibi seans, paket, ödeme ve ekip yoğunluğunu aynı merkezden takip eder.",
     screens: [
@@ -32,7 +32,7 @@ const screenGroups = [
     ],
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     fallbackImage: "/product-screens/trainer-home.png",
     summary: "Fizyoterapist günlük seanslarını, danışan bilgisini ve check-in işlemini cebinden yürütür.",
     screens: [
@@ -46,7 +46,7 @@ const screenGroups = [
     ],
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     fallbackImage: "/product-screens/member-home.png",
     summary: "Danışan yaklaşan seansını, kalan hakkını ve paket geçmişini uygulamada takip eder.",
     screens: [
@@ -88,17 +88,17 @@ const trustItems = [
 
 const productExplainers = [
   {
-    role: "Klinik sahibi",
+    role: "Yönetim merkezi",
     title: "Operasyon görünür olur",
     text: "Seans, paket, gelir ve ekip akışı yönetim ekranında birlikte okunur.",
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     title: "Seans sahada tamamlanır",
     text: "Günlük akış, danışan detayı ve check-in işlemi mobilde hazırdır.",
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     title: "Süreç danışana görünür",
     text: "Yaklaşan seans, kalan hak, ölçüm ve gelişim bilgisi uygulamada takip edilir.",
   },
@@ -108,20 +108,20 @@ const comparisonItems = [
   { scattered: "WhatsApp konuşmaları", flow: "Tek danışan kaydı", result: "Not, paket ve seans geçmişi aynı dosyada kalır." },
   { scattered: "Excel paket takibi", flow: "Otomatik kalan hak", result: "Check-in işlendiğinde hak bilgisi güncel görünür." },
   { scattered: "Dekont ve manuel kontrol", flow: "Yönetici onay akışı", result: "Ödeme ve paket talebi karar ekranına düşer." },
-  { scattered: "Eğitmene ayrı bilgi verme", flow: "Günlük fizyoterapist ekranı", result: "Fizyoterapist sıradaki seansı ve danışan bilgisini görür." },
+  { scattered: "Ekibe ayrı bilgi verme", flow: "Günlük uzman ekranı", result: "Fizyoterapist sıradaki seansı ve danışan bilgisini görür." },
   { scattered: "Danışanın tekrar tekrar yazması", flow: "Mobil danışan görünümü", result: "Yaklaşan seans, kalan hak ve ölçüm bilgisi uygulamadadır." },
 ];
 
 const featuredScreens = [
   {
-    role: "Yönetici",
+    role: "Klinik yönetimi",
     title: "Operasyon görünümü",
     text: "Günlük seans, ekip yoğunluğu ve paket durumu tek yönetim ekranında okunur.",
     image: "/product-screens/admin-dashboard.png",
     fallbackImage: "/product-screens/admin-dashboard.png",
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     title: "Sahada danışan dosyası",
     text: "Fizyoterapist aktif paket, katılım ve ölçüm bilgisini seans öncesinde görür.",
     image: "/product-screens/trainer-client-detail.png",
@@ -135,7 +135,7 @@ const featuredScreens = [
     fallbackImage: "/product-screens/trainer-checkin.png",
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     title: "Kalan hak ve ölçüm",
     text: "Danışan yaklaşan seansını, paket hakkını ve gelişim kayıtlarını mobilde takip eder.",
     image: "/product-screens/member-package.png",
@@ -205,10 +205,12 @@ export default function HomePage() {
           availability: "https://schema.org/InStock",
         },
         featureList: [
-          "Seans takibi",
-          "Paket ve kalan hak takibi",
-          "Fizyoterapist check-in akışı",
+          "Randevu ve seans takibi",
+          "Paket ve kalan hak yönetimi",
+          "Ekip ve fizyoterapist operasyonu",
+          "QR check-in akışı",
           "Danışan mobil deneyimi",
+          "Gelir ve seans raporları",
           "Ölçüm geçmişi",
           "Rol bazlı erişim",
         ],
@@ -254,7 +256,7 @@ export default function HomePage() {
         <div className="brand-intro-inner">
           <img src="/brand/fizyoflow-current-mark.png" alt="" />
           <strong>Fizyoflow</strong>
-          <span>Seans, paket ve danışan takibi tek akışta.</span>
+          <span>Mobil klinik yönetimi tek akışta.</span>
         </div>
       </div>
 
@@ -272,10 +274,10 @@ export default function HomePage() {
         <div className="hero-beams" aria-hidden="true" />
         <div className="product-shell product-hero-grid">
           <div className="product-hero-copy">
-            <p className="product-kicker">Fizyoterapi klinikleri için mobil operasyon sistemi</p>
-            <h1>Fizyoterapi kliniğinizde seans, paket ve check-in takibi <span className="hero-highlight">dağılmasın</span>.</h1>
+            <p className="product-kicker">Fizyoterapi ve pilates klinikleri için</p>
+            <h1>Fizyoflow <span className="hero-highlight">mobil klinik yönetim platformu.</span></h1>
             <p className="product-lead">
-              Fizyoflow; klinik sahibinin yönetim ekranını, fizyoterapistin günlük akışını ve danışanın mobil deneyimini aynı güncel kayıt üzerinde buluşturur.
+              Randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek merkezden yönetin. Fizyoterapistler ve danışanlar, kliniğinizin güncel akışına kendi mobil ekranlarından bağlansın.
             </p>
             <div className="product-store-actions" aria-label="Fizyoflow uygulama indirme bağlantıları">
               <MarketingLink
@@ -304,7 +306,7 @@ export default function HomePage() {
         <div className="product-shell product-explain-grid">
           <div className="product-section-heading">
             <p className="product-kicker">Fizyoflow nedir?</p>
-            <h2>Klinik sahibini, fizyoterapisti ve danışanı aynı güncel akışta buluşturan sistem.</h2>
+            <h2>Klinik operasyonunu tek merkezde tutan, ekip ve danışan deneyimini bu merkeze bağlayan platform.</h2>
             <p>
               Fizyoflow yalnızca bir takvim değildir. Başvuru, seans planı, paket hakkı, ödeme durumu, check-in,
               ölçüm geçmişi ve yenileme takibini birbirine bağlar.
@@ -330,8 +332,8 @@ export default function HomePage() {
         <div className="product-shell">
           <div className="product-section-heading">
             <p className="product-kicker">Gerçek ürün ekranları</p>
-            <h2>Önce en kritik akışlar, sonra tüm ürün ekranları.</h2>
-            <p>Yönetici operasyonu takip eder, fizyoterapist seansı işler, danışan kendi sürecini uygulamada görür.</p>
+            <h2>Klinik yönetiminden ekip ve danışan deneyimine uzanan tek ürün.</h2>
+            <p>Klinik sahibi operasyonu yönetir; fizyoterapist seansı işler, danışan kendi sürecini uygulamada görür.</p>
           </div>
 
           <FeaturedScreens />
@@ -408,8 +410,8 @@ export default function HomePage() {
           <div className="product-demo-copy">
             <img src="/brand/fizyoflow-current-mark.png" alt="" />
             <p className="product-kicker">Kısa bir görüşmeyle başlayın</p>
-            <h2>15 dakikada seans, paket ve check-in takibinin nerede koptuğunu birlikte çıkaralım.</h2>
-            <p>Klinik akışınızı birlikte açarız: hangi takip WhatsApp’ta kalıyor, paket hakkı nerede kopuyor, check-in ve danışan bilgilendirmesi nasıl sadeleşir netleştiririz.</p>
+            <h2>15 dakikada klinik operasyonunuzun nerede dağıldığını birlikte çıkaralım.</h2>
+            <p>Randevu, paket, ekip, QR, danışan bilgilendirmesi ve gelir/seans takibinin nasıl tek akışta sadeleşeceğini netleştiririz.</p>
           </div>
           <DemoLeadForm compact />
         </div>

@@ -8,63 +8,63 @@ import { trackMarketingEvent } from "./site-analytics";
 
 const storySteps = [
   {
-    role: "Yönetici",
+    role: "Klinik yönetimi",
     title: "Klinik güne tek ekrandan başlar.",
     text: "Yönetici bugünkü seansları, aktif danışanları, ekip yoğunluğunu ve takip gerektiren paketleri aynı yönetim merkezinde görür.",
     image: "/product-screens/admin-dashboard.png",
     details: ["Günlük operasyon özeti", "Gelir ve ekip görünürlüğü", "Paket bitiş takibi"],
   },
   {
-    role: "Yönetici",
+    role: "Klinik yönetimi",
     title: "Danışan ve ekip kaydı tek yerde tutulur.",
     text: "Yönetici aktif danışanları, fizyoterapistleri, paket durumunu ve takip ihtiyacını aynı listeden ayırır.",
     image: "/product-screens/admin-members.png",
     details: ["Danışan listesi", "Fizyoterapist görünümü", "Rol ve durum filtreleri"],
   },
   {
-    role: "Yönetici",
+    role: "Klinik yönetimi",
     title: "Paket ve gelir akışı görünür kalır.",
     text: "Paket kurgusu, hizmet ücretleri ve dönemsel gelir görünümü klinik sahibinin karar ekranında birleşir.",
     image: "/product-screens/admin-revenue-detail.png",
     details: ["Gelir detayı", "Paket takibi", "Dönemsel görünüm"],
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     title: "Fizyoterapist günün akışını cebinde görür.",
     text: "Bugünkü seanslar, sıradaki danışan ve yapılacak check-in işlemi masa başına dönmeden hazır olur.",
     image: "/product-screens/trainer-home.png",
     details: ["Bugünkü seanslar", "Danışan bilgisi", "Günlük akış"],
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     title: "Danışan dosyası sahada hazırdır.",
     text: "Aktif paket, kalan hak, son katılım, QR kodu ve ölçüm bilgileri fizyoterapistin danışan detayında görünür.",
     image: "/product-screens/trainer-client-detail.png",
     details: ["Aktif paket", "Kalan hak", "Ölçüm ve katılım"],
   },
   {
-    role: "Fizyoterapist",
+    role: "Ekip operasyonu",
     title: "Check-in işlendiğinde paket hakkı güncellenir.",
     text: "QR veya manuel MEM kodu ile seans katılımı kaydedilir; doğru paketten hak düşer ve kayıt güncel kalır.",
     image: "/product-screens/trainer-checkin.png",
     details: ["QR check-in", "Manuel MEM kodu", "Otomatik hak düşümü"],
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     title: "Danışan kendi sürecini uygulamada takip eder.",
     text: "Yaklaşan seans, kalan hak, grup dersleri, ölçüm ve bildirimler danışanın mobil deneyiminde bir araya gelir.",
     image: "/product-screens/member-home.png",
     details: ["Yaklaşan seans", "Ölçüm takibi", "Mobil bildirimler"],
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     title: "Paket geçmişi ve yenileme ihtiyacı görünür kalır.",
     text: "Kalan hak, geçmiş paketler, ek paket talebi ve yenileme adımı danışanın paket ekranında takip edilir.",
     image: "/product-screens/member-package.png",
     details: ["Kalan hak", "Paket geçmişi", "Yenileme akışı"],
   },
   {
-    role: "Danışan",
+    role: "Danışan deneyimi",
     title: "Ölçüm ve gelişim kayıtları kaybolmaz.",
     text: "Danışan güncel ölçümlerini, geçmiş değerlerini ve gelişim özetini uygulama içinde takip eder.",
     image: "/product-screens/member-measurements.png",
@@ -73,9 +73,9 @@ const storySteps = [
 ];
 
 const roleTone: Record<string, string> = {
-  Yönetici: "role-admin",
-  Fizyoterapist: "role-trainer",
-  Danışan: "role-member",
+  "Klinik yönetimi": "role-admin",
+  "Ekip operasyonu": "role-trainer",
+  "Danışan deneyimi": "role-member",
 };
 
 type ProductShowcaseProps = {
@@ -120,8 +120,8 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
     <section className={`product-showcase-section${hero ? " product-showcase-hero" : ""}`} aria-labelledby="showcase-title">
       <div className={hero ? "showcase-inner" : "product-shell"}>
         <div className="showcase-heading">
-          <p className="product-kicker">Ürünü çalışırken görün</p>
-          <h2 id="showcase-title">Klinik sahibi, fizyoterapist ve danışan aynı akışın farklı ekranlarını kullanır.</h2>
+          <p className="product-kicker">Klinik operasyonu çalışırken</p>
+          <h2 id="showcase-title">Yönetim merkezindeki her güncelleme ekip ve danışan ekranlarına bağlanır.</h2>
         </div>
 
         <div

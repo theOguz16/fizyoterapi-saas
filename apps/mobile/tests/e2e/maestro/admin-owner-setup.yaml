@@ -7,10 +7,11 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
+- assertVisible: "Kliniğini kurmaya başla"
 - tapOn:
     id: "welcome-signup-button"
     retryTapIfNoChange: true
-- assertVisible: "FizyoFlow’yı hangi rolde kullanacaksın?"
+- assertVisible: "Kliniğini kur veya davetinle katıl"
 - scrollUntilVisible:
     element:
       id: "role-option-admin"
@@ -18,3 +19,29 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - assertVisible:
     id: "role-option-admin"
+- tapOn:
+    id: "role-option-admin"
+- assertVisible: "İlk günden hangi alanı daha sıkı yönetmek istiyorsun?"
+- tapOn:
+    id: "role-step-primarygoal-operations"
+- assertVisible: "Klinik yönetiminde günlerin çoğunlukla nasıl geçiyor?"
+- tapOn:
+    id: "role-step-rhythm-steady"
+- assertVisible: "Panel kullanımında nasıl bir yapı beklersin?"
+- tapOn:
+    id: "role-step-supportstyle-control"
+- assertVisible: "Klinik ve salon sahipleri için"
+- swipe:
+    start: "50%,85%"
+    end: "50%,20%"
+    duration: 1000
+- swipe:
+    start: "50%,85%"
+    end: "50%,20%"
+    duration: 1000
+- tapOn:
+    point: "50%,89%"
+- assertVisible: "Hesabını oluştur"
+- assertVisible: "Klinik sahibi hesabı"
+- assertVisible:
+    id: "register-email-input"

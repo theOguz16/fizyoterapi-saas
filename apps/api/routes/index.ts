@@ -8,10 +8,12 @@ import { publicInvitesRoutes } from "./public-invites.route";
 import { billingRoutes } from "./billing.route";
 import { mobileDevicesRoutes } from "./mobile/devices.route";
 import { mobileNotificationPreferencesRoutes } from "./mobile/notification-preferences.route";
+import { mobileProductEventsRoutes } from "./mobile/product-events.route";
 import { accountClinicRequestRoutes } from "./account/clinic-request.route";
 import { internalClinicRequestsRoutes } from "./internal/clinic-requests.route";
 import { internalAuditLogsRoutes } from "./internal/audit-logs.route";
 import { internalE2ERoutes } from "./internal/e2e.route";
+import { successResponseEnvelope } from "../middlewares/success-response.middleware";
 
 // admin
 import { adminDashboardRoutes } from "./admin/dashboard.route";
@@ -65,6 +67,8 @@ import { memberGroupClassesRoutes } from "./member/group-classes.route";
 // ilgili route dosyasi ve bu merkezi baglama noktasi.
 export const appRouter = Router();
 
+appRouter.use(successResponseEnvelope);
+
 // Auth/public route'lari tenant bagimsiz veya login oncesi akislar icindir.
 appRouter.use("/auth", authRoutes);
 appRouter.use("/public", publicRoutes);
@@ -72,6 +76,7 @@ appRouter.use("/public/invites", publicInvitesRoutes);
 appRouter.use("/billing", billingRoutes);
 appRouter.use("/mobile/devices", mobileDevicesRoutes);
 appRouter.use("/mobile/notification-preferences", mobileNotificationPreferencesRoutes);
+appRouter.use("/mobile/product-events", mobileProductEventsRoutes);
 appRouter.use("/account/clinic-request", accountClinicRequestRoutes);
 appRouter.use("/internal/clinic-requests", internalClinicRequestsRoutes);
 appRouter.use("/internal/audit-logs", internalAuditLogsRoutes);

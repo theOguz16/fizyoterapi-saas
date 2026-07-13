@@ -23,6 +23,7 @@ import { detourConfig, isDetourConfigured } from "@/lib/detour";
 import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { resolveInternalHrefFromIncomingUrl } from "@/lib/incoming-link";
 import { initMobileSentry, setSentryScreenContext, setSentryUserContext, wrapMobileRoot } from "@/lib/sentry";
+import { initializeProductAnalytics } from "@/lib/product-analytics";
 import { tokens } from "@/theme/tokens";
 
 initMobileSentry();
@@ -101,6 +102,11 @@ function RootGate() {
     const inSharedGroup = currentGroup === "(shared)";
     const sharedLeaf = segments.at(1);
     const authLeaf = segments.at(1);
+    const allowMemberConnectionAuthFlow =
+      user?.role === "MEMBER" &&
+      onboardingState === "NO_SALON" &&
+      inAuthGroup &&
+      ["scan-salon-qr", "invite-accept"].includes(authLeaf || "");
     const allowedUnauthedGroups = inAuthGroup || inE2ELoginRoute;
 
     const pendingSalonHome = resolvePendingSalonHome({
@@ -163,12 +169,12 @@ function RootGate() {
       return;
     }
 
-    if (inAuthGroup && authLeaf !== "notification-permission") {
+    if (inAuthGroup && authLeaf !== "notification-permission" && !allowMemberConnectionAuthFlow) {
       router.replace(nextHome as never);
       return;
     }
 
-    if (currentGroup && currentGroup !== expectedGroup && !allowMemberPurchaseFlow && !allowSharedUtilityFlow) {
+    if (currentGroup && currentGroup !== expectedGroup && !allowMemberPurchaseFlow && !allowSharedUtilityFlow && !allowMemberConnectionAuthFlow) {
       router.replace(nextHome as never);
     }
   }, [
@@ -319,6 +325,10 @@ function RootLayout() {
     "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
     "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
   });
+
+  useEffect(() => {
+    void initializeProductAnalytics();
+  }, []);
 
   const TextComponent = Text as typeof Text & { defaultProps?: Record<string, unknown> };
   const TextInputComponent = TextInput as typeof TextInput & { defaultProps?: Record<string, unknown> };

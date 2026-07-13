@@ -4,7 +4,8 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/theme/components/app-icon";
 import { ActionButton } from "@/theme/components/action-button";
-import { SUBSCRIPTION_PRICING, type BillingCycle } from "@/lib/subscription-pricing";
+import { SUBSCRIPTION_PRICING, SUBSCRIPTION_VALUE_PROOFS, type BillingCycle } from "@/lib/subscription-pricing";
+import { CLINIC_TRIAL_DAYS } from "@/lib/admin-subscription";
 import { tokens } from "@/theme/tokens";
 
 export default function OwnerPlanScreen() {
@@ -55,10 +56,10 @@ export default function OwnerPlanScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
         <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }}>
           <View style={styles.hero}>
-            <Text style={styles.eyebrow}>Salon sahipleri için plan</Text>
-            <Text style={styles.title}>Önce ücretsiz dene, sonra planını etkinleştir.</Text>
+            <Text style={styles.eyebrow}>Klinik ve salon sahipleri için</Text>
+            <Text style={styles.title}>Yönetim sistemini ücretsiz dene, hazır olduğunda planını etkinleştir.</Text>
             <Text style={styles.subtitle}>
-              5 gün ücretsiz deneme ile salon yönetimini test et. Deneme süresinde salonunu kurabilir, ekibini hazırlayabilir ve hazır olduğunda planını etkinleştirebilirsin.
+              {CLINIC_TRIAL_DAYS} gün ücretsiz deneme ile kliniğini kurabilir; ekip, danışan, paket ve rezervasyon yönetimini tek akışta deneyebilirsin.
             </Text>
           </View>
         </Animated.View>
@@ -67,9 +68,9 @@ export default function OwnerPlanScreen() {
           <View style={styles.journeyCard}>
             <Text style={styles.journeyTitle}>Başlangıç sırası</Text>
             {[
-              ["1", "Salon bilgileri", "Hesabını oluştur ve salonunun temel bilgilerini tamamla."],
-              ["2", "Ücretsiz deneme veya ödeme", "Önce 5 günlük denemeyi başlat ya da planını doğrudan etkinleştir."],
-              ["3", "Kullanıma başla", "Salonun otomatik açılır; ekip, paket ve rezervasyon yönetimine geçersin."],
+              ["1", "Klinik bilgileri", "Yönetim hesabını oluştur ve kliniğinin temel bilgilerini tamamla."],
+              ["2", "Ücretsiz deneme veya ödeme", `Önce ${CLINIC_TRIAL_DAYS} günlük denemeyi başlat ya da planını doğrudan etkinleştir.`],
+              ["3", "Kullanıma başla", "Kliniğin açılır; ekip, danışan, paket ve rezervasyon yönetimine geçersin."],
             ].map(([step, title, description]) => (
               <View key={step} style={styles.journeyRow}>
                 <View style={styles.journeyStep}>
@@ -81,6 +82,25 @@ export default function OwnerPlanScreen() {
                 </View>
               </View>
             ))}
+          </View>
+
+          <View style={styles.valueCard} testID="owner-plan-value-proof">
+            <View style={styles.valueHeader}>
+              <Text style={styles.valueEyebrow}>TEK PLAN, TEK OPERASYON</Text>
+              <Text style={styles.valueTitle}>Bu planla neleri yönetirsin?</Text>
+              <Text style={styles.valueIntro}>Kliniğinin günlük işlerini ayrı araçlara bölmeden aynı yönetim akışında tutarsın.</Text>
+            </View>
+            <View style={styles.valueList}>
+              {SUBSCRIPTION_VALUE_PROOFS.map((item) => (
+                <View key={item.key} style={styles.valueRow}>
+                  <AppIcon name={item.icon} size="sm" tone="primary" />
+                  <View style={styles.valueCopyWrap}>
+                    <Text style={styles.valueRowTitle}>{item.title}</Text>
+                    <Text style={styles.valueDescription}>{item.description}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
           <View style={styles.switchRow}>
@@ -127,7 +147,7 @@ export default function OwnerPlanScreen() {
             <View style={styles.trialCard}>
               <Text style={styles.trialTitle}>Deneme süresi</Text>
               <Text style={styles.trialCopy}>
-                5 günlük deneme; salon kurulumunu tamamlamak, ekibini davet etmek ve ilk rezervasyon akışını görmek için yeterli, hızlı ve net bir karar penceresi sunar.
+                {CLINIC_TRIAL_DAYS} günlük denemede klinik kurulumunu tamamlayabilir, ekibini davet edebilir ve ilk rezervasyon akışını deneyebilirsin.
               </Text>
             </View>
           </View>
@@ -237,6 +257,56 @@ const styles = StyleSheet.create({
     color: tokens.colors.textMuted,
     fontSize: tokens.font.xs,
     lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
+  },
+  valueCard: {
+    gap: tokens.spacing.md,
+    padding: tokens.spacing.lg,
+    borderWidth: 1,
+    borderColor: "rgba(111,146,116,0.24)",
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surface,
+  },
+  valueHeader: {
+    gap: tokens.spacing.xs,
+  },
+  valueEyebrow: {
+    color: tokens.colors.primaryStrong,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  valueTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.lg,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  valueIntro: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.sm,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
+  },
+  valueList: {
+    gap: tokens.spacing.md,
+  },
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: tokens.spacing.sm,
+  },
+  valueCopyWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  valueRowTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  valueDescription: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.compact,
     fontFamily: tokens.fontFamily.regular,
   },
   billingChip: {

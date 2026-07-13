@@ -13,6 +13,19 @@ describe("auth middleware integration", () => {
     process.env.JWT_SECRET = "test-secret";
   });
 
+  it("exposes admin and trainer personas for a solo clinic owner account", () => {
+    const roles = (AuthController as any).resolveAvailablePersonasForAccount(
+      { id: "account-1", global_role_default: "ADMIN" },
+      [
+        { role: "ADMIN", tenant_id: "tenant-1" },
+        { role: "TRAINER", tenant_id: "tenant-1" },
+      ],
+      { id: "tenant-1", owner_account_id: "account-1" }
+    );
+
+    expect(roles).toEqual(expect.arrayContaining(["ADMIN", "TRAINER"]));
+  });
+
   it("returns config error when JWT secret is missing", async () => {
     delete process.env.JWT_SECRET;
     const response = await runRouteChain(

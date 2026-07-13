@@ -7,29 +7,20 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
+- assertVisible: "Kliniğini kurmaya başla"
 - tapOn:
     id: "welcome-signup-button"
     retryTapIfNoChange: true
-- assertVisible: "FizyoFlow’yı hangi rolde kullanacaksın?"
-- scrollUntilVisible:
-    element:
-      id: "role-option-member"
-    direction: DOWN
-    timeout: 10000
-    visibilityPercentage: 80
+- assertVisible: "Kliniğini kur veya davetinle katıl"
+- swipe:
+    start: "50%,85%"
+    end: "50%,20%"
+    duration: 1000
+- swipe:
+    start: "50%,85%"
+    end: "50%,20%"
+    duration: 1000
 - tapOn:
-    id: "role-option-member"
-- waitForAnimationToEnd:
-    timeout: 3000
-- assertVisible: "Başlangıçta en çok hangi hedefe odaklanıyorsun?"
-- tapOn:
-    id: "role-step-primarygoal-fitness"
-- assertVisible: "Haftalık tempon hangisine daha yakın?"
-- tapOn:
-    id: "role-step-rhythm-steady"
-- assertVisible: "Başlangıçta nasıl bir deneyim beklersin?"
-- tapOn:
-    id: "role-step-supportstyle-guided"
-- assertVisible: "Hesabını oluştur"
-- assertVisible:
-    id: "register-email-input"
+    point: "50%,82%"
+- assertVisible: "Salon QR okut"
+- assertVisible: "Salon onboarding"

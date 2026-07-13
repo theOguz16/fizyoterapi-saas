@@ -5,12 +5,12 @@ const APP_STORE_URL = "https://apps.apple.com/tr/app/fizyoflow/id6771870032?l=tr
 export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: string; metaDescription: string }> = {
   "fizyoterapi-klinik-yonetim-sistemi": {
     eyebrow: "Fizyoterapi klinik yönetim sistemi",
-    title: "Fizyoterapi kliniklerinde seans, paket ve danışan takibi tek mobil akışta.",
-    description: "Fizyoflow, fizyoterapi klinikleri için yönetici, fizyoterapist ve danışan ekranlarını aynı güncel kayıt üzerinden buluşturur.",
+    title: "Fizyoterapi ve pilates kliniklerinde tüm operasyon tek mobil akışta.",
+    description: "Fizyoflow, klinik sahibinin randevu, paket, danışan, ekip, QR ve gelir/seans süreçlerini tek merkezden yönettiği mobil klinik yönetim platformudur.",
     slug: "fizyoterapi-klinik-yonetim-sistemi",
     ctaText: "Klinik akışını birlikte çıkaralım",
     metaTitle: "Fizyoterapi Klinik Yönetim Sistemi | Fizyoflow",
-    metaDescription: "Fizyoflow; fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek mobil yönetim sisteminde toplar.",
+    metaDescription: "Fizyoflow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
     image: "/product-screens/admin-dashboard.png",
     imageAlt: "Fizyoflow fizyoterapi klinik yönetim merkezi ekranı",
     outcomes: [
@@ -24,8 +24,8 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
         text: "Fizyoflow; başvuru, seans planı, paket hakkı, ödeme durumu, check-in ve ölçüm geçmişini birbirine bağlar. Böylece klinik sahibi günlük akışı farklı mesajlar ve tablolar arasında aramak zorunda kalmaz.",
       },
       {
-        title: "Üç rol aynı verinin kendi tarafını kullanır",
-        text: "Yönetici operasyon özetini, fizyoterapist günlük seansını, danışan ise kendi seans ve paket bilgisini görür. Her rol aynı sistemde kalır ama yalnızca kendi işiyle ilgili ekranı kullanır.",
+        title: "Klinik sahibi yönetir, ekip ve danışanlar akışa katılır",
+        text: "Klinik sahibi operasyonun tamamını yönetir; fizyoterapist günlük seansını, danışan ise kendi seans ve paket bilgisini görür. Ekip ve danışan deneyimi klinik yönetiminin güncel kayıtlarına bağlı ilerler.",
       },
     ],
     faq: [
@@ -41,7 +41,7 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
   },
   "seans-paket-takibi": {
     eyebrow: "Seans ve paket takibi",
-    title: "Seans işlendiğinde paket hakkı güncel kalır.",
+    title: "Klinik seansları işlendiğinde paket hakkı güncel kalır.",
     description: "Fizyoflow, danışanın katılımını, kalan paket hakkını, paket geçmişini ve yenileme ihtiyacını aynı kayıt üzerinde takip eder.",
     slug: "seans-paket-takibi",
     ctaText: "Paket takip akışını konuşalım",
@@ -76,13 +76,13 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
     ],
   },
   "fizyoterapist-check-in": {
-    eyebrow: "Fizyoterapist check-in uygulaması",
-    title: "Fizyoterapist günlük seansını görür, katılımı mobilde işler.",
-    description: "Fizyoflow, fizyoterapistin günlük akışını ve danışan check-in işlemini masa başına dönmeden tamamlamasına yardımcı olur.",
+    eyebrow: "Klinik ekip ve check-in yönetimi",
+    title: "Klinik ekibi günlük seansını görür, katılımı mobilde işler.",
+    description: "Fizyoflow, klinik yönetiminin parçası olarak fizyoterapistin günlük akışını ve danışan check-in işlemini mobilde tamamlamasını sağlar.",
     slug: "fizyoterapist-check-in",
     ctaText: "Check-in akışını birlikte kuralım",
-    metaTitle: "Fizyoterapist Check-in Uygulaması | Fizyoflow",
-    metaDescription: "Fizyoflow ile fizyoterapistler günlük seanslarını görür, QR veya manuel kodla check-in işler ve paket hakkı güncel kalır.",
+    metaTitle: "Klinik Ekip ve Check-in Yönetimi | Fizyoflow",
+    metaDescription: "Fizyoflow klinik yönetimiyle fizyoterapistler günlük seanslarını görür, QR veya manuel kodla check-in işler; paket hakkı güncel kalır.",
     image: "/product-screens/trainer-checkin.png",
     imageAlt: "Fizyoflow fizyoterapist check-in ekranı",
     outcomes: [
@@ -112,13 +112,13 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
     ],
   },
   "danisan-takibi-olcum": {
-    eyebrow: "Danışan ve ölçüm takibi",
-    title: "Danışan yaklaşan seansını, kalan hakkını ve ölçüm geçmişini takip eder.",
-    description: "Fizyoflow, danışan mobil deneyimini klinik operasyonuyla bağlar; seans, paket ve ölçüm bilgisi aynı akışta güncel kalır.",
+    eyebrow: "Klinik danışan ve ölçüm takibi",
+    title: "Danışan deneyimi kliniğin güncel seans ve paket akışına bağlı kalır.",
+    description: "Fizyoflow, klinik yönetiminin parçası olarak danışanın yaklaşan seansını, kalan hakkını ve ölçüm geçmişini mobilde görünür tutar.",
     slug: "danisan-takibi-olcum",
     ctaText: "Danışan takip akışını inceleyelim",
-    metaTitle: "Danışan ve Ölçüm Takibi | Fizyoflow",
-    metaDescription: "Fizyoflow danışanların yaklaşan seansını, kalan paket hakkını, grup derslerini, ölçüm geçmişini ve yenileme ihtiyacını mobilde gösterir.",
+    metaTitle: "Klinikler İçin Danışan ve Ölçüm Takibi | Fizyoflow",
+    metaDescription: "Fizyoflow klinik yönetimi; danışanın yaklaşan seansını, kalan paket hakkını, ölçüm geçmişini ve yenileme ihtiyacını mobilde görünür tutar.",
     image: "/product-screens/member-package.png",
     imageAlt: "Fizyoflow danışan paket ve kalan hak takibi ekranı",
     outcomes: [

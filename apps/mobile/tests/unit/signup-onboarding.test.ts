@@ -27,8 +27,8 @@ describe("signup onboarding helpers", () => {
         supportStyle: "action",
       })
     ).toEqual({
-      title: "Salon sahibi özeti",
-      subtitle: "Salon kurulumu, plan kararı ve operasyon başlangıcı bu profile göre kurgulandı.",
+      title: "Klinik sahibi özeti",
+      subtitle: "Klinik kurulumu, plan kararı ve operasyon başlangıcı bu profile göre kurgulandı.",
       pillars: [
         expect.objectContaining({ label: "Ana odak", value: "Günlük operasyon" }),
         expect.objectContaining({ label: "Ritim", value: "Anlık karar yoğun" }),

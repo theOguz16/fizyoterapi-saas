@@ -17,6 +17,7 @@ import { FormField } from "@/theme/components/form-field";
 import { AppIcon } from "@/theme/components/app-icon";
 import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { tokens } from "@/theme/tokens";
+import { resolveMembersEmptyState } from "@/lib/admin-empty-states";
 
 type DirectoryItem = AdminCompactMember & {
   role: "MEMBER" | "TRAINER";
@@ -88,9 +89,20 @@ export default function AdminMembersScreen() {
       total: source.length,
       active: source.filter((item) => getPersonStatus(item).includes("ACTIVE")).length,
       trainers: source.filter((item) => item.role === "TRAINER").length,
+      members: source.filter((item) => item.role === "MEMBER").length,
     };
   }, [query.data]);
   const hasFilters = roleFilter !== "ALL" || statusFilter !== "ALL";
+  const hasSearchOrFilters = Boolean(search.trim()) || hasFilters;
+  const membersEmptyState = resolveMembersEmptyState(hasSearchOrFilters);
+  const showFirstMemberPrompt =
+    !query.isLoading && !query.isError && metrics.members === 0 && !hasSearchOrFilters;
+
+  function clearDirectoryFilters() {
+    setSearch("");
+    setRoleFilter("ALL");
+    setStatusFilter("ALL");
+  }
 
   return (
     <AppShell title="Üyeler" subtitle="Üye ve eğitmen listesini tek ekranda filtreleyip detaylarını aç." icon="members" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
@@ -98,6 +110,17 @@ export default function AdminMembersScreen() {
         <MetricCard label="Toplam kişi" value={metrics.total} hint="Üye + eğitmen" icon="members" />
         <MetricCard label="Eğitmen" value={metrics.trainers} hint="Aktif kadro görünümü" icon="trainer" />
       </View>
+      {showFirstMemberPrompt ? (
+        <EmptyState
+          title={membersEmptyState.title}
+          description={membersEmptyState.description}
+          icon={membersEmptyState.icon}
+          actionLabel={membersEmptyState.actionLabel}
+          actionIcon={membersEmptyState.actionIcon}
+          actionTestID="admin-members-open-clinic-qr"
+          onAction={() => router.push({ pathname: "/(admin)/clinic-qr", params: { backTo: "/(admin)/members" } } as never)}
+        />
+      ) : null}
       <SurfaceCard style={styles.searchCard}>
         <FormField label="Kişi ara" value={search} onChangeText={setSearch} placeholder="Ad, telefon veya e-posta ile ara" />
       </SurfaceCard>
@@ -163,7 +186,19 @@ export default function AdminMembersScreen() {
       ) : query.isError && !query.data ? (
         <QueryState mode="error" onRetry={() => void query.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState title="Liste boş" description="Filtreye uyan üye veya eğitmen bulunduğunda burada listelenecek." icon="members" />
+        <EmptyState
+          title={membersEmptyState.title}
+          description={membersEmptyState.description}
+          icon={membersEmptyState.icon}
+          actionLabel={membersEmptyState.actionLabel}
+          actionIcon={membersEmptyState.actionIcon}
+          actionTestID={hasSearchOrFilters ? "admin-members-clear-empty-filter" : "admin-members-empty-open-qr"}
+          onAction={
+            membersEmptyState.action === "CLEAR_FILTERS"
+              ? clearDirectoryFilters
+              : () => router.push({ pathname: "/(admin)/clinic-qr", params: { backTo: "/(admin)/members" } } as never)
+          }
+        />
       ) : (
         <VirtualListPanel
           data={items}

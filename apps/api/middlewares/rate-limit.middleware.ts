@@ -36,3 +36,10 @@ export const publicRecommendationRateLimit = createLimit(
   "PUBLIC_RECOMMENDATION_RATE_LIMITED",
   "Çok fazla öneri isteği gönderildi."
 );
+
+export const productEventRateLimit = createLimit(
+  15 * 60_000,
+  180,
+  "PRODUCT_EVENT_RATE_LIMITED",
+  "Çok fazla ölçüm olayı gönderildi."
+);

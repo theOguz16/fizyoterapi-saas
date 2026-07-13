@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getPublıcSalonApi } from "@/lib/mobile-api";
 import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonLocationLabel } from "@/lib/salon-discovery";
-import { setPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { clearPendingSalonJoinSlug, setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { useAppFlow } from "@/providers/app-flow";
 import { ActionButton } from "@/theme/components/action-button";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
@@ -32,9 +32,12 @@ export default function SalonDetailScreen() {
   const salon = salonQuery.data;
 
   useEffect(() => {
-    if (!slug) return;
-    void setPendingSalonJoinSlug(slug);
-  }, [slug]);
+    if (!slug || salonQuery.isError) {
+      void clearPendingSalonJoinSlug();
+      return;
+    }
+    if (salon) void setPendingSalonJoinSlug(slug);
+  }, [salon, salonQuery.isError, slug]);
 
   const businessHours = resolveBusinessHours([salon?.business_hours]);
   const locationLabel = getSalonLocationLabel(salon);
@@ -45,24 +48,17 @@ export default function SalonDetailScreen() {
 
   if (!slug) {
     return (
-      <AppShell title="Salon bulunamadı" subtitle="QR bağlantısı eksik veya hatalı görünüyor." icon="salon">
+      <AppShell title="Salon bağlantısı eksik" subtitle="Kliniğinin QR veya davetiyle yeniden bağlanabilirsin." icon="salon">
         <View testID="salon-not-found-screen" style={styles.stateWrap}>
           <View style={styles.stateIconWrap}>
             <AppIcon name="salon" size="lg" tone="primary" />
           </View>
 
-          <Text style={styles.stateTitle}>Salon bulunamadı</Text>
+          <Text style={styles.stateTitle}>Bağlantıda klinik bilgisi yok</Text>
           <Text style={styles.stateText}>
-            Bu QR bağlantısında salon bilgisi eksik. Lütfen bağlantıyı kontrol et veya tekrar dene.
+            Kliniğinden yeni bir FizyoFlow QR kodu, salon bağlantısı veya davet kodu iste.
           </Text>
-
-          <Pressable
-            testID="salon-not-found-back-button"
-            onPress={() => router.replace("/(auth)/welcome" as never)}
-            style={({ pressed }) => [styles.stateButton, pressed ? styles.stateButtonPressed : null]}
-          >
-            <Text style={styles.stateButtonText}>Geri dön</Text>
-          </Pressable>
+          <ConnectionRecoveryActions router={router} />
         </View>
       </AppShell>
     );
@@ -82,7 +78,7 @@ export default function SalonDetailScreen() {
 
   if (salonQuery.isError || !salon) {
     return (
-      <AppShell title="Salon bulunamadı" subtitle="Bu QR bağlantısı geçersiz olabilir." icon="salon">
+      <AppShell title="Klinik bağlantısı doğrulanamadı" subtitle="QR, salon linki veya davet koduyla tekrar deneyebilirsin." icon="salon">
         <View testID="salon-not-found-screen" style={styles.stateWrap}>
           <View style={styles.stateIconWrap}>
             <AppIcon name="salon" size="lg" tone="primary" />
@@ -90,26 +86,18 @@ export default function SalonDetailScreen() {
 
           <Text style={styles.stateTitle}>Salon bulunamadı</Text>
           <Text style={styles.stateText}>
-            Bu QR bağlantısı geçersiz olabilir veya salon artık yayında olmayabilir. Lütfen bağlantıyı kontrol et ya da
-            tekrar dene.
+            Bu bağlantı eski olabilir veya klinik şu anda yayında olmayabilir. Kliniğinden güncel QR ya da davet bağlantısı iste.
           </Text>
 
           <View style={styles.stateActions}>
-            <Pressable
+            <ActionButton
               testID="salon-not-found-retry-button"
+              label="Bağlantıyı tekrar kontrol et"
+              icon="progress"
+              variant="ghost"
               onPress={() => void salonQuery.refetch()}
-              style={({ pressed }) => [styles.secondaryButton, pressed ? styles.stateButtonPressed : null]}
-            >
-              <Text style={styles.secondaryButtonText}>Tekrar dene</Text>
-            </Pressable>
-
-            <Pressable
-              testID="salon-not-found-back-button"
-              onPress={() => router.replace("/(auth)/welcome" as never)}
-              style={({ pressed }) => [styles.stateButton, pressed ? styles.stateButtonPressed : null]}
-            >
-              <Text style={styles.stateButtonText}>Geri dön</Text>
-            </Pressable>
+            />
+            <ConnectionRecoveryActions router={router} />
           </View>
         </View>
       </AppShell>
@@ -232,6 +220,33 @@ export default function SalonDetailScreen() {
         </AnimatedEntrance>
       </View>
     </AppShell>
+  );
+}
+
+function ConnectionRecoveryActions({ router }: { router: ReturnType<typeof useRouter> }) {
+  return (
+    <View style={styles.connectionRecoveryActions}>
+      <ActionButton
+        testID="salon-not-found-scan-qr"
+        label="Yeni salon QR kodunu okut"
+        icon="scan"
+        onPress={() => router.replace("/(auth)/scan-salon-qr" as never)}
+      />
+      <ActionButton
+        testID="salon-not-found-enter-invite"
+        label="Davet koduyla bağlan"
+        icon="trainer"
+        variant="ghost"
+        onPress={() => router.replace("/(auth)/invite-accept" as never)}
+      />
+      <ActionButton
+        testID="salon-not-found-discovery"
+        label="Diğer klinikleri incele"
+        icon="salon"
+        variant="ghost"
+        onPress={() => router.replace("/(intake-member)/salons" as never)}
+      />
+    </View>
   );
 }
 
@@ -466,36 +481,5 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.sm,
     marginTop: tokens.spacing.sm,
   },
-  stateButton: {
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.primary,
-    paddingHorizontal: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stateButtonPressed: {
-    transform: [{ scale: 0.97 }],
-    opacity: 0.92,
-  },
-  stateButtonText: {
-    color: "#fff",
-    fontSize: tokens.font.sm,
-    fontFamily: tokens.fontFamily.semibold,
-  },
-  secondaryButton: {
-    borderRadius: tokens.radius.pill,
-    backgroundColor: tokens.colors.surface,
-    borderWidth: 1,
-    borderColor: tokens.colors.border,
-    paddingHorizontal: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryButtonText: {
-    color: tokens.colors.primaryStrong,
-    fontSize: tokens.font.sm,
-    fontFamily: tokens.fontFamily.semibold,
-  },
+  connectionRecoveryActions: { width: "100%", gap: tokens.spacing.sm },
 });

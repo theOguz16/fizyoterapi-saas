@@ -2,7 +2,7 @@
 // URL duzeni ile yetkilendirme kurallari bu katmanda bir araya getirilir.
 import { Router } from "express";
 import { PublicController } from "../controllers/public.controller";
-import { publicFormRateLimit, publicRecommendationRateLimit } from "../middlewares/rate-limit.middleware";
+import { productEventRateLimit, publicFormRateLimit, publicRecommendationRateLimit } from "../middlewares/rate-limit.middleware";
 
 export const publicRoutes = Router();
 
@@ -19,3 +19,4 @@ publicRoutes.post("/clinic-intake", publicFormRateLimit, PublicController.create
 publicRoutes.post("/demo-leads", publicFormRateLimit, PublicController.createDemoLead);
 publicRoutes.post("/salons/:slug/leads", publicFormRateLimit, PublicController.createLead);
 publicRoutes.post("/salons/:slug/events", publicRecommendationRateLimit, PublicController.trackSalonEvent);
+publicRoutes.post("/product-events", productEventRateLimit, PublicController.trackProductEvent);

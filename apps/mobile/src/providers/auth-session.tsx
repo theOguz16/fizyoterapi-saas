@@ -26,9 +26,9 @@ type RegisterInput = {
   first_name: string;
   last_name: string;
   phone: string;
-  account_type?: "MEMBER" | "CLINIC_ADMIN";
+  account_type?: "CLINIC_ADMIN";
   onboarding_profile?: {
-    role: "MEMBER" | "TRAINER" | "ADMIN";
+    role: "ADMIN";
     primary_goal: string;
     rhythm: string;
     support_style: string;

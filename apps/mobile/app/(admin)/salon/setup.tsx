@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { createClinıcRequestApi } from "@/lib/mobile-api";
+import { useSession } from "@/providers/auth-session";
 import { TURKEY_CITIES, TURKEY_DISTRICTS_BY_CITY } from "@/lib/turkey-locations";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
@@ -10,12 +11,14 @@ import { AppShell } from "@/theme/components/app-shell";
 import { FormField } from "@/theme/components/form-field";
 import { MetricCard } from "@/theme/components/metric-card";
 import { SurfaceCard } from "@/theme/components/surface-card";
+import { ToggleRow } from "@/theme/components/toggle-row";
 import { tokens } from "@/theme/tokens";
 
 type PickerMode = "city" | "district" | null;
 
 export default function AdminSalonSetupScreen() {
   const router = useRouter();
+  const { refreshMe } = useSession();
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
@@ -25,6 +28,7 @@ export default function AdminSalonSetupScreen() {
     district: "",
     phone: "",
     about_text: "",
+    owner_is_practitioner: true,
   });
 
   const cityKey = form.city ? form.city.toLocaleUpperCase("tr-TR") : "";
@@ -57,8 +61,9 @@ export default function AdminSalonSetupScreen() {
     ],
   },
 
-  onSuccess: () => {
-    router.replace("/(admin)/salon" as never);
+  onSuccess: async () => {
+    await refreshMe();
+    router.replace("/(admin)/dashboard" as never);
   },
 });
 
@@ -111,6 +116,16 @@ export default function AdminSalonSetupScreen() {
           <Text style={styles.copy}>
             Salon adı, konum, iletişim ve kısa açıklama bilgileri; ekip ve üyelerin gördüğü temel salon profilini oluşturur.
           </Text>
+        </SurfaceCard>
+
+        <SurfaceCard>
+          <Text style={styles.section}>Çalışma rolün</Text>
+          <ToggleRow
+            label="Ben de bu klinikte hizmet veriyorum"
+            description="Aynı hesapla hem klinik yönetimine hem fizyoterapist/eğitmen çalışma alanına erişirsin."
+            value={form.owner_is_practitioner}
+            onValueChange={(value) => setForm((prev) => ({ ...prev, owner_is_practitioner: value }))}
+          />
         </SurfaceCard>
 
         <SurfaceCard>

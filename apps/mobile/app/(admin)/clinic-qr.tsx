@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
@@ -13,6 +13,7 @@ import { AppIcon } from "@/theme/components/app-icon";
 import { EmptyPanel } from "@/theme/components/empty-panel";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
+import { trackProductEvent } from "@/lib/product-analytics";
 
 type AdminClinicQrPayload = {
   tenant_id?: string | null;
@@ -93,8 +94,21 @@ export default function AdminClinicQrScreen() {
   const salonName = normalizeText(data.name) || "Salon";
   const qrMode = resolveQrMode(detourUrl, joinUrl);
 
+  useEffect(() => {
+    if (!qrPayload) return;
+    void trackProductEvent(
+      "clinic_qr_viewed",
+      { screen: "admin_clinic_qr" },
+      { oncePerSession: true, dedupeKey: "clinic_qr_viewed" }
+    );
+  }, [qrPayload]);
+
   async function handleSaveQr() {
     if (!qrPayload || isSaving) return;
+    void trackProductEvent("member_invite_started", {
+      screen: "admin_clinic_qr",
+      source: "save_qr",
+    });
 
     try {
       setFeedback("");
@@ -184,8 +198,11 @@ export default function AdminClinicQrScreen() {
                 description="QR kodu şu an yüklenemedi. Lütfen tekrar dene."
                 iconName="qr"
                 iconTone="warning"
+                actionLabel="Tekrar dene"
+                actionIcon="progress"
+                actionTestID="admin-clinic-qr-empty-retry"
+                onAction={() => void query.refetch()}
               />
-              <ActionButton label="Tekrar dene" icon="qr" onPress={() => void query.refetch()} />
             </View>
           ) : qrPayload ? (
             <>
@@ -210,9 +227,13 @@ export default function AdminClinicQrScreen() {
             <View style={styles.qrState}>
               <EmptyPanel
                 title="Salon QR henüz hazır değil"
-                description="Salon bilgileri tamamlandığında QR kodun burada görünecek."
+                description="Salon bilgilerini tamamladığında danışan kayıt bağlantın ve QR kodun burada oluşur."
                 iconName="qr"
                 iconTone="neutral"
+                actionLabel="Salon bilgilerini tamamla"
+                actionIcon="clinic"
+                actionTestID="admin-clinic-qr-empty-open-salon"
+                onAction={() => router.push({ pathname: "/(admin)/salon", params: { backTo: "/(admin)/clinic-qr" } } as never)}
               />
             </View>
           )}

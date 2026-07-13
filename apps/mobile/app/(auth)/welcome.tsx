@@ -10,20 +10,21 @@ import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
 import { getSignupOnboardingRole, hasCompletedSignupOnboarding } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
+import { trackProductEvent } from "@/lib/product-analytics";
 
 const HIGHLIGHTS = [
-  { icon: "calendar" as const, title: "Planlama", copy: "Ders ve rezervasyon tek yerde." },
-  { icon: "notifications" as const, title: "Bilgilendirme", copy: "Doğru kişiye, doğru anda." },
-  { icon: "measurements" as const, title: "Takip", copy: "Üyelik ve gelişim net görünür." },
-  { icon: "members" as const, title: "Üye yönetimi", copy: "Kayıt, durum ve süreç tek akışta." },
-  { icon: "trainer" as const, title: "Eğitmen düzeni", copy: "Program ve sorumluluklar netleşir." },
-  { icon: "dashboard" as const, title: "Yönetici görünümü", copy: "Salonun tamamı tek panelde izlenir." },
+  { icon: "calendar" as const, title: "Seans planlama", copy: "Takvim ve rezervasyonlar tek yerde." },
+  { icon: "members" as const, title: "Danışan yönetimi", copy: "Kayıt, paket ve gelişim tek akışta." },
+  { icon: "trainer" as const, title: "Ekip düzeni", copy: "Program ve sorumluluklar netleşir." },
+  { icon: "measurements" as const, title: "Süreç takibi", copy: "Seans, katılım ve ölçümler görünür kalır." },
+  { icon: "notifications" as const, title: "Bilgilendirme", copy: "Doğru kişiye, doğru anda ulaşır." },
+  { icon: "dashboard" as const, title: "Yönetim görünümü", copy: "Kliniğin tüm operasyonu tek merkezden izlenir." },
 ];
 
 const LIVE_ITEMS = [
-  { icon: "member" as const, label: "Üye akışı", value: "Hazır" },
-  { icon: "trainer" as const, label: "Eğitmen planı", value: "Hazır" },
-  { icon: "dashboard" as const, label: "Yönetici görünümü", value: "Açık" },
+  { icon: "calendar" as const, label: "Bugünün seansları", value: "Hazır" },
+  { icon: "trainer" as const, label: "Ekip programı", value: "Hazır" },
+  { icon: "member" as const, label: "Danışan takibi", value: "Açık" },
 ];
 
 export default function WelcomeScreen() {
@@ -127,6 +128,11 @@ export default function WelcomeScreen() {
   async function handleSignup() {
     if (isRoutingSignup) return;
     setIsRoutingSignup(true);
+    void trackProductEvent(
+      "clinic_signup_started",
+      { screen: "welcome", source: "primary_cta" },
+      { oncePerSession: true }
+    );
 
     let nextRoute: "/(auth)/register" | "/(auth)/role-assessment" = "/(auth)/role-assessment";
 
@@ -147,20 +153,23 @@ export default function WelcomeScreen() {
 
   return (
     <MarketingShell
-      title="Salon yönetimi, tek merkez."
-      subtitle="Rezervasyon, ekip ve üye akışı tek uygulamada."
+      title="Klinik ve salon yönetimi, tek merkezde."
+      subtitle="Seans, paket, ekip ve danışan süreçlerini tek uygulamadan yönet."
       icon="spark"
       animateContent={false}
       footer={
         <View style={styles.footer}>
           <AnimatedEntrance delay={170}>
-            <ActionButton testID="welcome-login-button" label="Giriş yap" icon="member" onPress={() => router.push("/(auth)/login" as never)} />
+            <ActionButton testID="welcome-signup-button" label="Kliniğini kurmaya başla" icon="spark" onPress={handleSignup} loading={isRoutingSignup} />
           </AnimatedEntrance>
           <AnimatedEntrance delay={240}>
-            <ActionButton testID="welcome-signup-button" label="Kayıt ol" icon="spark" variant="ghost" onPress={handleSignup} loading={isRoutingSignup} />
+            <ActionButton testID="welcome-login-button" label="Giriş yap" icon="member" variant="ghost" onPress={() => router.push("/(auth)/login" as never)} />
           </AnimatedEntrance>
           <AnimatedEntrance delay={300}>
             <ActionButton testID="welcome-scan-salon-qr-button" label="Salon QR okut" icon="scan" variant="ghost" onPress={() => router.push("/(auth)/scan-salon-qr" as never)} />
+          </AnimatedEntrance>
+          <AnimatedEntrance delay={360}>
+            <ActionButton testID="welcome-invite-code-button" label="Davet koduyla katıl" icon="trainer" variant="ghost" onPress={() => router.push("/(auth)/invite-accept" as never)} />
           </AnimatedEntrance>
         </View>
       }
@@ -222,8 +231,8 @@ export default function WelcomeScreen() {
               </View>
             </View>
 
-            <Text style={styles.heroTitle}>Salonun tüm akışı tek merkezde.</Text>
-            <Text style={styles.body}>Üye, eğitmen ve yönetici deneyimini tek düzende birleştir.</Text>
+            <Text style={styles.heroTitle}>Kliniğinin tüm operasyonunu tek yerden yönet.</Text>
+            <Text style={styles.body}>Ekibini, danışanlarını, seanslarını ve paketlerini aynı güncel akışta buluştur.</Text>
 
             <View style={styles.previewStack}>
               <AnimatedEntrance delay={90}>

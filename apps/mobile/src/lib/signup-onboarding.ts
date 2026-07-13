@@ -112,17 +112,17 @@ const ADMIN_QUESTIONS: SignupQuestionStep[] = [
     key: "primaryGoal",
     eyebrow: "Öncelik",
     title: "İlk günden hangi alanı daha sıkı yönetmek istiyorsun?",
-    subtitle: "Yönetici deneyimini bu önceliğe göre daha doğru başlatacağız.",
+    subtitle: "Klinik yönetimi deneyimini bu önceliğe göre daha doğru başlatacağız.",
     options: [
       { value: "operations", label: "Günlük operasyon", description: "Onaylar, giriş akışı ve yoğun saat yönetimi benim için en kritik alan.", icon: "approvals" },
-      { value: "growth", label: "Büyüme ve kampanyalar", description: "Üye kazanımı, paket yenileme ve kampanya görünürlüğü önceliğim.", icon: "campaigns" },
-      { value: "team", label: "Ekip ve salon düzeni", description: "Eğitmen yapısı, çalışma saatleri ve salon düzeni önce oturmalı.", icon: "clinic" },
+      { value: "growth", label: "Büyüme ve kampanyalar", description: "Danışan kazanımı, paket yenileme ve kampanya görünürlüğü önceliğim.", icon: "campaigns" },
+      { value: "team", label: "Ekip ve klinik düzeni", description: "Ekip yapısı, çalışma saatleri ve klinik düzeni önce oturmalı.", icon: "clinic" },
     ],
   },
   {
     key: "rhythm",
     eyebrow: "Tempo",
-    title: "Salon yönetiminde günlerin çoğunlukla nasıl geçiyor?",
+    title: "Klinik yönetiminde günlerin çoğunlukla nasıl geçiyor?",
     subtitle: "Panelde öne çıkan özetler ve ilk ekran yoğunluğu buna göre şekillenir.",
     options: [
       { value: "steady", label: "Planlı ve düzenli", description: "Süreçler büyük ölçüde oturmuş durumda; daha çok görünürlük ve takip istiyorum.", icon: "calendar" },
@@ -136,7 +136,7 @@ const ADMIN_QUESTIONS: SignupQuestionStep[] = [
     title: "Panel kullanımında nasıl bir yapı beklersin?",
     subtitle: "İlk kullanım deneyiminde hangi değeri daha görünür vereceğimizi seç.",
     options: [
-      { value: "control", label: "Tam görünürlük", description: "Salonun kritik verilerini ilk bakışta net biçimde görmek istiyorum.", icon: "dashboard" },
+      { value: "control", label: "Tam görünürlük", description: "Kliniğin kritik verilerini ilk bakışta net biçimde görmek istiyorum.", icon: "dashboard" },
       { value: "action", label: "Hızlı müdahale", description: "Önemli uyarıları görüp gerekli aksiyonu hızlıca almak istiyorum.", icon: "spark" },
       { value: "balance", label: "Dengeli yapı", description: "Özetler net olsun, işlem yapmak da mümkün olduğunca hızlı olsun.", icon: "progress" },
     ],
@@ -160,15 +160,15 @@ export function summarizeSignupOnboarding(role: SignupOnboardingRole, profile: S
   const support = findOption(role, "supportStyle", profile.supportStyle);
 
   const titleMap: Record<SignupOnboardingRole, string> = {
-    MEMBER: "Üye özeti",
-    TRAINER: "Eğitmen özeti",
-    ADMIN: "Salon sahibi özeti",
+    MEMBER: "Danışan özeti",
+    TRAINER: "Ekip üyesi özeti",
+    ADMIN: "Klinik sahibi özeti",
   };
 
   const subtitleMap: Record<SignupOnboardingRole, string> = {
-    MEMBER: "Planlama dili, üyelik akışı ve başlangıç yönlendirmesi bu profile göre hazırlandı.",
-    TRAINER: "Takvim, danışan ve günlük operasyon öncelikleri bu profile göre düzenlendi.",
-    ADMIN: "Salon kurulumu, plan kararı ve operasyon başlangıcı bu profile göre kurgulandı.",
+    MEMBER: "Bağlı olduğun klinikteki seans, paket ve başlangıç yönlendirmesi bu profile göre hazırlandı.",
+    TRAINER: "Klinik ekibindeki takvim, danışan ve günlük operasyon öncelikleri bu profile göre düzenlendi.",
+    ADMIN: "Klinik kurulumu, plan kararı ve operasyon başlangıcı bu profile göre kurgulandı.",
   };
 
   const recommendationMap: Record<SignupOnboardingRole, string> = {

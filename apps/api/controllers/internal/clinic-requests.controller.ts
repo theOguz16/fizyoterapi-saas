@@ -12,6 +12,7 @@ import { AppError } from "../../errors/AppError";
 import { AuditLogService } from "../../services/audit-log.service";
 import { AuditLog } from "../../entities/audit-log.entity";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
+import { CLINIC_TRIAL_DAYS } from "../../config/subscription";
 
 function plusDays(days: number) {
   const date = new Date();
@@ -256,7 +257,7 @@ export class InternalClinicRequestsController {
       tenant.trial_starts_at = new Date();
     }
     if (!tenant.trial_ends_at) {
-      tenant.trial_ends_at = plusDays(14);
+      tenant.trial_ends_at = plusDays(CLINIC_TRIAL_DAYS);
     }
     await repo.save(tenant);
     await InternalClinicRequestsController.logClinicAudit(req, {

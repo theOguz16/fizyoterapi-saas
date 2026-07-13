@@ -5,6 +5,25 @@ import { ApiClientError, resolveApiError } from "./api-error";
 import { markNetworkFailure, markNetworkSuccess } from "./connectivity";
 
 let authToken: string | null = null;
+let productAnalyticsHeaders: Record<string, string> = {};
+const RESPONSE_ENVELOPE_HEADER = "X-FizyoFlow-Response-Envelope";
+
+export type ApiPaginationMeta = {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+};
+
+export type ApiSuccessEnvelope<T, TMeta extends Record<string, unknown> = Record<string, never>> = {
+  data: T;
+  message?: string;
+  meta?: TMeta;
+};
+
+export type ApiDetailResponse<T> = ApiSuccessEnvelope<T>;
+export type ApiListResponse<T> = ApiSuccessEnvelope<T[]>;
+export type ApiPaginatedResponse<T> = ApiSuccessEnvelope<T[], { pagination: ApiPaginationMeta }>;
 
 // Expo gelistirme ortaminda localhost cogu zaman telefondan gorunmez.
 // Bu helper host'u manifestten okuyup API base URL'ini cihaza uygun hale getirir.
@@ -74,20 +93,40 @@ export function setAuthToken(token: string | null) {
   authToken = token;
 }
 
+export function setProductAnalyticsHeaders(input: { installId?: string | null; sessionId?: string | null }) {
+  productAnalyticsHeaders = {
+    ...(input.installId ? { "X-FizyoFlow-Install-ID": input.installId } : {}),
+    ...(input.sessionId ? { "X-FizyoFlow-Session-ID": input.sessionId } : {}),
+  };
+}
+
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
   auth?: boolean;
   signal?: AbortSignal;
-  unwrapData?: boolean;
 };
 
-export async function httpRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, headers = {}, auth = true, signal, unwrapData = true } = options;
+function isSuccessEnvelope(payload: unknown): payload is ApiSuccessEnvelope<unknown> {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      !Array.isArray(payload) &&
+      Object.prototype.hasOwnProperty.call(payload, "data")
+  );
+}
+
+async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record<string, never>>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<ApiSuccessEnvelope<T, TMeta>> {
+  const { method = "GET", body, headers = {}, auth = true, signal } = options;
 
   const requestHeaders: Record<string, string> = {
     "Content-Type": "application/json",
+    [RESPONSE_ENVELOPE_HEADER]: "1",
+    ...productAnalyticsHeaders,
     ...headers,
   };
 
@@ -129,7 +168,23 @@ export async function httpRequest<T>(path: string, options: RequestOptions = {})
     throw new ApiClientError(message, response.status, code);
   }
 
-  return (unwrapData ? (payload?.data ?? payload) : payload) as T;
+  if (!isSuccessEnvelope(payload)) {
+    throw new ApiClientError("Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.", response.status, "INVALID_API_RESPONSE");
+  }
+
+  return payload as ApiSuccessEnvelope<T, TMeta>;
+}
+
+export async function httpRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const envelope = await requestEnvelope<T>(path, options);
+  return envelope.data;
+}
+
+export function httpRequestEnvelope<T, TMeta extends Record<string, unknown> = Record<string, never>>(
+  path: string,
+  options: RequestOptions = {}
+) {
+  return requestEnvelope<T, TMeta>(path, options);
 }
 
 export function createTimeoutSignal(ms: number) {

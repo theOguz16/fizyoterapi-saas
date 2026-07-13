@@ -2,9 +2,9 @@
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
 import { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { SurfaceCard } from "./surface-card";
 import { tokens } from "../tokens";
 import { AppIcon, type AppIconName } from "./app-icon";
+import { ActionButton } from "./action-button";
 
 type Props = {
   title: string;
@@ -12,15 +12,32 @@ type Props = {
   icon?: ReactNode;
   iconName?: AppIconName;
   iconTone?: "primary" | "success" | "warning" | "danger" | "neutral";
+  actionLabel?: string;
+  actionIcon?: AppIconName;
+  actionTestID?: string;
+  onAction?: () => void;
 };
 
-export function EmptyPanel({ title, description, icon, iconName, iconTone = "neutral" }: Props) {
+export function EmptyPanel({
+  title,
+  description,
+  icon,
+  iconName,
+  iconTone = "neutral",
+  actionLabel,
+  actionIcon = "arrow-right",
+  actionTestID,
+  onAction,
+}: Props) {
   return (
-    <SurfaceCard style={styles.card}>
+    <View style={styles.card} accessibilityRole="summary" accessibilityLabel={`${title}. ${description}`}>
       {icon || iconName ? <View style={styles.icon}>{icon ? icon : <AppIcon name={iconName as AppIconName} size="lg" tone={iconTone} />}</View> : null}
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
-    </SurfaceCard>
+      {actionLabel && onAction ? (
+        <ActionButton testID={actionTestID} label={actionLabel} icon={actionIcon} onPress={onAction} />
+      ) : null}
+    </View>
   );
 }
 
@@ -29,7 +46,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 160,
+    width: "100%",
     borderStyle: "dashed",
+    borderWidth: 1,
+    borderColor: tokens.colors.border,
+    borderRadius: tokens.radius.lg,
+    backgroundColor: tokens.colors.surfaceSoft,
+    padding: tokens.spacing.lg,
+    gap: tokens.spacing.sm,
   },
   icon: {
     marginBottom: tokens.spacing.xs,

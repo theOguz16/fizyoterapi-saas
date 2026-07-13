@@ -433,8 +433,9 @@ export class MemberAvailabilityController {
       });
 
       return res.status(201).json({
-        data: saved,
-        weekly_plan: {
+        data: {
+          items: saved,
+          weekly_plan: {
           weekly_class_hours: weeklyClassHours,
           selected_slots: selectedSlots,
           trainer_free_slots: trainerFreeSlots,
@@ -446,6 +447,7 @@ export class MemberAvailabilityController {
             mode === "REPLACE_WEEK"
               ? "Haftalık müsaitlik planı güncellendi"
               : "Haftalık müsaitlik planına yeni saatler eklendi",
+          },
         },
       });
     } catch (error) {

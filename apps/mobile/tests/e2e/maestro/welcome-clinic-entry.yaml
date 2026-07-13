@@ -1,0 +1,35 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
+- assertVisible: "Kliniğini kurmaya başla"
+- assertVisible:
+    id: "welcome-signup-button"
+- assertVisible:
+    id: "welcome-login-button"
+- assertVisible:
+    id: "welcome-scan-salon-qr-button"
+- assertVisible:
+    id: "welcome-invite-code-button"
+
+- tapOn:
+    id: "welcome-login-button"
+- assertVisible: "Hesabına giriş yap"
+- tapOn: "Geri"
+
+- tapOn:
+    id: "welcome-scan-salon-qr-button"
+- assertVisible: "Salon QR okut"
+- tapOn: "Geri"
+
+- tapOn:
+    id: "welcome-invite-code-button"
+- assertVisible: "Salon davetini tamamla"
+- tapOn: "Geri"
+
+- tapOn:
+    id: "welcome-signup-button"
+- assertVisible: "Kliniğini kur veya davetinle katıl"

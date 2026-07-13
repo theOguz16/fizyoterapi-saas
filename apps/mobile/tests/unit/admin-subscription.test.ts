@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
+import { SUBSCRIPTION_VALUE_PROOFS } from "@/lib/subscription-pricing";
 
 describe("admin subscription helpers", () => {
   it("formats known subscription states with publish-ready Turkish labels", () => {
@@ -18,7 +19,7 @@ describe("admin subscription helpers", () => {
         can_start_trial: true,
         trial_days_remaining: 0,
       })
-    ).toBe("5 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.");
+    ).toBe("21 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.");
     expect(
       buildSubscriptionHeadline({
         review_status: "PUBLISHED",
@@ -35,5 +36,18 @@ describe("admin subscription helpers", () => {
         trial_days_remaining: 0,
       })
     ).toBe("Deneme süren bitti. Satın alma ile salon akışlarını tekrar tam erişime açabilirsin.");
+  });
+
+  it("covers the operational value shown before pricing without duplicate items", () => {
+    expect(SUBSCRIPTION_VALUE_PROOFS.map((item) => item.key)).toEqual([
+      "packages",
+      "calendar",
+      "team",
+      "qr",
+      "clients",
+      "reports",
+    ]);
+    expect(new Set(SUBSCRIPTION_VALUE_PROOFS.map((item) => item.key)).size).toBe(SUBSCRIPTION_VALUE_PROOFS.length);
+    expect(SUBSCRIPTION_VALUE_PROOFS.every((item) => item.title.length > 0 && item.description.length > 0)).toBe(true);
   });
 });

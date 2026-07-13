@@ -19,16 +19,16 @@ function readSlugFromUrlLikeValue(value: string): string | null {
   try {
     const url = new URL(value);
 
-    const querySlug = normalizeSlug(url.searchParams.get("salon_slug"));
+    const querySlug = normalizeSalonSlug(url.searchParams.get("salon_slug"));
     if (querySlug) return querySlug;
 
-    const screenPathSlug = normalizeSlug(matchScreenPathSlug(url.searchParams.get("screen_path")));
+    const screenPathSlug = normalizeSalonSlug(matchScreenPathSlug(url.searchParams.get("screen_path")));
     if (screenPathSlug) return screenPathSlug;
 
-    const webJoinPathSlug = normalizeSlug(matchJoinSlug(url.searchParams.get("web_join_path")));
+    const webJoinPathSlug = normalizeSalonSlug(matchJoinSlug(url.searchParams.get("web_join_path")));
     if (webJoinPathSlug) return webJoinPathSlug;
 
-    const deepLinkPathSlug = normalizeSlug(matchJoinSlug(url.searchParams.get("$deeplink_path")));
+    const deepLinkPathSlug = normalizeSalonSlug(matchJoinSlug(url.searchParams.get("$deeplink_path")));
     if (deepLinkPathSlug) return deepLinkPathSlug;
 
     const fallbackUrlSlug: string | null = readSlugFromNestedUrl(url.searchParams.get("$fallback_url"));
@@ -37,25 +37,25 @@ function readSlugFromUrlLikeValue(value: string): string | null {
     const desktopUrlSlug: string | null = readSlugFromNestedUrl(url.searchParams.get("$desktop_url"));
     if (desktopUrlSlug) return desktopUrlSlug;
 
-    const joinSlug = normalizeSlug(matchJoinSlug(url.pathname));
+    const joinSlug = normalizeSalonSlug(matchJoinSlug(url.pathname));
     if (joinSlug) return joinSlug;
 
-    const customJoinSlug = normalizeSlug(matchJoinSlug(`/${url.hostname}${url.pathname}`));
+    const customJoinSlug = normalizeSalonSlug(matchJoinSlug(`/${url.hostname}${url.pathname}`));
     if (customJoinSlug) return customJoinSlug;
 
-    const directSalonSlug = normalizeSlug(matchDirectSalonSlug(url.pathname));
+    const directSalonSlug = normalizeSalonSlug(matchDirectSalonSlug(url.pathname));
     if (directSalonSlug) return directSalonSlug;
 
-    const customDirectSalonSlug = normalizeSlug(matchDirectSalonSlug(`/${url.hostname}${url.pathname}`));
+    const customDirectSalonSlug = normalizeSalonSlug(matchDirectSalonSlug(`/${url.hostname}${url.pathname}`));
     if (customDirectSalonSlug) return customDirectSalonSlug;
   } catch {
-    const joinSlug = normalizeSlug(matchJoinSlug(value));
+    const joinSlug = normalizeSalonSlug(matchJoinSlug(value));
     if (joinSlug) return joinSlug;
 
-    const directSalonSlug = normalizeSlug(matchDirectSalonSlug(value));
+    const directSalonSlug = normalizeSalonSlug(matchDirectSalonSlug(value));
     if (directSalonSlug) return directSalonSlug;
 
-    const screenPathSlug = normalizeSlug(matchScreenPathSlug(value));
+    const screenPathSlug = normalizeSalonSlug(matchScreenPathSlug(value));
     if (screenPathSlug) return screenPathSlug;
   }
 
@@ -71,14 +71,14 @@ function readSlugFromNestedUrl(value: string | null | undefined): string | null 
 
 function readSlugFromClinicCode(value: string): string | null {
   const raw = String(value || "").trim();
-  if (!raw) return null;
+  if (!/^(FYF|CLN)-/i.test(raw)) return null;
 
   const normalizedCode = raw.replace(/^(FYF|CLN)-/i, "");
   const codeParts = normalizedCode.split("-").filter(Boolean);
 
   if (codeParts.length < 2) return null;
 
-  return normalizeSlug(codeParts.slice(0, -1).join("-"));
+  return normalizeSalonSlug(codeParts.slice(0, -1).join("-"));
 }
 
 function matchJoinSlug(value: string | null | undefined): string | null {
@@ -120,7 +120,7 @@ function safeDecode(value: string | null | undefined): string {
   }
 }
 
-function normalizeSlug(value: string | null | undefined): string | null {
+export function normalizeSalonSlug(value: string | null | undefined): string | null {
   const normalized = String(value || "")
     .trim()
     .replace(/^\/+|\/+$/g, "")

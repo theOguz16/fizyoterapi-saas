@@ -21,10 +21,12 @@ import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
+import { EmptyState } from "@/theme/components/empty-state";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { DetailSheet } from "@/theme/components/detail-sheet";
 import { StyleSheet, Text, TextInput, View, Pressable, Alert } from "react-native";
 import { tokens } from "@/theme/tokens";
+import { resolvePackagesEmptyState } from "@/lib/admin-empty-states";
 
 type LessonVariant = {
   key: string;
@@ -277,6 +279,7 @@ export default function AdminPackagesScreen() {
       }),
     [packages, search, statusFilter]
   );
+  const packagesEmptyState = resolvePackagesEmptyState(packages.length);
 
   useEffect(() => {
     if (!selectedCategoryKey && effectiveCategories.length > 0) {
@@ -458,6 +461,7 @@ export default function AdminPackagesScreen() {
     ["trainer-assigned-packages"],
     ["trainer-booking-form-options"],
     ["salon-trainer-options"],
+    ["admin-dashboard-v2"],
   ],
 },
 
@@ -831,6 +835,24 @@ export default function AdminPackagesScreen() {
           <SelectionChip label="Pasif" active={statusFilter === "PASSIVE"} onPress={() => setStatusFilter("PASSIVE")} />
         </View>
         <View style={styles.list}>
+          {!packagesQuery.isLoading && !packagesQuery.isError && filteredPackages.length === 0 ? (
+            <EmptyState
+              title={packagesEmptyState.title}
+              description={packagesEmptyState.description}
+              icon={packagesEmptyState.icon}
+              actionLabel={packagesEmptyState.actionLabel}
+              actionIcon={packagesEmptyState.actionIcon}
+              actionTestID={packages.length === 0 ? "admin-packages-empty-start" : "admin-packages-empty-clear"}
+              onAction={
+                packagesEmptyState.action === "SELECT_PACKAGE_TYPE"
+                  ? () => setServiceSheetVisible(true)
+                  : () => {
+                      setSearch("");
+                      setStatusFilter("ALL");
+                    }
+              }
+            />
+          ) : null}
           {filteredPackages.map((pkg) => {
             const packageAssignments = assignments.filter((item: AdminPackageAssignment) => item.package_id === pkg.id && item.is_active !== false);
             return (

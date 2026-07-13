@@ -6,12 +6,12 @@ const outDir = "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/mobile/appstore-scre
 const rawDir = "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/mobile/appstore-screenshots/raw";
 
 const shots = [
-  { file: "admin-dashboard.png", out: "01-yonetim-merkezi.png", title: "Salon yönetimi tek merkezde", sub: "Üye, eğitmen, risk ve günlük operasyon özetleri." },
-  { file: "admin-packages.png", out: "02-paket-yonetimi.png", title: "Paketleri dakikalar içinde yönet", sub: "Fiyat, kapasite, komisyon ve eğitmen eşleşmeleri." },
-  { file: "admin-calendar-classes.png", out: "03-salon-takvimi.png", title: "Ders takvimi hep güncel", sub: "Grup dersleri, onaylar ve eğitmen programı aynı ekranda." },
-  { file: "admin-members.png", out: "04-uye-listesi.png", title: "Üye ve eğitmen listesi hazır", sub: "Filtrele, riskli üyeyi gör, detaylara hızlı geç." },
-  { file: "trainer-checkin.png", out: "05-qr-ders-girisi.png", title: "QR ile hızlı ders girişi", sub: "MEM kodu veya kamera ile doğru paketten hak düş." },
-  { file: "member-package.png", out: "06-paket-takibi.png", title: "Üyeler paketlerini takip eder", sub: "Kalan hak, ödeme ve geçmiş bilgiler tek yerde." },
+  { file: "admin-dashboard.png", out: "01-yonetim-merkezi.png", title: "Kliniğiniz tek merkezden yönetilsin", sub: "Randevu, paket, danışan, ekip ve gelir/seans görünümü." },
+  { file: "admin-packages.png", out: "02-paket-yonetimi.png", title: "Paket ve hizmetlerinizi yönetin", sub: "Fiyat, hak, kapasite ve uzman eşleşmeleri tek akışta." },
+  { file: "admin-calendar-classes.png", out: "03-salon-takvimi.png", title: "Randevu ve seans takvimi güncel", sub: "Bireysel seanslar, grup dersleri ve ekip programı birlikte." },
+  { file: "admin-members.png", out: "04-uye-listesi.png", title: "Danışan ve ekip takibi bir arada", sub: "Paket durumu, atamalar ve takip gereken işler görünür." },
+  { file: "trainer-checkin.png", out: "05-qr-ders-girisi.png", title: "QR ile seansı doğru pakete bağlayın", sub: "Katılım işlendiğinde hak ve seans kaydı birlikte güncellenir." },
+  { file: "member-package.png", out: "06-paket-takibi.png", title: "Danışan süreci kliniğe bağlı ilerler", sub: "Yaklaşan seans, kalan hak ve geçmiş kayıtlar mobilde." },
 ];
 
 function escapeHtml(value) {

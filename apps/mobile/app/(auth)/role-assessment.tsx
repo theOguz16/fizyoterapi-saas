@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { safeBack } from "@/lib/navigation";
 import { SIGNUP_QUESTION_SET } from "@/lib/signup-onboarding";
@@ -8,34 +8,38 @@ import { OnboardingQuestionStage, type OnboardingOption } from "@/theme/componen
 
 const PERSONA_OPTIONS: Array<OnboardingOption & { persona: AppPersoma }> = [
   {
-    persona: "MEMBER",
-    value: "MEMBER",
-    label: "Üye",
-    description: "Salon, paket ve rezervasyon akışını daha akıcı yönetmek istiyorum.",
-    icon: "member",
+    persona: "ADMIN",
+    value: "ADMIN",
+    label: "Klinik veya salon sahibi",
+    description: "Kliniğimi kurmak; operasyonu, ekibi ve danışan süreçlerini yönetmek istiyorum.",
+    icon: "clinic",
   },
   {
     persona: "TRAINER",
     value: "TRAINER",
-    label: "Eğitmen",
-    description: "Derslerimi, danışanlarımı ve günlük operasyonumu tek akışta toplamak istiyorum.",
+    label: "Bir kliniğe davet edildim",
+    description: "Fizyoterapist veya eğitmen olarak klinik yöneticimin davet koduyla katılacağım.",
     icon: "trainer",
   },
   {
-    persona: "ADMIN",
-    value: "ADMIN",
-    label: "Salon sahibi",
-    description: "Operasyon, ekip ve büyüme ekranlarını tek merkezden görmek istiyorum.",
-    icon: "clinic",
+    persona: "MEMBER",
+    value: "MEMBER",
+    label: "Salon QR ile katılacağım",
+    description: "Danışan veya üye olarak salonun QR kodu ya da bağlantısıyla devam edeceğim.",
+    icon: "member",
   },
 ];
 
 export default function RoleAssessmentScreen() {
   const router = useRouter();
-  const { advanceSignupFlow, selectedPersoma, setSelectedPersoma, signupOnboarding, setSignupOnboarding } = useAppFlow();
+  const { advanceSignupFlow, resetSignupFlow, selectedPersoma, setSelectedPersoma, signupOnboarding, setSignupOnboarding } = useAppFlow();
   const [stepIndex, setStepIndex] = useState(0);
   const isAdvancing = useRef(false);
-  const persona = selectedPersoma ?? "MEMBER";
+  const persona = selectedPersoma ?? "ADMIN";
+
+  useEffect(() => {
+    if (!selectedPersoma) setSelectedPersoma("ADMIN");
+  }, [selectedPersoma, setSelectedPersoma]);
 
   const steps = [
     {
@@ -43,9 +47,9 @@ export default function RoleAssessmentScreen() {
       icon: "spark" as const,
       eyebrow: "Rol seçimi",
       badgeLabel: "Başlangıç",
-      title: "FizyoFlow’yı hangi rolde kullanacaksın?",
-      subtitle: "Önce kullanım tipini seçelim; sonraki sorular buna göre şekillenecek.",
-      helperText: "Rol seçimi sonrası kayıt akışı, ekran öncelikleri ve öneri dili sana göre uyarlanır.",
+      title: "Kliniğini kur veya davetinle katıl",
+      subtitle: "Normal kayıt klinik sahibi hesabı oluşturur. Ekip ve danışan hesapları klinik bağlantısıyla başlar.",
+      helperText: "Klinik sahibi olarak devam edebilir; davet kodun veya salon QR’ın varsa ilgili yolu seçebilirsin.",
       options: PERSONA_OPTIONS,
     },
     ...SIGNUP_QUESTION_SET[persona].map((item, index) => ({
@@ -63,26 +67,17 @@ export default function RoleAssessmentScreen() {
   const currentStep = steps[stepIndex];
   const activeValue = currentStep.key === "persona" ? selectedPersoma ?? "" : signupOnboarding[currentStep.key];
 
-  async function finishFlow(nextPersona: AppPersoma, nextProfile = signupOnboarding) {
-    await setStoredSignupOnboardingProfile(nextPersona, nextProfile);
-    await setSignupOnboardingRole(nextPersona);
+  async function finishFlow(nextProfile = signupOnboarding) {
+    await setStoredSignupOnboardingProfile("ADMIN", nextProfile);
+    await setSignupOnboardingRole("ADMIN");
     await setSignupOnboardingCompleted(true);
     advanceSignupFlow();
-
-    if (nextPersona === "ADMIN") {
-      router.replace("/(auth)/owner-plan" as never);
-      return;
-    }
-    if (nextPersona === "TRAINER") {
-      router.replace("/(auth)/trainer-invite-guide" as never);
-      return;
-    }
-    router.replace({ pathname: "/(auth)/register", params: { role: nextPersona } } as never);
+    router.replace("/(auth)/owner-plan" as never);
   }
 
-  function moveNext(nextPersona: AppPersoma = persona, nextProfile = signupOnboarding) {
+  function moveNext(nextProfile = signupOnboarding) {
     if (stepIndex === steps.length - 1) {
-      void finishFlow(nextPersona, nextProfile);
+      void finishFlow(nextProfile);
       return;
     }
     setStepIndex((prev) => prev + 1);
@@ -95,10 +90,25 @@ export default function RoleAssessmentScreen() {
     if (currentStep.key === "persona") {
       const nextPersona = value as AppPersoma;
       const resetProfile = { primaryGoal: "", rhythm: "", supportStyle: "" };
+
+      if (nextPersona === "TRAINER") {
+        resetSignupFlow();
+        router.replace("/(auth)/trainer-invite-guide" as never);
+        isAdvancing.current = false;
+        return;
+      }
+
+      if (nextPersona === "MEMBER") {
+        resetSignupFlow();
+        router.replace("/(auth)/scan-salon-qr" as never);
+        isAdvancing.current = false;
+        return;
+      }
+
       setSelectedPersoma(nextPersona);
       setSignupOnboarding(resetProfile);
       setTimeout(() => {
-        moveNext(nextPersona, resetProfile);
+        moveNext(resetProfile);
         isAdvancing.current = false;
       }, 150);
       return;
@@ -110,7 +120,7 @@ export default function RoleAssessmentScreen() {
     };
     setSignupOnboarding(nextProfile);
     setTimeout(() => {
-      moveNext(persona, nextProfile);
+      moveNext(nextProfile);
       isAdvancing.current = false;
     }, 150);
   }

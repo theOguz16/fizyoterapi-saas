@@ -1,0 +1,29 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "fizyoflow://join/gecersiz-klinik-baglantisi"
+
+- extendedWaitUntil:
+    visible: "Klinik bağlantısı doğrulanamadı|Bağlantıda klinik bilgisi yok"
+    timeout: 20000
+
+- assertVisible:
+    id: "salon-not-found-scan-qr"
+- assertVisible:
+    id: "salon-not-found-enter-invite"
+- assertVisible:
+    id: "salon-not-found-discovery"
+
+- tapOn:
+    id: "salon-not-found-discovery"
+
+- extendedWaitUntil:
+    visible: "Kliniğin seni davet ettiyse doğrudan bağlan"
+    timeout: 15000
+- assertVisible:
+    id: "member-salons-scan-qr"
+- assertVisible:
+    id: "member-salons-enter-invite"

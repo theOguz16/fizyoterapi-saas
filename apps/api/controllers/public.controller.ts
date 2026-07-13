@@ -19,10 +19,45 @@ import { GroupClassService } from "../services/group-class.service";
 import { UserPackage } from "../entities/user-package.entity";
 import { isReservedPublicSlug } from "../constants/reserved-slugs";
 import { DemoLeadEmailService } from "../services/demo-lead-email.service";
+import { ProductEventName } from "../services/audit-log.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
   private static readonly UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  private static readonly ANONYMOUS_PRODUCT_EVENTS = new Set<ProductEventName>(["app_opened", "clinic_signup_started"]);
+
+  static async trackProductEvent(req: Request, res: Response) {
+    const eventName = String(req.body?.event_name || "").trim().toLowerCase() as ProductEventName;
+    if (!PublicController.ANONYMOUS_PRODUCT_EVENTS.has(eventName)) {
+      throw new AppError("INVALID_PRODUCT_EVENT", 422, "Geçersiz anonim ürün olayı");
+    }
+
+    await AuditLogService.logProductEvent({
+      event_name: eventName,
+      event_id: req.body?.event_id,
+      occurred_at: req.body?.occurred_at,
+      install_id: req.body?.install_id,
+      session_id: req.body?.session_id,
+      method: req.method,
+      path: req.originalUrl,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      metadata: PublicController.normalizeProductEventMetadata(req.body?.metadata),
+    });
+
+    return res.status(202).json({ data: { accepted: true } });
+  }
+
+  private static normalizeProductEventMetadata(raw: unknown) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+    const source = raw as Record<string, unknown>;
+    return {
+      source: String(source.source || "mobile").slice(0, 80),
+      screen: String(source.screen || "").slice(0, 120) || null,
+      platform: String(source.platform || "").slice(0, 20) || null,
+      app_version: String(source.app_version || "").slice(0, 40) || null,
+    };
+  }
 
   private static normalizeCampaigns(raw: unknown) {
     const defaults = {

@@ -206,20 +206,22 @@ describe("member availability controller", () => {
 
     expect(res.statusCode).toBe(201);
     expect(res.body).toEqual({
-      data: [
-        expect.objectContaining({ id: "slot-1" }),
-        expect.objectContaining({ id: "slot-2" }),
-        expect.objectContaining({ id: "slot-3" }),
-      ],
-      weekly_plan: {
-        weekly_class_hours: 1,
-        selected_slots: 3,
-        trainer_free_slots: 3,
-        required_slots: 3,
-        required_trainer_free_slots: 2,
-        is_valid: true,
-        mode: "APPEND",
-        message: "Haftalık müsaitlik planına yeni saatler eklendi",
+      data: {
+        items: [
+          expect.objectContaining({ id: "slot-1" }),
+          expect.objectContaining({ id: "slot-2" }),
+          expect.objectContaining({ id: "slot-3" }),
+        ],
+        weekly_plan: {
+          weekly_class_hours: 1,
+          selected_slots: 3,
+          trainer_free_slots: 3,
+          required_slots: 3,
+          required_trainer_free_slots: 2,
+          is_valid: true,
+          mode: "APPEND",
+          message: "Haftalık müsaitlik planına yeni saatler eklendi",
+        },
       },
     });
     expect(AuditLogService.log).toHaveBeenCalledTimes(1);

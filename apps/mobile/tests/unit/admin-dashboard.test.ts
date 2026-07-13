@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAdminDashboardMetrics } from "@/lib/admin-dashboard";
+import { buildAdminDashboardMetrics, buildQuickSetupChecklist } from "@/lib/admin-dashboard";
 
 describe("admin dashboard helpers", () => {
   it("builds admin dashboard metrics from API payload", () => {
@@ -83,5 +83,48 @@ describe("admin dashboard helpers", () => {
       lostLeads: 0,
       riskPreviewCount: 0,
     });
+  });
+
+  it("directs a new clinic owner to the first package as the next setup operation", () => {
+    const checklist = buildQuickSetupChecklist({
+      quick_setup: {
+        steps: {
+          clinic: true,
+          package: false,
+          working_hours: true,
+          clinic_qr: true,
+          dashboard_preview: true,
+        },
+        completed: 4,
+        total: 5,
+        is_complete: false,
+      },
+    });
+
+    expect(checklist.completed).toBe(4);
+    expect(checklist.total).toBe(5);
+    expect(checklist.isComplete).toBe(false);
+    expect(checklist.nextStep).toMatchObject({
+      key: "package",
+      route: "/(admin)/packages",
+    });
+  });
+
+  it("marks quick setup complete when every real operation is ready", () => {
+    const checklist = buildQuickSetupChecklist({
+      quick_setup: {
+        steps: {
+          clinic: true,
+          package: true,
+          working_hours: true,
+          clinic_qr: true,
+          dashboard_preview: true,
+        },
+      },
+    });
+
+    expect(checklist.completed).toBe(5);
+    expect(checklist.isComplete).toBe(true);
+    expect(checklist.nextStep).toBeNull();
   });
 });

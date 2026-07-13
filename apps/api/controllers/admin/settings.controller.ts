@@ -564,6 +564,8 @@ export class AdminSettingsController {
       const actorId = req.auth?.sub || null;
 
       const profile = await AdminSettingsController.ensureProfile(tenantId);
+      const previousBusinessHours = JSON.stringify(AdminSettingsController.normalizeBusinessHours(profile.business_hours));
+      let businessHoursChanged = false;
       const normalizedCurrentLocation = AdminSettingsController.normalizeLocation(profile.location);
       const previousCampaigns = JSON.stringify(normalizedCurrentLocation.campaigns || {});
       const previousAudit = Array.isArray((normalizedCurrentLocation as any).campaign_audit)
@@ -622,6 +624,7 @@ export class AdminSettingsController {
           const normalizedBusinessHours = AdminSettingsController.normalizeBusinessHours(profileInput.business_hours);
 
           profile.business_hours = normalizedBusinessHours;
+          businessHoursChanged = JSON.stringify(normalizedBusinessHours) !== previousBusinessHours;
         }
         if (profileInput.is_published !== undefined) profile.is_published = Boolean(profileInput.is_published);
         if (profileInput.location !== undefined && typeof profileInput.location === "object" && !Array.isArray(profileInput.location)) {
@@ -672,6 +675,26 @@ export class AdminSettingsController {
 
       profile.location = AdminSettingsController.normalizeLocation(profile.location);
       await profileRepo.save(profile);
+
+      if (businessHoursChanged) {
+        await AuditLogService.logProductEvent({
+          event_name: "working_hours_saved",
+          install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
+          session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
+          tenant_id: tenantId,
+          actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
+          actor_account_id: req.auth?.accountId || null,
+          actor_role: req.auth?.role || null,
+          method: req.method,
+          path: req.originalUrl,
+          target_type: "settings",
+          target_id: tenantId,
+          metadata: {
+            working_days_count: Array.isArray(profile.business_hours?.working_days) ? profile.business_hours.working_days.length : 0,
+            timezone: profile.business_hours?.timezone || null,
+          },
+        });
+      }
 
       const templatesInput = req.body?.notification_templates as
         | Array<{

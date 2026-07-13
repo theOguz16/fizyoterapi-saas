@@ -92,6 +92,7 @@ describe("admin packages controller", () => {
       return {} as any;
     });
     vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
+    const productEventSpy = vi.spyOn(AuditLogService, "logProductEvent").mockResolvedValue(true);
 
     const req = {
       tenantId: "tenant-1",
@@ -130,6 +131,13 @@ describe("admin packages controller", () => {
     expect(res.statusCode).toBe(201);
     expect(res.body).toEqual({ data: savedPackage });
     expect(AuditLogService.log).toHaveBeenCalledTimes(1);
+    expect(productEventSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_name: "package_created",
+        tenant_id: "tenant-1",
+        target_id: "pkg-2",
+      })
+    );
   });
 
   it("archives packages instead of hard deleting them", async () => {

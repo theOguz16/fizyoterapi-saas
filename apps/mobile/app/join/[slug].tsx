@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { setPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { normalizeSalonSlug } from "@/lib/salon-qr";
 import { tokens } from "@/theme/tokens";
 
 export default function JoinSalonRedirectScreen() {
@@ -10,16 +10,13 @@ export default function JoinSalonRedirectScreen() {
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
   useEffect(() => {
-    const normalized = String(slug || "").trim().toLowerCase();
+    const normalized = normalizeSalonSlug(slug);
     if (!normalized) {
-      router.replace("/(auth)/welcome" as never);
+      router.replace("/(intake-member)" as never);
       return;
     }
 
-    void (async () => {
-      await setPendingSalonJoinSlug(normalized);
-      router.replace(`/(intake-member)/salons/${normalized}` as never);
-    })();
+    router.replace(`/(intake-member)/salons/${normalized}` as never);
   }, [router, slug]);
 
   return (

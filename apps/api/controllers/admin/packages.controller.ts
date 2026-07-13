@@ -310,6 +310,23 @@ export class AdminPackagesController {
         eventType: "ADMIN_PACKAGE_CREATED",
         pkg: savedPackage,
       });
+      await AuditLogService.logProductEvent({
+        event_name: "package_created",
+        install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
+        session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
+        tenant_id: tenantId,
+        actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
+        actor_account_id: req.auth?.accountId || null,
+        actor_role: req.auth?.role || null,
+        method: req.method,
+        path: req.originalUrl,
+        target_type: "package",
+        target_id: savedPackage.id,
+        metadata: {
+          package_type: savedPackage.type,
+          is_public: savedPackage.is_public,
+        },
+      });
       return res.status(201).json({ data: savedPackage });
     } catch (error) {
       if (error instanceof AppError) {

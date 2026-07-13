@@ -56,6 +56,29 @@ describe("mobile http client", () => {
         headers: expect.objectContaining({
           Authorization: "Bearer token-1",
           "Content-Type": "application/json",
+          "X-FizyoFlow-Response-Envelope": "1",
+        }),
+      })
+    );
+  });
+
+  it("adds anonymous installation and session context to subsequent API requests", async () => {
+    const { httpRequest, setProductAnalyticsHeaders } = await loadHttpClientModule();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ data: { ok: true } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    setProductAnalyticsHeaders({ installId: "install-1", sessionId: "session-1" });
+
+    await httpRequest("/account/clinic-request", { method: "POST", body: {} });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.fizyoflow.com/api/account/clinic-request",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-FizyoFlow-Install-ID": "install-1",
+          "X-FizyoFlow-Session-ID": "session-1",
         }),
       })
     );
@@ -73,17 +96,32 @@ describe("mobile http client", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:4949/api/member/home", expect.any(Object));
   });
 
-  it("supports raw payload mode without data unwrapping", async () => {
+  it("returns the typed envelope when message or metadata is needed", async () => {
+    const { httpRequestEnvelope } = await loadHttpClientModule();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ data: { ok: true }, message: "Tamam" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await httpRequestEnvelope<{ ok: boolean }>("/auth/login", { auth: false });
+
+    expect(result).toEqual({ data: { ok: true }, message: "Tamam" });
+  });
+
+  it("rejects successful responses that do not follow the envelope contract", async () => {
     const { httpRequest } = await loadHttpClientModule();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
       json: vi.fn().mockResolvedValue({ ok: true }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await httpRequest<{ ok: boolean }>("/auth/login", { unwrapData: false, auth: false });
-
-    expect(result).toEqual({ ok: true });
+    await expect(httpRequest("/member/home")).rejects.toMatchObject({
+      code: "INVALID_API_RESPONSE",
+      status: 200,
+    });
   });
 
   it("throws ApiClientError with mapped message for failed responses", async () => {

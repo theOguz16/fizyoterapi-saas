@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAppFlow } from "@/providers/app-flow";
 import { useSession } from "@/providers/auth-session";
-import { getSignupOnboardingRole } from "@/lib/local-preferences";
-import { getPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { MarketingShell } from "@/theme/components/marketing-shell";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -15,10 +13,8 @@ import { getUserFacingMessage } from "@/lib/user-feedback";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ role?: string }>();
-  const { selectedPersoma, resetSignupFlow, setSelectedPersoma, signupOnboarding } = useAppFlow();
+  const { resetSignupFlow, setSelectedPersoma, signupOnboarding } = useAppFlow();
   const { register } = useSession();
-  const [personaResolved, setPersonaResolved] = useState(Boolean(selectedPersoma));
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -30,39 +26,12 @@ export default function RegisterScreen() {
   const [agreed, setAgreed] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendingSalonSlug, setPendingSalonSlug] = useState<string | null>(null);
   const introOpacity = useState(() => new Animated.Value(0))[0];
   const introTranslate = useState(() => new Animated.Value(20))[0];
 
   useEffect(() => {
-    getPendingSalonJoinSlug().then(setPendingSalonSlug).catch(() => setPendingSalonSlug(null));
-    const roleFromParams = typeof params.role === "string" ? params.role.toUpperCase() : "";
-    if (roleFromParams === "MEMBER" || roleFromParams === "TRAINER" || roleFromParams === "ADMIN") {
-      setSelectedPersoma(roleFromParams);
-      setPersonaResolved(true);
-      return;
-    }
-
-    if (selectedPersoma) {
-      setPersonaResolved(true);
-      return;
-    }
-    getSignupOnboardingRole()
-      .then((role) => {
-        if (role) {
-          setSelectedPersoma(role);
-        }
-      })
-      .catch(() => null)
-      .finally(() => setPersonaResolved(true));
-  }, [params.role, selectedPersoma, setSelectedPersoma]);
-
-  useEffect(() => {
-    if (!personaResolved) return;
-    if (!selectedPersoma) {
-      router.replace("/(auth)/role-assessment" as never);
-    }
-  }, [personaResolved, router, selectedPersoma]);
+    setSelectedPersoma("ADMIN");
+  }, [setSelectedPersoma]);
 
   useEffect(() => {
     Animated.parallel([
@@ -82,22 +51,6 @@ export default function RegisterScreen() {
   }, [introOpacity, introTranslate]);
 
   async function handleRegister() {
-    let nextPersona = selectedPersoma;
-    if (!nextPersona) {
-      nextPersona = await getSignupOnboardingRole().catch(() => null);
-      if (nextPersona) {
-        setSelectedPersoma(nextPersona);
-      }
-    }
-
-    if (!nextPersona) {
-      router.replace("/(auth)/role-assessment" as never);
-      return;
-    }
-    if (nextPersona === "TRAINER") {
-      router.replace("/(auth)/invite-accept" as never);
-      return;
-    }
     if (form.password !== form.repeat) {
       setError("Şifreler eşleşmiyor.");
       return;
@@ -116,9 +69,9 @@ export default function RegisterScreen() {
         email: form.email,
         phone: form.phone,
         password: form.password,
-        account_type: nextPersona === "ADMIN" ? "CLINIC_ADMIN" : "MEMBER",
+        account_type: "CLINIC_ADMIN",
         onboarding_profile: {
-          role: nextPersona,
+          role: "ADMIN",
           primary_goal: signupOnboarding.primaryGoal,
           rhythm: signupOnboarding.rhythm,
           support_style: signupOnboarding.supportStyle,
@@ -135,11 +88,7 @@ export default function RegisterScreen() {
   return (
     <MarketingShell
       title="Hesabını oluştur"
-      subtitle={
-        selectedPersoma === "ADMIN"
-          ? "Yönetici hesabını oluştur. Salon kurulumu ve plan ayarları girişten hemen sonra devam edecek."
-          : "Bilgilerini tamamlayarak hesabını oluştur ve sana uygun akışla devam et."
-      }
+      subtitle="Klinik sahibi hesabını oluştur. Klinik kurulumu ve plan ayarları girişten hemen sonra devam edecek."
       icon="spark"
       animateContent={false}
       footer={
@@ -151,23 +100,13 @@ export default function RegisterScreen() {
         </View>
       }
     >
-      {!personaResolved ? null : (
       <Animated.View style={[styles.contentStack, { opacity: introOpacity, transform: [{ translateY: introTranslate }] }]}>
-        {pendingSalonSlug ? (
-          <SurfaceCard tone="primary" padding="compact">
-            <Text style={styles.eyebrow}>QR ile seçilen salon</Text>
-            <Text style={styles.sectionTitle}>{pendingSalonSlug}</Text>
-            <Text style={styles.helper}>Kayıt bittiğinde bu salonun onboarding akışına devam edeceksin.</Text>
-          </SurfaceCard>
-        ) : null}
         <AnimatedEntrance>
           <SurfaceCard tone="primary" padding="hero">
-            <Text style={styles.eyebrow}>{selectedPersoma === "ADMIN" ? "Salon Kurulumu" : "Hızlı Başlangıç"}</Text>
-            <Text style={styles.sectionTitle}>{selectedPersoma === "ADMIN" ? "Salon sahibi hesabı" : "Kişisel hesap bilgileri"}</Text>
+            <Text style={styles.eyebrow}>Klinik Kurulumu</Text>
+            <Text style={styles.sectionTitle}>Klinik sahibi hesabı</Text>
             <Text style={styles.helper}>
-              {selectedPersoma === "ADMIN"
-                ? "Bu hesapla salon profilini, ekip davetlerini, paketlerini, çalışma saatlerini ve üyelik süreçlerini yöneteceksin."
-                : "Hesabın oluşturulduktan sonra rolüne uygun ekranlar otomatik olarak açılacak."}
+              Bu hesapla klinik profilini, ekip davetlerini, paketlerini, çalışma saatlerini ve danışan süreçlerini yöneteceksin.
             </Text>
             <FormField inputId="register-first-name-input" label="Ad" value={form.first_name} onChangeText={(value) => setForm((prev) => ({ ...prev, first_name: value }))} placeholder="Adın" />
             <FormField inputId="register-last-name-input" label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyadın" />
@@ -185,7 +124,6 @@ export default function RegisterScreen() {
           </SurfaceCard>
         </AnimatedEntrance>
       </Animated.View>
-      )}
     </MarketingShell>
   );
 }

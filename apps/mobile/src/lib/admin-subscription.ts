@@ -1,5 +1,7 @@
 import type { AdminClinicSubscription } from "./mobile-api";
 
+export const CLINIC_TRIAL_DAYS = 21;
+
 export function formatSubscriptionStatus(value?: string) {
   if (value === "TRIAL") return "Deneme aktif";
   if (value === "ACTIVE") return "Plan aktif";
@@ -20,7 +22,7 @@ export function buildSubscriptionHeadline(subscription?: Pick<AdminClinicSubscri
     return "Deneme süren bitti. Satın alma ile salon akışlarını tekrar tam erişime açabilirsin.";
   }
   if (subscription.can_start_trial) {
-    return "5 günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.";
+    return `${CLINIC_TRIAL_DAYS} günlük denemeyi başlat, salonunu ekip ve üye yönetimiyle birlikte canlı kullanıma aç.`;
   }
   return "Plan durumunu buradan takip edebilir, uygun olduğunda satın alma adımına geçebilirsin.";
 }

@@ -22,11 +22,18 @@ Bu repo tarafinda kod entegrasyonu hazirlandi. Dashboard ve store tarafinda su i
 
 ## Trial modeli
 
-- Trial suresi: `5 gun`
+- Uygulama ici klinik trial suresi: `21 gun`
 - Trial once admin tarafinda uygulama icinden baslatilir.
 - Satin alma yine admin tarafinda uygulama icinden yapilir.
 - `member` ve `trainer` odeme yapmaz.
 - `appUserID` olarak `tenant.id` kullanilir.
+
+Bu modelde trial, abonelik satin alinmadan once backend tarafindan klinige tanimlanir. Ayni kullaniciya arka arkaya iki deneme verilmemesi icin App Store Connect ve Google Play Console'daki `monthly` / `annual` urunlerine ek bir free trial veya introductory trial baglanmamalidir. RevenueCat satin alma ve entitlement senkronizasyonunu yonetir; 21 gunluk uygulama ici trial'i baslatmaz. Store tarafinda daha once bir introductory offer tanimlandiysa production yayinindan once kaldirilmali ve yeni bir sandbox hesabi ile satin alma ekrani kontrol edilmelidir.
+
+Store dogrulama kaynaklari:
+
+- [Apple: Auto-renewable subscription introductory offer kurulumu](https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-up-introductory-offers-for-auto-renewable-subscriptions)
+- [RevenueCat: Free trials ve introductory offers](https://www.revenuecat.com/docs/subscription-guidance/subscription-offers)
 
 ## Mobil env
 

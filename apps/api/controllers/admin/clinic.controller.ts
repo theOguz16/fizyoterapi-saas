@@ -7,8 +7,8 @@ import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../enti
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { AuditLogService } from "../../services/audit-log.service";
+import { CLINIC_TRIAL_DAYS } from "../../config/subscription";
 
-const ADMIN_TRIAL_DAYS = 5;
 const REVENUECAT_API_BASE_URL = "https://api.revenuecat.com/v1";
 
 function plusDays(days: number) {
@@ -117,7 +117,7 @@ export class AdminClinicController {
       subscription_started_at: tenant.subscription_started_at || null,
       subscription_current_period_ends_at: tenant.subscription_current_period_ends_at || null,
       subscription_last_event_at: tenant.subscription_last_event_at || null,
-      trial_days_total: ADMIN_TRIAL_DAYS,
+      trial_days_total: CLINIC_TRIAL_DAYS,
       trial_days_remaining: tenant.subscription_status === TenantSubscriptionStatus.TRIAL ? remainingDays : 0,
       has_trial_history: hasTrialHistory,
       can_start_trial: tenant.subscription_status === TenantSubscriptionStatus.INACTIVE && !hasTrialHistory,
@@ -317,7 +317,7 @@ export class AdminClinicController {
               type: "TRIAL_STARTED",
               occurred_at: tenant.trial_starts_at,
               title: "Deneme başladı",
-              description: "5 günlük ücretsiz deneme aktifleşti.",
+              description: `${CLINIC_TRIAL_DAYS} günlük ücretsiz deneme aktifleşti.`,
             }
           : null,
         tenant.trial_ends_at
@@ -382,7 +382,7 @@ export class AdminClinicController {
       tenant.reviewed_at = tenant.reviewed_at || new Date();
       tenant.review_note = tenant.review_note || "Mobil deneme baslatildiginda otomatik yayina alindi.";
       tenant.trial_starts_at = new Date();
-      tenant.trial_ends_at = plusDays(ADMIN_TRIAL_DAYS);
+      tenant.trial_ends_at = plusDays(CLINIC_TRIAL_DAYS);
       await repo.save(tenant);
 
       await AuditLogService.log({
@@ -406,6 +406,24 @@ export class AdminClinicController {
           trial_starts_at: tenant.trial_starts_at.toISOString(),
           trial_ends_at: tenant.trial_ends_at?.toISOString() || null,
           purchase_provider: "REVENUECAT",
+        },
+      });
+
+      await AuditLogService.logProductEvent({
+        event_name: "trial_started",
+        install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
+        session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
+        tenant_id: tenant.id,
+        actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
+        actor_account_id: req.auth?.accountId || null,
+        actor_role: req.auth?.role || null,
+        method: req.method,
+        path: req.originalUrl,
+        target_type: "tenant",
+        target_id: tenant.id,
+        metadata: {
+          trial_days: CLINIC_TRIAL_DAYS,
+          source: "subscription_screen",
         },
       });
 

@@ -234,14 +234,14 @@ describe("admin members controller", () => {
     } as any;
     const listRes = createMockResponse();
     await AdminMembersController.listMemberPackages(listReq, listRes as any);
-    expect((listRes.body as any).data[0]).toEqual(
+    expect((listRes.body as any).data.items[0]).toEqual(
       expect.objectContaining({
         package_title: "Starter",
         trainer_summary: "Deniz Akin",
         remaining_credits: 8,
       })
     );
-    expect((listRes.body as any).totalRemainingCredits).toBe(8);
+    expect((listRes.body as any).data.totalRemainingCredits).toBe(8);
 
     const adjustReq = {
       tenantId: "tenant-1",

@@ -69,7 +69,7 @@ describe("admin clinic subscription integration", () => {
     );
   });
 
-  it("starts a five-day trial and publishes an inactive clinic without manual review", async () => {
+  it("starts a twenty-one-day trial and publishes an inactive clinic without manual review", async () => {
     process.env.JWT_SECRET = "test-secret";
     const tenant = {
       id: "tenant-1",
@@ -90,6 +90,7 @@ describe("admin clinic subscription integration", () => {
     vi.spyOn(AppDataSource, "getRepository").mockReturnValue(tenantRepo as any);
     vi.spyOn(TenantLifecycleService, "syncTenantState").mockResolvedValue(tenant as any);
     vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined);
+    const productEventSpy = vi.spyOn(AuditLogService, "logProductEvent").mockResolvedValue(true);
 
     const token = createToken({ sub: "admin-user", tenantId: "tenant-1", role: "ADMIN", accountId: "account-1" });
     const response = await runRouteChain(
@@ -113,15 +114,19 @@ describe("admin clinic subscription integration", () => {
     expect(tenant.subscription_status).toBe("TRIAL");
     expect(tenant.trial_starts_at).toBeInstanceOf(Date);
     expect(tenant.trial_ends_at).toBeInstanceOf(Date);
+    expect((tenant.trial_ends_at!.getTime() - tenant.trial_starts_at!.getTime()) / (24 * 60 * 60 * 1000)).toBeCloseTo(21, 4);
     expect((response.body as any).data).toEqual(
       expect.objectContaining({
         subscription_status: "TRIAL",
         can_start_trial: false,
         can_purchase_in_app: true,
-        trial_days_total: 5,
+        trial_days_total: 21,
       })
     );
     expect(tenantRepo.save).toHaveBeenCalledTimes(1);
+    expect(productEventSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1" })
+    );
   });
 
   it("syncs a RevenueCat entitlement and moves trial clinics to active", async () => {

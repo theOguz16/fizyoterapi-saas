@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { Response } from "express";
+import { EntityManager } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { AuditLog } from "../entities/audit-log.entity";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
@@ -28,6 +29,40 @@ type AuditLogInput = {
   target_id?: string | null;
   error_code?: string | null;
   error_message?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export const PRODUCT_EVENT_NAMES = [
+  "app_opened",
+  "clinic_signup_started",
+  "clinic_created",
+  "trial_started",
+  "package_created",
+  "working_hours_saved",
+  "clinic_qr_viewed",
+  "member_invite_started",
+  "subscription_viewed",
+  "purchase_started",
+] as const;
+
+export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
+
+type ProductEventInput = {
+  event_name: ProductEventName;
+  event_id?: string | null;
+  occurred_at?: string | Date | null;
+  install_id?: string | null;
+  session_id?: string | null;
+  tenant_id?: string | null;
+  actor_user_id?: string | null;
+  actor_account_id?: string | null;
+  actor_role?: string | null;
+  method?: string | null;
+  path?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  target_type?: string | null;
+  target_id?: string | null;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -72,11 +107,11 @@ export class AuditLogService {
     };
   }
 
-  static async log(input: AuditLogInput) {
-    if (!AppDataSource.isInitialized) return;
+  static async log(input: AuditLogInput, manager?: EntityManager) {
+    if (!manager && !AppDataSource.isInitialized) return;
 
     try {
-      const repo = AppDataSource.getRepository(AuditLog);
+      const repo = manager ? manager.getRepository(AuditLog) : AppDataSource.getRepository(AuditLog);
       const entity = repo.create({
         tenant_id: input.tenant_id || null,
         actor_user_id: input.actor_user_id || null,
@@ -101,6 +136,56 @@ export class AuditLogService {
       await repo.save(entity);
     } catch (error) {
       console.error("Audit log write error:", error);
+    }
+  }
+
+  static async logProductEvent(input: ProductEventInput, manager?: EntityManager) {
+    if (!manager && !AppDataSource.isInitialized) return false;
+
+    const eventId = sanitizeText(input.event_id, 120) || randomUUID();
+    const eventType = input.event_name.toUpperCase();
+    const repo = manager ? manager.getRepository(AuditLog) : AppDataSource.getRepository(AuditLog);
+
+    try {
+      const duplicate = await repo.findOne({
+        where: { event_type: eventType, request_id: eventId },
+        select: ["id"],
+      });
+      if (duplicate) return false;
+
+      const occurredAtRaw = input.occurred_at instanceof Date ? input.occurred_at : new Date(input.occurred_at || Date.now());
+      const occurredAt = Number.isNaN(occurredAtRaw.getTime()) ? new Date() : occurredAtRaw;
+
+      const entity = repo.create({
+        tenant_id: input.tenant_id || null,
+        actor_user_id: input.actor_user_id || null,
+        actor_account_id: input.actor_account_id || null,
+        actor_role: sanitizeText(input.actor_role, 40),
+        event_type: eventType,
+        action: eventType,
+        method: sanitizeText(input.method, 10),
+        path: sanitizeText(input.path, 500),
+        status_code: 200,
+        success: true,
+        request_id: eventId,
+        ip_address: sanitizeText(input.ip_address, 120),
+        user_agent: sanitizeText(input.user_agent, 1000),
+        target_type: sanitizeText(input.target_type, 120),
+        target_id: sanitizeText(input.target_id, 120),
+        metadata: sanitizeMetadata({
+          event_name: input.event_name,
+          event_id: eventId,
+          occurred_at: occurredAt.toISOString(),
+          install_id: sanitizeText(input.install_id, 120),
+          session_id: sanitizeText(input.session_id, 120),
+          ...(input.metadata || {}),
+        }),
+      });
+      await repo.save(entity);
+      return true;
+    } catch (error) {
+      console.error("Product event write error:", error);
+      return false;
     }
   }
 }

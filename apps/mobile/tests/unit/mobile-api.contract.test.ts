@@ -22,6 +22,12 @@ import {
   trainerManualCheckinApi,
   trainerQrCheckinApi,
 } from "@/lib/mobile-api";
+import { loginApi as domainLoginApi } from "@/lib/api/auth";
+import { getPublicSalonsApi as domainGetPublicSalonsApi } from "@/lib/api/public";
+import { getMemberPackagesApi as domainGetMemberPackagesApi } from "@/lib/api/member";
+import { getTrainerTodayApi as domainGetTrainerTodayApi } from "@/lib/api/trainer";
+import { getAdminPackagesApi as domainGetAdminPackagesApi } from "@/lib/api/admin";
+import { syncAdminClinicSubscriptionApi as domainSyncAdminClinicSubscriptionApi } from "@/lib/api/subscription";
 
 const { httpRequest } = vi.hoisted(() => ({
   httpRequest: vi.fn(),
@@ -40,8 +46,17 @@ describe("mobile api contract helpers", () => {
     vi.unstubAllGlobals();
   });
 
+  it("keeps domain modules and the legacy barrel on the same function contracts", () => {
+    expect(domainLoginApi).toBe(loginApi);
+    expect(domainGetPublicSalonsApi).toBeDefined();
+    expect(domainGetMemberPackagesApi).toBe(getMemberPackagesApi);
+    expect(domainGetTrainerTodayApi).toBe(getTrainerTodayApi);
+    expect(domainGetAdminPackagesApi).toBe(getAdminPackagesApi);
+    expect(domainSyncAdminClinicSubscriptionApi).toBe(syncAdminClinicSubscriptionApi);
+  });
+
   it("loads and creates member measurements through the expected endpoints", async () => {
-    httpRequest.mockResolvedValueOnce([{ id: "m-1" }]).mockResolvedValueOnce({ data: { id: "m-2" } });
+    httpRequest.mockResolvedValueOnce([{ id: "m-1" }]).mockResolvedValueOnce({ id: "m-2" });
 
     const rows = await getMemberMeasurementsApi();
     const created = await createMemberMeasurementApi({
@@ -53,7 +68,7 @@ describe("mobile api contract helpers", () => {
     });
 
     expect(rows).toEqual([{ id: "m-1" }]);
-    expect(created).toEqual({ data: { id: "m-2" } });
+    expect(created).toEqual({ id: "m-2" });
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/member/measurements");
     expect(httpRequest).toHaveBeenNthCalledWith(2, "/member/measurements", {
       method: "POST",
@@ -94,7 +109,7 @@ describe("mobile api contract helpers", () => {
   });
 
   it("sends trainer check-in requests to dedicated manual and qr endpoints", async () => {
-    httpRequest.mockResolvedValue({ data: { attendanceId: "a-1" } });
+    httpRequest.mockResolvedValue({ attendanceId: "a-1" });
 
     await trainerManualCheckinApi({ manual_code: "member@gmail.com", session_id: "session-1" });
     await trainerQrCheckinApi({ qr_code: "FYF-MEMBER-001", scan_context: "TRAINER_CHECKIN" });
@@ -109,21 +124,18 @@ describe("mobile api contract helpers", () => {
     });
   });
 
-  it("normalizes admin package list responses from wrapped and direct payloads", async () => {
-    httpRequest.mockResolvedValueOnce({ data: [{ id: "pkg-1", title: "Starter" }] }).mockResolvedValueOnce([{ id: "pkg-2", title: "Pro" }]);
+  it("receives the normalized admin package list from the HTTP client", async () => {
+    httpRequest.mockResolvedValueOnce([{ id: "pkg-1", title: "Starter" }]);
 
-    const wrapped = await getAdminPackagesApi();
-    const direct = await getAdminPackagesApi();
+    const packages = await getAdminPackagesApi();
 
-    expect(wrapped).toEqual([{ id: "pkg-1", title: "Starter" }]);
-    expect(direct).toEqual([{ id: "pkg-2", title: "Pro" }]);
+    expect(packages).toEqual([{ id: "pkg-1", title: "Starter" }]);
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/admin/packages");
-    expect(httpRequest).toHaveBeenNthCalledWith(2, "/admin/packages");
   });
 
-  it("unwraps created admin package payloads and fetches mobile approvals", async () => {
+  it("creates admin packages and fetches mobile approvals with domain payloads", async () => {
     httpRequest
-      .mockResolvedValueOnce({ data: { id: "pkg-3", title: "QA Smoke Paket" } })
+      .mockResolvedValueOnce({ id: "pkg-3", title: "QA Smoke Paket" })
       .mockResolvedValueOnce([{ id: "approval-1", type: "PAYMENT" }]);
 
     const created = await createAdminPackageApi({
@@ -161,8 +173,8 @@ describe("mobile api contract helpers", () => {
       .mockResolvedValueOnce([{ id: "pkg-1" }])
       .mockResolvedValueOnce([{ id: "ref-1" }])
       .mockResolvedValueOnce([{ id: "pay-1" }])
-      .mockResolvedValueOnce({ data: { id: "pay-2" } })
-      .mockResolvedValueOnce({ data: { id: "chg-1" } });
+      .mockResolvedValueOnce({ id: "pay-2" })
+      .mockResolvedValueOnce({ id: "chg-1" });
 
     await expect(getMemberPackagesApi()).resolves.toEqual([{ id: "pkg-1" }]);
     await expect(getMemberReferralsApi()).resolves.toEqual([{ id: "ref-1" }]);
@@ -195,14 +207,14 @@ describe("mobile api contract helpers", () => {
 
   it("covers trainer today and admin campaign contract endpoints", async () => {
     httpRequest
-      .mockResolvedValueOnce({ data: { kpis: {} } })
-      .mockResolvedValueOnce({ data: [{ member_id: "member-1" }] })
-      .mockResolvedValueOnce({ data: { items: [] } })
-      .mockResolvedValueOnce({ data: { campaign: { id: "camp-1" } } });
+      .mockResolvedValueOnce({ kpis: {} })
+      .mockResolvedValueOnce([{ member_id: "member-1" }])
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValueOnce({ campaign: { id: "camp-1" } });
 
-    await expect(getTrainerTodayApi()).resolves.toEqual({ data: { kpis: {} } });
-    await expect(getTrainerRiskApi()).resolves.toEqual({ data: [{ member_id: "member-1" }] });
-    await expect(getAdminCampaignsApi()).resolves.toEqual({ data: { items: [] } });
+    await expect(getTrainerTodayApi()).resolves.toEqual({ kpis: {} });
+    await expect(getTrainerRiskApi()).resolves.toEqual([{ member_id: "member-1" }]);
+    await expect(getAdminCampaignsApi()).resolves.toEqual({ items: [] });
     await createAdminCampaignApi({
       name: "Referans Bahar",
       audience: "ALL",
@@ -235,28 +247,24 @@ describe("mobile api contract helpers", () => {
   it("loads admin clinic qr payload, syncs subscription and sends salon entry scan requests", async () => {
     httpRequest
       .mockResolvedValueOnce({
-        data: {
-          tenant_id: "tenant-1",
-          qr_code: "FYF-DEMO-001",
-          qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
-        },
+        tenant_id: "tenant-1",
+        qr_code: "FYF-DEMO-001",
+        qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
       })
-      .mockResolvedValueOnce({ data: { subscription_status: "ACTIVE", sync_state: "SYNCED" } })
-      .mockResolvedValueOnce({ data: { success: true } });
+      .mockResolvedValueOnce({ subscription_status: "ACTIVE", sync_state: "SYNCED" })
+      .mockResolvedValueOnce({ success: true });
 
     const clinicQr = await getAdminClinicQrApi();
     const syncResult = await syncAdminClinicSubscriptionApi();
     const scanResult = await adminSalonEntryScanApi({ manual_code: "MEM-ABCD1234" });
 
     expect(clinicQr).toEqual({
-      data: {
-        tenant_id: "tenant-1",
-        qr_code: "FYF-DEMO-001",
-        qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
-      },
+      tenant_id: "tenant-1",
+      qr_code: "FYF-DEMO-001",
+      qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
     });
-    expect(syncResult).toEqual({ data: { subscription_status: "ACTIVE", sync_state: "SYNCED" } });
-    expect(scanResult).toEqual({ data: { success: true } });
+    expect(syncResult).toEqual({ subscription_status: "ACTIVE", sync_state: "SYNCED" });
+    expect(scanResult).toEqual({ success: true });
     expect(httpRequest).toHaveBeenNthCalledWith(1, "/admin/clinic/qr");
     expect(httpRequest).toHaveBeenNthCalledWith(2, "/admin/clinic/subscription/sync", {
       method: "POST",
@@ -268,7 +276,7 @@ describe("mobile api contract helpers", () => {
   });
 
   it("sends selected package ids while loading salon day options", async () => {
-    httpRequest.mockResolvedValueOnce({ data: [] }).mockResolvedValueOnce({ data: [] });
+    httpRequest.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
     await getSalonDayOptionsApi("demo-salon", ["pkg-1", "pkg-2"]);
     await getSalonDayOptionsApi("demo-salon");

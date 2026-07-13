@@ -43,19 +43,6 @@ type RegisterInput = {
 export class AuthController {
   private static readonly MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
   private static readonly MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
-  private static readonly DEFAULT_BOOTSTRAP_ADMIN_EMAILS = ["oguzhanuyar531@gmail.com"];
-
-  private static getBootstrapAdminEmails() {
-    const configuredEmails = String(process.env.FIZYOFLOW_BOOTSTRAP_ADMIN_EMAILS || "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
-    return new Set([...AuthController.DEFAULT_BOOTSTRAP_ADMIN_EMAILS, ...configuredEmails]);
-  }
-
-  private static shouldRegisterAsAdmin(normalizedEmail: string, accountType?: RegisterInput["account_type"]) {
-    return accountType === "CLINIC_ADMIN" || AuthController.getBootstrapAdminEmails().has(normalizedEmail);
-  }
 
   private static readEventPayload(event: NotificationEvent): Record<string, any> {
     try {
@@ -75,6 +62,13 @@ export class AuthController {
     if (String(password).length < 8) {
       throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
     }
+    if (account_type && account_type !== "CLINIC_ADMIN") {
+      throw new AppError(
+        "SELF_SIGNUP_ROLE_RESTRICTED",
+        422,
+        "Eğitmen ve üye hesapları klinik daveti, salon QR kodu veya salon bağlantısıyla oluşturulmalıdır"
+      );
+    }
 
     const accountRepo = AppDataSource.getRepository(Account);
     const normalizedEmail = email.trim().toLowerCase();
@@ -83,7 +77,6 @@ export class AuthController {
       throw new AppError("ACCOUNT_EXISTS", 409, "Bu e-posta ile kayıtlı bir hesap zaten var");
     }
 
-    const registerAsAdmin = AuthController.shouldRegisterAsAdmin(normalizedEmail, account_type);
     const password_hash = await hashPassword(password);
     const account = accountRepo.create({
       email: normalizedEmail,
@@ -91,14 +84,14 @@ export class AuthController {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       phone: phone.replace(/\D+/g, ""),
-      global_role_default: registerAsAdmin ? UserRole.ADMIN : UserRole.MEMBER,
+      global_role_default: UserRole.ADMIN,
       onboarding_profile: AuthController.normalizeOnboardingProfile(onboarding_profile),
       is_active: true,
     });
     await accountRepo.save(account);
 
-    const role = account.global_role_default === UserRole.ADMIN ? UserRole.ADMIN : UserRole.MEMBER;
-    const onboardingState = role === UserRole.ADMIN ? "NO_CLINIC" : "NO_SALON";
+    const role = UserRole.ADMIN;
+    const onboardingState = "NO_CLINIC";
 
     // Kayit sonrasi client'in ek me cagrisi yapmadan devam edebilmesi icin
     // ilk session payload'i burada ayni formatta donulur.
@@ -133,7 +126,7 @@ export class AuthController {
       metadata: {
         email: account.email,
         onboarding_state: session.onboardingState,
-        bootstrap_admin: registerAsAdmin && account_type !== "CLINIC_ADMIN",
+        signup_scope: "CLINIC_OWNER",
       },
     });
 
@@ -142,7 +135,6 @@ export class AuthController {
 
   private static normalizeOnboardingProfile(input?: RegisterInput["onboarding_profile"]) {
     if (!input) return null;
-    const role = String(input.role || "").toUpperCase();
     const primary_goal = String(input.primary_goal || "").trim();
     const rhythm = String(input.rhythm || "").trim();
     const support_style = String(input.support_style || "").trim();
@@ -152,7 +144,7 @@ export class AuthController {
     }
 
     return {
-      role: role === "ADMIN" ? UserRole.ADMIN : role === "TRAINER" ? UserRole.TRAINER : UserRole.MEMBER,
+      role: UserRole.ADMIN,
       primary_goal,
       rhythm,
       support_style,

@@ -8,6 +8,13 @@ appId: com.fizyoflow.mobile
     timeout: 5000
 - assertVisible: "FizyoFlow"
 - assertVisible:
+    id: "admin-subscription-value-proof"
+- assertVisible: "Bu planla neleri yönetirsin?"
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-hero"
+    direction: DOWN
+- assertVisible:
     id: "admin-subscription-hero"
 - scrollUntilVisible:
     element:

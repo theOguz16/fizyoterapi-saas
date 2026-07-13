@@ -15,6 +15,47 @@ export type SalonServiceHighlight = {
   description: string;
 };
 
+export type MemberSalonConnectionState =
+  | { kind: "CONNECTED_LINK"; slug: string; route: string }
+  | { kind: "CONNECTION_REQUIRED"; slug: null; route: null };
+
+export function resolveMemberSalonConnection(pendingSlug?: string | null): MemberSalonConnectionState {
+  const slug = String(pendingSlug || "").trim().toLowerCase();
+  if (!slug) {
+    return { kind: "CONNECTION_REQUIRED", slug: null, route: null };
+  }
+
+  return {
+    kind: "CONNECTED_LINK",
+    slug,
+    route: `/(intake-member)/salons/${slug}`,
+  };
+}
+
+export function getSalonDiscoveryEmptyGuidance(hasPublishedSalons: boolean, hasActiveFilters: boolean) {
+  if (!hasPublishedSalons) {
+    return {
+      title: "Bağlanabileceğin bir klinik görünmüyor",
+      description: "Kliniğinden FizyoFlow QR kodunu, salon bağlantısını veya davet kodunu isteyerek doğrudan doğru kliniğe bağlanabilirsin.",
+      action: "SCAN_QR" as const,
+    };
+  }
+
+  if (hasActiveFilters) {
+    return {
+      title: "Bu aramayla klinik bulunamadı",
+      description: "Arama ve filtreleri temizleyerek yayınlanmış diğer klinikleri inceleyebilirsin.",
+      action: "CLEAR_FILTERS" as const,
+    };
+  }
+
+  return {
+    title: "Klinik listesi hazırlanıyor",
+    description: "Kliniğinden aldığın QR kodu veya davet bağlantısıyla beklemeden devam edebilirsin.",
+    action: "SCAN_QR" as const,
+  };
+}
+
 function getLocationParts(salon?: SalonDiscoverySummary | null) {
   const location = salon?.location && typeof salon.location === "object" ? salon.location : null;
   const city = String(salon?.city || location?.city || "").trim();

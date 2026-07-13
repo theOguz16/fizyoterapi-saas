@@ -10,6 +10,12 @@ appId: com.fizyoflow.mobile
     timeout: 5000
 - assertVisible: "FizyoFlow"
 - assertVisible:
+    id: "admin-subscription-value-proof"
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-hero"
+    direction: DOWN
+- assertVisible:
     id: "admin-subscription-hero"
 - assertVisible: "Plan aktif"
 - assertVisible: "Fizyoflow Plus Monthly"

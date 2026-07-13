@@ -14,11 +14,11 @@ import { AppError } from "../../errors/AppError";
 import { RiskService } from "../../services/risk.service";
 
 export class AdminDashboardController {
-  private static async resolveReportTimezone(tenantId: string) {
+  private static async resolveClinicProfile(tenantId: string) {
     const profile = await AppDataSource.getRepository(SalonProfile).findOne({
       where: { tenant_id: tenantId },
       order: { created_at: "DESC" },
-      select: ["id", "location"],
+      select: ["id", "slug", "location", "business_hours"],
     });
 
     const location =
@@ -28,7 +28,10 @@ export class AdminDashboardController {
 
     const timezone = typeof location.timezone === "string" ? location.timezone.trim() : "";
 
-    return timezone || "Europe/Istanbul";
+    return {
+      profile,
+      timezone: timezone || "Europe/Istanbul",
+    };
   }
 
   private static async buildSummary(tenantId: string) {
@@ -38,7 +41,8 @@ export class AdminDashboardController {
     const packageRepo = AppDataSource.getRepository(Package);
     const userRepo = AppDataSource.getRepository(User);
 
-    const reportTimezone = await AdminDashboardController.resolveReportTimezone(tenantId);
+    const clinicProfile = await AdminDashboardController.resolveClinicProfile(tenantId);
+    const reportTimezone = clinicProfile.timezone;
 
     const saleAmountExpression =
       "COALESCE(up.purchase_price::numeric, up.latest_package_price::numeric, p.display_price::numeric, 0)";
@@ -222,10 +226,33 @@ export class AdminDashboardController {
     ]);
 
     const toNumber = (value?: string | null) => Number(value || 0);
+    const businessHours = clinicProfile.profile?.business_hours;
+    const workingHoursReady = Boolean(
+      businessHours &&
+        Array.isArray(businessHours.working_days) &&
+        businessHours.working_days.length > 0 &&
+        businessHours.start_time &&
+        businessHours.end_time
+    );
+    const quickSetupSteps = {
+      clinic: Boolean(clinicProfile.profile?.id),
+      package: totalPackages > 0,
+      working_hours: workingHoursReady,
+      clinic_qr: Boolean(clinicProfile.profile?.slug),
+      dashboard_preview: true,
+    };
+    const quickSetupCompleted = Object.values(quickSetupSteps).filter(Boolean).length;
 
     return {
       tenant_id: tenantId,
       report_timezone: reportTimezone,
+
+      quick_setup: {
+        steps: quickSetupSteps,
+        completed: quickSetupCompleted,
+        total: Object.keys(quickSetupSteps).length,
+        is_complete: quickSetupCompleted === Object.keys(quickSetupSteps).length,
+      },
 
       kpis: {
         active_trainers: activeTrainers,

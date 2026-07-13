@@ -7,8 +7,8 @@ const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATIO
 const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || "";
 
 export const metadata: Metadata = {
-  title: "Fizyoflow | Fizyoterapi Klinikleri İçin Mobil Yönetim Sistemi",
-  description: "Fizyoflow; fizyoterapi klinikleri için seans takibi, paket takibi, check-in, ekip yönetimi, ölçüm ve danışan takibini tek mobil akışta toplar.",
+  title: "Fizyoflow | Mobil Klinik Yönetim Platformu",
+  description: "Fizyoflow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com"),
   icons: {
     icon: "/icon.png",
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
     apple: "/icon.png",
   },
   openGraph: {
-    title: "Fizyoflow | Fizyoterapi Klinikleri İçin Mobil Yönetim Sistemi",
-    description: "Seans takibi, paket takibi, check-in, ölçüm ve danışan takibini yönetici, fizyoterapist ve danışan ekranlarında birleştiren mobil sistem.",
+    title: "Fizyoflow | Mobil Klinik Yönetim Platformu",
+    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil akışta birleştiren yönetim platformu.",
     url: "https://fizyoflow.com",
     siteName: "Fizyoflow",
     type: "website",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Fizyoflow | Mobil Klinik Yönetimi",
-    description: "Fizyoterapi klinikleri için seans, paket, check-in, ekip ve danışan takibini tek akışta toplayan mobil sistem.",
+    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, ekip, QR, danışan ve gelir/seans takibini tek akışta toplayan mobil yönetim platformu.",
     images: ["/brand/fizyoflow-og.svg"],
   },
   verification: {

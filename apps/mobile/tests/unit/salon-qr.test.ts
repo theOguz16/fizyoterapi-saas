@@ -43,4 +43,8 @@ describe("extractSalonSlugFromQrPayload", () => {
   it("ignores unrelated deep links", () => {
     expect(extractSalonSlugFromQrPayload("fizyoflow://member/home")).toBeNull();
   });
+
+  it("does not truncate a plain slug as though it were a clinic code", () => {
+    expect(extractSalonSlugFromQrPayload("demo-salon")).toBeNull();
+  });
 });

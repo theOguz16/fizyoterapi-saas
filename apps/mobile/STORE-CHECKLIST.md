@@ -1,4 +1,42 @@
-# FizyoFlow Mobile Store Checklist
+# FizyoFlow App Store Checklist
+
+## Konumlandırma Kaynağı
+- Ürün kategorisi: Fizyoterapi ve pilates klinikleri için mobil klinik yönetim platformu
+- Ana müşteri: Klinik veya salon sahibi
+- Ana vaat: Randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek akışta yönetmek
+- Destek deneyimleri: Fizyoterapist ve danışan ekranları klinik operasyonuna bağlı çalışır; ayrı hedef kitle gibi anlatılmaz
+
+## Türkçe App Store Metinleri
+- Uygulama adı: `FizyoFlow`
+- Alt başlık: `Mobil Klinik Yönetimi`
+- Tanıtım metni: `Fizyoterapi ve pilates kliniklerinde randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil yönetim akışında birleştirin.`
+- Anahtar kelimeler: `klinik,fizyoterapi,pilates,randevu,seans,paket,danışan,ekip,check-in,gelir,takvim,QR`
+
+### Açıklama
+FizyoFlow, fizyoterapi ve klinik pilates merkezleri için geliştirilmiş mobil öncelikli klinik yönetim platformudur.
+
+Klinik sahibi randevu, seans, paket, danışan, ekip ve gelir süreçlerini tek merkezden yönetir. Fizyoterapistler günlük programlarını ve danışan bilgilerini kendi ekranlarından takip eder; danışanlar yaklaşan seanslarını, kalan haklarını ve geçmiş kayıtlarını mobilde görür.
+
+FizyoFlow ile:
+- Randevu, bireysel seans ve grup dersi takvimini yönetin.
+- Paketleri, kalan hakları ve yenileme ihtiyacını takip edin.
+- Danışan kayıtlarını ve ekip atamalarını düzenli tutun.
+- QR veya kod ile check-in işlemini doğru paketle ilişkilendirin.
+- Gelir ve seans görünümünü tek yönetim merkezinden izleyin.
+- Fizyoterapist ve danışan deneyimini kliniğinizin güncel operasyonuna bağlayın.
+
+Dağınık mesajlar ve tablolar yerine kliniğinizin günlük işlerini tek mobil akışta tutun.
+
+## Ekran Görüntüsü Hikayesi
+1. Klinik yönetimi: randevu, paket, danışan, ekip ve gelir/seans özeti
+2. Paket ve hizmet yönetimi
+3. Randevu ve seans takvimi
+4. Danışan ve ekip takibi
+5. Klinik operasyonuna bağlı QR check-in
+6. Klinik operasyonuna bağlı danışan deneyimi
+
+Kaynak dosya: `appstore-screenshots/render-appstore-shots.mjs`
+Çıktı klasörü: `appstore-screenshots/final`
 
 ## Zorunlu Hazırlık
 - Uygulama gizlilik metni ve KVKK/aydınlatma linkleri

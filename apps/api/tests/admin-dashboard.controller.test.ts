@@ -69,7 +69,16 @@ describe("admin dashboard controller", () => {
       },
     });
     const profileRepo = {
-      findOne: vi.fn().mockResolvedValue({ id: "salon-1", location: { timezone: "Europe/Istanbul" } }),
+      findOne: vi.fn().mockResolvedValue({
+        id: "salon-1",
+        slug: "ornek-klinik",
+        location: { timezone: "Europe/Istanbul" },
+        business_hours: {
+          working_days: [1, 2, 3, 4, 5],
+          start_time: "09:00",
+          end_time: "18:00",
+        },
+      }),
     };
 
     vi.spyOn(RiskService, "listRiskMembers").mockResolvedValue({
@@ -98,6 +107,18 @@ describe("admin dashboard controller", () => {
     expect(res.body).toEqual({
       tenant_id: "tenant-1",
       report_timezone: "Europe/Istanbul",
+      quick_setup: {
+        steps: {
+          clinic: true,
+          package: true,
+          working_hours: true,
+          clinic_qr: true,
+          dashboard_preview: true,
+        },
+        completed: 5,
+        total: 5,
+        is_complete: true,
+      },
       kpis: {
         active_trainers: 3,
         active_members: 25,

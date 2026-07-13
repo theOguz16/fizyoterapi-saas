@@ -8,6 +8,7 @@ import { SalonProfile } from "../entities/salon-profile.entity";
 import { Tenant } from "../entities/tenant.entity";
 import { User } from "../entities/user.entity";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
+import { AuditLogService } from "../services/audit-log.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("account clinic request controller", () => {
@@ -32,9 +33,6 @@ describe("account clinic request controller", () => {
       name: "Owner Fizyo",
     };
     const profile = { id: "profile-1" };
-    const linkedUser = { id: "user-1" };
-    const membership = { id: "membership-1" };
-
     const accountRepo = {
       findOne: vi.fn().mockResolvedValue(account),
       save: vi.fn().mockImplementation(async (input) => input),
@@ -50,8 +48,11 @@ describe("account clinic request controller", () => {
       save: vi.fn().mockImplementation(async (input) => input),
     };
     const membershipRepo = {
-      findOne: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null),
-      create: vi.fn().mockImplementation((input) => ({ ...membership, ...input })),
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation((input) => ({
+        id: input.role === "TRAINER" ? "membership-trainer" : "membership-admin",
+        ...input,
+      })),
       createQueryBuilder: vi.fn().mockReturnValue({
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
@@ -70,11 +71,14 @@ describe("account clinic request controller", () => {
     };
     const userRepo = {
       findOne: vi.fn().mockResolvedValue(null),
-      create: vi.fn().mockImplementation((input) => ({ ...linkedUser, ...input })),
+      create: vi.fn().mockImplementation((input) => ({
+        id: input.role === "TRAINER" ? "user-trainer" : "user-admin",
+        ...input,
+      })),
       save: vi.fn().mockImplementation(async (input) => input),
     };
 
-    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+    const getRepository = (entity: any) => {
       if (entity === Account) return accountRepo as any;
       if (entity === Tenant) return tenantRepo as any;
       if (entity === SalonProfile) return profileRepo as any;
@@ -82,8 +86,10 @@ describe("account clinic request controller", () => {
       if (entity === SalonApplication) return applicationRepo as any;
       if (entity === User) return userRepo as any;
       throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
-    });
+    };
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) => callback({ getRepository }));
     vi.spyOn(TenantLifecycleService, "syncTenantState").mockImplementation(async (input) => input as any);
+    const productEventSpy = vi.spyOn(AuditLogService, "logProductEvent").mockResolvedValue(true);
 
     const res = createMockResponse();
     await AccountClinicRequestController.createOrUpdate(
@@ -112,6 +118,10 @@ describe("account clinic request controller", () => {
         subscription_current_period_ends_at: expect.any(Date),
       })
     );
+    const savedTrialTenant = tenantRepo.save.mock.calls
+      .map(([input]) => input)
+      .find((input) => input.trial_starts_at && input.trial_ends_at);
+    expect((savedTrialTenant.trial_ends_at.getTime() - savedTrialTenant.trial_starts_at.getTime()) / (24 * 60 * 60 * 1000)).toBeCloseTo(21, 4);
     expect(profileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ is_published: true }));
     expect(userRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -121,15 +131,35 @@ describe("account clinic request controller", () => {
         is_active: true,
       })
     );
+    expect(userRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "user-trainer",
+        tenant_id: "tenant-1",
+        email: "owner@example.com",
+        role: "TRAINER",
+        is_active: true,
+      })
+    );
     expect(membershipRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({
         tenant_id: "tenant-1",
         account_id: "account-1",
-        user_id: "user-1",
+        user_id: "user-admin",
         role: "ADMIN",
         status: "ACTIVE",
         payment_status: "VERIFIED",
         is_active_context: true,
+      })
+    );
+    expect(membershipRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant_id: "tenant-1",
+        account_id: "account-1",
+        user_id: "user-trainer",
+        role: "TRAINER",
+        status: "ACTIVE",
+        payment_status: "VERIFIED",
+        is_active_context: false,
       })
     );
     expect((res.body as any).data).toEqual(
@@ -140,6 +170,115 @@ describe("account clinic request controller", () => {
         is_public: true,
         trial_starts_at: expect.any(Date),
         trial_ends_at: expect.any(Date),
+        owner_is_practitioner: true,
+        owner_trainer_user_id: "user-trainer",
+      })
+    );
+    expect(productEventSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event_name: "clinic_created", tenant_id: "tenant-1" }),
+      expect.anything()
+    );
+    expect(productEventSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1" }),
+      expect.anything()
+    );
+  });
+
+  it("does not create a trainer context when the owner opts out", async () => {
+    const account = {
+      id: "account-1",
+      email: "owner@example.com",
+      password_hash: "hash",
+      first_name: "Owner",
+      last_name: "User",
+      phone: "05550000000",
+      global_role_default: "MEMBER",
+    };
+    const tenant = {
+      id: "tenant-1",
+      owner_account_id: "account-1",
+      slug: "owner-fizyo",
+      name: "Owner Fizyo",
+    };
+    const accountRepo = {
+      findOne: vi.fn().mockResolvedValue(account),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    const tenantRepo = {
+      findOne: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null),
+      create: vi.fn().mockImplementation((input) => ({ ...tenant, ...input })),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    const profileRepo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation((input) => ({ id: "profile-1", ...input })),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    const membershipRepo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation((input) => ({ id: "membership-admin", ...input })),
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue({ affected: 0 }),
+      }),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    const applicationRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getOne: vi.fn().mockResolvedValue(null),
+      }),
+    };
+    const userRepo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockImplementation((input) => ({ id: "user-admin", ...input })),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    const getRepository = (entity: any) => {
+      if (entity === Account) return accountRepo as any;
+      if (entity === Tenant) return tenantRepo as any;
+      if (entity === SalonProfile) return profileRepo as any;
+      if (entity === SalonMembership) return membershipRepo as any;
+      if (entity === SalonApplication) return applicationRepo as any;
+      if (entity === User) return userRepo as any;
+      throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
+    };
+    const transaction = vi
+      .spyOn(AppDataSource, "transaction")
+      .mockImplementation(async (callback: any) => callback({ getRepository }));
+    vi.spyOn(TenantLifecycleService, "syncTenantState").mockImplementation(async (input) => input as any);
+    vi.spyOn(AuditLogService, "logProductEvent").mockResolvedValue(true);
+
+    const res = createMockResponse();
+    await AccountClinicRequestController.createOrUpdate(
+      {
+        auth: { accountId: "account-1" },
+        body: {
+          clinic_name: "Owner Fizyo",
+          city: "Bursa",
+          district: "Karacabey",
+          phone: "05550000000",
+          about_text: "Klinik aciklamasi",
+          owner_is_practitioner: false,
+        },
+      } as any,
+      res as any
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(userRepo.save).toHaveBeenCalledTimes(1);
+    expect(userRepo.save).toHaveBeenCalledWith(expect.objectContaining({ role: "ADMIN" }));
+    expect(membershipRepo.save).toHaveBeenCalledTimes(1);
+    expect(membershipRepo.save).toHaveBeenCalledWith(expect.objectContaining({ role: "ADMIN" }));
+    expect((res.body as any).data).toEqual(
+      expect.objectContaining({
+        owner_is_practitioner: false,
+        owner_trainer_user_id: null,
       })
     );
   });

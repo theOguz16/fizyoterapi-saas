@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getPublıcSalonsApi, type SalonDiscoverySummary } from "@/lib/mobile-api";
-import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonLocationLabel } from "@/lib/salon-discovery";
+import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonDiscoveryEmptyGuidance, getSalonLocationLabel } from "@/lib/salon-discovery";
 import { useAppFlow } from "@/providers/app-flow";
 import { AppShell } from "@/theme/components/app-shell";
 import { ActionButton } from "@/theme/components/action-button";
@@ -66,6 +66,14 @@ export default function IntakeSalonsScreen() {
       return searchOk && cityOk && serviceOk;
     });
   }, [cityFilter, salons, search, serviceFilter]);
+  const hasActiveFilters = Boolean(search.trim() || cityFilter !== "ALL" || serviceFilter !== "ALL");
+  const emptyGuidance = getSalonDiscoveryEmptyGuidance(salons.length > 0, hasActiveFilters);
+
+  function clearFilters() {
+    setSearch("");
+    setCityFilter("ALL");
+    setServiceFilter("ALL");
+  }
 
   const sections = useMemo(() => {
     const requestedCityKey = normalizeLocationKey(requestedCity);
@@ -93,27 +101,41 @@ export default function IntakeSalonsScreen() {
 
   return (
     <AppShell
-      title="Salonunu seç"
+      title="Kliniğini bul"
       subtitle={
         requestedCity
-          ? `${[requestedCity, requestedDistrict].filter(Boolean).join(" / ")} ile şehir/ilçe eşleşen salonları öne aldık; diğer salonları da altta görebilirsin.`
-          : "Konum paylaşmadan devam ediyorsan tüm salonları tek listede görebilirsin."
+          ? `${[requestedCity, requestedDistrict].filter(Boolean).join(" / ")} çevresindeki yayınlanmış klinikleri alternatif keşif listesinde öne aldık.`
+          : "Kliniğinin QR veya daveti yoksa yayınlanmış klinikleri ikincil olarak inceleyebilirsin."
       }
       icon="salon"
       refreshing={salonsQuery.isRefetching}
       onRefresh={() => void salonsQuery.refetch()}
     >
+      <View style={styles.connectionBand}>
+        <View style={styles.connectionHeading}>
+          <AppIcon name="scan" size="sm" tone="primary" />
+          <View style={styles.connectionCopy}>
+            <Text style={styles.connectionTitle}>Kliniğin seni davet ettiyse doğrudan bağlan</Text>
+            <Text style={styles.connectionText}>QR kodu, salon bağlantısı veya davet kodu doğru kliniği ve paket akışını otomatik açar.</Text>
+          </View>
+        </View>
+        <View style={styles.connectionActions}>
+          <ActionButton testID="member-salons-scan-qr" label="Salon QR okut" icon="scan" onPress={() => router.push("/(auth)/scan-salon-qr" as never)} />
+          <ActionButton testID="member-salons-enter-invite" label="Davet kodu gir" icon="trainer" variant="ghost" onPress={() => router.push("/(auth)/invite-accept" as never)} />
+        </View>
+      </View>
+
       <AnimatedEntrance>
         <IntakeProgressCard
           step={2}
           total={6}
           icon="salon"
-          eyebrow="Keşif özeti"
-          title="Sana en uygun başlangıç listesini hazırladık"
+          eyebrow="Alternatif keşif"
+          title="Henüz bir kliniğin yoksa seçenekleri incele"
           description={
             requestedCity
-              ? "Şehir ve ilçe eşleşen salonları ilk bölümde gösteriyoruz. Eşleşen salon yoksa diğer şehir ve ilçelerdeki seçenekleri yine listede tutuyoruz."
-              : "Konum izni vermeden devam ettiğin için tüm salonları gösteriyoruz. Karşılaştırırken her salonun il ve ilçe bilgisini kartın üstünde görebilirsin."
+              ? "Şehir ve ilçe eşleşen klinikleri önce gösteriyoruz. Kayıt bağlantısını seçtiğin klinikten doğrulaman gerekebilir."
+              : "Yayınlanmış klinikleri karşılaştırabilirsin. Mevcut kliniğin varsa en hızlı ve doğru yol kliniğinin QR veya davetidir."
           }
           badgeLabel={requestedCity ? [requestedCity, requestedDistrict].filter(Boolean).join(" / ") : "Tüm salonlar"}
           badgeTone="success"
@@ -142,15 +164,23 @@ export default function IntakeSalonsScreen() {
 
       {salons.length === 0 ? (
         <EmptyState
-          title="Şu anda uygun salon görünmüyor"
-          description="Bu kriterlerde listelenen bir salon bulamadık. Daha sonra tekrar deneyebilir veya konumsuz keşif ile devam edebilirsin."
+          title={emptyGuidance.title}
+          description={emptyGuidance.description}
           icon="salon"
+          actionLabel="Salon QR kodunu okut"
+          actionIcon="scan"
+          actionTestID="member-salons-empty-scan-qr"
+          onAction={() => router.push("/(auth)/scan-salon-qr" as never)}
         />
       ) : filteredSalons.length === 0 ? (
         <EmptyState
-          title="Bu filtreyle salon bulunamadı"
-          description="Arama kelimesini veya filtreleri değiştirerek diğer salonları görebilirsin."
+          title={emptyGuidance.title}
+          description={emptyGuidance.description}
           icon="salon"
+          actionLabel="Filtreleri temizle"
+          actionIcon="progress"
+          actionTestID="member-salons-empty-clear-filters"
+          onAction={clearFilters}
         />
       ) : (
         sections.map((section) => (
@@ -265,6 +295,17 @@ function FeaturePill({ icon, label }: { icon: "location" | "spark" | "trainer" |
 }
 
 const styles = StyleSheet.create({
+  connectionBand: {
+    gap: tokens.spacing.md,
+    paddingVertical: tokens.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border,
+  },
+  connectionHeading: { flexDirection: "row", alignItems: "flex-start", gap: tokens.spacing.sm },
+  connectionCopy: { flex: 1, gap: tokens.spacing.xs },
+  connectionTitle: { color: tokens.colors.text, fontSize: tokens.font.md, fontFamily: tokens.fontFamily.semibold },
+  connectionText: { color: tokens.colors.textMuted, fontSize: tokens.font.sm, lineHeight: tokens.lineHeight.normal, fontFamily: tokens.fontFamily.regular },
+  connectionActions: { gap: tokens.spacing.sm },
   sectionWrap: {
     gap: tokens.spacing.sm,
   },

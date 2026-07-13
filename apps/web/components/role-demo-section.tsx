@@ -25,14 +25,14 @@ export function RoleDemoSection({ tabs }: RoleDemoSectionProps) {
     <section className="role-demo-section" aria-labelledby="role-demo-title">
       <div className="product-shell">
         <div className="product-section-heading">
-          <p className="product-kicker">Rol bazlı mini demo</p>
-          <h2 id="role-demo-title">Aynı akış, üç farklı kullanıcı için ayrı ekrana dönüşür.</h2>
-          <p>Yönetici operasyonu görür, fizyoterapist seansı işler, danışan kendi sürecini takip eder.</p>
+          <p className="product-kicker">Kliniğe bağlı mobil deneyim</p>
+          <h2 id="role-demo-title">Klinik yönetimi merkezde kalır, her kullanıcı görevine uygun ekranı görür.</h2>
+          <p>Fizyoterapist ve danışan ekranları ayrı ürünler değil, kliniğin güncel operasyonuna bağlı çalışma alanlarıdır.</p>
         </div>
 
         <div className="role-demo-panel">
           <div className="role-demo-copy">
-            <div className="role-demo-tabs" role="tablist" aria-label="Fizyoflow rol demoları">
+            <div className="role-demo-tabs" role="tablist" aria-label="Fizyoflow klinik operasyonu görünümleri">
               {tabs.map((tab, index) => (
                 <button
                   type="button"

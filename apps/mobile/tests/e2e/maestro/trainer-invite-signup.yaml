@@ -1,0 +1,17 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- assertVisible: "FizyoFlow"
+- openLink: "fizyoflow://e2e-reset"
+- tapOn:
+    id: "welcome-signup-button"
+- assertVisible: "Kliniğini kur veya davetinle katıl"
+- tapOn:
+    id: "role-option-trainer"
+- assertVisible: "Eğitmen hesabını salon davetiyle bağla"
+- tapOn:
+    id: "trainer-invite-guide-continue"
+- assertVisible: "Salon davetini tamamla"
+- assertVisible: "Davet kodu"

@@ -248,9 +248,9 @@ export default function AdminMemberDetailScreen() {
     () =>
       person?.onboarding_profile
         ? summarizeSignupOnboarding(entityRole, {
-            primaryGoal: person.onboarding_profile.primary_goal,
-            rhythm: person.onboarding_profile.rhythm,
-            supportStyle: person.onboarding_profile.support_style,
+            primaryGoal: person.onboarding_profile.primary_goal || "",
+            rhythm: person.onboarding_profile.rhythm || "",
+            supportStyle: person.onboarding_profile.support_style || "",
           })
         : null,
     [entityRole, person?.onboarding_profile]

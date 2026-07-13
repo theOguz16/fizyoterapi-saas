@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
 import { getAdminBookingsApi, getAdminSessionsApi, getAdminSettingsApi } from "@/lib/mobile-api";
@@ -12,7 +13,9 @@ import { DetailSheet } from "@/theme/components/detail-sheet";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
+import { EmptyState } from "@/theme/components/empty-state";
 import { tokens } from "@/theme/tokens";
+import { resolveCalendarEmptyState } from "@/lib/admin-empty-states";
 
 function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
   if (!startsAt) return "-";
@@ -65,6 +68,7 @@ function DetailStat({ label, value }: { label: string; value: string | number | 
 }
 
 export default function AdminCalendarScreen() {
+  const router = useRouter();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   const todayAnchor = useMemo(() => {
@@ -135,6 +139,7 @@ export default function AdminCalendarScreen() {
       locationTimezone: salonLocation.timezone,
     });
   }, [settingsQuery.data]);
+  const calendarEmptyState = resolveCalendarEmptyState(businessHours.is_configured);
 
   return (
     <AppShell
@@ -157,6 +162,29 @@ export default function AdminCalendarScreen() {
         businessHours={businessHours}
         hideEmptyState
       />
+
+      {!bookingsQuery.isLoading &&
+      !sessionsQuery.isLoading &&
+      !settingsQuery.isLoading &&
+      !bookingsQuery.isError &&
+      !sessionsQuery.isError &&
+      !settingsQuery.isError &&
+      events.length === 0 ? (
+        <EmptyState
+          title={calendarEmptyState.title}
+          description={calendarEmptyState.description}
+          icon={calendarEmptyState.icon}
+          actionLabel={calendarEmptyState.actionLabel}
+          actionIcon={calendarEmptyState.actionIcon}
+          actionTestID={businessHours.is_configured ? "admin-calendar-empty-open-qr" : "admin-calendar-empty-working-hours"}
+          onAction={() =>
+            router.push({
+              pathname: calendarEmptyState.route,
+              params: { backTo: "/(admin)/calendar" },
+            } as never)
+          }
+        />
+      ) : null}
 
       <DetailSheet
         visible={Boolean(selectedBooking)}

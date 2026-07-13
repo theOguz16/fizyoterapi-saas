@@ -1,0 +1,20 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://owner-plan"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible:
+    id: "owner-plan-value-proof"
+- assertVisible: "Bu planla neleri yönetirsin?"
+- scrollUntilVisible:
+    element: "Gelir ve seans görünümü"
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: "owner-plan-start-trial"
+    direction: DOWN
+- assertVisible:
+    id: "owner-plan-start-trial"

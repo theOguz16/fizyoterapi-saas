@@ -3,10 +3,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, syncAdminClinicSubscriptionApi, type AdminClinicSubscription } from "@/lib/mobile-api";
-import { buildSubscriptionHeadline, formatSubscriptionStatus } from "@/lib/admin-subscription";
+import { buildSubscriptionHeadline, CLINIC_TRIAL_DAYS, formatSubscriptionStatus } from "@/lib/admin-subscription";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import { configureRevenueCat, getRevenueCatPlanPackages, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
-import { SUBSCRIPTION_PRICING, type BillingCycle } from "@/lib/subscription-pricing";
+import { SUBSCRIPTION_PRICING, SUBSCRIPTION_VALUE_PROOFS, type BillingCycle } from "@/lib/subscription-pricing";
 import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
@@ -15,6 +15,7 @@ import { MetricCard } from "@/theme/components/metric-card";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
+import { trackProductEvent } from "@/lib/product-analytics";
 
 const PRIVACY_POLICY_URL = "https://fizyoflow.com/privacy-policy";
 const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
@@ -33,7 +34,7 @@ function getPackageErrorMessage(_error: unknown) {
 function resolvePrimaryAction(subscription?: AdminClinicSubscription | null) {
   if (!subscription) return { label: "Plan bilgisi yükleniyor", icon: "subscription" as AppIconName, disabled: true, action: "NONE" as const };
   if (subscription.can_start_trial) {
-    return { label: "5 günlük ücretsiz denemeyi başlat", icon: "spark" as AppIconName, disabled: false, action: "TRIAL" as const };
+    return { label: `${CLINIC_TRIAL_DAYS} günlük ücretsiz denemeyi başlat`, icon: "spark" as AppIconName, disabled: false, action: "TRIAL" as const };
   }
   if (subscription.subscription_status === "ACTIVE") {
     return { label: "Plan aktif", icon: "checkin" as AppIconName, disabled: true, action: "NONE" as const };
@@ -73,6 +74,14 @@ export default function AdminSubscriptionScreen() {
     queryFn: async () => getRevenueCatPlanPackages(revenueCatAppUserId),
     retry: false,
   });
+
+  useEffect(() => {
+    void trackProductEvent(
+      "subscription_viewed",
+      { screen: "admin_subscription" },
+      { oncePerSession: true, dedupeKey: "subscription_viewed" }
+    );
+  }, []);
 
   useEffect(() => {
     if (!revenueCatAppUserId) return;
@@ -115,7 +124,7 @@ export default function AdminSubscriptionScreen() {
 
     showInfoAlert(
       "Deneme başlatıldı",
-      "5 günlük ücretsiz denemen aktif. Planını istediğin zaman bu ekrandan etkinleştirebilirsin."
+      `${CLINIC_TRIAL_DAYS} günlük ücretsiz denemen aktif. Planını istediğin zaman bu ekrandan etkinleştirebilirsin.`
     );
   },
 
@@ -151,6 +160,10 @@ export default function AdminSubscriptionScreen() {
       throw new Error("Salon bilgisi henüz hazır değil. Lütfen ekranı yenileyip tekrar dene.");
     }
 
+    void trackProductEvent("purchase_started", {
+      screen: "admin_subscription",
+      billing_cycle: billingCycle,
+    });
     return purchaseRevenueCatPackage(revenueCatAppUserId, billingCycle);
   },
 
@@ -232,8 +245,21 @@ export default function AdminSubscriptionScreen() {
     >
       <View style={styles.metricsRow}>
         <MetricCard label="Plan durumu" value={isPurchaseSyncing ? "Etkinleştiriliyor" : formatSubscriptionStatus(subscription?.subscription_status)} hint={subscription?.can_start_trial || subscription?.can_purchase_in_app ? "Satın almaya hazır" : "Plan bilgisi"} icon="subscription" />
-        <MetricCard label="Deneme" value={`${subscription?.trial_days_remaining ?? subscription?.trial_days_total ?? 5} gün`} hint={subscription?.subscription_status === "TRIAL" ? "Kalan süre" : "Ücretsiz başlangıç"} icon="calendar" />
+        <MetricCard label="Deneme" value={`${subscription?.trial_days_remaining ?? subscription?.trial_days_total ?? CLINIC_TRIAL_DAYS} gün`} hint={subscription?.subscription_status === "TRIAL" ? "Kalan süre" : "Ücretsiz başlangıç"} icon="calendar" />
       </View>
+
+      <SurfaceCard testID="admin-subscription-value-proof" padding="hero">
+        <View style={styles.valueHeader}>
+          <Text style={styles.eyebrow}>PLANINLA YÖNETECEKLERİN</Text>
+          <Text style={styles.section}>Bu planla neleri yönetirsin?</Text>
+          <Text style={styles.copy}>FizyoFlow, kliniğinin günlük operasyonunu ayrı araçlara bölmeden tek akışta toplar.</Text>
+        </View>
+        <View style={styles.featureList}>
+          {SUBSCRIPTION_VALUE_PROOFS.map((item) => (
+            <FeatureRow key={item.key} icon={item.icon} title={item.title} description={item.description} />
+          ))}
+        </View>
+      </SurfaceCard>
 
       <SurfaceCard tone="primary" padding="hero" testID="admin-subscription-hero">
         <View style={styles.heroTop}>
@@ -310,15 +336,6 @@ export default function AdminSubscriptionScreen() {
             }
           }}
         />
-      </SurfaceCard>
-
-      <SurfaceCard>
-        <Text style={styles.section}>Pro ile açılanlar</Text>
-        <View style={styles.featureList}>
-          <FeatureRow icon="members" title="Üye ve eğitmen yönetimi" description="Aktif üyeler, eğitmen atamaları ve detay profilleri tek panelde kalır." />
-          <FeatureRow icon="calendar" title="Ders ve takvim operasyonu" description="Rezervasyon, grup dersi, check-in ve katılım takibi salon düzenini korur." />
-          <FeatureRow icon="campaigns" title="Gelir ve büyüme araçları" description="Paketler, kampanyalar, referans akışı ve risk sinyalleri aynı sistemde çalışır." />
-        </View>
       </SurfaceCard>
 
       <SurfaceCard>
@@ -459,6 +476,9 @@ const styles = StyleSheet.create({
     color: tokens.colors.text,
     fontSize: tokens.font.md,
     fontFamily: tokens.fontFamily.semibold,
+  },
+  valueHeader: {
+    gap: tokens.spacing.xs,
   },
   copy: {
     color: tokens.colors.textMuted,

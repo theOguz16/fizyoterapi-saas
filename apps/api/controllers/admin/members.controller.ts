@@ -425,7 +425,12 @@ export class AdminMembersController {
         memberId,
       });
 
-      return res.json(result);
+      return res.json({
+        data: {
+          items: result.data,
+          totalRemainingCredits: result.totalRemainingCredits,
+        },
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
 

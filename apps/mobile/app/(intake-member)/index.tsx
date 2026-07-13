@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
 import { safeBack } from "@/lib/navigation";
 import { useAppFlow } from "@/providers/app-flow";
 import { OnboardingQuestionStage, type OnboardingOption } from "@/theme/components/onboarding-question-stage";
 import type { AppIconName } from "@/theme/components/app-icon";
-import { getStoredSignupOnboardingProfile } from "@/lib/local-preferences";
+import { getPendingSalonJoinSlug, getStoredSignupOnboardingProfile } from "@/lib/local-preferences";
 import { mapSignupProfileToMemberIntentDefaults } from "@/lib/signup-onboarding";
+import { resolveMemberSalonConnection } from "@/lib/salon-discovery";
+import { MarketingShell } from "@/theme/components/marketing-shell";
+import { ActionButton } from "@/theme/components/action-button";
+import { AppIcon } from "@/theme/components/app-icon";
+import { tokens } from "@/theme/tokens";
 
 type MemberQuestion = {
   key: "goal" | "issue" | "expectation" | "weeklyDays" | "timePreference";
@@ -110,10 +116,28 @@ export default function IntakeQuestionFlowScreen() {
   const router = useRouter();
   const { memberIntent, setMemberIntent } = useAppFlow();
   const [step, setStep] = useState(0);
+  const [connectionChecked, setConnectionChecked] = useState(false);
+  const [showDiscoveryQuestions, setShowDiscoveryQuestions] = useState(false);
   const isAdvancing = useRef(false);
   const current = QUESTIONS[step];
   const isLast = step === QUESTIONS.length - 1;
   const activeValue = memberIntent[current.key];
+
+  useEffect(() => {
+    let mounted = true;
+    void getPendingSalonJoinSlug().then((pendingSlug) => {
+      if (!mounted) return;
+      const connection = resolveMemberSalonConnection(pendingSlug);
+      if (connection.kind === "CONNECTED_LINK") {
+        router.replace(connection.route as never);
+        return;
+      }
+      setConnectionChecked(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   useEffect(() => {
     let mounted = true;
@@ -134,6 +158,58 @@ export default function IntakeQuestionFlowScreen() {
     // Stored onboarding answers should hydrate the intake only once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!connectionChecked) {
+    return <View style={styles.loadingScreen} />;
+  }
+
+  if (!showDiscoveryQuestions) {
+    return (
+      <MarketingShell
+        title="Kliniğine bağlan"
+        subtitle="FizyoFlow üye deneyimi kliniğinin QR kodu, daveti veya salon bağlantısıyla başlar."
+        icon="scan"
+        footer={
+          <View style={styles.footer}>
+            <ActionButton
+              testID="member-connect-scan-qr"
+              label="Salon QR kodunu okut"
+              icon="scan"
+              onPress={() => router.push("/(auth)/scan-salon-qr" as never)}
+            />
+            <ActionButton
+              testID="member-connect-invite"
+              label="Davet koduyla bağlan"
+              icon="trainer"
+              variant="ghost"
+              onPress={() => router.push("/(auth)/invite-accept" as never)}
+            />
+            <ActionButton
+              testID="member-connect-discovery"
+              label="Klinikleri incele"
+              icon="salon"
+              variant="ghost"
+              onPress={() => setShowDiscoveryQuestions(true)}
+            />
+          </View>
+        }
+      >
+        <View style={styles.connectionIntro}>
+          <ConnectionItem
+            icon="qr"
+            title="Kliniğinden QR iste"
+            description="Resepsiyondaki veya kliniğinin gönderdiği FizyoFlow QR kodu seni doğrudan doğru kayıt akışına götürür."
+          />
+          <ConnectionItem
+            icon="trainer"
+            title="Davet veya salon linkini aç"
+            description="Kliniğinin mesajla gönderdiği bağlantı ve davet kodu da aynı salon bağlamını güvenle korur."
+          />
+          <Text style={styles.discoveryNote}>Henüz bir kliniğin yoksa yayınlanmış klinikleri ikincil keşif adımından inceleyebilirsin.</Text>
+        </View>
+      </MarketingShell>
+    );
+  }
 
   function moveNext() {
     if (isLast) {
@@ -181,3 +257,41 @@ export default function IntakeQuestionFlowScreen() {
     />
   );
 }
+
+function ConnectionItem({ icon, title, description }: { icon: "qr" | "trainer"; title: string; description: string }) {
+  return (
+    <View style={styles.connectionItem}>
+      <View style={styles.connectionIcon}>
+        <AppIcon name={icon} size="sm" tone="primary" />
+      </View>
+      <View style={styles.connectionCopy}>
+        <Text style={styles.connectionTitle}>{title}</Text>
+        <Text style={styles.connectionDescription}>{description}</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  loadingScreen: { flex: 1, backgroundColor: tokens.colors.background },
+  footer: { gap: tokens.spacing.sm },
+  connectionIntro: { gap: tokens.spacing.md },
+  connectionItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border,
+  },
+  connectionIcon: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  connectionCopy: { flex: 1, gap: tokens.spacing.xs },
+  connectionTitle: { color: tokens.colors.text, fontSize: tokens.font.md, fontFamily: tokens.fontFamily.semibold },
+  connectionDescription: { color: tokens.colors.textMuted, fontSize: tokens.font.sm, lineHeight: tokens.lineHeight.normal, fontFamily: tokens.fontFamily.regular },
+  discoveryNote: { color: tokens.colors.textMuted, fontSize: tokens.font.xs, lineHeight: 18, fontFamily: tokens.fontFamily.medium },
+});
