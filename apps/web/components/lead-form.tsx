@@ -18,11 +18,12 @@ export function LeadForm({ slug, apiBase, quickContactHref, quickContactLabel = 
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setBusy(true);
     setMessage("");
     setMessageType("success");
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     if (String(formData.get("website") || "").trim()) {
       setBusy(false);
       return;
@@ -63,7 +64,7 @@ export function LeadForm({ slug, apiBase, quickContactHref, quickContactLabel = 
       setMessageType("success");
       setMessage(json.message || "Talebiniz başarıyla alındı. Ekibimiz size kısa sürede dönüş yapacak.");
       void trackPublicEvent(apiBase, slug, "LEAD_SUBMIT", "lead-form");
-      event.currentTarget.reset();
+      form.reset();
     } catch (error) {
       setMessageType("error");
       if (error instanceof DOMException && error.name === "AbortError") {

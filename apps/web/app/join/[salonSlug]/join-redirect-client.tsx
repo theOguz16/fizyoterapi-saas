@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { resolveJoinStoreUrl } from "../../../lib/join-redirect";
 
 type JoinRedirectClientProps = {
   salonSlug: string;
@@ -10,13 +11,6 @@ type JoinRedirectClientProps = {
   androidStoreUrl: string;
 };
 
-function resolveStoreUrl(iosStoreUrl: string, androidStoreUrl: string) {
-  if (typeof navigator === "undefined") return iosStoreUrl;
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes("android")) return androidStoreUrl;
-  return iosStoreUrl;
-}
-
 export function JoinRedirectClient({
   salonSlug,
   salonCode,
@@ -24,7 +18,10 @@ export function JoinRedirectClient({
   iosStoreUrl,
   androidStoreUrl,
 }: JoinRedirectClientProps) {
-  const storeUrl = useMemo(() => resolveStoreUrl(iosStoreUrl, androidStoreUrl), [androidStoreUrl, iosStoreUrl]);
+  const storeUrl = useMemo(
+    () => resolveJoinStoreUrl(typeof navigator === "undefined" ? "" : navigator.userAgent, iosStoreUrl, androidStoreUrl),
+    [androidStoreUrl, iosStoreUrl]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
