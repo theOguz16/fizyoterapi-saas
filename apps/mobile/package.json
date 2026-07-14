@@ -11,6 +11,8 @@
     "test": "../api/node_modules/.bin/vitest run -c vitest.config.ts",
     "test:watch": "../api/node_modules/.bin/vitest -c vitest.config.ts",
     "test:e2e": "if command -v maestro >/dev/null 2>&1; then maestro test tests/e2e/maestro; elif [ -x \"$HOME/.maestro/bin/maestro\" ]; then \"$HOME/.maestro/bin/maestro\" test tests/e2e/maestro; else echo \"Mobile e2e icin mobile.dev Maestro CLI gerekiyor. 'maestro test' komutu PATH'te olmali veya $HOME/.maestro/bin/maestro kurulu olmali.\" >&2; exit 1; fi",
+    "test:e2e:critical": "sh scripts/run-critical-e2e.sh",
+    "performance:verify": "node scripts/validate-performance-evidence.mjs",
     "release:env": "../api/node_modules/.bin/ts-node-dev --transpile-only --exit-child scripts/validate-release-env.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint app src tests --ext .ts,.tsx"

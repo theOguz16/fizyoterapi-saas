@@ -1,0 +1,92 @@
+# Release Gate
+
+Bir sürüm ancak aşağıdaki dört kapının tamamı geçtiğinde yayınlanabilir. `release:gate` komutu kanıt dosyası veya gerçek cihaz bağlantısı olmadan başarılı olmaz; bu kasıtlıdır.
+
+## 1. Otomatik sözleşme ve build
+
+```sh
+pnpm release:verify:automated
+```
+
+Bu komut API, mobil, web ve admin-web unit testlerini, typecheck'i, API/web preflight kontrollerini ve web production build'ini çalıştırır.
+
+## 2. Gerçek cihaz kritik akışları
+
+TestFlight veya release candidate build'i açık bir iOS/Android cihazda Maestro'ya bağlayın ve çalıştırın:
+
+```sh
+pnpm release:e2e:mobile
+```
+
+Bu suite metin veya geniş regex yerine ürün ekranındaki `testID` değerlerini doğrular. Her release'te aşağıdaki kayıtlar test kanıtına eklenmelidir:
+
+| Alan | Rol | Kanıt |
+| --- | --- | --- |
+| Giriş | Admin, trainer, member | Rolün ana ekranına giden Maestro videosu/logu |
+| Salon bağlantısı | Member | Geçerli QR/deep link ile salon detayı ve paket aksiyonu |
+| Paket | Admin | Paket oluşturma sonrası listede görünen kayıt |
+| Rezervasyon | Admin, trainer, member | Takvimlerin yüklendiği ve aynı booking bağlamını gösterdiği kayıt |
+| Check-in | Trainer | MEM kodu ile sonuç kartı |
+| Rol değişimi | Admin + trainer yetkili tek hesap | `role-switch-trainer` ile hedef ana ekrana geçiş |
+| Push | Admin, trainer, member | İzin, Expo token kaydı, bildirime dokunma ve hedef ekran videosu |
+
+Push testi simülatörde geçerli sayılmaz. Farklı role ait bir bildirim, yanlış rol ekranına düşmemeli; hedef id yoksa rol ana ekranına kontrollü dönmelidir. Bildirim payload sözleşmesi değişirse önce `apps/mobile/tests/unit/push.test.ts` güncellenir, ardından fiziksel cihaz matrisi tekrar çalıştırılır.
+
+## 3. Web Core Web Vitals bütçesi
+
+Staging veya production URL'si üzerinde Chromium ile ölçün:
+
+```sh
+WEB_PERF_URL=https://fizyofloww.com \
+WEB_PERF_INTERACTION_SELECTOR='a[href="#product"]' \
+pnpm release:performance:web
+```
+
+Varsayılan bütçeler: FCP `<= 1.8 s`, LCP `<= 2.5 s`, CLS `<= 0.10`, sentetik etkileşim gecikmesi `<= 200 ms`. Eşikler yalnızca ilgili ortamı temsil eden ölçümle sıkılaştırılabilir; gevşetmek için release notunda gerekçe ve önceki ölçüm gerekir. INP alan verisi olduğundan, gerçek kullanıcı takibi aktifse aynı sürüm için p75 INP `<= 200 ms` ayrıca release kaydına eklenir.
+
+## 4. Mobil performans bütçesi
+
+Cold start, warm start ve uzun liste kaydırmasını release candidate üzerinde ölçün. iOS'ta Instruments Time Profiler + Core Animation, Android'te Macrobenchmark/Perfetto kullanın. Kaydırma senaryosu: girişten sonra en az 100 kayıt içeren üye veya rezervasyon listesini baştan sona üç kez kaydırın.
+
+`mobile-performance.json` örneği:
+
+```json
+{
+  "build": "ios-1.0.1(21)",
+  "measuredAt": "2026-07-14T10:00:00.000Z",
+  "platforms": {
+    "ios": {
+      "device": "iPhone 14",
+      "osVersion": "iOS 18.6",
+      "coldStartMs": 2450,
+      "warmStartMs": 920,
+      "listScrollFps": 59,
+      "droppedFramePercent": 1.8,
+      "recording": "release-evidence/ios-scroll.mp4",
+      "profileArtifact": "release-evidence/ios-trace.trace"
+    }
+  }
+}
+```
+
+```sh
+MOBILE_PERFORMANCE_EVIDENCE=release-evidence/mobile-performance.json \
+MOBILE_PERFORMANCE_PLATFORMS=ios \
+pnpm release:performance:mobile
+```
+
+Bütçeler: cold start `<= 3000 ms`, warm start `<= 1500 ms`, liste kaydırma `>= 55 FPS`, dropped-frame oranı `<= %5`. Android sürümü yayınlanıyorsa `MOBILE_PERFORMANCE_PLATFORMS=ios,android` kullanılır ve iki fiziksel cihaz sonucu zorunludur.
+
+## Tam yayın kapısı
+
+Ortam değişkenleri ve gerçek cihaz kanıtı hazır olduğunda:
+
+```sh
+WEB_PERF_URL=https://staging.fizyofloww.com \
+WEB_PERF_INTERACTION_SELECTOR='a[href="#product"]' \
+MOBILE_PERFORMANCE_EVIDENCE=release-evidence/mobile-performance.json \
+MOBILE_PERFORMANCE_PLATFORMS=ios \
+pnpm release:gate
+```
+
+Bu komut hata verirse sürüm yayınlanmaz. Başarılı koşuda Maestro çıktısı, web performans JSON'u, mobil trace/video ve sürüm/build numarası release kaydına eklenir.

@@ -251,6 +251,7 @@ export default function MemberCalendarScreen() {
 
   return (
     <AppShell
+      testID="member-calendar-screen"
       title="Takvim"
       subtitle="Ders programını, onaylı saatlerini ve bekleyen taleplerini takip et."
       icon="calendar"

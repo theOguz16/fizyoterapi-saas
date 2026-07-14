@@ -31,6 +31,7 @@ export default function MemberBookingsScreen() {
 
   return (
     <AppShell
+      testID="member-bookings-screen"
       title="Takvim"
       subtitle="Yaklaşan derslerini, geçmiş kayıtlarını ve iptal kurallarını tek akışta yönet."
       icon="calendar"

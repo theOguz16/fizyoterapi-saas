@@ -240,6 +240,7 @@ export default function TrainerCheckinScreen() {
 
   return (
     <AppShell
+      testID="trainer-checkin-screen"
       title="Ders girişi"
       subtitle="Üyenin QR kodunu okut veya MEM kodunu gir. Sistem o saatteki onaylı derse göre doğru paketten hak düşer."
       icon="scan"
@@ -277,7 +278,7 @@ export default function TrainerCheckinScreen() {
           <Text style={styles.copy}>
             Üyenin QR kodunu çerçeve içine getir. QR algılandığında ders girişi otomatik başlar.
           </Text>
-          <ActionButton label="Manuel MEM kodu gir" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
+          <ActionButton testID="trainer-checkin-manual-mode" label="Manuel MEM kodu gir" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
 
           {permission?.granted ? (
             <View style={styles.cameraFrame}>
@@ -305,14 +306,14 @@ export default function TrainerCheckinScreen() {
               />
               <ActionButton label="İzni tekrar sor" icon="scan" onPress={() => void requestPermission()} />
               <ActionButton label="Ayarları aç" icon="profile" variant="ghost" onPress={() => void Linking.openSettings()} />
-              <ActionButton label="Manuel moda geç" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
+              <ActionButton testID="trainer-checkin-manual-mode" label="Manuel moda geç" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
             </View>
           ) : (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={tokens.colors.primaryStrong} />
               <Text style={styles.copy}>Kamera izni kontrol ediliyor...</Text>
               <ActionButton label="Kamera izni ver" icon="scan" onPress={() => void requestPermission()} />
-              <ActionButton label="Manuel MEM kodu gir" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
+              <ActionButton testID="trainer-checkin-manual-mode" label="Manuel MEM kodu gir" icon="ticket" variant="ghost" onPress={() => changeMode("manual")} />
             </View>
           )}
 

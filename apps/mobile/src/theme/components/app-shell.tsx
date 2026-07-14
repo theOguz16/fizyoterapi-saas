@@ -10,6 +10,7 @@ import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
 
 type Props = {
+  testID?: string;
   title: string;
   subtitle?: string;
   icon?: AppIconName;
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function AppShell({
+  testID,
   title,
   subtitle,
   icon = "spark",
@@ -86,7 +88,7 @@ export function AppShell({
   }, [bodyOpacity, bodyTranslate, heroOpacity, heroTranslate]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView testID={testID} style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0} style={styles.flex}>
         {shouldShowBackButton ? (
           <View style={styles.topNavigation}>

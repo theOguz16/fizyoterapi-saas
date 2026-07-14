@@ -728,6 +728,7 @@ export default function TrainerCalendarScreen() {
 
   return (
     <AppShell
+      testID="trainer-calendar-screen"
       title="Takvimim"
       subtitle="Ders programını yönet, talepleri planla ve değişiklik yap."
       icon="calendar"

@@ -6,8 +6,11 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fbookings"
 - extendedWaitUntil:
-    visible: "Takvim"
+    visible:
+      id: "member-bookings-screen"
     timeout: 20000
+- assertVisible:
+    id: "member-bookings-segment"
 - tapOn:
     id: "member-bookings-segment-history"
 - tapOn:

@@ -1,0 +1,26 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 15000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "oguzhanuyar531@gmail.com"
+- tapOn:
+    id: "login-password-input"
+- inputText: "admin123"
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-screen"
+    timeout: 20000
+- assertVisible:
+    id: "admin-dashboard-packages"

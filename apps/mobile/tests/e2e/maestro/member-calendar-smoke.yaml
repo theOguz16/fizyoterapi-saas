@@ -12,8 +12,6 @@ appId: com.fizyoflow.mobile
     timeout: 8000
 
 - extendedWaitUntil:
-    visible: "Takvim|FizyoFlow|Profil"
+    visible:
+      id: "member-calendar-screen"
     timeout: 20000
-
-- assertVisible:
-    text: "Takvim|FizyoFlow|Profil"

@@ -39,6 +39,7 @@ export default function AdminDashboardScreen() {
 
   return (
     <AppShell 
+      testID="admin-dashboard-screen"
       title="Yönetim merkezi" 
       subtitle="Aktif üye, risk, bugünkü ders ve operasyon sinyallerinin özet görünümü." 
       icon="dashboard" 

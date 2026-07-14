@@ -651,6 +651,7 @@ export default function AdminPackagesScreen() {
 
   return (
     <AppShell
+      testID="admin-packages-screen"
       title="Paketler"
       subtitle="Paket oluştur, fiyat ve komisyon belirle, ardından paketi eğitmene bağla. Ücretsiz deneme dersi paketi de buradan açılır."
       icon="package"

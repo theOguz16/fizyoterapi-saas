@@ -4,16 +4,22 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
-- assertVisible: "Bugün"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
 - tapOn:
     id: "trainer-home-qr-button"
 - waitForAnimationToEnd
-- assertVisible: "Ders girişi"
+- assertVisible:
+    id: "trainer-checkin-screen"
 - swipe:
     start: 50%, 82%
     end: 50%, 36%
-- tapOn: "Manuel MEM kodu gir"
-- assertVisible: "Üye MEM kodu"
+- tapOn:
+    id: "trainer-checkin-manual-mode"
+- assertVisible:
+    id: "trainer-checkin-manual-input"
 - tapOn:
     id: "trainer-checkin-manual-input"
 - inputText: "MEM-DEMO001"

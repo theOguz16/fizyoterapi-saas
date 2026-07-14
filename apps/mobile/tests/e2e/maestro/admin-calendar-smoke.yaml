@@ -11,11 +11,10 @@ appId: com.fizyoflow.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 
-- assertVisible:
-    text: "Salon Takvimi"
-
-- assertVisible:
-    text: "Ders akışını, eğitmen programını ve grup derslerini takip edin."
+- extendedWaitUntil:
+    visible:
+      id: "admin-calendar-screen"
+    timeout: 20000
 
 - swipe:
     start: 50%, 35%
@@ -25,4 +24,4 @@ appId: com.fizyoflow.mobile
     timeout: 3000
 
 - assertVisible:
-    text: "Salon Takvimi"
+    id: "admin-calendar-screen"

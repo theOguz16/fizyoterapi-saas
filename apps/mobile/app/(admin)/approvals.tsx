@@ -102,7 +102,7 @@ export default function AdminApprovalsScreen() {
   const hasFilters = statusFilter !== "PENDING" || typeFilter !== "ALL";
 
   return (
-    <AppShell title="Onaylar" subtitle="Başvuru, ödeme ve değişiklik taleplerini tek operasyonda yönet." icon="approvals" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <AppShell testID="admin-approvals-screen" title="Onaylar" subtitle="Başvuru, ödeme ve değişiklik taleplerini tek operasyonda yönet." icon="approvals" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.metricsRow}>
         <MetricCard label="Bekleyen" value={metrics.pending} hint="Aksiyon isteyen kayıt" icon="approvals" />
         <MetricCard label="Ödeme" value={metrics.payments} hint="Kontrol bekleyen" icon="wallet" />

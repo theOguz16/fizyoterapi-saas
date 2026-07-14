@@ -260,6 +260,7 @@ export default function MemberHomeScreen() {
 
   return (
     <AppShell
+      testID="member-home-screen"
       title={firstName ? `Merhaba ${firstName}` : "Merhaba"}
       subtitle="Sonraki dersin, kalan hakların, taleplerin ve günlük ilerleme özetin tek ekranda."
       icon="home"

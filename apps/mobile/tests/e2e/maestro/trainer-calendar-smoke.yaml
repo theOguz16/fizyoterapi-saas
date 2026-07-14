@@ -12,11 +12,9 @@ appId: com.fizyoflow.mobile
     timeout: 8000
 
 - extendedWaitUntil:
-    visible: "Takvimim"
+    visible:
+      id: "trainer-calendar-screen"
     timeout: 15000
-
-- assertVisible:
-    text: "Ders programını yönet, talepleri planla ve değişiklik yap."
 
 - swipe:
     start: 50%, 35%
@@ -26,4 +24,4 @@ appId: com.fizyoflow.mobile
     timeout: 3000
 
 - assertVisible:
-    text: "Takvimim"
+    id: "trainer-calendar-screen"

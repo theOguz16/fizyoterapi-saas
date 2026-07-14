@@ -143,6 +143,7 @@ export default function AdminCalendarScreen() {
 
   return (
     <AppShell
+      testID="admin-calendar-screen"
       title="Salon Takvimi"
       subtitle="Ders akışını, eğitmen programını ve grup derslerini takip edin."
       icon="calendar"

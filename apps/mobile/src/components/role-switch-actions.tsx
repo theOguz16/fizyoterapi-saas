@@ -50,6 +50,7 @@ export function RoleSwitchActions() {
         {switchableRoles.map((role) => (
           <ActionButton
             key={role}
+            testID={`role-switch-${role.toLowerCase()}`}
             label={`${ROLE_LABELS[role]} olarak geç`}
             icon={ROLE_ICONS[role]}
             variant="ghost"

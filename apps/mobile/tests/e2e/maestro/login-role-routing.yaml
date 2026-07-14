@@ -3,21 +3,18 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: "FizyoFlow"
 - openLink: "fizyoflow://e2e-reset"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
     id: "welcome-login-button"
     retryTapIfNoChange: true
-- assertVisible: "Hesabına giriş yap"
 - assertVisible:
     id: "login-identity-input"
 - tapOn:
     id: "login-identity-input"
     retryTapIfNoChange: true
 - inputText: "member@gmail.com"
-- tapOn: "Hesabına giriş yap"
 - assertVisible:
     id: "login-password-input"
 - tapOn:
@@ -26,4 +23,9 @@ appId: com.fizyoflow.mobile
 - inputText: "member123"
 - tapOn:
     id: "login-submit-button"
-- assertVisible: "Kalan hak"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-home-profile-button"
