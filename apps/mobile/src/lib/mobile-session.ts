@@ -20,11 +20,39 @@ export type NormalizedSessionSnapshot = {
   availableSurfaces: SessionEnvelope["available_surfaces"] | null;
 };
 
+export type SessionEnvelopeInput = Partial<SessionEnvelope> & {
+  user?: SessionUser | null | undefined;
+  available_surfaces?: SessionEnvelope["available_surfaces"] | null | undefined;
+};
+
+export type SessionSnapshotAction =
+  | { type: "APPLY"; payload: SessionEnvelopeInput }
+  | { type: "RESET" };
+
+export function createEmptySessionSnapshot(): NormalizedSessionSnapshot {
+  return {
+    user: null,
+    onboardingState: null,
+    membershipState: null,
+    membershipStatus: null,
+    recommendedEntrySurface: null,
+    hasActiveMembership: false,
+    hasPendingApplication: false,
+    hasManagedClinic: false,
+    availablePersonas: [],
+    activeMembership: null,
+    managedClinic: null,
+    pendingApplication: null,
+    pendingPaymentRequest: null,
+    activeChangeRequests: [],
+    availableMobileActions: [],
+    scanCapabilities: [],
+    availableSurfaces: null,
+  };
+}
+
 export function normalizeSessionEnvelope(
-  payload: Partial<SessionEnvelope> & {
-    user?: SessionUser | null | undefined;
-    available_surfaces?: SessionEnvelope["available_surfaces"] | null | undefined;
-  }
+  payload: SessionEnvelopeInput
 ): NormalizedSessionSnapshot {
   const hasResolvedActiveMembership = Boolean(payload.active_membership);
   const user = payload.user || null;
@@ -52,4 +80,15 @@ export function normalizeSessionEnvelope(
     scanCapabilities: Array.isArray(payload.scan_capabilities) ? payload.scan_capabilities : [],
     availableSurfaces: payload.available_surfaces || null,
   };
+}
+
+export function sessionSnapshotReducer(
+  _state: NormalizedSessionSnapshot,
+  action: SessionSnapshotAction
+): NormalizedSessionSnapshot {
+  if (action.type === "RESET") {
+    return createEmptySessionSnapshot();
+  }
+
+  return normalizeSessionEnvelope(action.payload);
 }

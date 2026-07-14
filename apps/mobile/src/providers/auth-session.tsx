@@ -1,6 +1,6 @@
 // Bu provider mobil uygulamada auth session ile ilgili ortak state veya servis erisimini merkezilestirir.
 // Ekranlar arasi tekrar eden baglam ihtiyaci bu dosya uzerinden yonetilir.
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,8 +9,30 @@ import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, register
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
 import { authenticateWithBiometrics, disableBiometricLogin, enableBiometricLoginIfAvailable, getBiometricState } from "@/lib/biometric-auth";
+import {
+  createEmptySessionSnapshot,
+  sessionSnapshotReducer,
+  type SessionEnvelopeInput,
+} from "@/lib/mobile-session";
 
 const TOKEN_KEY = "fizyoflow.access_token";
+
+type AuthRuntimeState = {
+  token: string | null;
+  loading: boolean;
+};
+
+type PushRuntimeState = {
+  token: string | null;
+  permissionStatus: PushPermissionStatus;
+  pendingPostAuthScreen: "NOTIFICATION_PERMISSION" | null;
+};
+
+const EMPTY_PUSH_RUNTIME: PushRuntimeState = {
+  token: null,
+  permissionStatus: "undetermined",
+  pendingPostAuthScreen: null,
+};
 
 type LoginInput = {
   email: string;
@@ -91,173 +113,173 @@ const SessionContext = createContext<SessionContextType | null>(null);
 // API'den gelen oturum zarfini UI'nin kolay tuketecegi state alanlarina parcaliyoruz.
 export function SessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pushToken, setPushToken] = useState<string | null>(null);
-  const [onboardingState, setOnboardingState] = useState<SessionEnvelope["onboarding_state"] | null>(null);
-  const [membershipState, setMembershipState] = useState<SessionEnvelope["membership_state"] | null>(null);
-  const [membershipStatus, setMembershipStatus] = useState<string | null>(null);
-  const [recommendedEntrySurface, setRecommendedEntrySurface] = useState<SessionEnvelope["recommended_entry_surface"] | null>(null);
-  const [hasActiveMembership, setHasActiveMembership] = useState(false);
-  const [hasPendingApplication, setHasPendingApplication] = useState(false);
-  const [hasManagedClinic, setHasManagedClinic] = useState(false);
-  const [availablePersonas, setAvailablePersonas] = useState<SessionRole[]>([]);
-  const [activeMembership, setActiveMembership] = useState<SessionEnvelope["active_membership"] | null>(null);
-  const [managedClinic, setManagedClinic] = useState<SessionEnvelope["managed_clinic"] | null>(null);
-  const [pendingApplication, setPendingApplication] = useState<SessionEnvelope["pending_application"] | null>(null);
-  const [pendingPaymentRequest, setPendingPaymentRequest] = useState<SessionEnvelope["pending_payment_request"] | null>(null);
-  const [activeChangeRequests, setActiveChangeRequests] = useState<NonNullable<SessionEnvelope["active_change_requests"]>>([]);
-  const [availableMobileActions, setAvailableMobileActions] = useState<NonNullable<SessionEnvelope["available_mobile_actions"]>>([]);
-  const [scanCapabilities, setScanCapabilities] = useState<NonNullable<SessionEnvelope["scan_capabilities"]>>([]);
-  const [availableSurfaces, setAvailableSurfaces] = useState<SessionEnvelope["available_surfaces"] | null>(null);
-  const [pendingPostAuthScreen, setPendingPostAuthScreen] = useState<"NOTIFICATION_PERMISSION" | null>(null);
-  const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<PushPermissionStatus>("undetermined");
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [biometricLabel, setBiometricLabel] = useState("Biyometrik giriş");
+  const [session, dispatchSession] = useReducer(
+    sessionSnapshotReducer,
+    undefined,
+    createEmptySessionSnapshot
+  );
+  const [authRuntime, setAuthRuntime] = useState<AuthRuntimeState>({ token: null, loading: true });
+  const [pushRuntime, setPushRuntime] = useState<PushRuntimeState>(EMPTY_PUSH_RUNTIME);
+  const [biometricState, setBiometricState] = useState({
+    available: false,
+    enabled: false,
+    label: "Biyometrik giriş",
+  });
 
-  function applySessionPayload(payload: Partial<SessionEnvelope> & { user?: SessionUser | null | undefined; available_surfaces?: SessionEnvelope["available_surfaces"] | null | undefined }) {
-    // Login, refresh ve bootstrap ayni session alanlarini guncelliyor.
-    // Bu helper merkezi tuttugunda alan unutma riski azalir.
-    const hasResolvedActiveMembership = Boolean(payload.active_membership);
-    const normalizedOnboardingState = hasResolvedActiveMembership ? "ACTIVE_SALON" : payload.onboarding_state || null;
-    const normalizedMembershipState = hasResolvedActiveMembership ? "ACTIVE_SALON" : payload.membership_state || payload.onboarding_state || null;
-    const normalizedRecommendedEntrySurface =
-      hasResolvedActiveMembership && payload.user?.role === "MEMBER"
-        ? "MEMBER_HOME"
-        : payload.recommended_entry_surface || null;
-    setUser(payload.user || null);
-    setOnboardingState(normalizedOnboardingState);
-    setMembershipState(normalizedMembershipState);
-    setMembershipStatus(payload.membership_status || null);
-    setRecommendedEntrySurface(normalizedRecommendedEntrySurface);
-    setHasActiveMembership(Boolean(payload.has_active_membership || hasResolvedActiveMembership));
-    setHasPendingApplication(hasResolvedActiveMembership ? false : Boolean(payload.has_pending_application || payload.pending_application));
-    setHasManagedClinic(Boolean(payload.has_managed_clinic || payload.managed_clinic));
-    setAvailablePersonas(Array.isArray(payload.available_personas) ? payload.available_personas : payload.user?.role ? [payload.user.role] : []);
-    setActiveMembership(payload.active_membership || null);
-    setManagedClinic(payload.managed_clinic || null);
-    setPendingApplication(payload.pending_application || null);
-    setPendingPaymentRequest(payload.pending_payment_request || null);
-    setActiveChangeRequests(Array.isArray(payload.active_change_requests) ? payload.active_change_requests : []);
-    setAvailableMobileActions(Array.isArray(payload.available_mobile_actions) ? payload.available_mobile_actions : []);
-    setScanCapabilities(Array.isArray(payload.scan_capabilities) ? payload.scan_capabilities : []);
-    setAvailableSurfaces(payload.available_surfaces || null);
-  }
+  const applySessionPayload = useCallback((payload: SessionEnvelopeInput) => {
+    dispatchSession({ type: "APPLY", payload });
+  }, []);
 
-  async function clearSessionState() {
+  const clearSessionState = useCallback(async () => {
     // Logout ve token invalid durumlari ayni temizlik adimini kullanir.
     setAuthToken(null);
-    setToken(null);
-    setUser(null);
-    setPushToken(null);
-    setOnboardingState(null);
-    setMembershipState(null);
-    setMembershipStatus(null);
-    setRecommendedEntrySurface(null);
-    setHasActiveMembership(false);
-    setHasPendingApplication(false);
-    setHasManagedClinic(false);
-    setAvailablePersonas([]);
-    setActiveMembership(null);
-    setManagedClinic(null);
-    setPendingApplication(null);
-    setPendingPaymentRequest(null);
-    setActiveChangeRequests([]);
-    setAvailableMobileActions([]);
-    setScanCapabilities([]);
-    setAvailableSurfaces(null);
-    setPendingPostAuthScreen(null);
-    setNotificationPermissionStatus("undetermined");
-    setBiometricAvailable(false);
-    setBiometricEnabled(false);
+    setAuthRuntime((current) => ({ ...current, token: null }));
+    dispatchSession({ type: "RESET" });
+    setPushRuntime(EMPTY_PUSH_RUNTIME);
+    setBiometricState({ available: false, enabled: false, label: "Biyometrik giriş" });
 
     queryClient.clear();
 
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await disableBiometricLogin();
-  }
+  }, [queryClient]);
 
-  async function refreshBiometricState() {
+  const {
+    user,
+    onboardingState,
+    membershipState,
+    membershipStatus,
+    recommendedEntrySurface,
+    hasActiveMembership,
+    hasPendingApplication,
+    hasManagedClinic,
+    availablePersonas,
+    activeMembership,
+    managedClinic,
+    pendingApplication,
+    pendingPaymentRequest,
+    activeChangeRequests,
+    availableMobileActions,
+    scanCapabilities,
+    availableSurfaces,
+  } = session;
+  const { token, loading } = authRuntime;
+  const {
+    token: pushToken,
+    permissionStatus: notificationPermissionStatus,
+    pendingPostAuthScreen,
+  } = pushRuntime;
+  const {
+    available: biometricAvailable,
+    enabled: biometricEnabled,
+    label: biometricLabel,
+  } = biometricState;
+
+  const refreshBiometricState = useCallback(async () => {
     const state = await getBiometricState();
-    setBiometricAvailable(state.available);
-    setBiometricEnabled(state.enabled);
-    setBiometricLabel(state.label);
+    setBiometricState(state);
     return state;
-  }
+  }, []);
 
-  async function syncNotificationPermission(options?: { allowPromptScreen?: boolean }) {
+  const syncNotificationPermission = useCallback(async (options?: { allowPromptScreen?: boolean }) => {
     const status = await getPushPermissionStatus();
-    setNotificationPermissionStatus(status);
+    setPushRuntime((current) => ({ ...current, permissionStatus: status }));
 
     if (status === "granted") {
       const push = await registerPushDeviceIfPermitted();
-      setPushToken(push.token);
+      setPushRuntime({
+        token: push.token,
+        permissionStatus: status,
+        pendingPostAuthScreen: null,
+      });
       await setNotificationPermissionPromptState({
         hasSeenPrompt: true,
         lastKnownStatus: "granted",
         updatedAt: new Date().toISOString(),
       });
-      setPendingPostAuthScreen(null);
       return status;
     }
 
     if (pushToken) {
       await unregisterPushDevice(pushToken).catch(() => null);
     }
-    setPushToken(null);
     const promptState = await getNotificationPermissionPromptState();
     await setNotificationPermissionPromptState({
       hasSeenPrompt: promptState.hasSeenPrompt,
       lastKnownStatus: status,
       updatedAt: new Date().toISOString(),
     });
-    setPendingPostAuthScreen(options?.allowPromptScreen && !promptState.hasSeenPrompt ? "NOTIFICATION_PERMISSION" : null);
+    setPushRuntime({
+      token: null,
+      permissionStatus: status,
+      pendingPostAuthScreen:
+        options?.allowPromptScreen && !promptState.hasSeenPrompt ? "NOTIFICATION_PERMISSION" : null,
+    });
     return status;
-  }
+  }, [pushToken]);
 
-  async function syncNotificationPermissionSafely(options?: { allowPromptScreen?: boolean }) {
+  const syncNotificationPermissionSafely = useCallback(async (options?: { allowPromptScreen?: boolean }) => {
     try {
       return await syncNotificationPermission(options);
     } catch {
-      setPushToken(null);
+      setPushRuntime((current) => ({ ...current, token: null }));
       return notificationPermissionStatus;
     }
-  }
+  }, [notificationPermissionStatus, syncNotificationPermission]);
 
-  async function dismissNotificationPermissionPrompt() {
+  const dismissNotificationPermissionPrompt = useCallback(async () => {
     await setNotificationPermissionPromptState({
       hasSeenPrompt: true,
       lastKnownStatus: notificationPermissionStatus,
       updatedAt: new Date().toISOString(),
     });
-    setPendingPostAuthScreen(null);
-  }
+    setPushRuntime((current) => ({ ...current, pendingPostAuthScreen: null }));
+  }, [notificationPermissionStatus]);
 
-  async function requestNotificationPermission() {
+  const requestNotificationPermission = useCallback(async () => {
     const result = await requestPushPermissionAndRegister();
     if (result.status !== "granted" && pushToken) {
       await unregisterPushDevice(pushToken).catch(() => null);
     }
-    setNotificationPermissionStatus(result.status);
-    setPushToken(result.token);
+    setPushRuntime({
+      token: result.token,
+      permissionStatus: result.status,
+      pendingPostAuthScreen: null,
+    });
     await setNotificationPermissionPromptState({
       hasSeenPrompt: true,
       lastKnownStatus: result.status,
       updatedAt: new Date().toISOString(),
     });
-    setPendingPostAuthScreen(null);
     return result.status;
-  }
+  }, [pushToken]);
 
-  const refreshMe = async () => {
+  const activateAuthenticatedSession = useCallback(async (
+    data: SessionEnvelope & { accessToken: string },
+    options?: { refreshBiometric?: boolean; allowNotificationPrompt?: boolean }
+  ) => {
+    queryClient.clear();
+    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
+
+    if (options?.refreshBiometric) {
+      await refreshBiometricState();
+    }
+
+    setAuthToken(data.accessToken);
+    setAuthRuntime((current) => ({ ...current, token: data.accessToken }));
+    applySessionPayload(data);
+    await syncNotificationPermissionSafely({
+      allowPromptScreen: options?.allowNotificationPrompt,
+    });
+  }, [applySessionPayload, queryClient, refreshBiometricState, syncNotificationPermissionSafely]);
+
+  const refreshMe = useCallback(async () => {
     const me = await meApi();
     if (me.available_surfaces?.mobile === false) {
       await clearSessionState();
       throw new Error("Bu rol mobil uygulamadan giriş yapamaz. Lütfen web paneli kullanın.");
     }
-    applySessionPayload(me as any);
+    applySessionPayload(me);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["member-home"] }),
       queryClient.invalidateQueries({ queryKey: ["member-my-packages-list"] }),
@@ -270,7 +292,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["admin-risk-members"] }),
       queryClient.invalidateQueries({ queryKey: ["admin-mobile-approvals"] }),
     ]);
-  };
+  }, [applySessionPayload, clearSessionState, queryClient]);
 
   useEffect(() => {
     let mounted = true;
@@ -284,7 +306,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         if (!stored) {
           setAuthToken(null);
-          setToken(null);
+          setAuthRuntime((current) => ({ ...current, token: null }));
           applySessionPayload({});
           await refreshBiometricState();
           return;
@@ -293,25 +315,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const biometricState = await refreshBiometricState();
         if (biometricState.available && biometricState.enabled) {
           setAuthToken(null);
-          setToken(null);
+          setAuthRuntime((current) => ({ ...current, token: null }));
           applySessionPayload({});
           return;
         }
 
         setAuthToken(stored);
-        setToken(stored);
+        setAuthRuntime((current) => ({ ...current, token: stored }));
         const me = await meApi();
         if (!mounted) return;
         if (me.available_surfaces?.mobile === false) {
           await clearSessionState();
           return;
         }
-        applySessionPayload(me as any);
+        applySessionPayload(me);
         await syncNotificationPermissionSafely();
       } catch {
         await clearSessionState();
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setAuthRuntime((current) => ({ ...current, loading: false }));
       }
     }
 
@@ -342,11 +364,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.remove();
     };
-    // The app-state listener is tied to token presence; refreshMe reads the latest session through state setters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [refreshMe, syncNotificationPermissionSafely, token]);
 
-  const login = async (input: LoginInput) => {
+  const login = useCallback(async (input: LoginInput) => {
     const data = await loginApi({ ...input, email: input.email.trim().toLowerCase() });
     if (data.available_surfaces?.mobile === false) {
       throw new Error("Bu rol mobil uygulamadan giriş yapamaz. Lütfen web paneli kullanın.");
@@ -355,17 +375,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw new Error("Oturum bilgisi alınamadı.");
     }
 
-    queryClient.clear();
+    await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
+      refreshBiometric: true,
+      allowNotificationPrompt: true,
+    });
+  }, [activateAuthenticatedSession]);
 
-    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
-    await refreshBiometricState();
-    setAuthToken(data.accessToken);
-    setToken(data.accessToken);
-    applySessionPayload(data);
-    await syncNotificationPermissionSafely({ allowPromptScreen: true });
-  };
-
-  const switchRole = async (role: SessionRole) => {
+  const switchRole = useCallback(async (role: SessionRole) => {
     const data = await switchRoleApi(role);
     if (data.available_surfaces?.mobile === false) {
       throw new Error("Bu rol mobil uygulamadan açılamaz. Lütfen web paneli kullanın.");
@@ -374,32 +390,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw new Error("Yeni rol oturumu başlatılamadı.");
     }
 
-    queryClient.clear();
+    await activateAuthenticatedSession({ ...data, accessToken: data.accessToken });
+  }, [activateAuthenticatedSession]);
 
-    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
-    setAuthToken(data.accessToken);
-    setToken(data.accessToken);
-    applySessionPayload(data);
-    await syncNotificationPermissionSafely();
-  };
-
-  const register = async (input: RegisterInput) => {
+  const register = useCallback(async (input: RegisterInput) => {
     const data = await registerApi({ ...input, email: input.email.trim().toLowerCase() });
     if (!data.accessToken) {
       throw new Error("Kayıt sonrası oturum başlatılamadı.");
     }
 
-    queryClient.clear();
+    await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
+      refreshBiometric: true,
+      allowNotificationPrompt: true,
+    });
+  }, [activateAuthenticatedSession]);
 
-    await SecureStore.setItemAsync(TOKEN_KEY, data.accessToken);
-    await refreshBiometricState();
-    setAuthToken(data.accessToken);
-    setToken(data.accessToken);
-    applySessionPayload(data);
-    await syncNotificationPermissionSafely({ allowPromptScreen: true });
-  };
-
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await unregisterPushDevice(pushToken);
     } catch {
@@ -413,9 +419,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     await clearSessionState();
-  };
+  }, [clearSessionState, pushToken]);
 
-  const loginWithBiometrics = async () => {
+  const loginWithBiometrics = useCallback(async () => {
     const state = await refreshBiometricState();
     if (!state.available || !state.enabled) {
       throw new Error("Bu cihazda hızlı giriş hazır değil. E-posta ve şifrenle giriş yapabilirsin.");
@@ -436,21 +442,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       queryClient.clear();
       setAuthToken(stored);
-      setToken(stored);
+      setAuthRuntime((current) => ({ ...current, token: stored }));
       const me = await meApi();
       if (me.available_surfaces?.mobile === false) {
         await clearSessionState();
         throw new Error("Bu rol mobil uygulamadan giriş yapamaz. Lütfen web paneli kullanın.");
       }
-      applySessionPayload(me as any);
+      applySessionPayload(me);
       await syncNotificationPermissionSafely({ allowPromptScreen: true });
     } catch (error) {
       await clearSessionState();
       throw error;
     }
-  };
+  }, [applySessionPayload, clearSessionState, queryClient, refreshBiometricState, syncNotificationPermissionSafely]);
 
-  const deleteAccount = async () => {
+  const deleteAccount = useCallback(async () => {
     try {
       await unregisterPushDevice(pushToken);
     } catch {
@@ -459,26 +465,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     await deleteAccountApi();
     await clearSessionState();
-  };
+  }, [clearSessionState, pushToken]);
 
-  const acceptInvite = async (input: InviteAcceptInput) => {
+  const acceptInvite = useCallback(async (input: InviteAcceptInput) => {
     await inviteAcceptApi(input);
-  };
+  }, []);
 
-  const enableBiometricLogin = async () => {
+  const enableBiometricLogin = useCallback(async () => {
     const state = await enableBiometricLoginIfAvailable();
-    setBiometricAvailable(state.available);
-    setBiometricEnabled(state.enabled);
-    setBiometricLabel(state.label);
+    setBiometricState(state);
     if (!state.available) {
       throw new Error("Bu cihazda Face ID veya Touch ID hazır değil.");
     }
-  };
+  }, []);
 
-  const disableBiometricLoginAction = async () => {
+  const disableBiometricLoginAction = useCallback(async () => {
     await disableBiometricLogin();
     await refreshBiometricState();
-  };
+  }, [refreshBiometricState]);
+
+  const clearPendingPostAuthScreen = useCallback(() => {
+    setPushRuntime((current) => ({ ...current, pendingPostAuthScreen: null }));
+  }, []);
+
+  const refreshNotificationPermissionStatus = useCallback(
+    () => syncNotificationPermissionSafely(),
+    [syncNotificationPermissionSafely]
+  );
 
   const value = useMemo<SessionContextType>(
     () => ({
@@ -508,10 +521,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       biometricLabel,
       enableBiometricLogin,
       disableBiometricLogin: disableBiometricLoginAction,
-      clearPendingPostAuthScreen: () => setPendingPostAuthScreen(null),
+      clearPendingPostAuthScreen,
       dismissNotificationPermissionPrompt,
       requestNotificationPermission,
-      refreshNotificationPermissionStatus: () => syncNotificationPermissionSafely(),
+      refreshNotificationPermissionStatus,
       login,
       loginWithBiometrics,
       switchRole,
@@ -521,9 +534,46 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       acceptInvite,
       refreshMe,
     }),
-    // Action functions intentionally stay outside the memo deps to keep the provider value stable between state updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, loading, token, onboardingState, membershipState, membershipStatus, recommendedEntrySurface, hasActiveMembership, hasPendingApplication, hasManagedClinic, availablePersonas, activeMembership, managedClinic, pendingApplication, pendingPaymentRequest, activeChangeRequests, availableMobileActions, scanCapabilities, availableSurfaces, pendingPostAuthScreen, notificationPermissionStatus, biometricAvailable, biometricEnabled, biometricLabel]
+    [
+      acceptInvite,
+      activeChangeRequests,
+      activeMembership,
+      availableMobileActions,
+      availablePersonas,
+      availableSurfaces,
+      biometricAvailable,
+      biometricEnabled,
+      biometricLabel,
+      clearPendingPostAuthScreen,
+      deleteAccount,
+      disableBiometricLoginAction,
+      dismissNotificationPermissionPrompt,
+      enableBiometricLogin,
+      hasActiveMembership,
+      hasManagedClinic,
+      hasPendingApplication,
+      loading,
+      login,
+      loginWithBiometrics,
+      logout,
+      managedClinic,
+      membershipState,
+      membershipStatus,
+      notificationPermissionStatus,
+      onboardingState,
+      pendingApplication,
+      pendingPaymentRequest,
+      pendingPostAuthScreen,
+      recommendedEntrySurface,
+      refreshMe,
+      refreshNotificationPermissionStatus,
+      register,
+      requestNotificationPermission,
+      scanCapabilities,
+      switchRole,
+      token,
+      user,
+    ]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
