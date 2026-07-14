@@ -1,0 +1,25 @@
+.site-footer {
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.footer-inner span {
+  color: var(--text);
+  font-weight: 850;
+}
+
+.footer-inner nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}

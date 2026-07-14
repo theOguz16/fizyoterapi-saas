@@ -1,0 +1,24 @@
+:root {
+  --bg: #f8fafb;
+  --surface: #ffffff;
+  --surface-soft: #f2f8f3;
+  --surface-deep: #0b1220;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --line: #e1eadf;
+  --brand: #6f9274;
+  --brand-soft: #97bb9c;
+  --brand-pale: #edf5ee;
+  --brand-dark: #496c4f;
+  --accent: #5dade2;
+  --warm: #f59e0b;
+  --danger: #dc2626;
+  --success: #22c55e;
+  --product-green: #6f9274;
+  --product-green-deep: #31543d;
+  --product-green-soft: #97bb9c;
+  --product-pale: #eef6f0;
+  --product-bg: #f8fafb;
+  --product-ink: #1f2937;
+  --product-muted: #6b7280;
+}
