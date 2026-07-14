@@ -20,12 +20,13 @@ import { AnimatedEntrance } from "@/theme/components/animated-entrance";
 import { IntakeProgressCard } from "@/theme/components/intake-progress-card";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
+import { clearPendingSalonJoinSlug } from "@/lib/local-preferences";
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ slug: string }>();
   const { memberIntent, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
-  const { refreshMe } = useSession();
+  const { refreshMe, user } = useSession();
   const isGroupFlow = isGroupClassBookingFlow(memberBookingDraft);
   const currentPackage = findCurrentPackage(memberBookingDraft);
   const selectedDaysForCurrentPackage = currentPackage?.preferred_slots || memberBookingDraft.preferredSlots;
@@ -188,6 +189,7 @@ export default function BookingSummaryScreen() {
 
   onSuccess: async () => {
     if (!memberBookingDraft.e2eBypassSubmit) {
+      await clearPendingSalonJoinSlug();
       await refreshMe();
     }
 
@@ -327,19 +329,37 @@ export default function BookingSummaryScreen() {
       </AnimatedEntrance>
 
       <ActionButton label="Saatleri düzenle" icon="calendar" variant="ghost" onPress={() => safeBack(router, "/(intake-member)/time-selection")} />
-      <ActionButton
-        label="Onaya gönder"
-        icon="approvals"
-        onPress={() => {
-          if (memberBookingDraft.e2eBypassSubmit) {
-            handleSubmissionSuccess();
-            return;
-          }
-          submitMutation.mutate();
-        }}
-        loading={submitMutation.isPending}
-        disabled={memberBookingDraft.e2eBypassSubmit ? false : !canSubmit || submitMutation.isPending}
-      />
+      {!user && !memberBookingDraft.e2eBypassSubmit ? (
+        <SurfaceCard tone="primary">
+          <Text style={styles.section}>Başvuruyu göndermek için hesabınla devam et</Text>
+          <Text style={styles.copy}>Salon, paket, eğitmen ve saat seçimlerin korunacak.</Text>
+          <ActionButton
+            label="Danışan hesabımla giriş yap"
+            icon="member"
+            onPress={() => router.push("/(auth)/login" as never)}
+          />
+          <ActionButton
+            label="Bu kliniğe danışan olarak katıl"
+            icon="spark"
+            variant="ghost"
+            onPress={() => router.push({ pathname: "/(auth)/member-register", params: { slug: String(params.slug) } } as never)}
+          />
+        </SurfaceCard>
+      ) : (
+        <ActionButton
+          label="Onaya gönder"
+          icon="approvals"
+          onPress={() => {
+            if (memberBookingDraft.e2eBypassSubmit) {
+              handleSubmissionSuccess();
+              return;
+            }
+            submitMutation.mutate();
+          }}
+          loading={submitMutation.isPending}
+          disabled={memberBookingDraft.e2eBypassSubmit ? false : !canSubmit || submitMutation.isPending}
+        />
+      )}
     </AppShell>
   );
 }

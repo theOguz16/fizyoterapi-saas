@@ -5,7 +5,6 @@ import { setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { extractSalonSlugFromQrPayload } from "@/lib/salon-qr";
 
 type Props = {
-  onPendingSalonSlug: (slug: string) => void;
   resolveRoute: (slug: string) => string | null;
 };
 
@@ -46,7 +45,7 @@ function extractSalonSlugFromDetourLink(link: unknown) {
   );
 }
 
-export function DetourLinkHandler({ onPendingSalonSlug, resolveRoute }: Props) {
+export function DetourLinkHandler({ resolveRoute }: Props) {
   const router = useRouter();
   const { isLinkProcessed, link, clearLink } = useDetourContext();
 
@@ -61,8 +60,7 @@ export function DetourLinkHandler({ onPendingSalonSlug, resolveRoute }: Props) {
         return;
       }
 
-      await setPendingSalonJoinSlug(slug);
-      onPendingSalonSlug(slug);
+      await setPendingSalonJoinSlug(slug, "DEEPLINK");
 
       const nextRoute = resolveRoute(slug);
 
@@ -74,7 +72,7 @@ export function DetourLinkHandler({ onPendingSalonSlug, resolveRoute }: Props) {
     }
 
     void handleDetourLink();
-  }, [clearLink, isLinkProcessed, link, onPendingSalonSlug, resolveRoute, router]);
+  }, [clearLink, isLinkProcessed, link, resolveRoute, router]);
 
   return null;
 }

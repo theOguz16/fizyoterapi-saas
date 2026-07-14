@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { normalizeSalonSlug } from "@/lib/salon-qr";
+import { setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
 
 export default function JoinSalonRedirectScreen() {
@@ -16,7 +17,9 @@ export default function JoinSalonRedirectScreen() {
       return;
     }
 
-    router.replace(`/(intake-member)/salons/${normalized}` as never);
+    void setPendingSalonJoinSlug(normalized, "DEEPLINK").then(() => {
+      router.replace(`/(intake-member)/salons/${normalized}` as never);
+    });
   }, [router, slug]);
 
   return (

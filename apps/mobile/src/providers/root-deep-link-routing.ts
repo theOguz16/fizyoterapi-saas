@@ -3,7 +3,13 @@ import { Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { resolveIncomingLinkAction } from "@/lib/incoming-link";
-import { getPendingSalonJoinSlug, setPendingSalonJoinSlug as persistPendingSalonJoinSlug } from "@/lib/local-preferences";
+import {
+  clearPendingSalonJoinSlug,
+  getPendingSalonJoinIntent,
+  setPendingSalonJoinSlug as persistPendingSalonJoinSlug,
+  subscribeSalonJoinIntent,
+  type SalonJoinIntent,
+} from "@/lib/local-preferences";
 import { resolvePendingSalonHome } from "@/lib/navigation";
 
 type RootLinkUser = {
@@ -16,11 +22,25 @@ export function useRootDeepLinkRouting(input: {
   onboardingState?: string | null;
 }) {
   const router = useRouter();
-  const [pendingSalonSlug, setPendingSalonSlugState] = useState<string | null | undefined>(undefined);
+  const [pendingSalonIntent, setPendingSalonIntent] = useState<SalonJoinIntent | null | undefined>(undefined);
+  const pendingSalonSlug = pendingSalonIntent === undefined ? undefined : pendingSalonIntent?.slug || null;
 
   useEffect(() => {
-    void getPendingSalonJoinSlug().then(setPendingSalonSlugState);
+    void getPendingSalonJoinIntent().then(setPendingSalonIntent);
+    return subscribeSalonJoinIntent(setPendingSalonIntent);
   }, []);
+
+  useEffect(() => {
+    if (!pendingSalonIntent) return;
+    const remainingMs = new Date(pendingSalonIntent.expiresAt).getTime() - Date.now();
+    if (remainingMs <= 0) {
+      void clearPendingSalonJoinSlug();
+      return;
+    }
+
+    const timer = setTimeout(() => void clearPendingSalonJoinSlug(), remainingMs);
+    return () => clearTimeout(timer);
+  }, [pendingSalonIntent]);
 
   const resolvePendingRoute = useCallback(
     (slug: string) =>
@@ -31,10 +51,6 @@ export function useRootDeepLinkRouting(input: {
       }),
     [input.onboardingState, input.user]
   );
-
-  const setPendingSalonSlug = useCallback((slug: string) => {
-    setPendingSalonSlugState(slug);
-  }, []);
 
   const handleIncomingUrl = useCallback(
     async (rawUrl: string | null | undefined) => {
@@ -47,8 +63,7 @@ export function useRootDeepLinkRouting(input: {
 
       if (action.type !== "salon") return;
 
-      await persistPendingSalonJoinSlug(action.slug);
-      setPendingSalonSlugState(action.slug);
+      await persistPendingSalonJoinSlug(action.slug, "DEEPLINK");
 
       const nextRoute = resolvePendingRoute(action.slug);
       if (nextRoute) {
@@ -72,7 +87,6 @@ export function useRootDeepLinkRouting(input: {
 
   return {
     pendingSalonSlug,
-    setPendingSalonSlug,
     resolvePendingRoute,
   };
 }

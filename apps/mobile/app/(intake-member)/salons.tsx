@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getPublıcSalonsApi, type SalonDiscoverySummary } from "@/lib/mobile-api";
 import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonDiscoveryEmptyGuidance, getSalonLocationLabel } from "@/lib/salon-discovery";
 import { useAppFlow } from "@/providers/app-flow";
+import { setPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { AppShell } from "@/theme/components/app-shell";
 import { ActionButton } from "@/theme/components/action-button";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
@@ -18,7 +19,7 @@ import { tokens } from "@/theme/tokens";
 
 export default function IntakeSalonsScreen() {
   const router = useRouter();
-  const { memberIntent, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
+  const { memberIntent, setMemberBookingDraft } = useAppFlow();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("ALL");
   const [serviceFilter, setServiceFilter] = useState("ALL");
@@ -192,10 +193,11 @@ export default function IntakeSalonsScreen() {
                   salon={salon}
                   accent={section.accent}
                   onInspect={() => {
+                    void setPendingSalonJoinSlug(salon.slug, "DISCOVERY");
                     setMemberBookingDraft({
-                      ...memberBookingDraft,
                       salonSlug: salon.slug,
                       salonName: salon.tenant_name || salon.name,
+                      preferredSlots: [],
                     });
                     router.push(`/(intake-member)/salons/${salon.slug}` as never);
                   }}

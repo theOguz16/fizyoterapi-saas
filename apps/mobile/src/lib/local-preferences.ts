@@ -8,7 +8,9 @@ const PERMISSION_PROMPT_KEY = "fizyoflow.notification_permission_prompt.v1";
 const SIGNUP_ONBOARDING_KEY = "fizyoflow.signup_onboarding_seen.v1";
 const SIGNUP_ONBOARDING_PROFILE_KEY = "fizyoflow.signup_onboarding_profile.v1";
 const SIGNUP_ONBOARDING_ROLE_KEY = "fizyoflow.signup_onboarding_role.v1";
-const PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_slug.v1";
+const LEGACY_PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_slug.v1";
+const PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_intent.v2";
+const SALON_JOIN_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
 export const LOCAL_GROUP_CLASSES_KEY = "fizyoflow.local_group_classes.v1";
 const RESETTABLE_KEYS = [
   PREF_KEY,
@@ -16,6 +18,7 @@ const RESETTABLE_KEYS = [
   SIGNUP_ONBOARDING_KEY,
   SIGNUP_ONBOARDING_PROFILE_KEY,
   SIGNUP_ONBOARDING_ROLE_KEY,
+  LEGACY_PENDING_SALON_JOIN_KEY,
   PENDING_SALON_JOIN_KEY,
   LOCAL_GROUP_CLASSES_KEY,
   "fizyoflow.selected_city.v1",
@@ -43,6 +46,19 @@ export type NotificationPermissionPromptState = {
   lastKnownStatus: "granted" | "denied" | "undetermined";
   updatedAt: string | null;
 };
+
+export type SalonJoinIntentSource = "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+
+export type SalonJoinIntent = {
+  slug: string;
+  source: SalonJoinIntentSource;
+  createdAt: string;
+  expiresAt: string;
+};
+
+type SalonJoinIntentListener = (intent: SalonJoinIntent | null) => void;
+
+const salonJoinIntentListeners = new Set<SalonJoinIntentListener>();
 
 const DEFAULTS: NotificationPreferences = {
   classReminderThreeHours: true,
@@ -163,28 +179,91 @@ export async function setStoredSignupOnboardingProfile(role: SignupOnboardingRol
   return profile;
 }
 
-export async function getPendingSalonJoinSlug(): Promise<string | null> {
+function notifySalonJoinIntent(intent: SalonJoinIntent | null) {
+  salonJoinIntentListeners.forEach((listener) => listener(intent));
+}
+
+function normalizeSalonJoinIntent(raw: string | null, now: Date): SalonJoinIntent | null {
+  if (!raw) return null;
+
   try {
-    const raw = await SecureStore.getItemAsync(PENDING_SALON_JOIN_KEY);
-    const value = String(raw || "").trim();
-    return value || null;
+    const parsed = JSON.parse(raw) as Partial<SalonJoinIntent>;
+    const slug = String(parsed.slug || "").trim().toLowerCase();
+    const source = parsed.source;
+    const createdAt = new Date(String(parsed.createdAt || ""));
+    const expiresAt = new Date(String(parsed.expiresAt || ""));
+    const validSource = source === "QR" || source === "DEEPLINK" || source === "INVITE" || source === "DISCOVERY";
+
+    if (!slug || !validSource || Number.isNaN(createdAt.getTime()) || Number.isNaN(expiresAt.getTime())) {
+      return null;
+    }
+    if (expiresAt.getTime() <= now.getTime()) return null;
+
+    return {
+      slug,
+      source,
+      createdAt: createdAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    };
   } catch {
     return null;
   }
 }
 
-export async function setPendingSalonJoinSlug(slug: string) {
-  const normalized = String(slug || "").trim();
-  if (!normalized) {
-    await SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY);
+export async function getPendingSalonJoinIntent(now = new Date()): Promise<SalonJoinIntent | null> {
+  try {
+    await SecureStore.deleteItemAsync(LEGACY_PENDING_SALON_JOIN_KEY);
+    const raw = await SecureStore.getItemAsync(PENDING_SALON_JOIN_KEY);
+    const intent = normalizeSalonJoinIntent(raw, now);
+    if (!intent && raw) {
+      await SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY);
+      notifySalonJoinIntent(null);
+    }
+    return intent;
+  } catch {
     return null;
   }
-  await SecureStore.setItemAsync(PENDING_SALON_JOIN_KEY, normalized);
-  return normalized;
+}
+
+export async function getPendingSalonJoinSlug(now = new Date()): Promise<string | null> {
+  return (await getPendingSalonJoinIntent(now))?.slug || null;
+}
+
+export async function setPendingSalonJoinSlug(
+  slug: string,
+  source: SalonJoinIntentSource = "DEEPLINK",
+  now = new Date()
+) {
+  const normalized = String(slug || "").trim().toLowerCase();
+  if (!normalized) {
+    await clearPendingSalonJoinSlug();
+    return null;
+  }
+
+  const intent: SalonJoinIntent = {
+    slug: normalized,
+    source,
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + SALON_JOIN_INTENT_TTL_MS).toISOString(),
+  };
+  await SecureStore.setItemAsync(PENDING_SALON_JOIN_KEY, JSON.stringify(intent));
+  notifySalonJoinIntent(intent);
+  return intent;
 }
 
 export async function clearPendingSalonJoinSlug() {
-  await SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY);
+  await Promise.all([
+    SecureStore.deleteItemAsync(LEGACY_PENDING_SALON_JOIN_KEY),
+    SecureStore.deleteItemAsync(PENDING_SALON_JOIN_KEY),
+  ]);
+  notifySalonJoinIntent(null);
+}
+
+export function subscribeSalonJoinIntent(listener: SalonJoinIntentListener) {
+  salonJoinIntentListeners.add(listener);
+  return () => {
+    salonJoinIntentListeners.delete(listener);
+  };
 }
 
 export async function resetLocalPreferencesForE2E() {

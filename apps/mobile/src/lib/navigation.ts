@@ -307,11 +307,11 @@ export function resolvePendingSalonHome(input: {
     return null;
   }
 
-  if (input.onboardingState !== "ACTIVE_SALON") {
+  if (input.onboardingState === "NO_SALON" || !input.onboardingState) {
     return `/(intake-member)/salons/${pendingSlug}`;
   }
 
-  return "/(member)/home";
+  return input.onboardingState === "ACTIVE_SALON" ? "/(member)/home" : null;
 }
 
 export function resolveRootNavigation(input: RootNavigationInput): RootNavigationDecision {
@@ -372,7 +372,7 @@ export function resolveRootNavigation(input: RootNavigationInput): RootNavigatio
     role === "MEMBER" &&
     input.onboardingState === "NO_SALON" &&
     inAuthGroup &&
-    ["scan-salon-qr", "invite-accept"].includes(authLeaf || "");
+    ["scan-salon-qr", "invite-accept", "login", "member-register"].includes(authLeaf || "");
   const allowMemberPurchaseFlow =
     role === "MEMBER" &&
     inIntakeGroup &&

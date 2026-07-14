@@ -13,6 +13,7 @@ import { EmptyPanel } from "@/theme/components/empty-panel";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
+import { useAppFlow } from "@/providers/app-flow";
 
 type CameraStatus = "unknown" | "granted" | "denied" | "unavailable";
 
@@ -35,6 +36,7 @@ function normalizeSlug(value: unknown) {
 export default function ScanSalonQrScreen() {
   const router = useRouter();
   const { user, onboardingState } = useSession();
+  const { setMemberBookingDraft } = useAppFlow();
 
   const [mode, setMode] = useState<ScanMode>("camera");
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>(CameraModule ? "unknown" : "unavailable");
@@ -91,7 +93,8 @@ export default function ScanSalonQrScreen() {
       return;
     }
 
-    await setPendingSalonJoinSlug(normalizedSlug);
+    await setPendingSalonJoinSlug(normalizedSlug, "QR");
+    setMemberBookingDraft({ salonSlug: normalizedSlug, preferredSlots: [] });
     setManualValue("");
     setScanLocked(false);
     setIsProcessing(false);

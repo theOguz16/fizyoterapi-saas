@@ -8,6 +8,7 @@ import { authLoginRateLimit, authRegisterRateLimit } from "../middlewares/rate-l
 export const authRoutes = Router();
 
 authRoutes.post("/register", authRegisterRateLimit, AuthController.register);
+authRoutes.post("/register-clinic-member", authRegisterRateLimit, AuthController.registerClinicMember);
 authRoutes.post("/login", authLoginRateLimit, AuthController.login);
 authRoutes.post("/logout", AuthController.logout);
 authRoutes.post("/switch-role", authMiddleware, AuthController.switchRole);

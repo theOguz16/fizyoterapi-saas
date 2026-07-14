@@ -26,11 +26,11 @@ initMobileSentry();
 
 function RootGate() {
   const { user, loading, onboardingState, availableSurfaces, pendingPostAuthScreen, refreshMe } = useSession();
-  const { signupFlowState, selectedPersoma } = useAppFlow();
+  const { signupFlowState, selectedPersoma, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
   const segments = useSegments();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { pendingSalonSlug, setPendingSalonSlug, resolvePendingRoute } = useRootDeepLinkRouting({
+  const { pendingSalonSlug, resolvePendingRoute } = useRootDeepLinkRouting({
     user,
     onboardingState,
   });
@@ -54,6 +54,11 @@ function RootGate() {
   useEffect(() => {
     setSentryScreenContext(segments.join("/") || "index");
   }, [segments]);
+
+  useEffect(() => {
+    if (!pendingSalonSlug || !memberBookingDraft.salonSlug || pendingSalonSlug === memberBookingDraft.salonSlug) return;
+    setMemberBookingDraft({ salonSlug: pendingSalonSlug, preferredSlots: [] });
+  }, [memberBookingDraft.salonSlug, pendingSalonSlug, setMemberBookingDraft]);
 
   useEffect(() => {
     const decision = resolveRootNavigation({
@@ -96,7 +101,6 @@ function RootGate() {
     <>
       {isDetourConfigured() ? (
         <DetourLinkHandler
-          onPendingSalonSlug={setPendingSalonSlug}
           resolveRoute={resolvePendingRoute}
         />
       ) : null}

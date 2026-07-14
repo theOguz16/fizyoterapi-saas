@@ -5,7 +5,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAuthToken } from "@/lib/http-client";
-import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
+import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, registerClinicMemberApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
 import { authenticateWithBiometrics, disableBiometricLogin, enableBiometricLoginIfAvailable, getBiometricState } from "@/lib/biometric-auth";
@@ -57,6 +57,16 @@ type RegisterInput = {
   };
 };
 
+type ClinicMemberRegisterInput = {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  tenant_slug: string;
+  join_source: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+};
+
 type InviteAcceptInput = {
   token: string;
   first_name: string;
@@ -101,6 +111,7 @@ type SessionContextType = {
   loginWithBiometrics: () => Promise<void>;
   switchRole: (role: SessionRole) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  registerClinicMember: (input: ClinicMemberRegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   acceptInvite: (input: InviteAcceptInput) => Promise<void>;
@@ -347,9 +358,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!hasActiveMembership) return;
+    if (!hasActiveMembership && !hasPendingApplication && !pendingPaymentRequest) return;
     void clearPendingSalonJoinSlug();
-  }, [hasActiveMembership]);
+  }, [hasActiveMembership, hasPendingApplication, pendingPaymentRequest]);
 
   useEffect(() => {
     if (!token) return;
@@ -377,7 +388,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
       refreshBiometric: true,
-      allowNotificationPrompt: true,
+      allowNotificationPrompt: !input.tenantSlug,
     });
   }, [activateAuthenticatedSession]);
 
@@ -402,6 +413,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
       refreshBiometric: true,
       allowNotificationPrompt: true,
+    });
+  }, [activateAuthenticatedSession]);
+
+  const registerClinicMember = useCallback(async (input: ClinicMemberRegisterInput) => {
+    const data = await registerClinicMemberApi({ ...input, email: input.email.trim().toLowerCase() });
+    if (!data.accessToken) {
+      throw new Error("Kayıt sonrası danışan oturumu başlatılamadı.");
+    }
+
+    await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
+      refreshBiometric: true,
+      allowNotificationPrompt: false,
     });
   }, [activateAuthenticatedSession]);
 
@@ -529,6 +552,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       loginWithBiometrics,
       switchRole,
       register,
+      registerClinicMember,
       logout,
       deleteAccount,
       acceptInvite,
@@ -568,6 +592,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       refreshMe,
       refreshNotificationPermissionStatus,
       register,
+      registerClinicMember,
       requestNotificationPermission,
       scanCapabilities,
       switchRole,

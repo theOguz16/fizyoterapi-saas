@@ -48,6 +48,16 @@ type RegisterInput = {
   };
 };
 
+type ClinicMemberRegisterInput = {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  tenant_slug: string;
+  join_source?: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+};
+
 // AuthController sadece login/register degil,
 // kullanicinin hangi role ve onboarding asamasina dusecegini de belirler.
 export class AuthController {
@@ -137,6 +147,98 @@ export class AuthController {
         email: account.email,
         onboarding_state: session.onboardingState,
         signup_scope: "CLINIC_OWNER",
+      },
+    });
+
+    return AuthController.respondWithSession(res, session);
+  }
+
+  static async registerClinicMember(req: Request, res: Response) {
+    const { email, password, first_name, last_name, phone, tenant_slug, join_source } =
+      req.body as ClinicMemberRegisterInput;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedSlug = String(tenant_slug || "").trim().toLowerCase();
+    const normalizedFirstName = String(first_name || "").trim();
+    const normalizedLastName = String(last_name || "").trim();
+    const normalizedPhone = String(phone || "").replace(/\D+/g, "");
+    const normalizedJoinSource = ["QR", "DEEPLINK", "INVITE", "DISCOVERY"].includes(String(join_source || ""))
+      ? join_source
+      : "DEEPLINK";
+
+    if (!normalizedEmail || !password || !normalizedFirstName || !normalizedLastName || !normalizedPhone || !normalizedSlug) {
+      throw new AppError("VALIDATION_ERROR", 422, "Salon, ad, soyad, telefon, e-posta ve şifre zorunludur");
+    }
+    if (String(password).length < 8) {
+      throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
+    }
+
+    const tenantRepo = AppDataSource.getRepository(Tenant);
+    const tenant = await TenantLifecycleService.syncTenantState(
+      await tenantRepo.findOne({ where: { slug: normalizedSlug, is_active: true } })
+    );
+    if (!tenant) {
+      throw new AppError("SALON_NOT_FOUND", 404, "Salon bulunamadı");
+    }
+    if (tenant.review_status !== TenantReviewStatus.PUBLISHED || !tenant.is_public) {
+      throw new AppError("SALON_NOT_PUBLIC", 409, "Bu salon henüz danışan kaydına açık değil");
+    }
+    if (![TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.ACTIVE].includes(tenant.subscription_status)) {
+      throw new AppError("SALON_NOT_ACCEPTING", 409, "Bu salon şu anda yeni danışan kabul etmiyor");
+    }
+
+    const accountRepo = AppDataSource.getRepository(Account);
+    const existing = await accountRepo.findOne({ where: { email: normalizedEmail } });
+    if (existing) {
+      throw new AppError("ACCOUNT_EXISTS", 409, "Bu e-posta ile kayıtlı bir hesap zaten var. Giriş yaparak devam edin");
+    }
+
+    const account = accountRepo.create({
+      email: normalizedEmail,
+      password_hash: await hashPassword(password),
+      first_name: normalizedFirstName,
+      last_name: normalizedLastName,
+      phone: normalizedPhone,
+      global_role_default: UserRole.MEMBER,
+      onboarding_profile: null,
+      is_active: true,
+    });
+    await accountRepo.save(account);
+
+    const role = UserRole.MEMBER;
+    const onboardingState: MembershipLifecycleState = "NO_SALON";
+    const session = {
+      account,
+      role,
+      membership: null,
+      tenant: null,
+      linkedUserId: null,
+      onboardingState,
+      membershipStatus: "NONE",
+      accessToken: AuthController.signToken({
+        sub: account.id,
+        role,
+        accountId: account.id,
+        loginScope: "ACCOUNT",
+      }),
+    };
+
+    await AuditLogService.log({
+      tenant_id: tenant.id,
+      actor_account_id: account.id,
+      actor_role: role,
+      event_type: "AUTH_CLINIC_MEMBER_REGISTER",
+      action: "REGISTER",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 200,
+      success: true,
+      request_id: (req as any).requestId || null,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      metadata: {
+        email: account.email,
+        tenant_slug: tenant.slug,
+        join_source: normalizedJoinSource,
       },
     });
 

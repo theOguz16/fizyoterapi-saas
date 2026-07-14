@@ -5,7 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getPublıcSalonApi } from "@/lib/mobile-api";
 import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonLocationLabel } from "@/lib/salon-discovery";
-import { clearPendingSalonJoinSlug, setPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { clearPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { useAppFlow } from "@/providers/app-flow";
 import { ActionButton } from "@/theme/components/action-button";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
@@ -36,8 +36,7 @@ export default function SalonDetailScreen() {
       void clearPendingSalonJoinSlug();
       return;
     }
-    if (salon) void setPendingSalonJoinSlug(slug);
-  }, [salon, salonQuery.isError, slug]);
+  }, [salonQuery.isError, slug]);
 
   const businessHours = resolveBusinessHours([salon?.business_hours]);
   const locationLabel = getSalonLocationLabel(salon);
@@ -45,6 +44,12 @@ export default function SalonDetailScreen() {
   const serviceHighlights = useMemo(() => buildSalonServiceHighlights(salon), [salon]);
   const workingHours = `${businessHours.start_time} - ${businessHours.end_time}`;
   const slotInfo = `${businessHours.slot_minutes} dk ders`;
+
+  async function leaveSalonIntent(destination: "/(intake-member)" | "/(intake-member)/salons") {
+    await clearPendingSalonJoinSlug();
+    setMemberBookingDraft({ preferredSlots: [] });
+    router.replace(destination as never);
+  }
 
   if (!slug) {
     return (
@@ -215,6 +220,20 @@ export default function SalonDetailScreen() {
                   params: { slug },
                 } as never);
               }}
+            />
+            <ActionButton
+              testID="salon-choose-another-button"
+              label="Başka klinik seç"
+              icon="salon"
+              variant="ghost"
+              onPress={() => void leaveSalonIntent("/(intake-member)/salons")}
+            />
+            <ActionButton
+              testID="salon-cancel-connection-button"
+              label="Bu bağlantıyı iptal et"
+              icon="arrow-left"
+              variant="ghost"
+              onPress={() => void leaveSalonIntent("/(intake-member)")}
             />
           </View>
         </AnimatedEntrance>

@@ -21,7 +21,7 @@ const TRUST_SIGNALS = [
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { resetSignupFlow, resumeSignupFlow, setSelectedPersoma, startSignupFlow } = useAppFlow();
+  const { memberBookingDraft, resetSignupFlow, resumeSignupFlow, setSelectedPersoma, startSignupFlow } = useAppFlow();
   const { biometricAvailable, biometricEnabled, biometricLabel, login, loginWithBiometrics } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,7 +59,15 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       setError("");
-      await login({ email: email.trim().toLowerCase(), password });
+      await login({ email: email.trim().toLowerCase(), password, tenantSlug: pendingSalonSlug || undefined });
+      if (pendingSalonSlug) {
+        router.replace({
+          pathname: memberBookingDraft.packageId
+            ? "/(intake-member)/booking-summary"
+            : "/(intake-member)/salons/[slug]",
+          params: { slug: pendingSalonSlug },
+        } as never);
+      }
     } catch (err) {
       setError(getUserFacingMessage(err, "Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene."));
     } finally {

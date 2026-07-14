@@ -26,6 +26,22 @@ export async function registerApi(input: {
   });
 }
 
+export async function registerClinicMemberApi(input: {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  tenant_slug: string;
+  join_source: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+}) {
+  return httpRequest<SessionEnvelope>("/auth/register-clinic-member", {
+    method: "POST",
+    auth: false,
+    body: input,
+  });
+}
+
 export async function loginApi(input: { email: string; password: string; tenantSlug?: string; role?: SessionRole; e2e?: boolean }) {
   const { e2e, ...body } = input;
   const useE2EEndpoint = e2e && isE2EModeEnabled();

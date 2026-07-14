@@ -213,6 +213,16 @@ describe("mobile navigation rules", () => {
     expect(
       resolveRootNavigation({
         ...common,
+        pendingSalonSlug: "demo-salon",
+        user: { role: "MEMBER" },
+        onboardingState: "NO_SALON",
+        segments: ["(auth)", "member-register"],
+      })
+    ).toEqual({ type: "none", reason: "CURRENT_ROUTE_ALLOWED" });
+
+    expect(
+      resolveRootNavigation({
+        ...common,
         user: { role: "MEMBER" },
         onboardingState: "ACTIVE_SALON",
         segments: ["(intake-member)", "packages"],
@@ -254,6 +264,13 @@ describe("mobile navigation rules", () => {
         onboardingState: "ACTIVE_SALON",
       })
     ).toBe("/(member)/home");
+    expect(
+      resolvePendingSalonHome({
+        pendingSalonSlug: "new-salon",
+        user: { role: "MEMBER" },
+        onboardingState: "PAYMENT_PENDING",
+      })
+    ).toBeNull();
     expect(
       resolvePendingSalonHome({
         pendingSalonSlug: "demo-salon",

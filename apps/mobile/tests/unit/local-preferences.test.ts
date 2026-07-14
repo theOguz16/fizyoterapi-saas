@@ -128,13 +128,39 @@ describe("notification preferences storage", () => {
     });
   });
 
-  it("persists pending salon slug for qr onboarding continuation", async () => {
-    const { getPendingSalonJoinSlug, setPendingSalonJoinSlug, clearPendingSalonJoinSlug } = await import("@/lib/local-preferences");
+  it("persists a sourced salon intent for 24-hour onboarding continuation", async () => {
+    const { getPendingSalonJoinIntent, getPendingSalonJoinSlug, setPendingSalonJoinSlug, clearPendingSalonJoinSlug } = await import("@/lib/local-preferences");
+    const now = new Date("2026-07-14T08:00:00.000Z");
 
-    await setPendingSalonJoinSlug("demo-salon");
-    await expect(getPendingSalonJoinSlug()).resolves.toBe("demo-salon");
+    await setPendingSalonJoinSlug("Demo-Salon", "QR", now);
+    await expect(getPendingSalonJoinSlug(new Date("2026-07-15T07:59:59.000Z"))).resolves.toBe("demo-salon");
+    await expect(getPendingSalonJoinIntent(new Date("2026-07-15T07:59:59.000Z"))).resolves.toEqual({
+      slug: "demo-salon",
+      source: "QR",
+      createdAt: "2026-07-14T08:00:00.000Z",
+      expiresAt: "2026-07-15T08:00:00.000Z",
+    });
 
     await clearPendingSalonJoinSlug();
     await expect(getPendingSalonJoinSlug()).resolves.toBeNull();
+  });
+
+  it("expires stale salon intents and replaces them when another clinic is selected", async () => {
+    const { getPendingSalonJoinIntent, setPendingSalonJoinSlug } = await import("@/lib/local-preferences");
+
+    await setPendingSalonJoinSlug("first-clinic", "DEEPLINK", new Date("2026-07-14T08:00:00.000Z"));
+    await setPendingSalonJoinSlug("second-clinic", "DISCOVERY", new Date("2026-07-14T09:00:00.000Z"));
+    await expect(getPendingSalonJoinIntent(new Date("2026-07-15T08:59:59.000Z"))).resolves.toEqual(
+      expect.objectContaining({ slug: "second-clinic", source: "DISCOVERY" })
+    );
+    await expect(getPendingSalonJoinIntent(new Date("2026-07-15T09:00:00.000Z"))).resolves.toBeNull();
+  });
+
+  it("does not revive legacy slug-only salon selections", async () => {
+    const { getPendingSalonJoinIntent } = await import("@/lib/local-preferences");
+    store.set("fizyoflow.pending_salon_join_slug.v1", "month-old-clinic");
+
+    await expect(getPendingSalonJoinIntent()).resolves.toBeNull();
+    expect(store.has("fizyoflow.pending_salon_join_slug.v1")).toBe(false);
   });
 });
