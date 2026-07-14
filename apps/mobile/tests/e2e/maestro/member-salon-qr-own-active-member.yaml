@@ -5,13 +5,32 @@ name: member-salon-qr-own-active-member
     clearState: true
     clearKeychain: true
 
+- tapOn:
+    text: "Aç"
+    optional: true
+
 - openLink: "fizyoflow://e2e-reset"
 
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible:
+    id: "welcome-login-button"
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member@gmail.com"
+- tapOn: "Hesabına giriş yap"
+- tapOn:
+    id: "login-password-input"
+- inputText: "member123"
+- tapOn:
+    id: "login-submit-button"
 
 - extendedWaitUntil:
     visible:
-      text: "Bugün|Ana sayfa|Paketim|Grup dersleri"
+      id: "member-home-profile-button"
     timeout: 20000
 
 # Member zaten demo-salon'a bağlıyken kendi salon QR'ını açıyor.
@@ -19,9 +38,9 @@ name: member-salon-qr-own-active-member
 
 - extendedWaitUntil:
     visible:
-      text: "Merhaba Demo|Kalan hak|Sonraki ders|Profil|Demo-Salon|Paketleri gör|Paketler"
+      id: "member-home-profile-button"
     timeout: 20000
 
 # Aktif üye kendi salon QR'ını açınca intake kayıt ekranına düşmeden güvenli akışta kalır.
 - assertVisible:
-    text: "Merhaba Demo|Kalan hak|Sonraki ders|Profil|Demo-Salon|Paketleri gör|Paketler"
+    id: "member-home-profile-button"
