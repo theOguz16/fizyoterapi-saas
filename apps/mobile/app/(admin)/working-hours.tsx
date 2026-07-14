@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { WorkingHours, WorkingHoursInput } from "@fitnes-saas/contracts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -32,16 +33,7 @@ const TIME_OPTIONS = buildTimeOptions();
 
 type TimeFieldKey = "start_time" | "end_time" | "lunch_break_start" | "lunch_break_end";
 
-type WorkingHoursForm = {
-  timezone: string | null;
-  start_time: string;
-  end_time: string;
-  lunch_break_start: string;
-  lunch_break_end: string;
-  slot_minutes: number;
-  break_duration_minutes: number;
-  working_days: number[];
-};
+type WorkingHoursForm = WorkingHoursInput;
 
 function createEmptyForm(timezone?: string | null): WorkingHoursForm {
   return {
@@ -161,7 +153,7 @@ export default function AdminWorkingHoursScreen() {
       const currentProfile = query.data?.profile || query.data || {};
       const currentLocation = currentProfile.location || {};
 
-      const nextBusinessHours: Record<string, unknown> = {
+      const nextBusinessHours: WorkingHours = {
         timezone: form.timezone || currentLocation.timezone || null,
         start_time: form.start_time,
         end_time: form.end_time,

@@ -16,6 +16,7 @@
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.2.0",
+    "@fitnes-saas/contracts": "workspace:*",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1"

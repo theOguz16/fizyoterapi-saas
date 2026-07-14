@@ -2,6 +2,11 @@
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import crypto from "crypto";
 import { Response } from "express";
+import type {
+  AdminClinicSubscription,
+  SubscriptionRecommendedAction,
+  SubscriptionSyncState,
+} from "@fitnes-saas/contracts";
 import { AppDataSource } from "../../data-source";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../entities/tenant.entity";
 import { AppError } from "../../errors/AppError";
@@ -27,6 +32,11 @@ function pickLatestDate(...dates: Array<Date | null | undefined>) {
   const valid = dates.filter((date): date is Date => Boolean(date && Number.isFinite(date.getTime())));
   if (!valid.length) return null;
   return new Date(Math.max(...valid.map((date) => date.getTime())));
+}
+
+function toTransportDate(value?: Date | string | null) {
+  if (!value) return null;
+  return new Date(value).toISOString();
 }
 
 export class AdminClinicController {
@@ -85,7 +95,10 @@ export class AdminClinicController {
     return `${baseUrl}?${params.toString()}`;
   }
 
-  private static serializeSubscription(tenant: Tenant, syncState: "IDLE" | "PENDING_SYNC" | "SYNCED" | "FAILED" = "IDLE") {
+  private static serializeSubscription(
+    tenant: Tenant,
+    syncState: SubscriptionSyncState = "IDLE"
+  ): AdminClinicSubscription {
     const trialEndsAt = tenant.trial_ends_at
       ? new Date(tenant.trial_ends_at)
       : tenant.subscription_status === TenantSubscriptionStatus.TRIAL && tenant.subscription_current_period_ends_at
@@ -95,7 +108,7 @@ export class AdminClinicController {
     const remainingDays = trialEndsAt ? Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000))) : 0;
     const hasTrialHistory = Boolean(tenant.trial_starts_at || tenant.trial_ends_at);
 
-    let recommendedAction = "WAIT_SETUP";
+    let recommendedAction: SubscriptionRecommendedAction = "WAIT_SETUP";
     if (tenant.subscription_status === TenantSubscriptionStatus.INACTIVE && !hasTrialHistory) {
       recommendedAction = "START_TRIAL";
     } else if (
@@ -112,11 +125,11 @@ export class AdminClinicController {
       review_status: tenant.review_status,
       subscription_status: tenant.subscription_status,
       is_public: tenant.is_public,
-      trial_starts_at: tenant.trial_starts_at || null,
-      trial_ends_at: tenant.trial_ends_at || null,
-      subscription_started_at: tenant.subscription_started_at || null,
-      subscription_current_period_ends_at: tenant.subscription_current_period_ends_at || null,
-      subscription_last_event_at: tenant.subscription_last_event_at || null,
+      trial_starts_at: toTransportDate(tenant.trial_starts_at),
+      trial_ends_at: toTransportDate(tenant.trial_ends_at),
+      subscription_started_at: toTransportDate(tenant.subscription_started_at),
+      subscription_current_period_ends_at: toTransportDate(tenant.subscription_current_period_ends_at),
+      subscription_last_event_at: toTransportDate(tenant.subscription_last_event_at),
       trial_days_total: CLINIC_TRIAL_DAYS,
       trial_days_remaining: tenant.subscription_status === TenantSubscriptionStatus.TRIAL ? remainingDays : 0,
       has_trial_history: hasTrialHistory,
@@ -130,7 +143,7 @@ export class AdminClinicController {
       sync_state: syncState,
       subscription_history_summary: {
         last_event_type: tenant.revenuecat_last_event_type || null,
-        last_event_at: tenant.subscription_last_event_at || null,
+        last_event_at: toTransportDate(tenant.subscription_last_event_at),
         product_id: tenant.revenuecat_product_id || null,
         store: tenant.revenuecat_store || null,
       },

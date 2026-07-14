@@ -1,6 +1,7 @@
 // Bu servis modulu backend tarafinda package.service ile ilgili tekrar kullanilan is kurallarini toplar.
 // Controller'larin zayif kalmasi ve ayni mantigin farkli endpointlerde paylasilmasi icin ayrilmistir.
 import { Package, PackageType } from "../entities/package.entity";
+import type { AdminPackage } from "@fitnes-saas/contracts";
 
 export type LessonCatalogPackageType =
   | "GROUP"
@@ -753,7 +754,7 @@ const subLessons = asStringArray(
   };
 }
 
-export function enrichPackageRowForDisplay(pkg: Package, catalog: LessonCatalogItem[]) {
+export function enrichPackageRowForDisplay(pkg: Package, catalog: LessonCatalogItem[]): AdminPackage {
   const rules = asObject(pkg.rules);
   const serviceKey = normalizeCode(rules.service_key ?? rules.lesson_category);
   const catalogItem = findLessonCatalogItem(catalog, serviceKey, serviceKey);

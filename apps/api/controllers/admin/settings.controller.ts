@@ -1,6 +1,7 @@
 // Bu controller admin tarafindaki settings.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import type { WorkingHours } from "@fitnes-saas/contracts";
 import { In } from "typeorm";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
@@ -279,7 +280,7 @@ export class AdminSettingsController {
     ? Math.min(Math.max(Math.floor(breakDurationRaw), 0), 60)
     : Number(defaults.break_duration_minutes || 0);
 
-  const normalized: SalonProfile["business_hours"] = {
+  const normalized: SalonProfile["business_hours"] & WorkingHours = {
     timezone: typeof raw.timezone === "string" && raw.timezone.trim() ? raw.timezone : defaults.timezone,
     working_days: workingDays.length > 0 ? workingDays : defaults.working_days,
     start_time: parseRequiredTime(raw.start_time, defaults.start_time || "09:00"),

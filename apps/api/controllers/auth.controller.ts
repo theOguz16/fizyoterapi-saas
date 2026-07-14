@@ -1,6 +1,11 @@
 // Bu controller genel tarafindaki auth.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Request, Response } from "express";
+import type {
+  MembershipLifecycleState,
+  RecommendedEntrySurface,
+  SessionEnvelope,
+} from "@fitnes-saas/contracts";
 import jwt from "jsonwebtoken";
 import { AppDataSource } from "../data-source";
 import { User, UserRole } from "../entities/user.entity";
@@ -15,6 +20,11 @@ import { hashPassword, verifyPassword } from "../services/password.service";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
 import { MemberRequestCleanupService } from "../services/member-request-cleanup.service";
 import { AuditLogService } from "../services/audit-log.service";
+
+function toSessionDate(value?: Date | string | null) {
+  if (!value) return null;
+  return new Date(value).toISOString();
+}
 
 type LoginInput = {
   email: string;
@@ -91,7 +101,7 @@ export class AuthController {
     await accountRepo.save(account);
 
     const role = UserRole.ADMIN;
-    const onboardingState = "NO_CLINIC";
+    const onboardingState: MembershipLifecycleState = "NO_CLINIC";
 
     // Kayit sonrasi client'in ek me cagrisi yapmadan devam edebilmesi icin
     // ilk session payload'i burada ayni formatta donulur.
@@ -582,8 +592,7 @@ export class AuthController {
 
       // Mobile client burada sadece kimlik degil, acilis akisini da belirleyen
       // tum karar verilerini birlikte alir.
-      return res.json({
-        data: {
+      const sessionPayload = {
           sub: auth.sub,
           tenantId: membership?.tenant_id || null,
           role,
@@ -616,8 +625,8 @@ export class AuthController {
                   review_status: tenant.review_status,
                   subscription_status: tenant.subscription_status,
                   is_public: tenant.is_public,
-                  trial_starts_at: tenant.trial_starts_at || null,
-                  trial_ends_at: tenant.trial_ends_at || null,
+                  trial_starts_at: toSessionDate(tenant.trial_starts_at),
+                  trial_ends_at: toSessionDate(tenant.trial_ends_at),
                   review_note: tenant.review_note || null,
                   is_boosted: TenantLifecycleService.isBoosted(tenant),
                 }
@@ -629,7 +638,7 @@ export class AuthController {
               status: pendingApplication.status,
               payment_status: pendingApplication.payment_status,
               payment_reference: pendingApplication.payment_reference || null,
-              payment_confirmed_at: pendingApplication.payment_confirmed_at || null,
+              payment_confirmed_at: toSessionDate(pendingApplication.payment_confirmed_at),
             }
           : null,
           pending_payment_request: pendingPaymentRequest,
@@ -647,8 +656,9 @@ export class AuthController {
             accountId: account.id,
             phone: account.phone,
           },
-        },
-      });
+      } satisfies SessionEnvelope<any, any, string>;
+
+      return res.json({ data: sessionPayload });
     }
 
     const [user, tenant] = await Promise.all([
@@ -671,8 +681,7 @@ export class AuthController {
       throw new AppError("USER_INACTIVE", 403, "Kullanıcı aktif değil");
     }
 
-    return res.json({
-      data: {
+    const sessionPayload = {
         sub: user.id,
         tenantId: user.tenant_id,
         role: user.role,
@@ -701,8 +710,9 @@ export class AuthController {
           tenantSlug: tenant.slug,
           fullName: `${user.first_name} ${user.last_name}`.trim(),
         },
-      },
-    });
+    } satisfies SessionEnvelope<any, any, string>;
+
+    return res.json({ data: sessionPayload });
   }
 
   private static async loginWithLegacyStaff(email: string, password: string, tenantSlug?: string) {
@@ -746,7 +756,7 @@ export class AuthController {
       membership,
       tenant,
       linkedUserId: user.id,
-      onboardingState: "ACTIVE_SALON",
+      onboardingState: "ACTIVE_SALON" as MembershipLifecycleState,
       membershipStatus: "ACTIVE",
       accessToken: AuthController.signToken({
         sub: user.id,
@@ -863,7 +873,7 @@ export class AuthController {
       membership: SalonMembership | null;
       tenant: Tenant | null;
       linkedUserId: string | null;
-      onboardingState: string;
+      onboardingState: MembershipLifecycleState;
       membershipStatus: string;
       accessToken: string;
       pendingApplication?: SalonApplication | null;
@@ -880,8 +890,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.json({
-      data: {
+    const sessionPayload = {
         accessToken,
         onboarding_state: onboardingState,
         membership_state: onboardingState,
@@ -910,7 +919,7 @@ export class AuthController {
               status: pendingApplication.status,
               payment_status: pendingApplication.payment_status,
               payment_reference: pendingApplication.payment_reference || null,
-              payment_confirmed_at: pendingApplication.payment_confirmed_at || null,
+              payment_confirmed_at: toSessionDate(pendingApplication.payment_confirmed_at),
             }
           : null,
         managed_clinic:
@@ -922,8 +931,8 @@ export class AuthController {
                 review_status: managedClinic.review_status,
                 subscription_status: managedClinic.subscription_status,
                 is_public: managedClinic.is_public,
-                trial_starts_at: managedClinic.trial_starts_at || null,
-                trial_ends_at: managedClinic.trial_ends_at || null,
+                trial_starts_at: toSessionDate(managedClinic.trial_starts_at),
+                trial_ends_at: toSessionDate(managedClinic.trial_ends_at),
                 review_note: managedClinic.review_note || null,
                 is_boosted: TenantLifecycleService.isBoosted(managedClinic),
               }
@@ -943,8 +952,9 @@ export class AuthController {
           accountId: account.id,
           phone: account.phone,
         },
-      },
-    });
+    } satisfies SessionEnvelope<any, any, string>;
+
+    return res.json({ data: sessionPayload });
   }
 
   private static resolveAccountRole(account: Account) {
@@ -957,7 +967,7 @@ export class AuthController {
     pendingApplication?: SalonApplication | null;
     ownedTenant?: Tenant | null;
     pendingPaymentRequest?: any | null;
-  }) {
+  }): MembershipLifecycleState {
     const { account, membership, pendingApplication, ownedTenant, pendingPaymentRequest } = input;
     if (membership) {
       return "ACTIVE_SALON";
@@ -1049,7 +1059,10 @@ export class AuthController {
     return { mobile: true, web: false };
   }
 
-  private static resolveRecommendedEntrySurface(role: UserRole, onboardingState: string) {
+  private static resolveRecommendedEntrySurface(
+    role: UserRole,
+    onboardingState: MembershipLifecycleState
+  ): RecommendedEntrySurface {
     if (role === UserRole.ADMIN) {
       return onboardingState === "NO_CLINIC" ? "OWNER_SETUP" : "ADMIN_HOME";
     }

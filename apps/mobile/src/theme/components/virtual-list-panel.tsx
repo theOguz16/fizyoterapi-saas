@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { tokens } from "../tokens";
 
-type Props<T> = { data: T[]; renderItem: (item: T, index: number) => ReactElement; keyExtractor: (item: T, index: number) => string; maxHeight?: number; testID?: string };
+type Props<T> = { data: T[]; renderItem: (item: T, index: number) => ReactElement<any, any>; keyExtractor: (item: T, index: number) => string; maxHeight?: number; testID?: string };
 
 export function VirtualListPanel<T>({ data, renderItem, keyExtractor, maxHeight = 520, testID }: Props<T>) {
   return (

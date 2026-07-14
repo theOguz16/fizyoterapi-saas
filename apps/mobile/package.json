@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.6",
+    "@fitnes-saas/contracts": "workspace:*",
     "@expo/metro-runtime": "~6.1.2",
     "@hookform/resolvers": "^3.10.0",
     "@howljs/calendar-kit": "^2.5.6",

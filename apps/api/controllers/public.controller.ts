@@ -1,6 +1,7 @@
 // Bu controller genel tarafindaki public.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Request, Response } from "express";
+import type { ClinicSummary, PackageOption, PublicClinicProfile } from "@fitnes-saas/contracts";
 import { In } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { SalonProfile } from "../entities/salon-profile.entity";
@@ -166,7 +167,7 @@ export class PublicController {
         : new Map<string, number>();
 
       // Public whitelist (sadece public alanlar)
-      return res.json({
+      const payload = {
         id: context.tenant.id,
         name: context.tenant.name,
         slug: profile.slug,
@@ -213,7 +214,9 @@ export class PublicController {
           sort_order: row.sort_order,
           meta: row.meta || {},
         })),
-      });
+      } satisfies PublicClinicProfile;
+
+      return res.json(payload);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
@@ -248,7 +251,7 @@ export class PublicController {
       });
 
       // Public whitelist (tenant_id vb. internal alanları sızdırma)
-      const data = packages.map((p) => {
+      const data: PackageOption[] = packages.map((p) => {
         const rules = p.rules && typeof p.rules === "object" ? (p.rules as Record<string, unknown>) : {};
         const lessonMode = String(rules.lesson_mode ?? (p.capacity > 2 ? "GROUP" : p.capacity === 2 ? "DUO" : "PRIVATE")).toUpperCase();
         const weeklyClassHours = PublicController.deriveWeeklyClassHours(p);
@@ -773,7 +776,7 @@ export class PublicController {
           services: PublicController.buildPublicServiceCatalog(packagesByTenant.get(profile.tenant_id), profile.services, memberCountsByPackage),
           is_boosted: TenantLifecycleService.isBoosted(tenant),
           boost_label: TenantLifecycleService.isBoosted(tenant) ? "One Cikan" : null,
-        };
+        } satisfies ClinicSummary;
       })
       .filter(Boolean)
       .map((row) => row as NonNullable<typeof row>)

@@ -102,6 +102,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@fitnes-saas/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -199,6 +202,9 @@ importers:
       '@expo/metro-runtime':
         specifier: ~6.1.2
         version: 6.1.2(expo@54.0.35)(react-dom@18.3.1(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.1(@babel/core@7.29.0))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      '@fitnes-saas/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.71.2(react@19.1.0))
@@ -359,6 +365,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fitnes-saas/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@fortawesome/fontawesome-svg-core':
         specifier: ^7.2.0
         version: 7.2.0
@@ -405,6 +414,12 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@22.19.12)(jiti@1.21.7)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.46.0)(yaml@2.8.2)
+
+  packages/contracts:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/eslint-config: {}
 

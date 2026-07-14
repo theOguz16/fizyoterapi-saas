@@ -4,7 +4,27 @@
 // Mobil uygulamanin backend ile sozlesme katmani.
 // Type tanimlari ve endpoint fonksiyonlari burada tutuluyor ki ekranlar
 // ham fetch ayrintilarini degil is alanlarini tuksun.
-export type SessionRole = "ADMIN" | "TRAINER" | "MEMBER";
+import type {
+  ActiveMembership as ContractActiveMembership,
+  AdminClinicSubscription as ContractAdminClinicSubscription,
+  AdminPackage as ContractAdminPackage,
+  ClinicSummary as ContractClinicSummary,
+  MembershipLifecycleState as ContractMembershipLifecycleState,
+  PackageOption as ContractPackageOption,
+  RecommendedEntrySurface as ContractRecommendedEntrySurface,
+  SessionEnvelope as ContractSessionEnvelope,
+  SessionRole as ContractSessionRole,
+  SessionUser as ContractSessionUser,
+} from "@fitnes-saas/contracts";
+
+export type SessionRole = ContractSessionRole;
+export type RecommendedEntrySurface = ContractRecommendedEntrySurface;
+export type MembershipLifecycleState = ContractMembershipLifecycleState;
+export type SessionUser = ContractSessionUser;
+export type ActiveMembership = ContractActiveMembership;
+export type SalonDiscoverySummary = ContractClinicSummary;
+export type PackageOption = ContractPackageOption;
+export type AdminPackage = ContractAdminPackage;
 
 export type ProductEventName =
   | "app_opened"
@@ -21,68 +41,6 @@ export type ProductEventPayload = {
   install_id: string;
   session_id: string;
   metadata: Record<string, string | null>;
-};
-
-export type RecommendedEntrySurface = "ADMIN_HOME" | "OWNER_SETUP" | "MEMBER_HOME" | "DISCOVERY" | "APPLICATION_STATUS" | "TRAINER_HOME";
-
-export type MembershipLifecycleState =
-  | "NO_SALON"
-  | "PENDING_APPLICATION"
-  | "DAY_SELECTION_REQUIRED"
-  | "PACKAGE_SELECTION_REQUIRED"
-  | "TRAINER_SELECTION_REQUIRED"
-  | "PAYMENT_PENDING"
-  | "ACTIVE_SALON"
-  | "NO_CLINIC"
-  | "PENDING_CLINIC_REVIEW"
-  | "CLINIC_REJECTED"
-  | "CLINIC_READ_ONLY";
-
-export type SessionUser = {
-  id: string;
-  email: string;
-  role: SessionRole;
-  tenantId?: string | null;
-  tenantSlug?: string | null;
-  fullName: string;
-  accountId?: string;
-  phone?: string;
-};
-
-export type ActiveMembership = {
-  id: string;
-  role: SessionRole;
-  status: string;
-  payment_status: string;
-  tenant_id: string;
-  tenant_slug?: string | null;
-  tenant_name?: string | null;
-  linked_user_id?: string | null;
-};
-
-export type SalonDiscoverySummary = {
-  id: string;
-  slug: string;
-  name: string;
-  tenant_name?: string | null;
-  city?: string | null;
-  district?: string | null;
-  location?: { city?: string | null; district?: string | null } | null;
-  hero_title?: string | null;
-  hero_subtitle?: string | null;
-  about_text?: string | null;
-  is_boosted?: boolean;
-  services?: Array<{ title?: string | null; starting_price?: string | number | null; summary?: string | null; active_member_count?: number | null }>;
-  trainers?: TrainerOption[];
-  business_hours?: {
-    start_time?: string | null;
-    end_time?: string | null;
-    lunch_break_start?: string | null;
-    lunch_break_end?: string | null;
-    slot_minutes?: number | null;
-    break_duration_minutes?: number | null;
-    working_days?: number[];
-  } | null;
 };
 
 export type PurchaseDaySelection = {
@@ -107,60 +65,6 @@ export type PurchaseDaySelection = {
   trainer_can_invite_members?: boolean | null;
   notification_scope?: "SALON_MEMBERS" | "INVITED_MEMBERS" | null;
   requires_admin_approval?: boolean | null;
-};
-
-export type PackageOption = {
-  id: string;
-  title: string;
-  type?: string | null;
-  display_price?: string | number | null;
-  total_credits?: number | null;
-  summary?: string | null;
-  rules?: Record<string, unknown> | null;
-  service_key?: string | null;
-  service_name?: string | null;
-  lesson_category?: string | null;
-  weekly_class_hours?: number | null;
-  required_preference_slots?: number | null;
-  required_trainer_free_slots?: number | null;
-  is_available?: boolean;
-  unavailable_reason?: string | null;
-  lesson_mode?: string | null;
-  sub_lessons?: string[];
-  session_duration_minutes?: number | null;
-  break_duration_minutes?: number | null;
-  allow_member_multi_select?: boolean;
-  allow_drop_in_booking?: boolean;
-};
-
-export type AdminPackage = {
-  id: string;
-  title: string;
-  type: string;
-  total_credits: number;
-  duration_days: number;
-  capacity: number;
-  is_active: boolean;
-  is_visible: boolean;
-  is_public: boolean;
-  display_price?: string | number | null;
-  service_key?: string | null;
-  service_name?: string | null;
-  lesson_category?: string | null;
-  capacity_label?: string | null;
-  trainer_commission_rate?: number | null;
-  commission_label?: string | null;
-  pricing_label?: string | null;
-  summary?: string | null;
-  rules?: Record<string, unknown> | null;
-  lesson_mode?: string | null;
-  sub_lessons?: string[];
-  linked_group_class_ids?: string[];
-  linked_group_class_titles?: string[];
-  session_duration_minutes?: number | null;
-  break_duration_minutes?: number | null;
-  allow_member_multi_select?: boolean;
-  allow_drop_in_booking?: boolean;
 };
 
 export type AdminPackageFormTemplate = {
@@ -651,81 +555,8 @@ export type BookingReschedulePayload = {
   status?: string;
 };
 
-export type SessionEnvelope = {
-  accessToken?: string;
-  user: SessionUser;
-  onboarding_state?: MembershipLifecycleState;
-  membership_state?: MembershipLifecycleState;
-  membership_status?: string;
-  recommended_entry_surface?: RecommendedEntrySurface;
-  has_active_membership?: boolean;
-  has_pending_application?: boolean;
-  has_managed_clinic?: boolean;
-  available_personas?: SessionRole[];
-  active_membership?: ActiveMembership | null;
-  managed_clinic?: {
-    id: string;
-    slug: string;
-    name: string;
-    review_status: string;
-    subscription_status: string;
-    is_public: boolean;
-    trial_starts_at?: string | null;
-    trial_ends_at?: string | null;
-    subscription_started_at?: string | null;
-    subscription_current_period_ends_at?: string | null;
-    subscription_last_event_at?: string | null;
-    review_note?: string | null;
-    is_boosted?: boolean;
-    city?: string | null;
-    district?: string | null;
-  } | null;
-  pending_application?: {
-    id: string;
-    tenant_id: string;
-    status: string;
-    payment_status: string;
-    payment_reference?: string | null;
-    payment_confirmed_at?: string | null;
-  } | null;
-  pending_payment_request?: PaymentRequest | null;
-  active_change_requests?: MemberChangeRequest[] | null;
-  available_mobile_actions?: string[] | null;
-  scan_capabilities?: QrScanContext[] | null;
-  available_surfaces?: { mobile: boolean; web: boolean };
-};
-
-export type AdminClinicSubscription = {
-  tenant_id: string;
-  review_status: string;
-  subscription_status: string;
-  is_public: boolean;
-  trial_starts_at?: string | null;
-  trial_ends_at?: string | null;
-  subscription_started_at?: string | null;
-  subscription_current_period_ends_at?: string | null;
-  subscription_last_event_at?: string | null;
-  trial_days_total: number;
-  trial_days_remaining: number;
-  has_trial_history: boolean;
-  can_start_trial: boolean;
-  can_purchase_in_app: boolean;
-  purchase_provider: "REVENUECAT";
-  purchase_mode: "IN_APP_PURCHASE";
-  recommended_action: "WAIT_REVIEW" | "WAIT_SETUP" | "START_TRIAL" | "PURCHASE_IN_APP" | "MANAGE_PLAN";
-  sync_state?: "IDLE" | "PENDING_SYNC" | "SYNCED" | "FAILED";
-  subscription_history_summary?: {
-    last_event_type?: string | null;
-    last_event_at?: string | null;
-    product_id?: string | null;
-    store?: string | null;
-  } | null;
-  store_products?: {
-    provider?: "REVENUECAT" | string;
-    monthly_product_id?: string | null;
-    yearly_product_id?: string | null;
-  } | null;
-};
+export type SessionEnvelope = ContractSessionEnvelope<PaymentRequest, MemberChangeRequest, QrScanContext>;
+export type AdminClinicSubscription = ContractAdminClinicSubscription;
 
 export type MobileNotificationPreferences = {
   class_reminders: {

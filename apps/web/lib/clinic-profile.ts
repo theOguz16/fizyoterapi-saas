@@ -1,59 +1,8 @@
 import type { Metadata } from "next";
+import type { PublicClinicProfile, PublicClinicService } from "@fitnes-saas/contracts";
 
-export type ServiceItem = {
-  title?: string;
-  desc?: string;
-  starting_price?: string;
-  display_price?: string;
-  type?: string;
-};
-
-export type SalonPageData = {
-  id: string;
-  name: string;
-  slug: string;
-  hero_title?: string | null;
-  hero_subtitle?: string | null;
-  hero_image_url?: string | null;
-  seo_title?: string | null;
-  seo_description?: string | null;
-  google_business_url?: string | null;
-  google_maps_url?: string | null;
-  business_category?: string | null;
-  service_area?: string[];
-  managed_growth_status?: string;
-  digital_brief?: {
-    logo_url?: string;
-    gallery_urls?: string[];
-    working_hours_note?: string;
-    review_url?: string;
-    campaign_note?: string;
-    target_audience?: string;
-    brand_voice?: string;
-  };
-  about_text?: string | null;
-  why_us?: Array<{ title?: string; desc?: string }>;
-  services?: ServiceItem[];
-  location?: {
-    city?: string;
-    district?: string;
-    phone?: string;
-    address?: string;
-    maps_embed_url?: string;
-  };
-  social_links?: {
-    instagram?: string;
-    website?: string;
-    whatsapp?: string;
-  };
-  primary_color?: string;
-  business_hours?: {
-    working_days?: number[];
-    start_time?: string;
-    end_time?: string;
-  };
-  gallery_images?: Array<{ id: string; url: string; sort_order?: number; meta?: Record<string, unknown> }>;
-};
+export type ServiceItem = PublicClinicService;
+export type SalonPageData = PublicClinicProfile;
 
 export type ClinicPageProps = {
   params: { salonSlug: string };
@@ -170,7 +119,7 @@ function buildTelHref(value?: string | null) {
   return phone.length >= 7 ? `tel:${phone}` : "";
 }
 
-export function slugifyClinicSource(value?: string) {
+export function slugifyClinicSource(value?: string | null) {
   return String(value || "service")
     .toLowerCase()
     .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
@@ -178,7 +127,7 @@ export function slugifyClinicSource(value?: string) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "service";
 }
 
-function getOpenStatus(activeDays: number[], startTime?: string, endTime?: string) {
+function getOpenStatus(activeDays: number[], startTime?: string | null, endTime?: string | null) {
   if (!activeDays.length || !startTime || !endTime) return "";
   const parts = new Intl.DateTimeFormat("tr-TR", {
     timeZone: "Europe/Istanbul",
