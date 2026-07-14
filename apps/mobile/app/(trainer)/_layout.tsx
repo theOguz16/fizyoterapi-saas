@@ -3,7 +3,10 @@
 import { Tabs } from "expo-router";
 import { useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { createResponsiveTabOptions } from "@/theme/components/tab-bar-options";
+import { getRoleLayoutRoutes } from "@/lib/navigation";
+import { createRoleTabOptions } from "@/theme/components/tab-bar-options";
+
+const routes = getRoleLayoutRoutes("TRAINER");
 
 export default function TrainerLayout() {
   const { width } = useWindowDimensions();
@@ -12,39 +15,21 @@ export default function TrainerLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        ...createResponsiveTabOptions({
+        ...createRoleTabOptions({
+          role: "TRAINER",
           routeName: route.name,
           width,
           bottomInset: insets.bottom,
-          featuredRoutes: ["home"],
-          iconMap: {
-            home: "home",
-            clients: "clients",
-            calendar: "calendar",
-            earnings: "earnings",
-            profile: "profile",
-          },
         }),
       })}
     >
-      <Tabs.Screen name="calendar" options={{ title: "Takvim" }} />
-      <Tabs.Screen name="clients" options={{ title: "Danışanlar" }} />
-      <Tabs.Screen name="home" options={{ title: "Ana Sayfa" }} />
-      <Tabs.Screen name="earnings" options={{ title: "Kazanç" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profil" }} />
-      <Tabs.Screen name="request-center" options={{ href: null }} />
-      <Tabs.Screen name="bulk-notification" options={{ href: null }} />
-      <Tabs.Screen name="today" options={{ href: null }} />
-      <Tabs.Screen name="packages" options={{ href: null }} />
-      <Tabs.Screen name="qr" options={{ href: null }} />
-      <Tabs.Screen name="bookings" options={{ href: null }} />
-      <Tabs.Screen name="checkin" options={{ href: null }} />
-      <Tabs.Screen name="members" options={{ href: null }} />
-      <Tabs.Screen name="members/[id]" options={{ href: null }} />
-      <Tabs.Screen name="risk" options={{ href: null }} />
-      <Tabs.Screen name="notes" options={{ href: null }} />
-      <Tabs.Screen name="note-edit" options={{ href: null }} />
-      <Tabs.Screen name="group-classes" options={{ href: null }} />
+      {routes.map((route) => (
+        <Tabs.Screen
+          key={route.name}
+          name={route.name}
+          options={route.visibility === "tab" ? { title: route.title || undefined } : { href: null }}
+        />
+      ))}
     </Tabs>
   );
 }

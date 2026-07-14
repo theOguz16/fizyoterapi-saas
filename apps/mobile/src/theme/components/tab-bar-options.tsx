@@ -1,6 +1,7 @@
 // Bu paylasilan UI component'i mobil tasarim sistemindeki tab bar options parcasi icin standart gorunum saglar.
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
 import { Platform, View } from "react-native";
+import { getRoleTabBarConfig, type MobileRole } from "@/lib/navigation";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
 
@@ -11,6 +12,17 @@ type OptionsInput = {
   iconMap: Record<string, AppIconName>;
   featuredRoutes?: string[];
 };
+
+type RoleOptionsInput = Omit<OptionsInput, "iconMap" | "featuredRoutes"> & {
+  role: MobileRole;
+};
+
+export function createRoleTabOptions({ role, ...input }: RoleOptionsInput) {
+  return createResponsiveTabOptions({
+    ...input,
+    ...getRoleTabBarConfig(role),
+  });
+}
 
 export function createResponsiveTabOptions({ routeName, width, bottomInset, iconMap, featuredRoutes = [] }: OptionsInput) {
   const isTabRoute = Object.prototype.hasOwnProperty.call(iconMap, routeName);

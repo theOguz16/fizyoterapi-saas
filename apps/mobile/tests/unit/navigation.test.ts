@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  getRoleLayoutRoutes,
+  getRoleTabBarConfig,
   resolveAdminHome,
   resolveBackNavigation,
+  resolveContextualBackHref,
   resolveIndexRedirect,
   resolveMemberHome,
   resolvePendingSalonHome,
@@ -11,6 +14,66 @@ import {
 } from "@/lib/navigation";
 
 describe("mobile navigation rules", () => {
+  it("keeps role tab order and presentation in the central registry", () => {
+    expect(getRoleLayoutRoutes("ADMIN").filter((route) => route.visibility === "tab").map((route) => route.name)).toEqual([
+      "calendar",
+      "approvals",
+      "dashboard",
+      "members",
+      "profile",
+    ]);
+    expect(getRoleLayoutRoutes("TRAINER").filter((route) => route.visibility === "tab").map((route) => route.name)).toEqual([
+      "calendar",
+      "clients",
+      "home",
+      "earnings",
+      "profile",
+    ]);
+    expect(getRoleLayoutRoutes("MEMBER").filter((route) => route.visibility === "tab").map((route) => route.name)).toEqual([
+      "calendar",
+      "package",
+      "home",
+      "measurements",
+      "profile",
+    ]);
+
+    expect(getRoleTabBarConfig("ADMIN")).toEqual({
+      iconMap: {
+        calendar: "calendar",
+        approvals: "approvals",
+        dashboard: "dashboard",
+        members: "members",
+        profile: "profile",
+      },
+      featuredRoutes: ["dashboard"],
+    });
+    expect(getRoleTabBarConfig("TRAINER").featuredRoutes).toEqual(["home"]);
+    expect(getRoleTabBarConfig("MEMBER").featuredRoutes).toEqual(["home"]);
+  });
+
+  it("keeps layout visibility and authorization on every registered route", () => {
+    for (const role of ["ADMIN", "TRAINER", "MEMBER"] as const) {
+      const routes = getRoleLayoutRoutes(role);
+      expect(new Set(routes.map((route) => route.name)).size).toBe(routes.length);
+      expect(routes.every((route) => route.role === role)).toBe(true);
+      expect(routes.every((route) => route.authorizedRoles.includes(role))).toBe(true);
+      expect(routes.filter((route) => route.visibility === "hidden").every((route) => route.icon === null)).toBe(true);
+      expect(
+        routes
+          .filter((route) => route.visibility === "tab")
+          .every((route) => Boolean(route.title && route.icon))
+      ).toBe(true);
+    }
+  });
+
+  it("resolves role back fallbacks from the same route registry", () => {
+    expect(resolveContextualBackHref(["(admin)", "approval", "[id]"])).toBe("/(admin)/approvals");
+    expect(resolveContextualBackHref(["(trainer)", "members", "[id]"])).toBe("/(trainer)/clients");
+    expect(resolveContextualBackHref(["(member)", "qr", "fullscreen"])).toBe("/(member)/profile");
+    expect(resolveContextualBackHref(["(admin)", "revenue-report"])).toBeNull();
+    expect(resolveContextualBackHref(["(shared)", "leave-salon"])).toBe("/(member)/profile");
+  });
+
   it("routes admins to onboarding or dashboard depending on lifecycle state", () => {
     expect(resolveAdminHome("NO_CLINIC")).toBe("/(admin)/salon/setup");
     expect(resolveAdminHome("CLINIC_READ_ONLY")).toBe("/(admin)/subscription");

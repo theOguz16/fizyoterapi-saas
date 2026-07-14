@@ -1,3 +1,5 @@
+import type { AppIconName } from "@/theme/components/app-icon";
+
 type RouterLike = {
   back: () => void;
   push: (href: any) => void;
@@ -5,7 +7,147 @@ type RouterLike = {
   canGoBack?: () => boolean;
 };
 
-type Role = "ADMIN" | "TRAINER" | "MEMBER";
+export type MobileRole = "ADMIN" | "TRAINER" | "MEMBER";
+
+type Role = MobileRole;
+
+export type RoleRouteDefinition = Readonly<{
+  role: MobileRole;
+  authorizedRoles: readonly MobileRole[];
+  name: string;
+  visibility: "tab" | "hidden";
+  title: string | null;
+  icon: AppIconName | null;
+  featured: boolean;
+  backHref: string | null;
+  includeInLayout: boolean;
+}>;
+
+type RoleRouteSeed = Omit<RoleRouteDefinition, "role" | "authorizedRoles">;
+
+function defineRoleRoutes(role: MobileRole, routes: readonly RoleRouteSeed[]): readonly RoleRouteDefinition[] {
+  return routes.map((route) => ({
+    ...route,
+    role,
+    authorizedRoles: [role],
+  }));
+}
+
+const tabRoute = (
+  name: string,
+  title: string,
+  icon: AppIconName,
+  featured = false
+): RoleRouteSeed => ({
+  name,
+  title,
+  icon,
+  featured,
+  visibility: "tab",
+  backHref: null,
+  includeInLayout: true,
+});
+
+const hiddenRoute = (
+  name: string,
+  backHref: string | null = null,
+  includeInLayout = true
+): RoleRouteSeed => ({
+  name,
+  title: null,
+  icon: null,
+  featured: false,
+  visibility: "hidden",
+  backHref,
+  includeInLayout,
+});
+
+export const ROLE_ROUTE_REGISTRY: Readonly<Record<MobileRole, readonly RoleRouteDefinition[]>> = {
+  ADMIN: defineRoleRoutes("ADMIN", [
+    tabRoute("calendar", "Takvim", "calendar"),
+    tabRoute("approvals", "Onaylar", "approvals"),
+    tabRoute("dashboard", "Ana Sayfa", "dashboard", true),
+    tabRoute("members", "Üyeler", "members"),
+    tabRoute("profile", "Profil", "profile"),
+    hiddenRoute("salon", "/(admin)/dashboard"),
+    hiddenRoute("notifications", "/(admin)/dashboard"),
+    hiddenRoute("entry-scan", "/(admin)/dashboard"),
+    hiddenRoute("members/[id]", "/(admin)/members"),
+    hiddenRoute("dashboard/risk-preview", "/(admin)/dashboard"),
+    hiddenRoute("dashboard/revenue-detail", "/(admin)/dashboard"),
+    hiddenRoute("approval/[id]", "/(admin)/approvals"),
+    hiddenRoute("risk-members", "/(admin)/dashboard"),
+    hiddenRoute("campaigns", "/(admin)/dashboard"),
+    hiddenRoute("campaigns/new", "/(admin)/campaigns"),
+    hiddenRoute("working-hours", "/(admin)/salon"),
+    hiddenRoute("pricing", "/(admin)/salon"),
+    hiddenRoute("packages", "/(admin)/salon"),
+    hiddenRoute("subscription", "/(admin)/salon"),
+    hiddenRoute("subscription-history"),
+    hiddenRoute("revenue-report"),
+    hiddenRoute("salon-profile", "/(admin)/salon"),
+    hiddenRoute("clinic-qr", "/(admin)/dashboard"),
+    hiddenRoute("salon/setup", "/(admin)/dashboard"),
+    hiddenRoute("campaign-create", "/(admin)/campaigns"),
+  ]),
+  TRAINER: defineRoleRoutes("TRAINER", [
+    tabRoute("calendar", "Takvim", "calendar"),
+    tabRoute("clients", "Danışanlar", "clients"),
+    tabRoute("home", "Ana Sayfa", "home", true),
+    tabRoute("earnings", "Kazanç", "earnings"),
+    tabRoute("profile", "Profil", "profile"),
+    hiddenRoute("request-center"),
+    hiddenRoute("bulk-notification"),
+    hiddenRoute("today", "/(trainer)/home"),
+    hiddenRoute("packages", "/(trainer)/home"),
+    hiddenRoute("qr", "/(trainer)/home"),
+    hiddenRoute("bookings", "/(trainer)/calendar"),
+    hiddenRoute("checkin", "/(trainer)/home"),
+    hiddenRoute("members", "/(trainer)/clients"),
+    hiddenRoute("members/[id]", "/(trainer)/clients"),
+    hiddenRoute("risk", "/(trainer)/home"),
+    hiddenRoute("notes", "/(trainer)/clients"),
+    hiddenRoute("note-edit", "/(trainer)/clients"),
+    hiddenRoute("group-classes", "/(trainer)/home"),
+    hiddenRoute("manual-code", "/(trainer)/home", false),
+  ]),
+  MEMBER: defineRoleRoutes("MEMBER", [
+    tabRoute("calendar", "Takvim", "calendar"),
+    tabRoute("package", "Paketim", "package"),
+    tabRoute("home", "Ana Sayfa", "home", true),
+    tabRoute("measurements", "Ölçümler", "measurements"),
+    tabRoute("profile", "Profil", "profile"),
+    hiddenRoute("bookings", "/(member)/home"),
+    hiddenRoute("group-classes", "/(member)/home"),
+    hiddenRoute("plan", "/(member)/package"),
+    hiddenRoute("attendance", "/(member)/home"),
+    hiddenRoute("booking/[id]", "/(member)/bookings"),
+    hiddenRoute("measurement/[id]", "/(member)/measurements"),
+    hiddenRoute("referrals", "/(member)/profile"),
+    hiddenRoute("qr/fullscreen", "/(member)/profile"),
+    hiddenRoute("campaigns", "/(member)/profile"),
+    hiddenRoute("progress", "/(member)/profile"),
+  ]),
+};
+
+export function getRoleRoutes(role: MobileRole) {
+  return ROLE_ROUTE_REGISTRY[role];
+}
+
+export function getRoleLayoutRoutes(role: MobileRole) {
+  return getRoleRoutes(role).filter((route) => route.includeInLayout);
+}
+
+export function getRoleTabBarConfig(role: MobileRole) {
+  const tabRoutes = getRoleRoutes(role).filter((route) => route.visibility === "tab");
+
+  return {
+    iconMap: Object.fromEntries(
+      tabRoutes.map((route) => [route.name, route.icon])
+    ) as Record<string, AppIconName>,
+    featuredRoutes: tabRoutes.filter((route) => route.featured).map((route) => route.name),
+  };
+}
 
 type SessionLikeUser = {
   role?: Role | string | null;
@@ -322,56 +464,23 @@ export function resolveIndexRedirect(
 }
 
 export function resolveContextualBackHref(segments: string[]) {
-  const routeKey = segments.join("/");
+  const groupRole: Partial<Record<string, MobileRole>> = {
+    "(admin)": "ADMIN",
+    "(trainer)": "TRAINER",
+    "(member)": "MEMBER",
+  };
+  const role = groupRole[segments[0]];
+  const routeName = segments.slice(1).join("/");
 
-  const routeMap: Record<string, string> = {
-    "(admin)/approval/[id]": "/(admin)/approvals",
-    "(admin)/campaign-create": "/(admin)/campaigns",
-    "(admin)/campaigns": "/(admin)/dashboard",
-    "(admin)/campaigns/new": "/(admin)/campaigns",
-    "(admin)/clinic-qr": "/(admin)/dashboard",
-    "(admin)/dashboard/revenue-detail": "/(admin)/dashboard",
-    "(admin)/dashboard/risk-preview": "/(admin)/dashboard",
-    "(admin)/entry-scan": "/(admin)/dashboard",
-    "(admin)/members/[id]": "/(admin)/members",
-    "(admin)/notifications": "/(admin)/dashboard",
-    "(admin)/packages": "/(admin)/salon",
-    "(admin)/pricing": "/(admin)/salon",
-    "(admin)/risk-members": "/(admin)/dashboard",
-    "(admin)/salon": "/(admin)/dashboard",
-    "(admin)/salon/setup": "/(admin)/dashboard",
-    "(admin)/salon-profile": "/(admin)/salon",
-    "(admin)/subscription": "/(admin)/salon",
-    "(admin)/working-hours": "/(admin)/salon",
+  if (role) {
+    return getRoleRoutes(role).find((route) => route.name === routeName)?.backHref ?? null;
+  }
 
-    "(member)/attendance": "/(member)/home",
-    "(member)/booking/[id]": "/(member)/bookings",
-    "(member)/bookings": "/(member)/home",
-    "(member)/campaigns": "/(member)/profile",
-    "(member)/group-classes": "/(member)/home",
-    "(member)/measurement/[id]": "/(member)/measurements",
-    "(member)/plan": "/(member)/package",
-    "(member)/progress": "/(member)/profile",
-    "(member)/qr/fullscreen": "/(member)/profile",
-    "(member)/referrals": "/(member)/profile",
-
-    "(trainer)/bookings": "/(trainer)/calendar",
-    "(trainer)/checkin": "/(trainer)/home",
-    "(trainer)/group-classes": "/(trainer)/home",
-    "(trainer)/members": "/(trainer)/clients",
-    "(trainer)/manual-code": "/(trainer)/home",
-    "(trainer)/members/[id]": "/(trainer)/clients",
-    "(trainer)/note-edit": "/(trainer)/clients",
-    "(trainer)/notes": "/(trainer)/clients",
-    "(trainer)/packages": "/(trainer)/home",
-    "(trainer)/qr": "/(trainer)/home",
-    "(trainer)/risk": "/(trainer)/home",
-    "(trainer)/today": "/(trainer)/home",
-
+  const sharedRouteMap: Record<string, string> = {
     "(shared)/clinics": "/(shared)/invite-join",
     "(shared)/leave-salon": "/(member)/profile",
     "(shared)/notification-settings": "/(member)/profile",
   };
 
-  return routeMap[routeKey] ?? null;
+  return sharedRouteMap[segments.join("/")] ?? null;
 }
