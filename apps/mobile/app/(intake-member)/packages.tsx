@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getPublicSalonPackagesApi } from "@/lib/mobile-api";
+import { clearPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { applyCurrentPackageToDraft, findNextUnsubmittedPackage } from "@/lib/member-package-queue";
 import { useAppFlow } from "@/providers/app-flow";
 import { AppShell } from "@/theme/components/app-shell";
@@ -135,6 +136,13 @@ export default function PackageListScreen() {
   }, [memberBookingDraft.packageId, memberBookingDraft.packageIds, memberBookingDraft.selectedPackages]);
   const submittedPackageIds = useMemo(() => new Set(memberBookingDraft.submittedPackageIds || []), [memberBookingDraft.submittedPackageIds]);
   const currentPackageId = memberBookingDraft.currentPackageId || "";
+  const isClinicContext = memberBookingDraft.entryContext === "CLINIC_LINK" && memberBookingDraft.salonSlug === String(params.slug || "");
+
+  async function leaveClinicContext(destination: string) {
+    await clearPendingSalonJoinSlug();
+    setMemberBookingDraft({ preferredSlots: [] });
+    router.replace(destination as never);
+  }
 
   function togglePackageSelection(pkg: any) {
     const current = new Set(selectedPackageIds);
@@ -206,23 +214,43 @@ export default function PackageListScreen() {
   }
 
   return (
-    <AppShell title="Paket seç" subtitle="Sana uygun paketi seç. Bir sonraki adımda bu pakete uygun eğitmenleri göreceksin." icon="package">
+    <AppShell
+      testID="intake-packages-screen"
+      title={isClinicContext ? "Klinik paketleri" : "Paket seç"}
+      subtitle={
+        isClinicContext
+          ? `${memberBookingDraft.salonName || "Kliniğin"} için açık paketi seç; ardından uygun uzman ve saatlere geç.`
+          : "Sana uygun paketi seç. Bir sonraki adımda bu pakete uygun eğitmenleri göreceksin."
+      }
+      icon="package"
+    >
       <AnimatedEntrance>
         <IntakeProgressCard
-          step={3}
-          total={6}
+          step={isClinicContext ? 1 : 3}
+          total={isClinicContext ? 4 : 6}
           icon="package"
-          eyebrow="Paket seçimi"
-          title="Şimdi sana uygun paket yapısını netleştiriyoruz"
-          description="Paket seçimi yalnızca fiyat kararı değil; ritim, toplam ders hakkı ve planlama esnekliğini birlikte belirler."
+          eyebrow={isClinicContext ? "Klinik bağlantısı" : "Paket seçimi"}
+          title={isClinicContext ? `${memberBookingDraft.salonName || "Kliniğin"} paketlerinden birini seç` : "Şimdi sana uygun paket yapısını netleştiriyoruz"}
+          description={
+            isClinicContext
+              ? "QR veya davet bağlamın korundu. Klinik aramadan doğrudan paket ve uygun saat yolundasın."
+              : "Paket seçimi yalnızca fiyat kararı değil; ritim, toplam ders hakkı ve planlama esnekliğini birlikte belirler."
+          }
           badgeLabel={memberBookingDraft.salonName || "Salon seçildi"}
           badgeTone="success"
-      summaryItems={[
-            { label: "Salon", value: memberBookingDraft.salonName || "Henüz seçilmedi" },
-            { label: "Ritim", value: memberIntent.weeklyDays || "Belirtilmedi" },
-            { label: "Saat tercihi", value: memberIntent.timePreference || "Belirtilmedi" },
-          ]}
-          footnote="Bir paket seçtiğinde yalnız bu yapı için uygun eğitmen ve saat akışını görürsün."
+          summaryItems={
+            isClinicContext
+              ? [
+                  { label: "Klinik", value: memberBookingDraft.salonName || String(params.slug) },
+                  { label: "Sonraki adım", value: "Uygun uzman ve saatler" },
+                ]
+              : [
+                  { label: "Salon", value: memberBookingDraft.salonName || "Henüz seçilmedi" },
+                  { label: "Ritim", value: memberIntent.weeklyDays || "Belirtilmedi" },
+                  { label: "Saat tercihi", value: memberIntent.timePreference || "Belirtilmedi" },
+                ]
+          }
+          footnote={isClinicContext ? "Paket seçimin yalnızca bu klinik için uygulanır." : "Bir paket seçtiğinde yalnız bu yapı için uygun eğitmen ve saat akışını görürsün."}
         />
       </AnimatedEntrance>
 
@@ -272,7 +300,19 @@ export default function PackageListScreen() {
       ) : null}
 
       {packages.length === 0 ? (
-        <EmptyState title="Şu anda seçilebilir paket yok" description="Bu salon için yayında bir paket bulunmuyor. Daha sonra tekrar kontrol edebilirsin." icon="package" />
+        <View style={styles.emptyStack}>
+          <EmptyState
+            title="Şu anda seçilebilir paket yok"
+            description={isClinicContext ? "Kliniğin henüz açık paket yayınlamamış. Güncel QR veya davet bilgisi için kliniğinle iletişime geçebilirsin." : "Bu salon için yayında bir paket bulunmuyor. Daha sonra tekrar kontrol edebilirsin."}
+            icon="package"
+          />
+          {isClinicContext ? (
+            <>
+              <ActionButton testID="intake-packages-new-qr" label="Yeni klinik QR kodu okut" icon="scan" onPress={() => void leaveClinicContext("/(auth)/scan-salon-qr")} />
+              <ActionButton testID="intake-packages-cancel-link" label="Bu bağlantıdan çık" icon="arrow-left" variant="ghost" onPress={() => void leaveClinicContext("/(intake-member)")} />
+            </>
+          ) : null}
+        </View>
       ) : filteredPackages.length === 0 ? (
         <EmptyState
           title="Bu filtrede paket görünmüyor"
@@ -341,7 +381,7 @@ export default function PackageListScreen() {
       {selectedPackageIds.size > 0 ? (
         <ActionButton
           testID="intake-package-continue"
-          label={selectedPackageIds.size > 1 ? `${selectedPackageIds.size} paketle devam et` : "Detaya geç"}
+          label={selectedPackageIds.size > 1 ? `${selectedPackageIds.size} paketle devam et` : isClinicContext ? "Paketi seç ve devam et" : "Detaya geç"}
           icon="spark"
           onPress={() => {
             const nextPackage = findNextUnsubmittedPackage(memberBookingDraft) || rankedPackages.find((row: any) => selectedPackageIds.has(String(row.id)));
@@ -544,6 +584,7 @@ function MetaPill({ icon, label }: { icon: "calendar" | "clock" | "spark" | "pac
 }
 
 const styles = StyleSheet.create({
+  emptyStack: { gap: tokens.spacing.sm },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

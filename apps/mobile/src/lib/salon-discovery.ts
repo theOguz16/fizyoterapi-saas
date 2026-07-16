@@ -1,4 +1,5 @@
 import type { SalonDiscoverySummary } from "@/lib/mobile-api";
+import type { SalonJoinIntent } from "@/lib/local-preferences";
 import type { MemberIntentProfile } from "@/providers/app-flow";
 
 type HighlightIcon = "location" | "spark" | "trainer" | "clock";
@@ -18,6 +19,25 @@ export type SalonServiceHighlight = {
 export type MemberSalonConnectionState =
   | { kind: "CONNECTED_LINK"; slug: string; route: string }
   | { kind: "CONNECTION_REQUIRED"; slug: null; route: null };
+
+export type MemberClinicEntryMode = "DIRECT" | "DISCOVERY" | "UNSCOPED";
+
+export function resolveMemberClinicEntryMode(
+  intent: Pick<SalonJoinIntent, "slug" | "source"> | null | undefined,
+  routeSlug?: string | null
+): MemberClinicEntryMode {
+  const normalizedRouteSlug = String(routeSlug || "").trim().toLowerCase();
+  const normalizedIntentSlug = String(intent?.slug || "").trim().toLowerCase();
+  if (!normalizedRouteSlug || normalizedIntentSlug !== normalizedRouteSlug) return "UNSCOPED";
+  return intent?.source === "DISCOVERY" ? "DISCOVERY" : "DIRECT";
+}
+
+export function isDefinitiveSalonUnavailable(error: unknown) {
+  const candidate = error as { status?: unknown; code?: unknown } | null;
+  const status = Number(candidate?.status || 0);
+  const code = String(candidate?.code || "").toUpperCase();
+  return status === 404 || code === "INVALID_TENANT" || code === "SALON_NOT_FOUND";
+}
 
 export function resolveMemberSalonConnection(pendingSlug?: string | null): MemberSalonConnectionState {
   const slug = String(pendingSlug || "").trim().toLowerCase();

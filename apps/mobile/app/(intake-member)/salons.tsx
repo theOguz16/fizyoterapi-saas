@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { getPublıcSalonsApi, type SalonDiscoverySummary } from "@/lib/mobile-api";
 import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonDiscoveryEmptyGuidance, getSalonLocationLabel } from "@/lib/salon-discovery";
 import { useAppFlow } from "@/providers/app-flow";
@@ -197,6 +197,7 @@ export default function IntakeSalonsScreen() {
                     setMemberBookingDraft({
                       salonSlug: salon.slug,
                       salonName: salon.tenant_name || salon.name,
+                      entryContext: "DISCOVERY",
                       preferredSlots: [],
                     });
                     router.push(`/(intake-member)/salons/${salon.slug}` as never);
@@ -246,7 +247,7 @@ function SalonCard({
   const serviceHighlights = buildSalonServiceHighlights(salon);
 
   return (
-    <Pressable onPress={onInspect} style={({ pressed }) => [pressed ? styles.cardPressed : null]}>
+    <View testID={`member-salon-card-${salon.slug}`}>
       <SurfaceCard tone={salon.is_boosted ? "primary" : "default"} padding="hero">
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleWrap}>
@@ -280,10 +281,10 @@ function SalonCard({
 
         <View style={styles.cardFooter}>
           <Text style={styles.cardHint}>Detay, paket ve akış uyumunu gör</Text>
-          <ActionButton label="Salonu incele" icon="salon" onPress={onInspect} />
+          <ActionButton testID={`member-salon-open-${salon.slug}`} label="Salonu incele" icon="salon" onPress={onInspect} />
         </View>
       </SurfaceCard>
-    </Pressable>
+    </View>
   );
 }
 
@@ -331,9 +332,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: tokens.spacing.xs,
-  },
-  cardPressed: {
-    transform: [{ scale: 0.99 }, { translateY: 1 }],
   },
   cardHeader: {
     flexDirection: "row",

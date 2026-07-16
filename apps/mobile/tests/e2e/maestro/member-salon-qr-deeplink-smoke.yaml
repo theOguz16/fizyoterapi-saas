@@ -6,12 +6,14 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://join/demo-salon?code=FYF-DEMO-SALON-001"
 - extendedWaitUntil:
     visible:
-      id: "salon-detail-screen"
+      id: "intake-packages-screen"
     timeout: 20000
+- assertVisible: "Klinik paketleri"
+- assertNotVisible: "Salon detayını inceliyorsun"
 - scrollUntilVisible:
     element:
-      id: "salon-view-packages-button"
+      id: "intake-package-card-0"
     direction: DOWN
     timeout: 15000
 - assertVisible:
-    id: "salon-view-packages-button"
+    id: "intake-package-card-0"

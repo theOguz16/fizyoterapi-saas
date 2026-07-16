@@ -14,8 +14,11 @@ appId: com.fizyoflow.mobile
     id: "salon-not-found-scan-qr"
 - assertVisible:
     id: "salon-not-found-enter-invite"
-- assertVisible:
-    id: "salon-not-found-discovery"
+- scrollUntilVisible:
+    element:
+      id: "salon-not-found-discovery"
+    direction: DOWN
+    timeout: 10000
 
 - tapOn:
     id: "salon-not-found-discovery"

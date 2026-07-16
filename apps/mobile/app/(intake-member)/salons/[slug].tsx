@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getPublıcSalonApi } from "@/lib/mobile-api";
-import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonLocationLabel } from "@/lib/salon-discovery";
-import { clearPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { buildSalonFeatureItems, buildSalonServiceHighlights, getSalonLocationLabel, isDefinitiveSalonUnavailable, resolveMemberClinicEntryMode } from "@/lib/salon-discovery";
+import { clearPendingSalonJoinSlug, getPendingSalonJoinIntent } from "@/lib/local-preferences";
 import { useAppFlow } from "@/providers/app-flow";
 import { ActionButton } from "@/theme/components/action-button";
 import { AnimatedEntrance } from "@/theme/components/animated-entrance";
@@ -19,6 +19,8 @@ export default function SalonDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ slug: string }>();
   const slug = String(params.slug || "").trim();
+  const [isOpeningPackages, setIsOpeningPackages] = useState(false);
+  const handledDirectEntry = useRef(false);
 
   const { memberIntent, memberBookingDraft, setMemberBookingDraft } = useAppFlow();
 
@@ -31,12 +33,37 @@ export default function SalonDetailScreen() {
 
   const salon = salonQuery.data;
 
+  const joinIntentQuery = useQuery({
+    queryKey: ["pending-salon-join-intent", slug],
+    queryFn: () => getPendingSalonJoinIntent(),
+    staleTime: 0,
+  });
+  const persistedEntryMode = resolveMemberClinicEntryMode(joinIntentQuery.data, slug);
+  const entryMode =
+    persistedEntryMode === "DIRECT"
+      ? "DIRECT"
+      : memberBookingDraft.entryContext === "DISCOVERY" && memberBookingDraft.salonSlug === slug
+        ? "DISCOVERY"
+        : persistedEntryMode;
+
   useEffect(() => {
-    if (!slug || salonQuery.isError) {
+    if (!slug || (salonQuery.isError && isDefinitiveSalonUnavailable(salonQuery.error))) {
       void clearPendingSalonJoinSlug();
-      return;
     }
-  }, [salonQuery.isError, slug]);
+  }, [salonQuery.error, salonQuery.isError, slug]);
+
+  useEffect(() => {
+    if (!salon || entryMode !== "DIRECT" || handledDirectEntry.current) return;
+    handledDirectEntry.current = true;
+    setIsOpeningPackages(true);
+    setMemberBookingDraft({
+      preferredSlots: [],
+      salonSlug: slug,
+      salonName: salon.tenant_name || salon.name,
+      entryContext: "CLINIC_LINK",
+    });
+    router.replace({ pathname: "/(intake-member)/packages", params: { slug } } as never);
+  }, [entryMode, router, salon, setMemberBookingDraft, slug]);
 
   const businessHours = resolveBusinessHours([salon?.business_hours]);
   const locationLabel = getSalonLocationLabel(salon);
@@ -45,7 +72,7 @@ export default function SalonDetailScreen() {
   const workingHours = `${businessHours.start_time} - ${businessHours.end_time}`;
   const slotInfo = `${businessHours.slot_minutes} dk ders`;
 
-  async function leaveSalonIntent(destination: "/(intake-member)" | "/(intake-member)/salons") {
+  async function leaveSalonIntent(destination: string) {
     await clearPendingSalonJoinSlug();
     setMemberBookingDraft({ preferredSlots: [] });
     router.replace(destination as never);
@@ -63,7 +90,7 @@ export default function SalonDetailScreen() {
           <Text style={styles.stateText}>
             Kliniğinden yeni bir FizyoFlow QR kodu, salon bağlantısı veya davet kodu iste.
           </Text>
-          <ConnectionRecoveryActions router={router} />
+          <ConnectionRecoveryActions onNavigate={leaveSalonIntent} />
         </View>
       </AppShell>
     );
@@ -102,8 +129,20 @@ export default function SalonDetailScreen() {
               variant="ghost"
               onPress={() => void salonQuery.refetch()}
             />
-            <ConnectionRecoveryActions router={router} />
+            <ConnectionRecoveryActions onNavigate={leaveSalonIntent} />
           </View>
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (joinIntentQuery.isLoading || isOpeningPackages || entryMode === "DIRECT") {
+    return (
+      <AppShell title="Klinik doğrulandı" subtitle="Paketler ve uygun saat yolu hazırlanıyor." icon="package">
+        <View testID="clinic-context-opening-packages" style={styles.stateWrap}>
+          <ActivityIndicator size="large" color={tokens.colors.primary} />
+          <Text style={styles.stateTitle}>{salon.tenant_name || salon.name}</Text>
+          <Text style={styles.stateText}>Marketplace adımlarını atlayıp doğrudan kliniğinin açık paketlerine geçiyorsun.</Text>
         </View>
       </AppShell>
     );
@@ -213,6 +252,7 @@ export default function SalonDetailScreen() {
                   ...memberBookingDraft,
                   salonSlug: slug,
                   salonName: salon.tenant_name || salon.name,
+                  entryContext: "DISCOVERY",
                 });
 
                 router.push({
@@ -242,28 +282,28 @@ export default function SalonDetailScreen() {
   );
 }
 
-function ConnectionRecoveryActions({ router }: { router: ReturnType<typeof useRouter> }) {
+function ConnectionRecoveryActions({ onNavigate }: { onNavigate: (destination: string) => Promise<void> }) {
   return (
     <View style={styles.connectionRecoveryActions}>
       <ActionButton
         testID="salon-not-found-scan-qr"
         label="Yeni salon QR kodunu okut"
         icon="scan"
-        onPress={() => router.replace("/(auth)/scan-salon-qr" as never)}
+        onPress={() => void onNavigate("/(auth)/scan-salon-qr")}
       />
       <ActionButton
         testID="salon-not-found-enter-invite"
         label="Davet koduyla bağlan"
         icon="trainer"
         variant="ghost"
-        onPress={() => router.replace("/(auth)/invite-accept" as never)}
+        onPress={() => void onNavigate("/(auth)/invite-accept")}
       />
       <ActionButton
         testID="salon-not-found-discovery"
         label="Diğer klinikleri incele"
         icon="salon"
         variant="ghost"
-        onPress={() => router.replace("/(intake-member)/salons" as never)}
+        onPress={() => void onNavigate("/(intake-member)/salons")}
       />
     </View>
   );

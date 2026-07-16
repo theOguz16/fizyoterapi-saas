@@ -20,6 +20,7 @@ export type MemberIntentProfile = {
 
 export type MemberBookingDraft = {
   e2eBypassSubmit?: boolean;
+  entryContext?: "CLINIC_LINK" | "DISCOVERY";
   salonSlug?: string;
   salonName?: string;
   packageId?: string;

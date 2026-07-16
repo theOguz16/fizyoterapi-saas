@@ -33,6 +33,7 @@ export default function BookingSummaryScreen() {
   const isDuoFlow = String(currentPackage?.lesson_mode || memberBookingDraft.lessonMode || "").toUpperCase() === "DUO";
   const duoPartnerName = currentPackage?.duo_partner_name || memberBookingDraft.duoPartnerName || "";
   const duoPartnerContact = currentPackage?.duo_partner_contact || memberBookingDraft.duoPartnerContact || "";
+  const isClinicContext = memberBookingDraft.entryContext === "CLINIC_LINK" && memberBookingDraft.salonSlug === String(params.slug || "");
 
   const trainerQuery = useQuery({
     queryKey: ["trainer-options", params.slug, currentPackage?.package_id || memberBookingDraft.packageId, selectedDaysForCurrentPackage],
@@ -199,18 +200,19 @@ export default function BookingSummaryScreen() {
 
   return (
     <AppShell
-      title="Başvurunu gözden geçir"
+      testID="intake-booking-summary-screen"
+      title={isClinicContext ? "Klinik başvurunu gönder" : "Başvurunu gözden geçir"}
       subtitle={isGroupFlow ? "Seçtiğin grup dersi, seans bilgileri ve ücret özeti salon onayına gönderilecek." : "Seçtiğin paket, eğitmen ve uygunluk bilgileri salon onayına gönderilecek."}
       icon="approvals"
     >
       <AnimatedEntrance>
         <IntakeProgressCard
-          step={6}
-          total={6}
+          step={isClinicContext ? 4 : 6}
+          total={isClinicContext ? 4 : 6}
           icon="approvals"
           eyebrow="Son kontrol"
-          title="Son kontrol adımındasın"
-          description="Başvurun gönderildiğinde salon ekibi seçimlerini birlikte değerlendirip sana geri bildirim verecek."
+          title={isClinicContext ? "Klinik bağlantılı kısa akışın son adımı" : "Son kontrol adımındasın"}
+          description={isClinicContext ? "QR veya davetle seçtiğin klinik, paket ve uygun saat bilgilerini son kez kontrol et." : "Başvurun gönderildiğinde salon ekibi seçimlerini birlikte değerlendirip sana geri bildirim verecek."}
           badgeLabel="Onaya hazır"
           badgeTone="warning"
           summaryItems={[

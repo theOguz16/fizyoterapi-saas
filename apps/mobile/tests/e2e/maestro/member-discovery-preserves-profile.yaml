@@ -1,0 +1,32 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://(intake-member)/salons"
+
+- scrollUntilVisible:
+    element:
+      id: "member-salon-open-demo-salon"
+    direction: DOWN
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "member-salon-open-demo-salon"
+    retryTapIfNoChange: true
+
+- extendedWaitUntil:
+    visible:
+      id: "salon-detail-screen"
+    timeout: 20000
+- assertVisible: "Salon detayını inceliyorsun"
+- assertNotVisible: "Klinik paketleri"
+
+- openLink: "fizyoflow://join/demo-salon?code=FYF-WARM-APP-001"
+- extendedWaitUntil:
+    visible:
+      id: "intake-packages-screen"
+    timeout: 20000
+- assertVisible: "Klinik paketleri"

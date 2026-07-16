@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSalonServiceHighlights, getSalonDiscoveryEmptyGuidance, resolveMemberSalonConnection } from "@/lib/salon-discovery";
+import {
+  buildSalonServiceHighlights,
+  getSalonDiscoveryEmptyGuidance,
+  isDefinitiveSalonUnavailable,
+  resolveMemberClinicEntryMode,
+  resolveMemberSalonConnection,
+} from "@/lib/salon-discovery";
 
 describe("salon discovery helpers", () => {
   it("keeps only the most purchased visible service", () => {
@@ -38,5 +44,21 @@ describe("salon discovery helpers", () => {
   it("directs an empty marketplace back to the clinic QR flow", () => {
     expect(getSalonDiscoveryEmptyGuidance(false, false)).toMatchObject({ action: "SCAN_QR" });
     expect(getSalonDiscoveryEmptyGuidance(true, true)).toMatchObject({ action: "CLEAR_FILTERS" });
+  });
+
+  it("shortens only a matching QR, invite or deeplink clinic context", () => {
+    expect(resolveMemberClinicEntryMode({ slug: "demo-salon", source: "QR" }, "demo-salon")).toBe("DIRECT");
+    expect(resolveMemberClinicEntryMode({ slug: "demo-salon", source: "INVITE" }, "DEMO-SALON")).toBe("DIRECT");
+    expect(resolveMemberClinicEntryMode({ slug: "demo-salon", source: "DEEPLINK" }, "demo-salon")).toBe("DIRECT");
+    expect(resolveMemberClinicEntryMode({ slug: "demo-salon", source: "DISCOVERY" }, "demo-salon")).toBe("DISCOVERY");
+    expect(resolveMemberClinicEntryMode({ slug: "other-salon", source: "QR" }, "demo-salon")).toBe("UNSCOPED");
+    expect(resolveMemberClinicEntryMode(null, "demo-salon")).toBe("UNSCOPED");
+  });
+
+  it("clears stale clinic context only for definitive unavailable responses", () => {
+    expect(isDefinitiveSalonUnavailable({ status: 404 })).toBe(true);
+    expect(isDefinitiveSalonUnavailable({ status: 400, code: "INVALID_TENANT" })).toBe(true);
+    expect(isDefinitiveSalonUnavailable({ status: 503, code: "UPSTREAM_UNAVAILABLE" })).toBe(false);
+    expect(isDefinitiveSalonUnavailable(new Error("network"))).toBe(false);
   });
 });

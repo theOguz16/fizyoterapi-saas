@@ -5,7 +5,7 @@ import { safeBack } from "@/lib/navigation";
 import { useAppFlow } from "@/providers/app-flow";
 import { OnboardingQuestionStage, type OnboardingOption } from "@/theme/components/onboarding-question-stage";
 import type { AppIconName } from "@/theme/components/app-icon";
-import { getPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { getPendingSalonJoinIntent } from "@/lib/local-preferences";
 import { resolveMemberSalonConnection } from "@/lib/salon-discovery";
 import { MarketingShell } from "@/theme/components/marketing-shell";
 import { ActionButton } from "@/theme/components/action-button";
@@ -101,9 +101,9 @@ export default function IntakeQuestionFlowScreen() {
 
   useEffect(() => {
     let mounted = true;
-    void getPendingSalonJoinSlug().then((pendingSlug) => {
+    void getPendingSalonJoinIntent().then((pendingIntent) => {
       if (!mounted) return;
-      const connection = resolveMemberSalonConnection(pendingSlug);
+      const connection = resolveMemberSalonConnection(pendingIntent?.slug);
       if (connection.kind === "CONNECTED_LINK") {
         router.replace(connection.route as never);
         return;
