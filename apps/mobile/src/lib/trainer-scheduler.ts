@@ -66,6 +66,18 @@ export function isSlotAllowed(slotKey: string, assignableSlots?: TrainerAssignab
   return assignableSlots.some((slot) => toSlotKey(slot.starts_at) === slotKey);
 }
 
+export function collectMemberAssignableSlots(
+  memberId: string,
+  requests: Array<{ member_id: string; assignable_slots?: TrainerAssignableSlot[] | null }>
+) {
+  const slots = requests
+    .filter((request) => String(request.member_id) === String(memberId))
+    .flatMap((request) => request.assignable_slots || []);
+  return Array.from(new Map(slots.map((slot) => [slot.starts_at, slot])).values()).sort(
+    (first, second) => new Date(first.starts_at).getTime() - new Date(second.starts_at).getTime()
+  );
+}
+
 export function rebuildRequestFromCancelledBooking<T extends TrainerScheduleBooking>(booking: T) {
   return {
     id: `rebuild-${booking.id}`,

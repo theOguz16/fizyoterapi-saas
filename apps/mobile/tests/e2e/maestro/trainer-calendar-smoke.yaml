@@ -6,7 +6,25 @@ appId: com.fizyoflow.mobile
 
 - openLink: "fizyoflow://e2e-reset"
 
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 
 - waitForAnimationToEnd:
     timeout: 8000
@@ -16,12 +34,26 @@ appId: com.fizyoflow.mobile
       id: "trainer-calendar-screen"
     timeout: 15000
 
-- swipe:
-    start: 50%, 35%
-    end: 50%, 85%
-
-- waitForAnimationToEnd:
-    timeout: 3000
+- assertVisible:
+    id: "trainer-calendar-open-checkin"
 
 - assertVisible:
-    id: "trainer-calendar-screen"
+    id: "trainer-calendar-open-requests"
+
+- tapOn:
+    id: "trainer-calendar-open-requests"
+
+- assertVisible: "Ders talepleri"
+
+- tapOn: "Kapat"
+
+- tapOn:
+    id: "trainer-calendar-open-checkin"
+
+- extendedWaitUntil:
+    visible:
+      id: "trainer-checkin-screen"
+    timeout: 10000
+
+- assertVisible:
+    id: "trainer-checkin-mode"

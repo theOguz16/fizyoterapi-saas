@@ -10,16 +10,17 @@ type Props = {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  scrollEnabled?: boolean;
 };
 
-export function DetailSheet({ visible, onClose, title, subtitle, children }: Props) {
+export function DetailSheet({ visible, onClose, title, subtitle, children, scrollEnabled = true }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-        <View style={styles.header}>
+          <View style={styles.header}>
             <View style={styles.headerRow}>
               <Text style={styles.title}>{title}</Text>
               <Pressable onPress={onClose} style={({ pressed }) => [styles.closeChip, pressed ? styles.closeChipPressed : null]}>
@@ -27,15 +28,19 @@ export function DetailSheet({ visible, onClose, title, subtitle, children }: Pro
               </Pressable>
             </View>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
-          <ScrollView
-            style={styles.content}
-            contentContainerStyle={styles.contentInner}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {children}
-          </ScrollView>
+          </View>
+          {scrollEnabled ? (
+            <ScrollView
+              style={styles.content}
+              contentContainerStyle={styles.contentInner}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={[styles.content, styles.contentInner]}>{children}</View>
+          )}
         </View>
       </View>
     </Modal>
@@ -105,6 +110,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   contentInner: {
     gap: tokens.spacing.sm,

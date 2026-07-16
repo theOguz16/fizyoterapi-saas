@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  collectMemberAssignableSlots,
   findSlotByKey,
   groupAssignableRequestsByDay,
   isSlotAllowed,
@@ -54,5 +55,19 @@ describe("trainer scheduler helpers", () => {
       assignable_slots: [],
       note: "İptal sonrası tekrar planlanabilir",
     });
+  });
+
+  it("collects and deduplicates only the selected member's reschedule slots", () => {
+    const sharedSlot = { starts_at: "2026-07-20T09:00:00.000Z", ends_at: "2026-07-20T10:00:00.000Z" };
+    expect(
+      collectMemberAssignableSlots("member-1", [
+        { member_id: "member-1", assignable_slots: [sharedSlot] },
+        { member_id: "member-1", assignable_slots: [sharedSlot, { starts_at: "2026-07-21T08:00:00.000Z", ends_at: "2026-07-21T09:00:00.000Z" }] },
+        { member_id: "member-2", assignable_slots: [{ starts_at: "2026-07-19T08:00:00.000Z", ends_at: "2026-07-19T09:00:00.000Z" }] },
+      ])
+    ).toEqual([
+      sharedSlot,
+      { starts_at: "2026-07-21T08:00:00.000Z", ends_at: "2026-07-21T09:00:00.000Z" },
+    ]);
   });
 });

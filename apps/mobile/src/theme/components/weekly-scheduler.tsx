@@ -10,10 +10,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { AppIcon } from "./app-icon";
+import { AppIcon, type AppIconName } from "./app-icon";
 import { EmptyState } from "./empty-state";
 import { StatusBadge } from "./status-badge";
 import { SurfaceCard } from "./surface-card";
+import { VirtualListPanel } from "./virtual-list-panel";
 import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { tokens } from "../tokens";
 import type { CalendarAgendaItem } from "./calendar-agenda";
@@ -30,6 +31,10 @@ export type WeeklySchedulerEvent = {
   badgeTone?: BadgeTone;
   draggable?: boolean;
   onPress?: () => void;
+  actionLabel?: string;
+  actionIcon?: AppIconName;
+  actionTestID?: string;
+  onAction?: () => void;
 };
 
 export type WeeklySchedulerRequest = {
@@ -80,6 +85,8 @@ type Props = {
     break_duration_minutes?: number | null;
     working_days?: number[] | null;
   } | null;
+  viewMode?: "timeline" | "agenda";
+  timezone?: string;
 };
 
 const SLOT_HEIGHT = 78;
@@ -99,8 +106,20 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function toDateKey(value: Date | string) {
+function toDateKey(value: Date | string, timezone?: string) {
   const date = value instanceof Date ? value : new Date(value);
+  if (timezone) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    const day = parts.find((part) => part.type === "day")?.value;
+    return `${year}-${month}-${day}`;
+  }
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
@@ -162,17 +181,18 @@ function formatWeekRange(weekStart: Date) {
   })}`;
 }
 
-function formatTime(value?: string | null) {
+function formatTime(value?: string | null, timezone?: string) {
   if (!value) return "--:--";
   const date = new Date(value);
   return date.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: timezone,
   });
 }
 
-function formatTimeRange(startsAt?: string | null, endsAt?: string | null) {
-  return `${formatTime(startsAt)}${endsAt ? ` - ${formatTime(endsAt)}` : ""}`;
+function formatTimeRange(startsAt?: string | null, endsAt?: string | null, timezone?: string) {
+  return `${formatTime(startsAt, timezone)}${endsAt ? ` - ${formatTime(endsAt, timezone)}` : ""}`;
 }
 
 function buildWeekDays(weekStart: Date) {
@@ -342,13 +362,14 @@ export function WeeklyScheduler({
   onSelectedDateChange,
   onSelectedSlotChange,
   businessHours,
+  viewMode = "timeline",
+  timezone = "Europe/Istanbul",
 }: Props) {
   const anchorDate = useMemo(() => {
-    if (initialDate) return new Date(initialDate);
-    if (events[0]?.startsAt) return new Date(events[0].startsAt);
-    if (requests[0]?.startsAt) return new Date(requests[0].startsAt);
-    return new Date();
-  }, [events, initialDate, requests]);
+    const source = initialDate || events[0]?.startsAt || requests[0]?.startsAt || new Date();
+    const clinicDateKey = toDateKey(source, timezone);
+    return new Date(`${clinicDateKey}T12:00:00`);
+  }, [events, initialDate, requests, timezone]);
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(anchorDate));
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(anchorDate));
@@ -411,22 +432,22 @@ export function WeeklyScheduler({
   const weekEvents = useMemo(
     () =>
       events
-        .filter((event) => weekDayKeys.has(toDateKey(event.startsAt)))
+        .filter((event) => weekDayKeys.has(toDateKey(event.startsAt, timezone)))
         .sort((first, second) => new Date(first.startsAt).getTime() - new Date(second.startsAt).getTime()),
-    [events, weekDayKeys]
+    [events, timezone, weekDayKeys]
   );
 
   const dayEvents = useMemo(
-    () => weekEvents.filter((event) => toDateKey(event.startsAt) === selectedDateKey),
-    [selectedDateKey, weekEvents]
+    () => weekEvents.filter((event) => toDateKey(event.startsAt, timezone) === selectedDateKey),
+    [selectedDateKey, timezone, weekEvents]
   );
 
   const weekRequests = useMemo(
     () =>
       requests
-        .filter((request) => weekDayKeys.has(toDateKey(request.startsAt)))
+        .filter((request) => weekDayKeys.has(toDateKey(request.startsAt, timezone)))
         .sort((first, second) => new Date(first.startsAt).getTime() - new Date(second.startsAt).getTime()),
-    [requests, weekDayKeys]
+    [requests, timezone, weekDayKeys]
   );
 
   function shiftWeek(direction: -1 | 1) {
@@ -455,8 +476,8 @@ export function WeeklyScheduler({
         <View style={styles.daysRow}>
           {weekDays.map((day) => {
             const count =
-              weekEvents.filter((event) => toDateKey(event.startsAt) === day.key).length +
-              weekRequests.filter((request) => toDateKey(request.startsAt) === day.key).length;
+              weekEvents.filter((event) => toDateKey(event.startsAt, timezone) === day.key).length +
+              weekRequests.filter((request) => toDateKey(request.startsAt, timezone) === day.key).length;
             const selected = day.key === selectedDateKey;
             const isWorkingDay = workingDays.includes(isoDayNumber(day.date));
             return (
@@ -513,7 +534,7 @@ export function WeeklyScheduler({
                   style={[
                     styles.requestCard,
                     toneToCardStyle(request.badgeTone || "warning"),
-                    toDateKey(request.startsAt) === selectedDateKey ? styles.requestCardActive : null,
+                    toDateKey(request.startsAt, timezone) === selectedDateKey ? styles.requestCardActive : null,
                   ]}
                 >
                   <View style={styles.requestHeader}>
@@ -550,8 +571,20 @@ export function WeeklyScheduler({
 
           {!selectedDayWorking ? (
             <EmptyState title="Salon bugün kapalı" description="Çalışma takvimi salon ayarlarına göre gösterilir." icon="calendar" />
-          ) : dayEvents.length === 0 && !hideEmptyState ? (
-            <EmptyState title={emptyTitle} description={emptyDescription} icon="calendar" />
+          ) : dayEvents.length === 0 ? (
+            hideEmptyState ? null : (
+              <EmptyState title={emptyTitle} description={emptyDescription} icon="calendar" />
+            )
+          ) : viewMode === "agenda" ? (
+            <VirtualListPanel
+              data={dayEvents}
+              keyExtractor={(event) => event.id}
+              maxHeight={520}
+              testID={`${mode}-calendar-agenda`}
+              renderItem={(event) => (
+                <AgendaEventRow event={event} timezone={timezone} onPress={event.onPress} />
+              )}
+            />
           ) : (
             <View style={styles.slotStack}>
               {slots.map((slot) => {
@@ -647,6 +680,57 @@ export function WeeklyScheduler({
         </SurfaceCard>
       </Animated.View>
     </View>
+  );
+}
+
+function AgendaEventRow({
+  event,
+  timezone,
+  onPress,
+}: {
+  event: WeeklySchedulerEvent;
+  timezone: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}, ${formatTimeRange(event.startsAt, event.endsAt, timezone)}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.agendaEvent,
+        toneToCardStyle(event.badgeTone),
+        pressed ? styles.agendaEventPressed : null,
+      ]}
+    >
+      <View style={styles.agendaTimeRail}>
+        <Text style={styles.agendaStartTime}>{formatTime(event.startsAt, timezone)}</Text>
+        <Text style={styles.agendaEndTime}>{formatTime(event.endsAt, timezone)}</Text>
+      </View>
+      <View style={styles.agendaEventBody}>
+        <View style={styles.eventHeader}>
+          <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
+          {event.badgeLabel ? <StatusBadge label={event.badgeLabel} tone={event.badgeTone || "neutral"} /> : null}
+        </View>
+        <Text style={styles.eventSubtitle} numberOfLines={2}>{event.subtitle}</Text>
+        {event.onAction && event.actionLabel ? (
+          <Pressable
+            testID={event.actionTestID}
+            accessibilityRole="button"
+            accessibilityLabel={event.actionLabel}
+            hitSlop={6}
+            onPress={(pressEvent) => {
+              pressEvent.stopPropagation();
+              event.onAction?.();
+            }}
+            style={({ pressed }) => [styles.agendaAction, pressed ? styles.agendaActionPressed : null]}
+          >
+            {event.actionIcon ? <AppIcon name={event.actionIcon} size="sm" tone="primary" variant="plain" /> : null}
+            <Text style={styles.agendaActionLabel}>{event.actionLabel}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -1029,6 +1113,64 @@ const styles = StyleSheet.create({
     color: tokens.colors.primaryStrong,
     fontSize: tokens.font.xs,
     fontFamily: tokens.fontFamily.medium,
+  },
+  agendaEvent: {
+    minHeight: 104,
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderRadius: tokens.radius.lg,
+    borderWidth: 1,
+    padding: tokens.spacing.sm,
+    gap: tokens.spacing.sm,
+  },
+  agendaEventPressed: {
+    opacity: 0.82,
+  },
+  agendaTimeRail: {
+    width: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRightWidth: 1,
+    borderRightColor: tokens.colors.border,
+    paddingRight: tokens.spacing.sm,
+    gap: 2,
+  },
+  agendaStartTime: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  agendaEndTime: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  agendaEventBody: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 5,
+  },
+  agendaAction: {
+    minHeight: 38,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    borderColor: tokens.colors.borderStrong,
+    backgroundColor: tokens.colors.surface,
+    paddingHorizontal: tokens.spacing.sm,
+    gap: 4,
+  },
+  agendaActionPressed: {
+    opacity: 0.75,
+  },
+  agendaActionLabel: {
+    color: tokens.colors.primaryStrong,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.bold,
   },
   dragHint: {
     color: tokens.colors.warning,

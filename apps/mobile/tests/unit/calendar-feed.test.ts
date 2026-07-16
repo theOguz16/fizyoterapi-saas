@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CalendarFeedEvent } from "@fitnes-saas/contracts";
-import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
+import {
+  calendarDateKey,
+  calendarFeedEventToDetailRow,
+  canShowTrainerCalendarCheckin,
+  createCalendarFeedRange,
+  isCalendarEventToday,
+} from "@/lib/calendar-feed";
 
 describe("mobile calendar feed", () => {
   it("requests a fixed range without projecting recurrence on the device", () => {
@@ -36,5 +42,31 @@ describe("mobile calendar feed", () => {
       status: "APPROVED",
       approval_status: "APPROVED",
     });
+  });
+
+  it("uses the clinic timezone for day grouping and today's check-in action", () => {
+    const instant = "2026-07-15T22:30:00.000Z";
+    expect(calendarDateKey(instant, "Europe/Istanbul")).toBe("2026-07-16");
+    expect(calendarDateKey(instant, "America/New_York")).toBe("2026-07-15");
+    expect(
+      isCalendarEventToday(instant, "Europe/Istanbul", new Date("2026-07-16T08:00:00.000Z"))
+    ).toBe(true);
+    expect(
+      isCalendarEventToday(instant, "America/New_York", new Date("2026-07-16T08:00:00.000Z"))
+    ).toBe(false);
+  });
+
+  it("shows quick check-in only for today's unfinished trainer sessions", () => {
+    const now = new Date("2026-07-16T08:00:00.000Z");
+    const event = {
+      starts_at: "2026-07-16T09:00:00.000Z",
+      source: "BOOKING",
+      is_cancelled: false,
+      checkin_status: "PENDING",
+    };
+    expect(canShowTrainerCalendarCheckin(event, "Europe/Istanbul", now)).toBe(true);
+    expect(canShowTrainerCalendarCheckin({ ...event, checkin_status: "COMPLETED" }, "Europe/Istanbul", now)).toBe(false);
+    expect(canShowTrainerCalendarCheckin({ ...event, source: "AVAILABILITY" }, "Europe/Istanbul", now)).toBe(false);
+    expect(canShowTrainerCalendarCheckin({ ...event, is_cancelled: true }, "Europe/Istanbul", now)).toBe(false);
   });
 });

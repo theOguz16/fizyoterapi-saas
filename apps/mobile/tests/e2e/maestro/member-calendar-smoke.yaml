@@ -6,7 +6,25 @@ appId: com.fizyoflow.mobile
 
 - openLink: "fizyoflow://e2e-reset"
 
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 
 - waitForAnimationToEnd:
     timeout: 8000
@@ -15,3 +33,5 @@ appId: com.fizyoflow.mobile
     visible:
       id: "member-calendar-screen"
     timeout: 20000
+
+- assertVisible: "Haftalık Takvim"

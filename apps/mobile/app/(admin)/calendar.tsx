@@ -17,7 +17,7 @@ import { EmptyState } from "@/theme/components/empty-state";
 import { tokens } from "@/theme/tokens";
 import { resolveCalendarEmptyState } from "@/lib/admin-empty-states";
 
-function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
+function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null, timezone = "Europe/Istanbul") {
   if (!startsAt) return "-";
 
   const start = new Date(startsAt);
@@ -27,17 +27,20 @@ function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
     weekday: "long",
     day: "2-digit",
     month: "long",
+    timeZone: timezone,
   });
 
   const startTime = start.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: timezone,
   });
 
   const endTime = end
     ? end.toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: timezone,
       })
     : "--:--";
 
@@ -133,7 +136,9 @@ export default function AdminCalendarScreen() {
         emptyTitle="Planlı ders bulunmuyor"
         emptyDescription="Salon programı burada görüntülenir."
         businessHours={businessHours}
-        hideEmptyState
+        timezone={calendarQuery.data?.timezone}
+        viewMode="agenda"
+        hideEmptyState={events.length === 0}
       />
 
       {!calendarQuery.isLoading &&
@@ -175,7 +180,7 @@ export default function AdminCalendarScreen() {
           <View style={styles.detailHeaderRow}>
             <View style={styles.detailHeaderText}>
               <Text style={styles.detailTitle}>Ders özeti</Text>
-              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)}</Text>
+              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarQuery.data?.timezone)}</Text>
             </View>
 
             {selectedBooking?.pending_schedule_change ? (
@@ -239,7 +244,8 @@ export default function AdminCalendarScreen() {
                 label="Önerilen yeni saat"
                 value={formatDateTimeRange(
                   selectedBooking.pending_schedule_change.proposed_starts_at,
-                  selectedBooking.pending_schedule_change.proposed_ends_at
+                  selectedBooking.pending_schedule_change.proposed_ends_at,
+                  calendarQuery.data?.timezone
                 )}
               />
             </View>

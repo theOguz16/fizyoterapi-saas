@@ -22,8 +22,8 @@ import {
   type TrainerAvailabilityEntry,
   type TrainerScheduleEntry,
 } from "@/lib/mobile-api";
-import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
-import { type TrainerScheduleRequest } from "@/lib/trainer-scheduler";
+import { calendarFeedEventToDetailRow, canShowTrainerCalendarCheckin, createCalendarFeedRange } from "@/lib/calendar-feed";
+import { collectMemberAssignableSlots, type TrainerScheduleRequest } from "@/lib/trainer-scheduler";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -31,6 +31,7 @@ import { EmptyState } from "@/theme/components/empty-state";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
 import { tokens } from "@/theme/tokens";
 
@@ -63,7 +64,7 @@ type SelectedGroupMember = {
   status: string;
 };
 
-function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
+function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null, timezone = "Europe/Istanbul") {
   if (!startsAt) return "-";
 
   const start = new Date(startsAt);
@@ -73,17 +74,20 @@ function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
     weekday: "long",
     day: "2-digit",
     month: "long",
+    timeZone: timezone,
   });
 
   const startTime = start.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: timezone,
   });
 
   const endTime = end
     ? end.toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: timezone,
       })
     : "--:--";
 
@@ -382,11 +386,14 @@ export default function TrainerCalendarScreen() {
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [placementRequestId, setPlacementRequestId] = useState<string | null>(null);
   const [selectedRescheduleDayKey, setSelectedRescheduleDayKey] = useState<string | null>(null);
+  const [requestsVisible, setRequestsVisible] = useState(false);
+  const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null);
 
   const calendarQuery = useQuery({
     queryKey: ["trainer-bookings-calendar", "feed", calendarRange.from, calendarRange.to],
     queryFn: () => getCalendarFeedApi(calendarRange),
   });
+  const calendarTimezone = calendarQuery.data?.timezone || "Europe/Istanbul";
 
   const availabilityQuery = useQuery({
     queryKey: ["trainer-availabilities-calendar"],
@@ -477,13 +484,32 @@ export default function TrainerCalendarScreen() {
         badgeTone: row.presentation.badge_tone,
         draggable: false,
         onPress: () => setSelectedBookingId(String(row.calendar_event_id)),
+        ...(canShowTrainerCalendarCheckin(row, calendarTimezone)
+          ? {
+              actionLabel: "Check-in",
+              actionIcon: "checkin" as const,
+              actionTestID: `trainer-calendar-checkin-${row.calendar_event_id}`,
+              onAction: () =>
+                router.push({
+                  pathname: "/(trainer)/checkin",
+                  params: row.session_id
+                    ? { sessionId: String(row.session_id), backTo: "/(trainer)/calendar" }
+                    : { backTo: "/(trainer)/calendar" },
+                } as never),
+            }
+          : {}),
       })),
-    [calendarRows]
+    [calendarRows, calendarTimezone, router]
   );
 
   const selectedBooking = useMemo(
     () => calendarRows.find((item) => String(item.calendar_event_id) === selectedBookingId) || null,
     [calendarRows, selectedBookingId]
+  );
+
+  const rescheduleBooking = useMemo(
+    () => calendarRows.find((item) => String(item.calendar_event_id) === rescheduleBookingId) || null,
+    [calendarRows, rescheduleBookingId]
   );
 
   const memberDetailQuery = useQuery({
@@ -556,6 +582,7 @@ export default function TrainerCalendarScreen() {
     onSuccess: () => {
       setPlacementRequestId(null);
       setSelectedRequestId(null);
+      void calendarQuery.refetch();
     },
 
     onError: (error: any) => {
@@ -586,6 +613,7 @@ export default function TrainerCalendarScreen() {
 
     onSuccess: () => {
       setSelectedBookingId(null);
+      void calendarQuery.refetch();
     },
 
     onError: (error: any) => {
@@ -619,6 +647,8 @@ export default function TrainerCalendarScreen() {
     },
 
     onSuccess: () => {
+      setRescheduleBookingId(null);
+      void calendarQuery.refetch();
       showInfoAlert(
         "Saat değişikliği gönderildi",
         "Yeni saat önerisi üyeye iletildi. Onay sonrası takvim güncellenecek."
@@ -677,10 +707,22 @@ export default function TrainerCalendarScreen() {
     .filter((item: SelectedGroupMember | null): item is SelectedGroupMember => Boolean(item));
 }, [groupMemberNameMap, selectedBooking]);
 
-  const rescheduleDayGroups = useMemo(
-    () => groupSlotsByDay(Array.isArray(selectedBooking?.assignable_slots) ? selectedBooking.assignable_slots : []),
-    [selectedBooking?.assignable_slots]
-  );
+  const rescheduleDayGroups = useMemo(() => {
+    if (!rescheduleBooking?.member_id) return [];
+    const slots = collectMemberAssignableSlots(String(rescheduleBooking.member_id), rawRequests)
+      .filter((slot) => slotFitsBusinessHours(slot, businessHours))
+      .filter((slot) => !isOutsideMinimumLeadTime(slot.starts_at, minimumAdvanceHours))
+      .filter((slot) => {
+        const start = new Date(slot.starts_at);
+        const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
+        return !bookings.some(
+          (booking) =>
+            String(booking.id) !== String(rescheduleBooking.id) &&
+            rangesOverlap(start, end, booking.starts_at, booking.ends_at)
+        );
+      });
+    return groupSlotsByDay(slots);
+  }, [bookings, businessHours, minimumAdvanceHours, rawRequests, rescheduleBooking?.id, rescheduleBooking?.member_id]);
 
   const selectedRescheduleDay = useMemo(
     () => rescheduleDayGroups.find((item) => item.dayKey === selectedRescheduleDayKey) || rescheduleDayGroups[0] || null,
@@ -689,7 +731,7 @@ export default function TrainerCalendarScreen() {
 
   useEffect(() => {
     setSelectedRescheduleDayKey(rescheduleDayGroups[0]?.dayKey || null);
-  }, [selectedBooking?.id, rescheduleDayGroups]);
+  }, [rescheduleBooking?.id, rescheduleDayGroups]);
 
   function handleAddRequest(request: CalendarRequest) {
     const availableSlots = buildRequestPlacementSlots(request, businessHours, bookings, minimumAdvanceHours);
@@ -716,7 +758,7 @@ export default function TrainerCalendarScreen() {
     <AppShell
       testID="trainer-calendar-screen"
       title="Takvimim"
-      subtitle="Ders programını yönet, talepleri planla ve değişiklik yap."
+      subtitle="Günün seanslarını takip et ve check-in işlemini doğru dersten başlat."
       icon="calendar"
       refreshing={calendarQuery.isRefetching || availabilityQuery.isRefetching || todayQuery.isRefetching}
       onRefresh={() => {
@@ -725,6 +767,31 @@ export default function TrainerCalendarScreen() {
         void todayQuery.refetch();
       }}
     >
+      <SurfaceCard tone="primary">
+        <View style={styles.flowHeader}>
+          <View style={styles.flowHeaderText}>
+            <Text style={styles.boardTitle}>Günlük akış</Text>
+            <Text style={styles.detailText}>Bugünkü seanslar ve planlanmayı bekleyen talepler.</Text>
+          </View>
+          <StatusBadge label={`${requests.length} talep`} tone={requests.length > 0 ? "warning" : "neutral"} />
+        </View>
+        <View style={styles.flowActions}>
+          <ActionButton
+            testID="trainer-calendar-open-checkin"
+            label="QR / kod ile check-in"
+            icon="checkin"
+            onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: "/(trainer)/calendar" } } as never)}
+          />
+          <ActionButton
+            testID="trainer-calendar-open-requests"
+            label={`Ders talepleri (${requests.length})`}
+            icon="request"
+            variant="ghost"
+            onPress={() => setRequestsVisible(true)}
+          />
+        </View>
+      </SurfaceCard>
+
       <WeeklyScheduler
         mode="trainer"
         events={events}
@@ -732,35 +799,46 @@ export default function TrainerCalendarScreen() {
         emptyTitle="Planlı ders bulunmuyor"
         emptyDescription="Onaylanan dersler burada görüntülenir."
         businessHours={businessHours}
+        timezone={calendarQuery.data?.timezone}
         showRequestPanel={false}
-        hideEmptyState
+        viewMode="agenda"
         onSelectedDateChange={({ key }) => {
           setSelectedDateKey(key);
         }}
       />
 
-      <SurfaceCard>
-        <Text style={styles.boardTitle}>Ders Talepleri</Text>
-        <Text style={styles.detailText}>
-          Seçili güne ait talepler listelenir. Takvime ekleme sırasında yalnızca uygun saatler sunulur.
-        </Text>
-
-        <View style={styles.requestGrid}>
-          {selectedDayRequests.length === 0 ? (
-            <EmptyState title="Talep bulunmuyor" description="Seçili gün için bekleyen ders talebi yok." icon="request" />
-          ) : (
-            selectedDayRequests.map((request) => (
+      <DetailSheet
+        visible={requestsVisible}
+        onClose={() => setRequestsVisible(false)}
+        title="Ders talepleri"
+        subtitle="Takvimde seçtiğin güne ait planlanmamış talepler"
+        scrollEnabled={false}
+      >
+        {selectedDayRequests.length === 0 ? (
+          <EmptyState title="Talep bulunmuyor" description="Seçili gün için bekleyen ders talebi yok." icon="request" />
+        ) : (
+          <VirtualListPanel
+            data={selectedDayRequests}
+            maxHeight={380}
+            testID="trainer-calendar-request-list"
+            keyExtractor={(request) => request.id}
+            renderItem={(request) => (
               <RequestCard
-                key={request.id}
                 request={request}
-                onOpen={() => setSelectedRequestId(request.id)}
-                onAdd={() => handleAddRequest(request)}
+                onOpen={() => {
+                  setRequestsVisible(false);
+                  setSelectedRequestId(request.id);
+                }}
+                onAdd={() => {
+                  setRequestsVisible(false);
+                  handleAddRequest(request);
+                }}
                 adding={createBookingMutation.isPending && placementRequestId === request.id}
               />
-            ))
-          )}
-        </View>
-      </SurfaceCard>
+            )}
+          />
+        )}
+      </DetailSheet>
 
       <DetailSheet
         visible={Boolean(selectedRequest)}
@@ -777,7 +855,7 @@ export default function TrainerCalendarScreen() {
           {selectedRequest?.assignable_slots?.length ? (
             <Text style={styles.detailText}>
               Seçilen saatler:{" "}
-              {selectedRequest.assignable_slots.map((slot) => formatDateTimeRange(slot.starts_at, slot.ends_at)).join(" • ")}
+              {selectedRequest.assignable_slots.map((slot) => formatDateTimeRange(slot.starts_at, slot.ends_at, calendarTimezone)).join(" • ")}
             </Text>
           ) : null}
         </SurfaceCard>
@@ -830,7 +908,7 @@ export default function TrainerCalendarScreen() {
           <View style={styles.detailHeaderRow}>
             <View style={styles.detailHeaderText}>
               <Text style={styles.detailTitle}>Ders özeti</Text>
-              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)}</Text>
+              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)}</Text>
             </View>
 
             {selectedBooking?.presentation ? (
@@ -856,7 +934,7 @@ export default function TrainerCalendarScreen() {
             />
             {selectedBooking?.is_duo ? <DetailRow label="Duo partner" value={selectedBooking?.duo_partner_name || "Partner daveti bekleniyor"} /> : null}
             {selectedBooking?.is_duo ? <DetailRow label="Duo durum" value={selectedBooking?.duo_status || "Partner ödemesi bekleniyor"} /> : null}
-            <DetailRow label="Planlanan saat" value={formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)} />
+            <DetailRow label="Planlanan saat" value={formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)} />
           </View>
         </SurfaceCard>
 
@@ -940,7 +1018,8 @@ export default function TrainerCalendarScreen() {
                 label="Önerilen yeni saat"
                 value={formatDateTimeRange(
                   selectedBooking.pending_schedule_change.proposed_starts_at,
-                  selectedBooking.pending_schedule_change.proposed_ends_at
+                  selectedBooking.pending_schedule_change.proposed_ends_at,
+                  calendarTimezone
                 )}
               />
             </View>
@@ -964,64 +1043,18 @@ export default function TrainerCalendarScreen() {
           )}
         </SurfaceCard>
 
-        <SurfaceCard>
-          <Text style={styles.detailTitle}>Ders saatini değiştir</Text>
-          <Text style={styles.detailText}>Önce gün, ardından saat seç. Talep üyeye iletilir ve onay süreci başlar.</Text>
-
-          {selectedBooking?.is_group_class ? (
-            <Text style={styles.detailText}>Grup derslerinin saati grup dersi düzenleme akışından güncellenir.</Text>
-          ) : rescheduleDayGroups.length === 0 ? (
-            <Text style={styles.detailText}>Bu ders için uygun alternatif saat bulunmuyor.</Text>
-          ) : (
-            <>
-              <View style={styles.rescheduleCalendar}>
-                {rescheduleDayGroups.map((group) => {
-                  const active = group.dayKey === selectedRescheduleDay?.dayKey;
-                  const dayDate = new Date(`${group.dayKey}T00:00:00`);
-
-                  return (
-                    <Pressable
-                      key={group.dayKey}
-                      onPress={() => setSelectedRescheduleDayKey(group.dayKey)}
-                      style={[styles.dayCard, active ? styles.dayCardActive : null]}
-                    >
-                      <Text style={[styles.dayCardWeekday, active ? styles.dayCardWeekdayActive : null]}>
-                        {dayDate.toLocaleDateString("tr-TR", { weekday: "short" }).toUpperCase()}
-                      </Text>
-                      <Text style={[styles.dayCardNumber, active ? styles.dayCardNumberActive : null]}>
-                        {dayDate.toLocaleDateString("tr-TR", { day: "2-digit" })}
-                      </Text>
-                      <Text style={[styles.dayCardMonth, active ? styles.dayCardMonthActive : null]}>
-                        {dayDate.toLocaleDateString("tr-TR", { month: "short" })}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <ScrollPanel maxHeight={220} contentContainerStyle={styles.slotList}>
-                {selectedRescheduleDay?.slots.map((slot) => (
-                  <Pressable
-                    key={slot.key}
-                    style={styles.slotOption}
-                    onPress={() => {
-                      if (!selectedBooking?.id || !selectedBooking?.member_id) return;
-
-                      scheduleChangeMutation.mutate({
-                        bookingId: String(selectedBooking.id),
-                        starts_at: slot.startsAt,
-                        ends_at: slot.endsAt,
-                        member_id: String(selectedBooking.member_id),
-                      });
-                    }}
-                  >
-                    <Text style={styles.slotOptionText}>{slot.label}</Text>
-                  </Pressable>
-                ))}
-              </ScrollPanel>
-            </>
-          )}
-        </SurfaceCard>
+        {!selectedBooking?.is_group_class ? (
+          <ActionButton
+            testID="trainer-calendar-open-reschedule"
+            label="Saat değişikliği öner"
+            icon="calendar"
+            variant="ghost"
+            onPress={() => {
+              setRescheduleBookingId(String(selectedBooking.calendar_event_id));
+              setSelectedBookingId(null);
+            }}
+          />
+        ) : null}
 
         {!selectedBooking?.is_group_class ? (
           <ActionButton
@@ -1030,7 +1063,10 @@ export default function TrainerCalendarScreen() {
             onPress={() => {
               if (!selectedBooking?.id) return;
 
-              Alert.alert("Dersi kaldır", "Bu dersi takvimden kaldırıp planlama listesine geri almak istiyor musun?", [
+              Alert.alert(
+                "Dersi takvimden kaldır",
+                `${selectedBooking.member_full_name || "Bu danışan"} için ${formatDateTimeRange(selectedBooking.starts_at, selectedBooking.ends_at, calendarTimezone)} seansını kaldırmak istiyor musun?`,
+                [
                 { text: "Vazgeç", style: "cancel" },
                 {
                   text: "Kaldır",
@@ -1039,7 +1075,8 @@ export default function TrainerCalendarScreen() {
                     cancelBookingMutation.mutate(String(selectedBooking.id));
                   },
                 },
-              ]);
+                ]
+              );
             }}
             loading={cancelBookingMutation.isPending}
           />
@@ -1060,6 +1097,87 @@ export default function TrainerCalendarScreen() {
           />
         ) : null}
       </DetailSheet>
+
+      <DetailSheet
+        visible={Boolean(rescheduleBooking)}
+        onClose={() => setRescheduleBookingId(null)}
+        title="Saat değişikliği öner"
+        subtitle={rescheduleBooking?.member_full_name || "Ders planı"}
+      >
+        <SurfaceCard tone="primary">
+          <Text style={styles.detailTitle}>Mevcut seans</Text>
+          <Text style={styles.detailText}>{formatDateTimeRange(rescheduleBooking?.starts_at, rescheduleBooking?.ends_at, calendarTimezone)}</Text>
+        </SurfaceCard>
+
+        {rescheduleDayGroups.length === 0 ? (
+          <EmptyState
+            title="Alternatif saat bulunmuyor"
+            description="Danışanın paylaştığı uygun saatler bu ders için kullanılabilir değil."
+            icon="calendar"
+          />
+        ) : (
+          <>
+            <View style={styles.rescheduleCalendar}>
+              {rescheduleDayGroups.map((group) => {
+                const active = group.dayKey === selectedRescheduleDay?.dayKey;
+                const dayDate = new Date(`${group.dayKey}T00:00:00`);
+                return (
+                  <Pressable
+                    key={group.dayKey}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => setSelectedRescheduleDayKey(group.dayKey)}
+                    style={[styles.dayCard, active ? styles.dayCardActive : null]}
+                  >
+                    <Text style={[styles.dayCardWeekday, active ? styles.dayCardWeekdayActive : null]}>
+                      {dayDate.toLocaleDateString("tr-TR", { weekday: "short" }).toUpperCase()}
+                    </Text>
+                    <Text style={[styles.dayCardNumber, active ? styles.dayCardNumberActive : null]}>
+                      {dayDate.toLocaleDateString("tr-TR", { day: "2-digit" })}
+                    </Text>
+                    <Text style={[styles.dayCardMonth, active ? styles.dayCardMonthActive : null]}>
+                      {dayDate.toLocaleDateString("tr-TR", { month: "short" })}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <ScrollPanel maxHeight={220} contentContainerStyle={styles.slotList}>
+              {selectedRescheduleDay?.slots.map((slot) => (
+                <Pressable
+                  key={slot.key}
+                  testID={`trainer-calendar-reschedule-${slot.key}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Yeni saat ${formatDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)}`}
+                  style={styles.slotOption}
+                  onPress={() => {
+                    if (!rescheduleBooking?.id || !rescheduleBooking?.member_id) return;
+                    Alert.alert(
+                      "Yeni saati doğrula",
+                      `${formatDateTimeRange(rescheduleBooking.starts_at, rescheduleBooking.ends_at, calendarTimezone)} yerine ${formatDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)} önerilecek.`,
+                      [
+                        { text: "Vazgeç", style: "cancel" },
+                        {
+                          text: "Öneriyi gönder",
+                          onPress: () => scheduleChangeMutation.mutate({
+                            bookingId: String(rescheduleBooking.id),
+                            starts_at: slot.startsAt,
+                            ends_at: slot.endsAt,
+                            member_id: String(rescheduleBooking.member_id),
+                          }),
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Text style={styles.slotOptionText}>{slot.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollPanel>
+          </>
+        )}
+      </DetailSheet>
     </AppShell>
   );
 }
@@ -1070,7 +1188,18 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.lg,
     fontFamily: tokens.fontFamily.bold,
   },
-  requestGrid: {
+  flowHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+  },
+  flowHeaderText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  flowActions: {
     gap: tokens.spacing.sm,
   },
   requestCard: {

@@ -33,3 +33,39 @@ export function calendarFeedEventToDetailRow(event: CalendarFeedEvent): Record<s
     presentation: event.presentation,
   };
 }
+
+export function calendarDateKey(value: Date | string, timezone = "Europe/Istanbul") {
+  const date = value instanceof Date ? value : new Date(value);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return `${year}-${month}-${day}`;
+}
+
+export function isCalendarEventToday(startsAt: string, timezone: string, now = new Date()) {
+  return calendarDateKey(startsAt, timezone) === calendarDateKey(now, timezone);
+}
+
+export function canShowTrainerCalendarCheckin(
+  event: {
+    starts_at: string;
+    source: string;
+    is_cancelled?: boolean;
+    checkin_status?: string | null;
+  },
+  timezone: string,
+  now = new Date()
+) {
+  return (
+    isCalendarEventToday(event.starts_at, timezone, now) &&
+    !event.is_cancelled &&
+    event.checkin_status !== "COMPLETED" &&
+    (event.source === "BOOKING" || event.source === "GROUP_SESSION")
+  );
+}

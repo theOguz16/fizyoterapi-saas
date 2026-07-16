@@ -29,7 +29,7 @@ type MemberCalendarEvent = {
   onPress?: () => void;
 };
 
-function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
+function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null, timezone = "Europe/Istanbul") {
   if (!startsAt) return "-";
 
   const start = new Date(startsAt);
@@ -39,17 +39,20 @@ function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
     weekday: "long",
     day: "2-digit",
     month: "long",
+    timeZone: timezone,
   });
 
   const startTime = start.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: timezone,
   });
 
   const endTime = end
     ? end.toLocaleTimeString("tr-TR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: timezone,
       })
     : "--:--";
 
@@ -144,7 +147,8 @@ export default function MemberCalendarScreen() {
         emptyTitle="Planlı ders bulunmuyor"
         emptyDescription="Programlanan dersler ve admin onayı sonrası kaydedilen saatlerin burada listelenir."
         businessHours={businessHours}
-        hideEmptyState
+        timezone={calendarQuery.data?.timezone}
+        viewMode="agenda"
       />
 
       <DetailSheet
@@ -163,7 +167,7 @@ export default function MemberCalendarScreen() {
                     ? "Onaylı saat tercihi"
                     : "Onay bekleyen saat tercihi"}
               </Text>
-              <Text style={styles.detailText}>{formatDateTimeRange(selectedEvent?.startsAt, selectedEvent?.endsAt)}</Text>
+              <Text style={styles.detailText}>{formatDateTimeRange(selectedEvent?.startsAt, selectedEvent?.endsAt, calendarQuery.data?.timezone)}</Text>
             </View>
 
             {selectedEvent?.badgeLabel ? <StatusBadge label={selectedEvent.badgeLabel} tone={selectedEvent.badgeTone || "neutral"} /> : null}
@@ -171,7 +175,7 @@ export default function MemberCalendarScreen() {
 
           <View style={styles.detailGrid}>
             <DetailRow label="Durum" value={selectedEvent?.badgeLabel} />
-            <DetailRow label="Saat" value={formatDateTimeRange(selectedEvent?.startsAt, selectedEvent?.endsAt)} />
+            <DetailRow label="Saat" value={formatDateTimeRange(selectedEvent?.startsAt, selectedEvent?.endsAt, calendarQuery.data?.timezone)} />
             <DetailRow label="Açıklama" value={selectedEvent?.subtitle} />
           </View>
         </SurfaceCard>
@@ -206,7 +210,8 @@ export default function MemberCalendarScreen() {
                     label="Önerilen yeni saat"
                     value={formatDateTimeRange(
                       selectedBooking.pending_schedule_change.proposed_starts_at,
-                      selectedBooking.pending_schedule_change.proposed_ends_at
+                      selectedBooking.pending_schedule_change.proposed_ends_at,
+                      calendarQuery.data?.timezone
                     )}
                   />
                 </View>
