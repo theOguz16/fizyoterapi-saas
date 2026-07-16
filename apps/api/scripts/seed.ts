@@ -686,12 +686,26 @@ async function main() {
       ends_at: plusDays(now, -2),
       capacity: 1,
     }),
+    sessionRepo.create({
+      tenant_id: tenant.id,
+      title: "Bugünkü Reformer Seansı",
+      type: SessionType.PT,
+      status: SessionStatus.SCHEDULED,
+      trainer_id: trainer.id,
+      related_package_id: ptPackage.id,
+      lesson_category: LessonCategory.PT,
+      starts_at: now,
+      ends_at: now,
+      capacity: 1,
+    }),
   ]);
 
   sessions[0].starts_at = isoAtLocal(sessions[0].starts_at, 10, 0);
   sessions[0].ends_at = isoAtLocal(sessions[0].ends_at, 11, 0);
   sessions[1].starts_at = isoAtLocal(sessions[1].starts_at, 18, 0);
   sessions[1].ends_at = isoAtLocal(sessions[1].ends_at, 19, 0);
+  sessions[2].starts_at = isoAtLocal(sessions[2].starts_at, 14, 0);
+  sessions[2].ends_at = isoAtLocal(sessions[2].ends_at, 15, 0);
   await sessionRepo.save(sessions);
 
   const bookingRepo = AppDataSource.getRepository(Booking);
@@ -719,6 +733,20 @@ async function main() {
       payment_status: BookingPaymentStatus.APPROVED,
       payment_requested_at: plusDays(now, -3),
       payment_approved_at: plusDays(now, -2),
+      payment_approved_by_admin_id: admin.id,
+      meta: { package_id: ptPackage.id, package_display_price: ptPackage.display_price },
+    }),
+    bookingRepo.create({
+      tenant_id: tenant.id,
+      member_id: member.id,
+      trainer_id: trainer.id,
+      session_id: sessions[2].id,
+      starts_at: sessions[2].starts_at,
+      ends_at: sessions[2].ends_at,
+      status: BookingStatus.APPROVED,
+      payment_status: BookingPaymentStatus.APPROVED,
+      payment_requested_at: now,
+      payment_approved_at: now,
       payment_approved_by_admin_id: admin.id,
       meta: { package_id: ptPackage.id, package_display_price: ptPackage.display_price },
     }),

@@ -1,0 +1,77 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "fizyoflow://e2e-reset"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- assertVisible: "Bugünkü seanslar"
+
+- scrollUntilVisible:
+    element:
+      id: "trainer-home-session-0"
+    direction: DOWN
+    timeout: 15000
+- assertVisible: "Bugünkü Reformer Seansı"
+- assertVisible:
+    id: "trainer-home-session-0-checkin"
+- assertVisible:
+    id: "trainer-home-session-0-member"
+- assertVisible:
+    id: "trainer-home-session-0-note"
+- assertVisible:
+    id: "trainer-home-session-0-schedule"
+
+- tapOn:
+    id: "trainer-home-session-0-note"
+- extendedWaitUntil:
+    visible: "Koç notları"
+    timeout: 15000
+
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-home-session-0-schedule"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "trainer-home-session-0-schedule"
+
+- extendedWaitUntil:
+    visible: "Ders özeti"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-calendar-open-reschedule"
+    direction: DOWN
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "trainer-calendar-cancel-booking"
+    direction: DOWN
+    timeout: 15000

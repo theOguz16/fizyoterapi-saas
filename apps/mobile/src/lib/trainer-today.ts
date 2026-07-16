@@ -13,6 +13,53 @@ export type TrainerTodayBooking = {
   [key: string]: unknown;
 };
 
+const CLOSED_BOOKING_STATUSES = new Set(["CANCELED", "CANCELLED", "REJECTED", "COMPLETED"]);
+
+export function sortTrainerTodayBookings(bookings?: TrainerTodayBooking[] | null) {
+  if (!Array.isArray(bookings)) return [];
+
+  return [...bookings].sort((left, right) => {
+    const leftTime = new Date(String(left.starts_at || "")).getTime();
+    const rightTime = new Date(String(right.starts_at || "")).getTime();
+    const safeLeft = Number.isFinite(leftTime) ? leftTime : Number.MAX_SAFE_INTEGER;
+    const safeRight = Number.isFinite(rightTime) ? rightTime : Number.MAX_SAFE_INTEGER;
+    return safeLeft - safeRight;
+  });
+}
+
+export function canTrainerBookingCheckIn(booking: TrainerTodayBooking) {
+  return Boolean(booking.session_id) && !CLOSED_BOOKING_STATUSES.has(String(booking.status || "").toUpperCase());
+}
+
+export function canTrainerBookingManageSchedule(booking: TrainerTodayBooking) {
+  return Boolean(booking.id) && !CLOSED_BOOKING_STATUSES.has(String(booking.status || "").toUpperCase());
+}
+
+export function formatTrainerTodayTime(value?: string | null) {
+  if (!value) return "Saat yok";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Saat yok";
+  return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+}
+
+export function resolveTrainerFocusedBookingEventId(
+  rows: Array<{ id?: unknown; entity_id?: unknown; calendar_event_id?: unknown }>,
+  bookingId?: string | null
+) {
+  if (!bookingId) return null;
+  const focused = rows.find((item) => {
+    const calendarEventId = String(item.calendar_event_id || "");
+    return (
+      String(item.id || "") === bookingId ||
+      String(item.entity_id || "") === bookingId ||
+      calendarEventId === bookingId ||
+      calendarEventId === `booking:${bookingId}`
+    );
+  });
+
+  return focused?.calendar_event_id ? String(focused.calendar_event_id) : null;
+}
+
 export type TrainerRiskPreviewRow = {
   id?: string | number | null;
   member_id?: string | null;
@@ -41,8 +88,7 @@ export function formatTrainerTodayDate(value?: string | null) {
 }
 
 export function selectTrainerNextBooking(bookings?: TrainerTodayBooking[] | null) {
-  if (!Array.isArray(bookings) || bookings.length === 0) return null;
-  return bookings[0] || null;
+  return sortTrainerTodayBookings(bookings)[0] || null;
 }
 
 export function selectTrainerRiskPreview(data?: { risk?: { preview?: TrainerRiskPreviewRow[] | null } } | null) {

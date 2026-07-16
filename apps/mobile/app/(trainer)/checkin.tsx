@@ -90,12 +90,13 @@ function getRemainingCreditsLabel(value: unknown) {
 }
 
 export default function TrainerCheckinScreen() {
-  const params = useLocalSearchParams<{ sessionId?: string | string[] }>();
+  const params = useLocalSearchParams<{ sessionId?: string | string[]; mode?: string | string[] }>();
   const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
+  const requestedMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
 
   const [permission, requestPermission] = useCameraPermissions();
 
-  const [mode, setMode] = useState<CheckinMode>("camera");
+  const [mode, setMode] = useState<CheckinMode>(requestedMode === "manual" ? "manual" : "camera");
   const [manualCode, setManualCode] = useState("");
   const [lastScannedCode, setLastScannedCode] = useState("");
   const [scanLocked, setScanLocked] = useState(false);
@@ -233,6 +234,14 @@ export default function TrainerCheckinScreen() {
   }
 
   useEffect(() => {
+    if (requestedMode === "manual") {
+      setMode("manual");
+      setScanLocked(false);
+      setLastScannedCode("");
+    }
+  }, [requestedMode]);
+
+  useEffect(() => {
     if (mode === "camera" && !permission) {
       void requestPermission();
     }
@@ -284,6 +293,7 @@ export default function TrainerCheckinScreen() {
             <View style={styles.cameraFrame}>
               <CameraView
                 style={StyleSheet.absoluteFillObject}
+                pointerEvents="none"
                 facing="back"
                 barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
                 onBarcodeScanned={scanLocked || mutation.isPending ? undefined : handleBarcodeScanned}

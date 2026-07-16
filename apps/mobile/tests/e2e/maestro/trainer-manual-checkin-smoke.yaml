@@ -13,17 +13,30 @@ appId: com.fizyoflow.mobile
 - waitForAnimationToEnd
 - assertVisible:
     id: "trainer-checkin-screen"
-- swipe:
-    start: 50%, 82%
-    end: 50%, 36%
-- tapOn:
-    id: "trainer-checkin-manual-mode"
-- assertVisible:
-    id: "trainer-checkin-manual-input"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcheckin%3Fmode%3Dmanual%26backTo%3D%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-checkin-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "trainer-checkin-manual-input"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "trainer-checkin-manual-input"
 - inputText: "MEM-DEMO001"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "trainer-checkin-submit"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
-    id: "trainer-checkin-submit"
-- assertVisible:
-    id: "trainer-checkin-result"
+    text: "Ders girişini onayla"
+    retryTapIfNoChange: true
+- scrollUntilVisible:
+    element:
+      id: "trainer-checkin-result"
+    direction: DOWN
+    timeout: 15000

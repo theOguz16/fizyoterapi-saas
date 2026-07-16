@@ -1,9 +1,9 @@
 // Bu sayfa mobil uygulamada trainer akisindaki calendar ekranini temsil eder.
 // Ekranin amaci ilgili roldeki kullaniciya bu adimda gereken veri, karar veya aksiyonu sunmaktir.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/mobile-api";
 import { calendarFeedEventToDetailRow, canShowTrainerCalendarCheckin, createCalendarFeedRange } from "@/lib/calendar-feed";
 import { collectMemberAssignableSlots, type TrainerScheduleRequest } from "@/lib/trainer-scheduler";
+import { resolveTrainerFocusedBookingEventId } from "@/lib/trainer-today";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -373,6 +374,9 @@ function DetailStat({ label, value }: { label: string; value: string | number | 
 
 export default function TrainerCalendarScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ bookingId?: string | string[] }>();
+  const focusedBookingId = Array.isArray(params.bookingId) ? params.bookingId[0] : params.bookingId;
+  const handledFocusedBookingId = useRef<string | null>(null);
   const calendarRange = useMemo(() => createCalendarFeedRange(), []);
 
   const todayAnchor = useMemo(() => {
@@ -506,6 +510,15 @@ export default function TrainerCalendarScreen() {
     () => calendarRows.find((item) => String(item.calendar_event_id) === selectedBookingId) || null,
     [calendarRows, selectedBookingId]
   );
+
+  useEffect(() => {
+    if (!focusedBookingId || handledFocusedBookingId.current === focusedBookingId || calendarRows.length === 0) return;
+    const calendarEventId = resolveTrainerFocusedBookingEventId(calendarRows, focusedBookingId);
+    handledFocusedBookingId.current = focusedBookingId;
+    if (calendarEventId) {
+      setSelectedBookingId(calendarEventId);
+    }
+  }, [calendarRows, focusedBookingId]);
 
   const rescheduleBooking = useMemo(
     () => calendarRows.find((item) => String(item.calendar_event_id) === rescheduleBookingId) || null,
@@ -1058,6 +1071,7 @@ export default function TrainerCalendarScreen() {
 
         {!selectedBooking?.is_group_class ? (
           <ActionButton
+            testID="trainer-calendar-cancel-booking"
             label="Takvimden kaldır"
             variant="danger"
             onPress={() => {
