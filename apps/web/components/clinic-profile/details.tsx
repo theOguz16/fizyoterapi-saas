@@ -39,7 +39,7 @@ export function ClinicContactSection({ model }: { model: ClinicProfileViewModel 
           <h3>Bilgi ve Randevu Talebi</h3>
           <p className="small">Formu doldurun; klinik ekibi size uygun zaman ve hizmet bilgisiyle dönüş yapar.</p>
           <LeadForm slug={data.slug} apiBase={CLINIC_API_BASE} quickContactHref={whatsappWithMessage || undefined} quickContactLabel="WhatsApp'tan hızlıca yazın" />
-          {whatsapp ? <TrackedLink apiBase={CLINIC_API_BASE} slug={data.slug} eventType="WHATSAPP_CLICK" source="lead-form-after-note" href={whatsappWithMessage} className="form-whatsapp-link">Daha hızlı dönüş için WhatsApp'tan yazın</TrackedLink> : null}
+          {whatsapp ? <TrackedLink apiBase={CLINIC_API_BASE} slug={data.slug} eventType="WHATSAPP_CLICK" source="lead-form-after-note" href={whatsappWithMessage} className="form-whatsapp-link">Daha hızlı dönüş için WhatsApp&apos;tan yazın</TrackedLink> : null}
         </aside>
       </div>
     </section>
@@ -128,7 +128,7 @@ export function ClinicLocationAndGallery({ model }: { model: ClinicProfileViewMo
               {data.location?.maps_embed_url ? (
                 <iframe src={data.location.maps_embed_url} title={`${data.name} harita`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
               ) : (
-                <div className="map-fallback"><strong>{data.name}</strong><span>{locationText || data.location?.address || "Klinik konumu"}</span>{mapsUrl ? <a href={mapsUrl}>Google Haritalar'da aç</a> : null}</div>
+                <div className="map-fallback"><strong>{data.name}</strong><span>{locationText || data.location?.address || "Klinik konumu"}</span>{mapsUrl ? <a href={mapsUrl}>Google Haritalar&apos;da aç</a> : null}</div>
               )}
             </div>
           </div>

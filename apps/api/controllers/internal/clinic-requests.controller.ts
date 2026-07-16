@@ -10,7 +10,7 @@ import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../../enti
 import { User, UserRole } from "../../entities/user.entity";
 import { AppError } from "../../errors/AppError";
 import { AuditLogService } from "../../services/audit-log.service";
-import { AuditLog } from "../../entities/audit-log.entity";
+import { ProductDemoLead } from "../../entities/product-demo-lead.entity";
 import { TenantLifecycleService } from "../../services/tenant-lifecycle.service";
 import { CLINIC_TRIAL_DAYS } from "../../config/subscription";
 
@@ -21,6 +21,8 @@ function plusDays(days: number) {
 }
 
 export class InternalClinicRequestsController {
+  private static readonly UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
   private static async logClinicAudit(
     req: Request,
     input: {
@@ -89,28 +91,60 @@ export class InternalClinicRequestsController {
   }
 
   static async listDemoLeads(_req: Request, res: Response) {
-    const rows = await AppDataSource.getRepository(AuditLog).find({
-      where: { event_type: "PRODUCT_SITE_DEMO_LEAD_SUBMIT" },
+    const rows = await AppDataSource.getRepository(ProductDemoLead).find({
       order: { created_at: "DESC" },
       take: 100,
     });
 
     return res.json({
-      data: rows.map((row) => {
-        const metadata = row.metadata || {};
-        return {
-          id: row.id,
-          created_at: row.created_at,
-          full_name: String(metadata.full_name || ""),
-          clinic_name: String(metadata.clinic_name || ""),
-          email: String(metadata.email || ""),
-          phone: String(metadata.phone || ""),
-          city: String(metadata.city || ""),
-          note: String(metadata.note || ""),
-          source: String(metadata.source || "PRODUCT_SITE_DEMO"),
-        };
-      }),
+      data: rows.map((row) => ({
+        id: row.id,
+        created_at: row.created_at,
+        full_name: row.full_name,
+        clinic_name: row.clinic_name,
+        email: row.email,
+        phone: row.phone,
+        city: row.city || "",
+        note: row.note || "",
+        source: row.source,
+      })),
     });
+  }
+
+  static async hardDeleteDemoLead(req: Request, res: Response) {
+    const demoLeadId = String(req.params.id || "").trim();
+    if (!InternalClinicRequestsController.UUID_PATTERN.test(demoLeadId)) {
+      throw new AppError("INVALID_DEMO_LEAD_ID", 400, "Geçersiz demo talebi kimliği");
+    }
+    const repo = AppDataSource.getRepository(ProductDemoLead);
+    const demoLead = await repo.findOne({ where: { id: demoLeadId } });
+    if (!demoLead) {
+      throw new AppError("DEMO_LEAD_NOT_FOUND", 404, "Demo talebi bulunamadı");
+    }
+
+    await repo.remove(demoLead);
+    await AuditLogService.log({
+      tenant_id: null,
+      actor_role: "INTERNAL_ADMIN",
+      event_type: "INTERNAL_DEMO_LEAD_HARD_DELETED",
+      action: "INTERNAL_DEMO_LEAD_HARD_DELETED",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 204,
+      success: true,
+      request_id: (req as Request & { requestId?: string }).requestId || null,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      target_type: "product_demo_lead",
+      target_id: demoLead.id,
+      metadata: {
+        demo_lead_id: demoLead.id,
+        source: demoLead.source,
+        status: "HARD_DELETED",
+      },
+    });
+
+    return res.status(204).send();
   }
 
   static async publish(req: Request, res: Response) {

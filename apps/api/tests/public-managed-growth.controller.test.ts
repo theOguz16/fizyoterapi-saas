@@ -6,7 +6,9 @@ import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entitie
 import { AppError } from "../errors/AppError";
 import { AuditLogService } from "../services/audit-log.service";
 import { DemoLeadEmailService } from "../services/demo-lead-email.service";
+import { ProductDemoLead } from "../entities/product-demo-lead.entity";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
+import { LoggerService } from "../services/logger.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("public managed growth controller", () => {
@@ -110,12 +112,29 @@ describe("public managed growth controller", () => {
   });
 
   it("accepts product site demo leads without tenant context", async () => {
+    const demoLead = {
+      id: "demo-lead-1",
+      source: "PRODUCT_SITE_DEMO",
+      full_name: "Ayşe Yılmaz",
+      clinic_name: "Denge Fizyo",
+      email: "ayse@dengefizyo.com",
+      phone: "05551112233",
+    };
+    const demoLeadRepo = {
+      create: vi.fn((value) => value),
+      save: vi.fn().mockImplementation(async (value) => ({ id: demoLead.id, ...value })),
+    };
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === ProductDemoLead) return demoLeadRepo as any;
+      throw new Error(`Unexpected repository request: ${String(entity?.name || entity)}`);
+    });
     const auditSpy = vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+    const loggerSpy = vi.spyOn(LoggerService, "warn").mockImplementation(() => undefined);
     const emailSpy = vi.spyOn(DemoLeadEmailService, "send").mockResolvedValue({
       configured: true,
       adminDelivered: true,
-      applicantDelivered: true,
-      errors: [],
+      applicantDelivered: false,
+      errors: ["applicant ayse@dengefizyo.com rejected"],
     });
     const res = createMockResponse();
 
@@ -143,17 +162,47 @@ describe("public managed growth controller", () => {
       email: "ayse@dengefizyo.com",
       clinicName: "Denge Fizyo",
     }));
-    expect(auditSpy).toHaveBeenCalledWith(
+    expect(demoLeadRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+      source_audit_log_id: null,
+      full_name: "Ayşe Yılmaz",
+      clinic_name: "Denge Fizyo",
+      email: "ayse@dengefizyo.com",
+      phone: "05551112233",
+    }));
+    expect(auditSpy).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         tenant_id: null,
         event_type: "PRODUCT_SITE_DEMO_LEAD_SUBMIT",
-        metadata: expect.objectContaining({
+        target_id: "demo-lead-1",
+        metadata: {
+          demo_lead_id: "demo-lead-1",
           source: "PRODUCT_SITE_DEMO",
-          clinic_name: "Denge Fizyo",
-          email: "ayse@dengefizyo.com",
-          phone: "05551112233",
-        }),
+          status: "PERSISTED",
+        },
       })
     );
+    expect(auditSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        event_type: "PRODUCT_SITE_DEMO_LEAD_EMAIL",
+        target_id: "demo-lead-1",
+        metadata: {
+          demo_lead_id: "demo-lead-1",
+          status: "PARTIAL_OR_FAILED",
+          smtp_configured: true,
+          admin_delivered: true,
+          applicant_delivered: false,
+          errors_count: 1,
+        },
+      })
+    );
+    expect(JSON.stringify(auditSpy.mock.calls)).not.toContain("ayse@dengefizyo.com");
+    expect(JSON.stringify(auditSpy.mock.calls)).not.toContain("05551112233");
+    expect(loggerSpy).toHaveBeenCalledWith("demo_lead_email_delivery_failed", {
+      demo_lead_id: "demo-lead-1",
+      errors_count: 1,
+    });
+    expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain("applicant ayse@dengefizyo.com rejected");
   });
 });

@@ -4,6 +4,7 @@ import { BaseEntityWithTimestamps } from "./base.entity";
 export enum BackgroundJobType {
   GROUP_CLASS_REMINDER_SCAN = "GROUP_CLASS_REMINDER_SCAN",
   TRIAL_SUBSCRIPTION_REMINDER_SCAN = "TRIAL_SUBSCRIPTION_REMINDER_SCAN",
+  PRODUCT_DEMO_LEAD_RETENTION = "PRODUCT_DEMO_LEAD_RETENTION",
 }
 
 export enum BackgroundJobStatus {

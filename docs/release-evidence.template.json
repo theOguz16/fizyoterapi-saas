@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "release": {
+    "gitSha": "",
+    "version": ""
+  },
+  "webSmoke": {
+    "status": "pending",
+    "url": "",
+    "artifact": ""
+  },
+  "builds": {
+    "ios": {
+      "id": "",
+      "status": "pending",
+      "profile": "production",
+      "easBuildUrl": "",
+      "buildNumber": ""
+    },
+    "android": {
+      "id": "",
+      "status": "pending",
+      "profile": "production",
+      "easBuildUrl": "",
+      "versionCode": ""
+    }
+  },
+  "maestro": {
+    "ios": [
+      { "id": "release-admin-login", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "admin-package-create-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "admin-calendar-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "release-trainer-login", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "trainer-manual-checkin-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "trainer-calendar-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "login-role-routing", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "member-salon-qr-deeplink-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "member-bookings-smoke", "status": "pending", "buildId": "", "artifact": "" }
+    ],
+    "android": [
+      { "id": "release-admin-login", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "admin-package-create-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "admin-calendar-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "release-trainer-login", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "trainer-manual-checkin-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "trainer-calendar-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "login-role-routing", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "member-salon-qr-deeplink-smoke", "status": "pending", "buildId": "", "artifact": "" },
+      { "id": "member-bookings-smoke", "status": "pending", "buildId": "", "artifact": "" }
+    ]
+  },
+  "push": {
+    "status": "pending",
+    "buildId": "",
+    "evidenceFile": ""
+  },
+  "deepLink": {
+    "ios": { "status": "pending", "artifact": "" },
+    "android": { "status": "pending", "artifact": "" }
+  },
+  "qr": {
+    "ios": { "status": "pending", "artifact": "" },
+    "android": { "status": "pending", "artifact": "" }
+  },
+  "revenueCat": {
+    "ios": { "status": "pending", "sandboxTransactionId": "", "artifact": "" },
+    "android": { "status": "pending", "sandboxTransactionId": "", "artifact": "" }
+  }
+}

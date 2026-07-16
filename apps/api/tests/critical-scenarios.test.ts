@@ -18,6 +18,21 @@ describe("Critical Scenario Set", () => {
     expect(messageForCode("UNKNOWN_CODE", "fallback")).toBe("fallback");
   });
 
+  it("keeps critical catalog messages user-facing and terminology-safe", () => {
+    expect(messageForCode("NO_TENANT_OR_AUTH", "Tenant veya auth bilgisi bulunamadı")).toBe(
+      "Klinik veya oturum bilgisine ulaşılamadı. Lütfen tekrar giriş yapın."
+    );
+    expect(messageForCode("MEMBER_MEASUREMENTS_LIST_ERROR", "fallback")).toBe(
+      "Danışan ölçüm geçmişi getirilemedi."
+    );
+    expect(messageForCode("PACKAGE_TRAINER_ASSIGNMENT_NOT_FOUND", "fallback")).toBe(
+      "Bu paket için uygun eğitmen ataması bulunamadı."
+    );
+    expect(messageForCode("INTERNAL_ERROR", "Sunucu hatası")).toBe(
+      "Bir sorun oluştu. Lütfen tekrar deneyin."
+    );
+  });
+
   it("builds strict intersection for member bookable packages", () => {
     const memberActive = new Map<string, Set<string>>([
       ["m1", new Set(["p1", "p2"])],

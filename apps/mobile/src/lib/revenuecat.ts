@@ -27,6 +27,33 @@ type RevenueCatOfferings = {
   all?: Record<string, RevenueCatOffering>;
 };
 
+type PurchasesClient = {
+  configure(input: { apiKey: string; appUserID: string }): Promise<unknown> | unknown;
+  getOfferings(): Promise<RevenueCatOfferings>;
+  purchasePackage(pkg: RevenueCatPackage): Promise<unknown>;
+  restorePurchases(): Promise<unknown>;
+};
+
+const PURCHASES_UNAVAILABLE_MESSAGE =
+  "Satın alma özelliği şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.";
+const PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE =
+  "Abonelik seçenekleri şu anda yüklenemiyor. Lütfen daha sonra tekrar deneyin.";
+const PURCHASE_FAILED_MESSAGE =
+  "Satın alma tamamlanamadı. Lütfen tekrar deneyin.";
+const PURCHASE_CANCELLED_MESSAGE =
+  "Satın alma işlemi iptal edildi.";
+const RESTORE_FAILED_MESSAGE =
+  "Satın alma kayıtları geri yüklenemedi. Lütfen tekrar deneyin.";
+
+function isUserCancelledPurchase(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const source = error as { userCancelled?: unknown; code?: unknown };
+  if (source.userCancelled === true) return true;
+  if (source.code === 1 || source.code === "1") return true;
+  const code = typeof source.code === "string" ? source.code.toUpperCase() : "";
+  return code.includes("PURCHASE_CANCELLED") || code.includes("USER_CANCELLED");
+}
+
 function getRevenueCatApiKey() {
   const fallbackKey = (process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || "").trim();
   if (Platform.OS === "ios") {
@@ -38,11 +65,12 @@ function getRevenueCatApiKey() {
   return fallbackKey;
 }
 
-function getPurchasesModule() {
+async function getPurchasesModule() {
   try {
-    return require("react-native-purchases").default || require("react-native-purchases");
+    const purchasesModule = await import("react-native-purchases");
+    return (purchasesModule.default || purchasesModule) as unknown as PurchasesClient;
   } catch {
-    throw new Error("RevenueCat native modulu bulunamadi. 'pnpm install' ve development build gerekli.");
+    throw new Error(PURCHASES_UNAVAILABLE_MESSAGE);
   }
 }
 
@@ -51,31 +79,39 @@ let configuredAppUserId: string | null = null;
 export async function configureRevenueCat(appUserId: string) {
   const apiKey = getRevenueCatApiKey();
   if (!apiKey) {
-    throw new Error("RevenueCat API key tanimli degil. EXPO_PUBLIC_REVENUECAT_API_KEY veya platform keyleri gerekli.");
+    throw new Error(PURCHASES_UNAVAILABLE_MESSAGE);
   }
 
-  const Purchases = getPurchasesModule();
+  const Purchases = await getPurchasesModule();
 
   if (configuredAppUserId === appUserId) return;
 
-  await Purchases.configure({
-    apiKey,
-    appUserID: appUserId,
-  });
+  try {
+    await Purchases.configure({
+      apiKey,
+      appUserID: appUserId,
+    });
+  } catch {
+    throw new Error(PURCHASES_UNAVAILABLE_MESSAGE);
+  }
   configuredAppUserId = appUserId;
 }
 
 export async function getRevenueCatOfferings(appUserId: string) {
   await configureRevenueCat(appUserId);
-  const Purchases = getPurchasesModule();
-  return (await Purchases.getOfferings()) as RevenueCatOfferings;
+  const Purchases = await getPurchasesModule();
+  try {
+    return (await Purchases.getOfferings()) as RevenueCatOfferings;
+  } catch {
+    throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
+  }
 }
 
 export async function getRevenueCatCurrentPackage(appUserId: string) {
   const offerings = await getRevenueCatOfferings(appUserId);
   const current = offerings.current;
   if (!current) {
-    throw new Error("RevenueCat current offering bulunamadi.");
+    throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
   }
 
   return current.monthly || current.annual || current.availablePackages?.[0] || null;
@@ -85,7 +121,7 @@ export async function getRevenueCatPlanPackages(appUserId: string) {
   const offerings = await getRevenueCatOfferings(appUserId);
   const current = offerings.current;
   if (!current) {
-    throw new Error("RevenueCat current offering bulunamadi.");
+    throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
   }
 
   const monthly =
@@ -104,7 +140,7 @@ export async function getRevenueCatPackageForPlan(appUserId: string, billingCycl
   const offerings = await getRevenueCatOfferings(appUserId);
   const current = offerings.current;
   if (!current) {
-    throw new Error("RevenueCat current offering bulunamadi.");
+    throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
   }
 
   if (billingCycle === "yearly") {
@@ -115,13 +151,20 @@ export async function getRevenueCatPackageForPlan(appUserId: string, billingCycl
 }
 
 export async function purchaseRevenueCatPackage(appUserId: string, billingCycle: BillingCycle) {
-  const Purchases = getPurchasesModule();
+  const Purchases = await getPurchasesModule();
   const pkg = await getRevenueCatPackageForPlan(appUserId, billingCycle);
   if (!pkg) {
-    throw new Error("Satinalinabilir paket bulunamadi. RevenueCat offering ayarlarini kontrol edin.");
+    throw new Error("Satın alınabilir abonelik paketi bulunamadı. Lütfen daha sonra tekrar deneyin.");
   }
 
-  return Purchases.purchasePackage(pkg);
+  try {
+    return await Purchases.purchasePackage(pkg);
+  } catch (error) {
+    if (isUserCancelledPurchase(error)) {
+      throw new Error(PURCHASE_CANCELLED_MESSAGE);
+    }
+    throw new Error(PURCHASE_FAILED_MESSAGE);
+  }
 }
 
 export async function purchaseRevenueCatCurrentPackage(appUserId: string) {
@@ -130,6 +173,10 @@ export async function purchaseRevenueCatCurrentPackage(appUserId: string) {
 
 export async function restoreRevenueCatPurchases(appUserId: string) {
   await configureRevenueCat(appUserId);
-  const Purchases = getPurchasesModule();
-  return Purchases.restorePurchases();
+  const Purchases = await getPurchasesModule();
+  try {
+    return await Purchases.restorePurchases();
+  } catch {
+    throw new Error(RESTORE_FAILED_MESSAGE);
+  }
 }

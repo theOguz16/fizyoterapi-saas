@@ -18,7 +18,7 @@ export default function PrivacyPage() {
         <h1>Fizyoflow Gizlilik Politikası</h1>
         <p>
           Bu gizlilik politikası, Oğuz Han UYAR tarafından mobil cihazlar ve web için geliştirilen Fizyoflow uygulaması,
-          Fizyoflow web sitesi, admin paneli ve klinik vitrinleri (birlikte "Uygulama" veya "Hizmet" olarak anılacaktır)
+          Fizyoflow web sitesi, admin paneli ve klinik vitrinleri (birlikte &quot;Uygulama&quot; veya &quot;Hizmet&quot; olarak anılacaktır)
           için geçerlidir. Hizmet, fizyoterapi klinikleri, klinik pilates stüdyoları, eğitmenler ve üyeler için dijital
           klinik yönetimi altyapısı sunar.
         </p>
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
 
         <h2>Yapay zeka teknolojileri kullanılıyor mu?</h2>
         <p>
-          Fizyoflow'un mevcut hizmet kapsamı; randevu, paket, klinik vitrini, lead, bildirim ve operasyon yönetimi
+          Fizyoflow&apos;un mevcut hizmet kapsamı; randevu, paket, klinik vitrini, lead, bildirim ve operasyon yönetimi
           süreçlerine odaklanır. Uygulama içinde yapay zeka destekli bir özellik etkinleştirilirse, hangi verilerin hangi
           sağlayıcıya gönderileceği ve açık onay süreci bu politikada veya ilgili özellik ekranında ayrıca belirtilecektir.
         </p>
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
         <h2>Hesabımı ve verilerimi nasıl sildirebilirim?</h2>
         <p>
           Hesabınızı ve Fizyoflow sistemlerinde kayıtlı kişisel verilerinizi silme talebinizi destek@fizyoflow.com
-          adresine "Fizyoflow hesap silme talebi" konu başlığıyla e-posta göndererek iletebilirsiniz. Kimlik doğrulama ve
+          adresine &quot;Fizyoflow hesap silme talebi&quot; konu başlığıyla e-posta göndererek iletebilirsiniz. Kimlik doğrulama ve
           talep kapsamı kontrol edildikten sonra, hesabınızla ilişkili veriler makul süre içinde silinir veya yasal
           saklama yükümlülüğü bulunan kayıtlar erişimi sınırlandırılmış şekilde tutulur. Ayrıntılı yönergeler için{" "}
           <a href="/hesap-silme">Hesap Silme</a> sayfasını ziyaret edebilirsiniz.

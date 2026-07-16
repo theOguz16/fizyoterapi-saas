@@ -4,6 +4,7 @@ import { BackgroundJob, BackgroundJobStatus, BackgroundJobType } from "../entiti
 import { GroupClassReminderService } from "./group-class-reminder.service";
 import { JobLockService } from "./job-lock.service";
 import { LoggerService } from "./logger.service";
+import { ProductDemoLeadRetentionService } from "./product-demo-lead-retention.service";
 import { TrialSubscriptionReminderService } from "./trial-subscription-reminder.service";
 
 const JOB_DEFINITIONS = [
@@ -18,6 +19,12 @@ const JOB_DEFINITIONS = [
     type: BackgroundJobType.TRIAL_SUBSCRIPTION_REMINDER_SCAN,
     intervalSeconds: 30 * 60,
     enabled: () => process.env.ENABLE_TRIAL_SUBSCRIPTION_REMINDER_BATCH !== "false",
+  },
+  {
+    key: "product-demo-lead-retention",
+    type: BackgroundJobType.PRODUCT_DEMO_LEAD_RETENTION,
+    intervalSeconds: 24 * 60 * 60,
+    enabled: () => true,
   },
 ] as const;
 
@@ -76,6 +83,8 @@ export class PersistentBackgroundJobService {
             await GroupClassReminderService.triggerAllTenants({ from: previousCompletedAt, now });
           } else if (job.type === BackgroundJobType.TRIAL_SUBSCRIPTION_REMINDER_SCAN) {
             await TrialSubscriptionReminderService.triggerAllTenants();
+          } else if (job.type === BackgroundJobType.PRODUCT_DEMO_LEAD_RETENTION) {
+            await ProductDemoLeadRetentionService.purgeExpired(now);
           }
           job.status = BackgroundJobStatus.READY;
           job.last_completed_at = new Date();

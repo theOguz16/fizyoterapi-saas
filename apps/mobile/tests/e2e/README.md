@@ -21,6 +21,16 @@ Mevcut Maestro akışları:
 maestro test tests/e2e/maestro
 ```
 
+Release kritik dosyalarının yalnız syntax kontrolü için:
+
+```sh
+pnpm release:e2e:mobile:syntax
+```
+
+Bu komut cihaz sonucu üretmez. Release için `run-critical-e2e.sh` içindeki dokuz akış aynı production EAS build ID'siyle hem fiziksel iOS hem fiziksel Android cihazda çalıştırılır. Her platformun Maestro log/video kaydı `RELEASE_EVIDENCE` manifestindeki `maestro.ios` veya `maestro.android` alanına eklenir.
+
+Deep link ve fiziksel QR farklı kanıtlardır. Deep link URL/scheme açılışını; QR ise cihaz kamerası ile gerçek kod taramasını ve hedef salon ekranını kaydetmelidir. RevenueCat kanıtı da her platform için store sandbox transaction ID, entitlement sonucu ve backend senkronizasyon logunu ayrı tutar. Tam alan matrisi `docs/release-gate.md` içindedir.
+
 Not:
 - iOS tarafında oturum sızıntısını önlemek için flow'lar `launchApp.clearState: true` ve `clearKeychain: true` ile başlar.
 

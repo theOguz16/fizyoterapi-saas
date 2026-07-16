@@ -15,7 +15,7 @@ export default function PrivacyPolicyEnPage() {
         <h1>Fizyoflow Privacy Policy</h1>
         <p>
           This privacy policy applies to the Fizyoflow mobile application, website, admin panel, and public clinic pages
-          developed by Oğuz Han UYAR for mobile and web devices (together, the "App" or the "Service"). Fizyoflow provides
+          developed by Oğuz Han UYAR for mobile and web devices (together, the &quot;App&quot; or the &quot;Service&quot;). Fizyoflow provides
           digital clinic management infrastructure for physiotherapy clinics, clinical pilates studios, trainers, and
           members.
         </p>
@@ -73,7 +73,7 @@ export default function PrivacyPolicyEnPage() {
 
         <h2>Does the App use artificial intelligence?</h2>
         <p>
-          Fizyoflow's current Service focuses on booking, package, clinic page, lead, notification, and operations
+          Fizyoflow&apos;s current Service focuses on booking, package, clinic page, lead, notification, and operations
           management. If an AI-powered feature is enabled in the App, the data sent to the relevant provider and the
           consent flow will be described in this policy or in the relevant feature screen.
         </p>
@@ -115,12 +115,12 @@ export default function PrivacyPolicyEnPage() {
         <h2>How can I delete my account and data?</h2>
         <p>
           You can request deletion of your account and personal data stored in Fizyoflow systems by emailing
-          destek@fizyoflow.com with the subject line "Fizyoflow account deletion request". After identity verification and
+          destek@fizyoflow.com with the subject line &quot;Fizyoflow account deletion request&quot;. After identity verification and
           scope review, data associated with your account will be deleted within a reasonable period, except for records
           that must be retained for legal obligations. See the <a href="/hesap-silme">Account Deletion</a> page for details.
         </p>
 
-        <h2>Children's privacy</h2>
+        <h2>Children&apos;s privacy</h2>
         <p>
           Fizyoflow is not directed to children under 13 and does not knowingly collect personal data from children under
           13. If we become aware that such data has been processed, we will delete it within a reasonable period. Parents or

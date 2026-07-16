@@ -20,6 +20,8 @@ import { GroupClassService } from "../services/group-class.service";
 import { UserPackage } from "../entities/user-package.entity";
 import { isReservedPublicSlug } from "../constants/reserved-slugs";
 import { DemoLeadEmailService } from "../services/demo-lead-email.service";
+import { ProductDemoLead } from "../entities/product-demo-lead.entity";
+import { LoggerService } from "../services/logger.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
@@ -488,6 +490,24 @@ export class PublicController {
     if (note.length > 1200) throw new AppError("VALIDATION_ERROR", 400, "Not çok uzun");
     if (!consent) throw new AppError("VALIDATION_ERROR", 400, "Demo talebi için aydınlatma metni onayı gereklidir");
 
+    const demoLeadRepo = AppDataSource.getRepository(ProductDemoLead);
+    const demoLead = await demoLeadRepo.save(
+      demoLeadRepo.create({
+        source_audit_log_id: null,
+        source: "PRODUCT_SITE_DEMO",
+        full_name: fullName,
+        clinic_name: clinicName,
+        email,
+        phone: phoneClean,
+        city: city || null,
+        note: note || null,
+        clinic_type: clinicType || null,
+        primary_need: primaryNeed || null,
+        attribution: attribution || null,
+        page_path: pagePath || null,
+      })
+    );
+
     await AuditLogService.log({
       tenant_id: null,
       actor_role: "PUBLIC",
@@ -500,19 +520,11 @@ export class PublicController {
       ip_address: req.ip || null,
       user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
       target_type: "product_demo_lead",
-      target_id: null,
+      target_id: demoLead.id,
       metadata: {
+        demo_lead_id: demoLead.id,
         source: "PRODUCT_SITE_DEMO",
-        full_name: fullName,
-        clinic_name: clinicName,
-        email,
-        phone: phoneClean,
-        city: city || null,
-        note: note || null,
-        clinic_type: clinicType || null,
-        primary_need: primaryNeed || null,
-        attribution: attribution || null,
-        page_path: pagePath || null,
+        status: "PERSISTED",
       },
     });
 
@@ -529,7 +541,10 @@ export class PublicController {
       pagePath: pagePath || null,
     });
     if (emailDelivery.errors.length > 0) {
-      console.error("Demo lead email delivery error:", emailDelivery.errors.join("; "));
+      LoggerService.warn("demo_lead_email_delivery_failed", {
+        demo_lead_id: demoLead.id,
+        errors_count: emailDelivery.errors.length,
+      });
     }
 
     await AuditLogService.log({
@@ -542,12 +557,14 @@ export class PublicController {
       status_code: 200,
       success: emailDelivery.adminDelivered && emailDelivery.applicantDelivered,
       target_type: "product_demo_lead",
+      target_id: demoLead.id,
       metadata: {
-        email,
+        demo_lead_id: demoLead.id,
+        status: emailDelivery.adminDelivered && emailDelivery.applicantDelivered ? "DELIVERED" : "PARTIAL_OR_FAILED",
         smtp_configured: emailDelivery.configured,
         admin_delivered: emailDelivery.adminDelivered,
         applicant_delivered: emailDelivery.applicantDelivered,
-        errors: emailDelivery.errors,
+        errors_count: emailDelivery.errors.length,
       },
     });
 

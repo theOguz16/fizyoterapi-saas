@@ -8,5 +8,6 @@ type ClinicImageProps = Omit<ImageProps, "onError">;
 export function ClinicImage(props: ClinicImageProps) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  return <Image {...props} onError={() => setFailed(true)} />;
+  const { alt, ...imageProps } = props;
+  return <Image alt={alt} {...imageProps} onError={() => setFailed(true)} />;
 }

@@ -15,13 +15,13 @@ export default function AccountDeletionPage() {
         <h1>Fizyoflow Hesap Silme Talebi</h1>
         <p>
           Fizyoflow mobil uygulamasında veya web/admin panelinde oluşturduğunuz hesabı ve hesabınızla ilişkili kişisel
-          verileri silme hakkına sahipsiniz. Talebinizi e-posta yoluyla iletebilir veya mobil uygulamadaki "Hesap silme
-          talebi" aksiyonunu kullanabilirsiniz.
+          verileri silme hakkına sahipsiniz. Talebinizi e-posta yoluyla iletebilir veya mobil uygulamadaki &quot;Hesap silme
+          talebi&quot; aksiyonunu kullanabilirsiniz.
         </p>
 
         <h2>Talep nasıl iletilir?</h2>
         <p>
-          destek@fizyoflow.com adresine "Fizyoflow hesap silme talebi" konu başlığıyla e-posta gönderin. E-postanızda
+          destek@fizyoflow.com adresine &quot;Fizyoflow hesap silme talebi&quot; konu başlığıyla e-posta gönderin. E-postanızda
           hesabınızla ilişkili ad soyad, e-posta adresi veya telefon numarasını ve varsa bağlı olduğunuz klinik adını
           paylaşmanız kimlik doğrulama sürecini hızlandırır.
         </p>
@@ -50,7 +50,7 @@ export default function AccountDeletionPage() {
 
         <h2>Mobil uygulamadan erişim</h2>
         <p>
-          Fizyoflow mobil uygulamasında profil veya hesap güvenliği bölümünden "Hesap silme talebi" aksiyonuna
+          Fizyoflow mobil uygulamasında profil veya hesap güvenliği bölümünden &quot;Hesap silme talebi&quot; aksiyonuna
           ulaşabilirsiniz. Bu aksiyon destek@fizyoflow.com adresine hesap silme talebi oluşturmanız için e-posta ekranını
           açar.
         </p>

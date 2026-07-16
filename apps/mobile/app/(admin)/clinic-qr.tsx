@@ -121,7 +121,7 @@ export default function AdminClinicQrScreen() {
         throw new Error("QR görseli henüz hazır değil. Lütfen birkaç saniye sonra tekrar dene.");
       }
 
-      const permission = await MediaLibrary.requestPermissionsAsync();
+      const permission = await MediaLibrary.requestPermissionsAsync(true);
 
       if (!permission.granted) {
         throw new Error("QR görselini galeriye kaydetmek için fotoğraf izni vermelisin.");

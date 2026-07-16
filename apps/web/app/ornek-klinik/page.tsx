@@ -126,7 +126,7 @@ export default function SampleClinicPage() {
           <p className="eyebrow">Fizyoterapi Kliniği · Kadıköy · İstanbul</p>
           <h1>Atlas Fizyo</h1>
           <p className="lead">
-            Kadıköy'de fizyoterapi, klinik pilates ve sporcu rehabilitasyonu için güven veren; ilk temastan düzenli
+            Kadıköy&apos;de fizyoterapi, klinik pilates ve sporcu rehabilitasyonu için güven veren; ilk temastan düzenli
             takibe kadar kliniğin profesyonel ritmini anlatan örnek dijital klinik vitrini.
           </p>
           <div className="hero-actions">
