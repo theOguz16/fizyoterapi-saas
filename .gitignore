@@ -15,6 +15,7 @@ dist
 .next
 coverage
 uploads
+release-evidence/
 
 # Mobile build artifacts
 apps/mobile/build/

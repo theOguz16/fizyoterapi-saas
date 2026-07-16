@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOBILE_PERFORMANCE_BUDGETS, RELEASE_CRITICAL_MOBILE_FLOWS } from "@/lib/release-gate";
+import { MOBILE_PERFORMANCE_BUDGETS, PUSH_RELEASE_SCENARIOS, RELEASE_CRITICAL_MOBILE_FLOWS } from "@/lib/release-gate";
 
 describe("mobile release gate contract", () => {
   it("covers each role and every critical operational flow", () => {
@@ -17,5 +17,16 @@ describe("mobile release gate contract", () => {
     expect(MOBILE_PERFORMANCE_BUDGETS.warmStartMs).toBeLessThanOrEqual(1500);
     expect(MOBILE_PERFORMANCE_BUDGETS.listScrollFps).toBeGreaterThanOrEqual(55);
     expect(MOBILE_PERFORMANCE_BUDGETS.droppedFramePercent).toBeLessThanOrEqual(5);
+  });
+
+  it("requires foreground, background and terminated push proof for every role", () => {
+    expect(PUSH_RELEASE_SCENARIOS).toHaveLength(9);
+    for (const role of ["ADMIN", "TRAINER", "MEMBER"]) {
+      expect(PUSH_RELEASE_SCENARIOS.filter((scenario) => scenario.role === role).map((scenario) => scenario.appState)).toEqual([
+        "foreground",
+        "background",
+        "terminated",
+      ]);
+    }
   });
 });

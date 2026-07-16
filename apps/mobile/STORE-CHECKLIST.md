@@ -42,6 +42,8 @@ Kaynak dosya: `appstore-screenshots/render-appstore-shots.mjs`
 - Uygulama gizlilik metni ve KVKK/aydınlatma linkleri
 - Push izin açıklamaları (iOS/Android)
 - Hesap silme ve destek iletişim linkleri
+- TestFlight build üzerinde fiziksel iPhone push matrisi: admin/trainer/member token kaydı, izin reddi, foreground/background/terminated teslimat ve hedef ekran
+- Her push senaryosu için Maestro logu, ekran görüntüsü, Expo ticket ve Expo/APNs receipt kaydı
 
 ## Build Profilleri
 - development: internal testing
@@ -52,3 +54,5 @@ Kaynak dosya: `appstore-screenshots/render-appstore-shots.mjs`
 1. Internal test (10-20 kullanıcı)
 2. Closed beta
 3. Production: %10 -> %50 -> %100
+
+Store gönderiminden önce `PUSH_RELEASE_EVIDENCE` ve aynı build numarasını taşıyan `PUSH_RELEASE_BUILD` ile `pnpm release:push:mobile` başarılı olmalıdır. Simülatör çıktısı veya önceki build kanıtı kabul edilmez.

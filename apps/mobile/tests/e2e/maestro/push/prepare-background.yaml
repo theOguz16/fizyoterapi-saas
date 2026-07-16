@@ -1,0 +1,8 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: ${PUSH_E2E_HOME_ID}
+    timeout: 20000
+- pressKey: HOME

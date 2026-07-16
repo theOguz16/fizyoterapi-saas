@@ -5,6 +5,10 @@ export const MOBILE_PERFORMANCE_BUDGETS = {
   droppedFramePercent: 5,
 } as const;
 
+export const PUSH_RELEASE_SCENARIOS = (["ADMIN", "TRAINER", "MEMBER"] as const).flatMap((role) =>
+  (["foreground", "background", "terminated"] as const).map((appState) => ({ role, appState }))
+);
+
 export const RELEASE_CRITICAL_MOBILE_FLOWS = [
   { id: "admin-login", role: "ADMIN", kind: "login", mode: "automated", flow: "release-admin-login.yaml" },
   { id: "admin-package", role: "ADMIN", kind: "package", mode: "automated", flow: "admin-package-create-smoke.yaml" },

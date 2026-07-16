@@ -1,0 +1,13 @@
+appId: com.fizyoflow.mobile
+---
+- extendedWaitUntil:
+    visible: ${PUSH_E2E_NOTIFICATION_TITLE}
+    timeout: 30000
+- tapOn: ${PUSH_E2E_NOTIFICATION_TITLE}
+- extendedWaitUntil:
+    visible:
+      id: ${PUSH_E2E_TARGET_ID}
+    timeout: 30000
+- assertVisible:
+    id: ${PUSH_E2E_TARGET_ID}
+- takeScreenshot: ${PUSH_E2E_SCREENSHOT}

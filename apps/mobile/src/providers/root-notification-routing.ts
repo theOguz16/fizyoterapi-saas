@@ -3,6 +3,15 @@ import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { resolveNotificationResponseHref } from "@/lib/push";
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export function useRootNotificationRouting(input: {
   enabled: boolean;
   role?: string | null;

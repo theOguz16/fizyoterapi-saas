@@ -32,6 +32,36 @@ Bu suite metin veya geniş regex yerine ürün ekranındaki `testID` değerlerin
 
 Push testi simülatörde geçerli sayılmaz. Farklı role ait bir bildirim, yanlış rol ekranına düşmemeli; hedef id yoksa rol ana ekranına kontrollü dönmelidir. Bildirim payload sözleşmesi değişirse önce `apps/mobile/tests/unit/push.test.ts` güncellenir, ardından fiziksel cihaz matrisi tekrar çalıştırılır.
 
+### Push kanıtının otomatik toplanması
+
+Gerçek cihaz push testi admin, trainer ve member rollerinin her biri için foreground, background ve terminated durumlarını kapsar; toplam dokuz teslimat/tıklama senaryosu zorunludur. İzin reddi testi fresh-install durumda ayrı çalıştırılır:
+
+```sh
+PUSH_E2E_DEVICE_ID=000081... \
+PUSH_E2E_EVIDENCE_DIR=release-evidence/push-ios-45 \
+PUSH_E2E_MEMBER_EMAIL=... \
+PUSH_E2E_MEMBER_PASSWORD=... \
+pnpm --filter @fitnes-saas/mobile test:e2e:push:permission-denied
+```
+
+İzin iOS Ayarlar'dan tekrar açıldıktan sonra `apps/mobile/tests/e2e/README.md` içindeki rol değişkenleriyle matrix runner çalıştırılır:
+
+```sh
+pnpm --filter @fitnes-saas/mobile test:e2e:push:device
+```
+
+Runner bağlı ve kullanılabilir cihazı `xcrun devicectl` ile fiziksel iPhone olarak doğrular. Her senaryoda Expo ticket, Expo/APNs receipt, Maestro logu ve hedef ekran screenshot'ı üretir. Backend token kayıt sorgusunun rol, `registered` durumu, `isActive: true`, maskeli token sonu ve `checkedAt` alanlarını taşıyan JSON çıktısı her rol için `PUSH_E2E_<ROLE>_REGISTRATION_LOG` olarak verilmelidir; örnek sözleşme `apps/mobile/tests/e2e/README.md` içindedir.
+
+Kanıtı bağımsız doğrulamak için:
+
+```sh
+PUSH_RELEASE_EVIDENCE=release-evidence/push-ios-45/push-release-evidence.json \
+PUSH_RELEASE_BUILD='ios-1.2.3(45)' \
+pnpm release:push:mobile
+```
+
+Doğrulayıcı fiziksel iPhone, TestFlight/production-like ortam, aynı build numarası, en fazla 72 saatlik kanıt, izin reddi, üç rol token kaydı ve dokuz başarılı receipt/tıklama sonucunun tamamını zorunlu tutar.
+
 ## 3. Web Core Web Vitals bütçesi
 
 Staging veya production URL'si üzerinde Chromium ile ölçün:
@@ -86,6 +116,8 @@ WEB_PERF_URL=https://staging.fizyofloww.com \
 WEB_PERF_INTERACTION_SELECTOR='a[href="#product"]' \
 MOBILE_PERFORMANCE_EVIDENCE=release-evidence/mobile-performance.json \
 MOBILE_PERFORMANCE_PLATFORMS=ios \
+PUSH_RELEASE_EVIDENCE=release-evidence/push-ios-45/push-release-evidence.json \
+PUSH_RELEASE_BUILD='ios-1.2.3(45)' \
 pnpm release:gate
 ```
 

@@ -114,8 +114,8 @@ export default function NotificationPermissionScreen() {
       icon="notifications"
       footer={
         <View style={styles.footer}>
-          <ActionButton label="İzin ver ve devam et" icon="notifications" onPress={handleAllow} loading={loading} />
-          <ActionButton label="Şimdilik atla" icon="spark" variant="ghost" onPress={() => void handleSkip()} />
+          <ActionButton testID="notification-permission-allow" label="İzin ver ve devam et" icon="notifications" onPress={handleAllow} loading={loading} />
+          <ActionButton testID="notification-permission-skip" label="Şimdilik atla" icon="spark" variant="ghost" onPress={() => void handleSkip()} />
         </View>
       }
     >
@@ -124,12 +124,12 @@ export default function NotificationPermissionScreen() {
           <MetricCard key={metric.label} label={metric.label} value={metric.value} hint={metric.hint} icon={metric.icon} />
         ))}
       </View>
-      <SurfaceCard>
+      <SurfaceCard testID="notification-permission-status">
         <Text style={styles.copy}>{content.primaryCopy}</Text>
       </SurfaceCard>
       <SurfaceCard>
         <Text style={styles.copy}>{content.secondaryCopy}</Text>
-        <Text style={styles.caption}>
+        <Text testID={`notification-permission-status-${notificationPermissionStatus}`} style={styles.caption}>
           {notificationPermissionStatus === "denied"
             ? "Bildirimler şu anda kapalı. Bu tercihi daha sonra cihaz ayarlarından veya uygulama içi bildirim tercihleri alanından güncelleyebilirsin."
             : "İzin vermesen de uygulamayı kullanmaya devam edebilirsin. Sadece zaman kritik hatırlatmalar cihazına düşmez."}

@@ -1,0 +1,45 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: ${PUSH_E2E_EMAIL}
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "login-password-input"
+    direction: DOWN
+- tapOn:
+    id: "login-password-input"
+    retryTapIfNoChange: true
+- inputText: ${PUSH_E2E_PASSWORD}
+- tapOn:
+    id: "login-submit-button"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible:
+        id: "notification-permission-allow"
+    commands:
+      - tapOn:
+          id: "notification-permission-allow"
+      - runFlow:
+          when:
+            visible: "Allow|İzin Ver"
+          commands:
+            - tapOn: "Allow|İzin Ver"
+- extendedWaitUntil:
+    visible:
+      id: ${PUSH_E2E_HOME_ID}
+    timeout: 30000
+- assertVisible:
+    id: ${PUSH_E2E_HOME_ID}
+- takeScreenshot: ${PUSH_E2E_SCREENSHOT}
