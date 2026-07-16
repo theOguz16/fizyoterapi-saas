@@ -10,6 +10,12 @@ import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";
 import { getUserFacingMessage } from "@/lib/user-feedback";
+import {
+  createRegistrationLegalConsent,
+  EMPTY_LEGAL_CONSENT_SELECTION,
+  getLegalConsentValidationMessage,
+} from "@/lib/legal-consent";
+import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -23,7 +29,7 @@ export default function RegisterScreen() {
     password: "",
     repeat: "",
   });
-  const [agreed, setAgreed] = useState(true);
+  const [legalConsent, setLegalConsent] = useState(EMPTY_LEGAL_CONSENT_SELECTION);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const introOpacity = useState(() => new Animated.Value(0))[0];
@@ -55,8 +61,9 @@ export default function RegisterScreen() {
       setError("Şifreler eşleşmiyor.");
       return;
     }
-    if (!agreed) {
-      setError("KVKK ve kullanım koşullarını onaylamalısın.");
+    const legalError = getLegalConsentValidationMessage(legalConsent);
+    if (legalError) {
+      setError(legalError);
       return;
     }
 
@@ -76,6 +83,7 @@ export default function RegisterScreen() {
           rhythm: signupOnboarding.rhythm,
           support_style: signupOnboarding.supportStyle,
         },
+        legal_consent: createRegistrationLegalConsent(legalConsent),
       });
       resetSignupFlow();
     } catch (err) {
@@ -114,12 +122,7 @@ export default function RegisterScreen() {
             <FormField inputId="register-phone-input" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
             <FormField inputId="register-password-input" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="Şifreni oluştur" secureTextEntry />
             <FormField inputId="register-repeat-input" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry />
-            <Pressable onPress={() => setAgreed((prev) => !prev)} style={({ pressed }) => [styles.checkboxRow, pressed ? styles.checkboxPressed : null]}>
-              <View style={[styles.checkboxBox, agreed ? styles.checkboxBoxActive : null]}>
-                <Text style={styles.checkboxMark}>{agreed ? "✓" : ""}</Text>
-              </View>
-              <Text style={styles.checkbox}>KVKK ve kullanım koşullarını kabul ediyorum</Text>
-            </Pressable>
+            <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="CLINIC_OWNER" />
             {error ? <Text style={styles.error}>{error}</Text> : null}
           </SurfaceCard>
         </AnimatedEntrance>
@@ -155,44 +158,11 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.md,
     fontFamily: tokens.fontFamily.semibold,
   },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: tokens.spacing.sm,
-  },
-  checkboxPressed: {
-    opacity: 0.92,
-  },
-  checkboxBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: tokens.colors.borderStrong,
-    backgroundColor: tokens.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxBoxActive: {
-    backgroundColor: tokens.colors.primaryStrong,
-    borderColor: tokens.colors.primaryStrong,
-  },
-  checkboxMark: {
-    color: "#FFFFFF",
-    fontSize: tokens.font.xs,
-    fontFamily: tokens.fontFamily.bold,
-  },
   helper: {
     color: tokens.colors.textMuted,
     fontSize: tokens.font.sm,
     lineHeight: tokens.lineHeight.normal,
     fontFamily: tokens.fontFamily.regular,
-  },
-  checkbox: {
-    color: tokens.colors.text,
-    fontSize: tokens.font.sm,
-    fontFamily: tokens.fontFamily.medium,
-    flex: 1,
   },
   error: {
     color: tokens.colors.danger,

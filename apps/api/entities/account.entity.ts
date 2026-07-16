@@ -3,6 +3,7 @@
 import { Column, Entity, Index } from "typeorm";
 import { BaseEntityWithTimestamps } from "./base.entity";
 import { UserRole } from "./user.entity";
+import type { StoredRegistrationLegalConsent } from "@fitnes-saas/contracts";
 
 @Entity("accounts")
 export class Account extends BaseEntityWithTimestamps {
@@ -18,6 +19,9 @@ export class Account extends BaseEntityWithTimestamps {
 
   @Column({ type: "jsonb", nullable: true })
   notification_preferences?: Record<string, unknown> | null;
+
+  @Column({ type: "jsonb", nullable: true })
+  legal_consents?: StoredRegistrationLegalConsent | null;
 
   @Index({ unique: true })
   @Column({ type: "varchar", length: 140 })

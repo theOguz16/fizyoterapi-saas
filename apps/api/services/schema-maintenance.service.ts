@@ -58,7 +58,8 @@ export class SchemaMaintenanceService {
 
     await dataSource.query(`
       ALTER TABLE IF EXISTS accounts
-      ADD COLUMN IF NOT EXISTS notification_preferences jsonb
+      ADD COLUMN IF NOT EXISTS notification_preferences jsonb,
+      ADD COLUMN IF NOT EXISTS legal_consents jsonb
     `);
 
     await dataSource.query(`

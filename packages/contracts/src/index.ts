@@ -18,6 +18,8 @@ export {
   PRODUCT_EVENT_NAMES,
   PUBLIC_PRODUCT_EVENT_NAMES,
 } from "./analytics";
+export { LEGAL_DOCUMENT_VERSION } from "./legal-consent";
+export type { RegistrationLegalConsent, StoredRegistrationLegalConsent } from "./legal-consent";
 export type {
   ProductEventMetadataValue,
   ProductEventName,

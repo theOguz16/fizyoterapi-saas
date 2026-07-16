@@ -3,9 +3,12 @@
 import { Request, Response } from "express";
 import type {
   MembershipLifecycleState,
+  RegistrationLegalConsent,
   RecommendedEntrySurface,
   SessionEnvelope,
+  StoredRegistrationLegalConsent,
 } from "@fitnes-saas/contracts";
+import { LEGAL_DOCUMENT_VERSION } from "@fitnes-saas/contracts";
 import jwt from "jsonwebtoken";
 import { AppDataSource } from "../data-source";
 import { User, UserRole } from "../entities/user.entity";
@@ -46,6 +49,7 @@ type RegisterInput = {
     rhythm?: string;
     support_style?: string;
   };
+  legal_consent?: RegistrationLegalConsent;
 };
 
 type ClinicMemberRegisterInput = {
@@ -56,6 +60,7 @@ type ClinicMemberRegisterInput = {
   phone: string;
   tenant_slug: string;
   join_source?: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+  legal_consent?: RegistrationLegalConsent;
 };
 
 // AuthController sadece login/register degil,
@@ -75,7 +80,7 @@ export class AuthController {
   }
 
   static async register(req: Request, res: Response) {
-    const { email, password, first_name, last_name, phone, account_type, onboarding_profile } = req.body as RegisterInput;
+    const { email, password, first_name, last_name, phone, account_type, onboarding_profile, legal_consent } = req.body as RegisterInput;
     if (!email || !password || !first_name || !last_name || !phone) {
       throw new AppError("VALIDATION_ERROR", 422, "Ad, soyad, telefon, e-posta ve şifre zorunludur");
     }
@@ -89,6 +94,7 @@ export class AuthController {
         "Eğitmen ve üye hesapları klinik daveti, salon QR kodu veya salon bağlantısıyla oluşturulmalıdır"
       );
     }
+    const legalConsents = AuthController.normalizeLegalConsents(legal_consent, "MOBILE_CLINIC_OWNER_REGISTER");
 
     const accountRepo = AppDataSource.getRepository(Account);
     const normalizedEmail = email.trim().toLowerCase();
@@ -106,6 +112,7 @@ export class AuthController {
       phone: phone.replace(/\D+/g, ""),
       global_role_default: UserRole.ADMIN,
       onboarding_profile: AuthController.normalizeOnboardingProfile(onboarding_profile),
+      legal_consents: legalConsents,
       is_active: true,
     });
     await accountRepo.save(account);
@@ -147,6 +154,8 @@ export class AuthController {
         email: account.email,
         onboarding_state: session.onboardingState,
         signup_scope: "CLINIC_OWNER",
+        legal_document_version: legalConsents.terms.version,
+        marketing_consent: legalConsents.marketing.granted,
       },
     });
 
@@ -154,7 +163,7 @@ export class AuthController {
   }
 
   static async registerClinicMember(req: Request, res: Response) {
-    const { email, password, first_name, last_name, phone, tenant_slug, join_source } =
+    const { email, password, first_name, last_name, phone, tenant_slug, join_source, legal_consent } =
       req.body as ClinicMemberRegisterInput;
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedSlug = String(tenant_slug || "").trim().toLowerCase();
@@ -171,6 +180,7 @@ export class AuthController {
     if (String(password).length < 8) {
       throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
     }
+    const legalConsents = AuthController.normalizeLegalConsents(legal_consent, "MOBILE_CLINIC_MEMBER_REGISTER");
 
     const tenantRepo = AppDataSource.getRepository(Tenant);
     const tenant = await TenantLifecycleService.syncTenantState(
@@ -200,6 +210,7 @@ export class AuthController {
       phone: normalizedPhone,
       global_role_default: UserRole.MEMBER,
       onboarding_profile: null,
+      legal_consents: legalConsents,
       is_active: true,
     });
     await accountRepo.save(account);
@@ -239,6 +250,8 @@ export class AuthController {
         email: account.email,
         tenant_slug: tenant.slug,
         join_source: normalizedJoinSource,
+        legal_document_version: legalConsents.terms.version,
+        marketing_consent: legalConsents.marketing.granted,
       },
     });
 
@@ -260,6 +273,33 @@ export class AuthController {
       primary_goal,
       rhythm,
       support_style,
+    };
+  }
+
+  private static normalizeLegalConsents(
+    input: RegistrationLegalConsent | undefined,
+    source: StoredRegistrationLegalConsent["source"]
+  ): StoredRegistrationLegalConsent {
+    if (!input?.terms_accepted) {
+      throw new AppError("TERMS_REQUIRED", 422, "Kullanım Şartları kabul edilmelidir");
+    }
+    if (!input.privacy_notice_acknowledged) {
+      throw new AppError("PRIVACY_NOTICE_REQUIRED", 422, "KVKK Aydınlatma Metni okunarak bilgi edinilmelidir");
+    }
+    if (input.document_version !== LEGAL_DOCUMENT_VERSION) {
+      throw new AppError("LEGAL_DOCUMENT_VERSION_MISMATCH", 409, "Hukuki metinler güncellendi. Lütfen metinleri yeniden inceleyin");
+    }
+
+    const recordedAt = new Date().toISOString();
+    return {
+      terms: { accepted_at: recordedAt, version: LEGAL_DOCUMENT_VERSION },
+      privacy_notice: { acknowledged_at: recordedAt, version: LEGAL_DOCUMENT_VERSION },
+      marketing: {
+        granted: input.marketing_consent === true,
+        updated_at: recordedAt,
+        version: LEGAL_DOCUMENT_VERSION,
+      },
+      source,
     };
   }
 

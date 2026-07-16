@@ -1,6 +1,7 @@
 // Mobile API auth domain endpointleri.
 import { httpRequest } from "../http-client";
 import { isE2EModeEnabled } from "../e2e-mode";
+import type { RegistrationLegalConsent } from "@fitnes-saas/contracts";
 import type { ActiveMembership, MemberChangeRequest, MembershipLifecycleState, PaymentRequest, QrScanContext, RecommendedEntrySurface, SessionEnvelope, SessionRole, SessionUser } from "./types";
 
 // Auth endpointleri SessionEnvelope donduruyor.
@@ -18,6 +19,7 @@ export async function registerApi(input: {
     rhythm: string;
     support_style: string;
   };
+  legal_consent: RegistrationLegalConsent;
 }) {
   return httpRequest<SessionEnvelope>("/auth/register", {
     method: "POST",
@@ -34,6 +36,7 @@ export async function registerClinicMemberApi(input: {
   phone: string;
   tenant_slug: string;
   join_source: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+  legal_consent: RegistrationLegalConsent;
 }) {
   return httpRequest<SessionEnvelope>("/auth/register-clinic-member", {
     method: "POST",

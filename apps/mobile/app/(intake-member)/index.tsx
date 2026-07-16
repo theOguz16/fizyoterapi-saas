@@ -5,8 +5,7 @@ import { safeBack } from "@/lib/navigation";
 import { useAppFlow } from "@/providers/app-flow";
 import { OnboardingQuestionStage, type OnboardingOption } from "@/theme/components/onboarding-question-stage";
 import type { AppIconName } from "@/theme/components/app-icon";
-import { getPendingSalonJoinSlug, getStoredSignupOnboardingProfile } from "@/lib/local-preferences";
-import { mapSignupProfileToMemberIntentDefaults } from "@/lib/signup-onboarding";
+import { getPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { resolveMemberSalonConnection } from "@/lib/salon-discovery";
 import { MarketingShell } from "@/theme/components/marketing-shell";
 import { ActionButton } from "@/theme/components/action-button";
@@ -14,7 +13,7 @@ import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
 
 type MemberQuestion = {
-  key: "goal" | "issue" | "expectation" | "weeklyDays" | "timePreference";
+  key: "goal" | "expectation" | "weeklyDays" | "timePreference";
   icon: AppIconName;
   eyebrow: string;
   title: string;
@@ -28,40 +27,17 @@ const QUESTIONS: MemberQuestion[] = [
   {
     key: "goal",
     icon: "spark",
-    eyebrow: "Başlangıç odağı",
-    title: "Seni en iyi hangi hedef tanımlar?",
-    subtitle: "Buradaki amaç sana bir şey satmak değil; doğru salonu ve ritmi daha hızlı bulmak.",
-    helperText: "İlk seçimin, keşif listesindeki öncelikleri ve öneri dilini şekillendirir.",
-    badgeLabel: "Keşif başlangıcı",
+    eyebrow: "Hizmet tercihi",
+    title: "Nasıl bir hizmeti incelemek istersin?",
+    subtitle: "Klinik bağlantın olmadığı için yalnızca keşif tercihini soruyoruz; belirti, tanı veya sağlık geçmişi istemiyoruz.",
+    helperText: "Bu geçici seçim yalnızca yayınlanmış klinik ve paketleri sıralamak için kullanılır.",
+    badgeLabel: "Minimum veri",
     options: [
-      { value: "Daha sağlıklı hissetmek istiyorum", label: "Daha sağlıklı hissetmek istiyorum", description: "Enerjimi yükseltmek ve günlük hayatımda daha iyi hissetmek istiyorum.", icon: "spark" },
-      { value: "Ağrılarımı azaltmak istiyorum", label: "Ağrılarımı azaltmak istiyorum", description: "Bel, boyun veya sırt hattında beni zorlayan konulara odaklanmak istiyorum.", icon: "shield" },
-      { value: "Duruşumu düzeltmek istiyorum", label: "Duruşumu düzeltmek istiyorum", description: "Daha dengeli bir postür ve daha kontrollü bir beden kullanımı hedefliyorum.", icon: "ruler" },
-      { value: "Antrenman ve performans hedefim var", label: "Antrenman ve performans hedefim var", description: "Gücümü, kondisyonumu veya sportif performansımı düzenli takip etmek istiyorum.", icon: "target" },
-      { value: "Çocuğum için uygun ders arıyorum", label: "Çocuğum için uygun ders arıyorum", description: "Çocuk yogası, pediatrik destek veya yaşına uygun güvenli bir hareket akışı arıyorum.", icon: "members" },
-      { value: "Kilo / yağ / kas takibi istiyorum", label: "Kilo / yağ / kas takibi istiyorum", description: "Ölçülebilir sonuçlarla ilerlemek ve değişimi net görmek istiyorum.", icon: "measurements" },
-      { value: "Düzenli egzersiz alışkanlığı kazanmak istiyorum", label: "Düzenli egzersiz alışkanlığı kazanmak istiyorum", description: "Sürdürülebilir bir rutin kurup devamlılığı önceliklemek istiyorum.", icon: "calendar" },
-    ],
-  },
-  {
-    key: "issue",
-    icon: "shield",
-    eyebrow: "Zorluk alanı",
-    title: "Şu an seni en çok zorlayan konu ne?",
-    subtitle: "En büyük zorluk noktası, sana uygun yapı ve salon tipini daha doğru belirlememizi sağlar.",
-    helperText: "Buradaki cevap, öneri sıralamasında yaklaşım farkı yaratır.",
-    badgeLabel: "Netleştiriyoruz",
-    options: [
-      { value: "Bel / boyun / sırt ağrısı", label: "Bel / boyun / sırt ağrısı", description: "Daha kontrollü, güvenli ve dikkatli ilerlemek istiyorum.", icon: "shield" },
-      { value: "Skolyoz / postür takibi", label: "Skolyoz / postür takibi", description: "Skolyoz, duruş veya omurga hattı için daha hedefli bir program arıyorum.", icon: "ruler" },
-      { value: "Hareketsizlik", label: "Hareketsizlik", description: "Günlük tempoma düzenli hareket eklemek istiyorum.", icon: "progress" },
-      { value: "Kilo kontrolü", label: "Kilo kontrolü", description: "Takip edilebilir bir planla daha net sonuç görmek istiyorum.", icon: "measurements" },
-      { value: "Antrenman / performans", label: "Antrenman / performans", description: "Güç, kondisyon veya spora dönüş odağında daha planlı ilerlemek istiyorum.", icon: "target" },
-      { value: "Çocuk yogası / pediatrik destek", label: "Çocuk yogası / pediatrik destek", description: "Çocuklara uygun, güvenli ve gelişim odaklı bir ders yapısı arıyorum.", icon: "members" },
-      { value: "Gebelik / doğum sonrası", label: "Gebelik / doğum sonrası", description: "Gebelik veya doğum sonrası döneme uygun kontrollü egzersiz istiyorum.", icon: "spark" },
-      { value: "Düzenli devam edememek", label: "Düzenli devam edememek", description: "Takvime oturan sürdürülebilir bir ritim kurmak istiyorum.", icon: "calendar" },
-      { value: "Stres / gerginlik", label: "Stres / gerginlik", description: "Beni rahatlatan ve iyi hissettiren bir akış arıyorum.", icon: "progress" },
-      { value: "Diğer", label: "Diğer", description: "Tam olarak tek başlıkta toplanmayan farklı bir ihtiyacım var.", icon: "notes" },
+      { value: "Birebir ders", label: "Birebir ders", description: "Tek uzmanla kişisel bir ders düzenini incelemek istiyorum.", icon: "member" },
+      { value: "Grup dersi", label: "Grup dersi", description: "Küçük veya düzenli grup seçeneklerini karşılaştırmak istiyorum.", icon: "members" },
+      { value: "Klinik pilates / reformer", label: "Klinik pilates / reformer", description: "Klinik ve stüdyoların pilates seçeneklerini görmek istiyorum.", icon: "spark" },
+      { value: "Genel hareket programı", label: "Genel hareket programı", description: "Düzenli bir hareket rutini için sunulan paketleri incelemek istiyorum.", icon: "calendar" },
+      { value: "Henüz karar vermedim", label: "Henüz karar vermedim", description: "Önce klinikleri ve sundukları hizmetleri görmek istiyorum.", icon: "salon" },
     ],
   },
   {
@@ -139,26 +115,6 @@ export default function IntakeQuestionFlowScreen() {
     };
   }, [router]);
 
-  useEffect(() => {
-    let mounted = true;
-    void getStoredSignupOnboardingProfile("MEMBER").then((profile) => {
-      if (!mounted || !profile) return;
-      const defaults = mapSignupProfileToMemberIntentDefaults(profile);
-      setMemberIntent({
-        ...memberIntent,
-        goal: memberIntent.goal || defaults.goal,
-        issue: memberIntent.issue || defaults.issue,
-        expectation: memberIntent.expectation || defaults.expectation,
-        weeklyDays: memberIntent.weeklyDays || defaults.weeklyDays,
-      });
-    });
-    return () => {
-      mounted = false;
-    };
-    // Stored onboarding answers should hydrate the intake only once.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   if (!connectionChecked) {
     return <View style={styles.loadingScreen} />;
   }
@@ -189,7 +145,10 @@ export default function IntakeQuestionFlowScreen() {
               label="Klinikleri incele"
               icon="salon"
               variant="ghost"
-              onPress={() => setShowDiscoveryQuestions(true)}
+              onPress={() => {
+                setMemberIntent({ ...memberIntent, goal: "", issue: "" });
+                setShowDiscoveryQuestions(true);
+              }}
             />
           </View>
         }
@@ -206,6 +165,9 @@ export default function IntakeQuestionFlowScreen() {
             description="Kliniğinin mesajla gönderdiği bağlantı ve davet kodu da aynı salon bağlamını güvenle korur."
           />
           <Text style={styles.discoveryNote}>Henüz bir kliniğin yoksa yayınlanmış klinikleri ikincil keşif adımından inceleyebilirsin.</Text>
+          <Text style={styles.dataPurposeNote}>
+            Keşif sırasında sağlık geçmişi, tanı veya belirti istemeyiz. Ayrıntılı sağlık bilgileri ancak bir kliniğe bağlandıktan sonra, ilgili hizmet için gerekli olduğu ölçüde ve ayrıca bilgilendirilerek alınabilir.
+          </Text>
         </View>
       </MarketingShell>
     );
@@ -294,4 +256,5 @@ const styles = StyleSheet.create({
   connectionTitle: { color: tokens.colors.text, fontSize: tokens.font.md, fontFamily: tokens.fontFamily.semibold },
   connectionDescription: { color: tokens.colors.textMuted, fontSize: tokens.font.sm, lineHeight: tokens.lineHeight.normal, fontFamily: tokens.fontFamily.regular },
   discoveryNote: { color: tokens.colors.textMuted, fontSize: tokens.font.xs, lineHeight: 18, fontFamily: tokens.fontFamily.medium },
+  dataPurposeNote: { color: tokens.colors.text, fontSize: tokens.font.xs, lineHeight: 18, fontFamily: tokens.fontFamily.regular },
 });

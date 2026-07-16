@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           klinik yönetimi altyapısı sunar.
         </p>
         <p>
-          Bu metin 26.05.2026 tarihinden itibaren geçerlidir. Hizmetin bazı bölümleri ilgili klinik veya işletme hesabı
+          Bu metin 16.07.2026 tarihinden itibaren geçerlidir. Hizmetin bazı bölümleri ilgili klinik veya işletme hesabı
           adına kullanılabilir; bu durumda klinik kendi danışanları ve çalışanları ile ilgili süreçlerde ayrıca veri
           sorumlusu veya veri işleyen rolünde olabilir.
         </p>
@@ -41,6 +41,11 @@ export default function PrivacyPage() {
           bilgiler yalnızca hizmetin sunulması, klinik operasyonunun yürütülmesi ve kullanıcının uygulama deneyiminin
           sağlanması amacıyla işlenir. Fizyoflow acil sağlık hizmeti, tanı veya tedavi hizmeti sunmaz; sağlık hizmetinin
           uygulanmasından ilgili klinik veya uzman sorumludur.
+        </p>
+        <p>
+          Klinik bağlantısı kurulmadan önceki genel keşif akışı belirti, tanı, gebelik durumu veya sağlık geçmişi istemez.
+          Sağlıkla ilişkili özel nitelikli veriler ancak bağlı klinikteki ilgili özellik kullanıldığında, amaçla sınırlı
+          biçimde ve uygulanabilir hukuki işleme şartı sağlanarak alınır.
         </p>
 
         <h2>Otomatik olarak hangi bilgiler toplanır?</h2>
@@ -102,6 +107,14 @@ export default function PrivacyPage() {
           üzerinden yönetebilirsiniz.
         </p>
 
+        <h2>Kayıt beyanları ve pazarlama tercihi</h2>
+        <p>
+          Kullanım Şartları kabulü, KVKK Aydınlatma Metni&apos;nin okunduğuna ilişkin bildirim ve isteğe bağlı pazarlama
+          tercihi ayrı kaydedilir. Aydınlatma metnini okuduğunuzu belirtmeniz açık rıza verdiğiniz anlamına gelmez.
+          Pazarlama iletişimini reddetmeniz hesap açmanızı veya temel hizmetleri kullanmanızı engellemez; bu tercihi daha
+          sonra geri alabilirsiniz.
+        </p>
+
         <h2>Vazgeçme haklarınız nelerdir?</h2>
         <p>
           Uygulamayı cihazınızdan kaldırarak mobil uygulama kaynaklı yeni veri toplamayı durdurabilirsiniz. Bildirimleri
@@ -142,8 +155,9 @@ export default function PrivacyPage() {
 
         <h2>Değişiklikler</h2>
         <p>
-          Bu gizlilik politikası zaman zaman güncellenebilir. Güncel metin bu sayfada yayımlanır. Hizmeti kullanmaya devam
-          etmeniz, yürürlükteki politika kapsamında veri işleme faaliyetlerini kabul ettiğiniz anlamına gelebilir.
+          Bu gizlilik politikası zaman zaman güncellenebilir. Güncel metin ve yürürlük tarihi bu sayfada yayımlanır.
+          Yeni bir açık rıza gerektiren amaç ortaya çıkarsa yalnızca hizmeti kullanmaya devam etmeniz rıza sayılmaz;
+          ilgili tercih ayrıca istenir.
         </p>
 
         <h2>İletişim</h2>

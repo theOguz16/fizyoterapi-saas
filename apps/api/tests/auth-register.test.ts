@@ -7,6 +7,14 @@ import { Account } from "../entities/account.entity";
 import { Tenant, TenantReviewStatus, TenantSubscriptionStatus } from "../entities/tenant.entity";
 import { AuditLogService } from "../services/audit-log.service";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
+import { LEGAL_DOCUMENT_VERSION } from "@fitnes-saas/contracts";
+
+const legalConsent = {
+  terms_accepted: true,
+  privacy_notice_acknowledged: true,
+  marketing_consent: false,
+  document_version: LEGAL_DOCUMENT_VERSION,
+};
 
 describe("auth public register", () => {
   beforeEach(() => {
@@ -59,6 +67,7 @@ describe("auth public register", () => {
           rhythm: "steady",
           support_style: "control",
         },
+        legal_consent: legalConsent,
       },
       method: "POST",
       originalUrl: "/api/auth/register",
@@ -76,6 +85,10 @@ describe("auth public register", () => {
       expect.objectContaining({
         global_role_default: UserRole.ADMIN,
         onboarding_profile: expect.objectContaining({ role: UserRole.ADMIN }),
+        legal_consents: expect.objectContaining({
+          source: "MOBILE_CLINIC_OWNER_REGISTER",
+          marketing: expect.objectContaining({ granted: false }),
+        }),
       })
     );
     expect(res.json).toHaveBeenCalledWith(
@@ -121,6 +134,7 @@ describe("auth public register", () => {
         phone: "05550000000",
         tenant_slug: "demo-clinic",
         join_source: "QR",
+        legal_consent: { ...legalConsent, marketing_consent: true },
       },
       method: "POST",
       originalUrl: "/api/auth/register-clinic-member",
@@ -132,7 +146,13 @@ describe("auth public register", () => {
     await AuthController.registerClinicMember(req, res);
 
     expect(accountRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ global_role_default: UserRole.MEMBER })
+      expect.objectContaining({
+        global_role_default: UserRole.MEMBER,
+        legal_consents: expect.objectContaining({
+          source: "MOBILE_CLINIC_MEMBER_REGISTER",
+          marketing: expect.objectContaining({ granted: true }),
+        }),
+      })
     );
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -168,10 +188,54 @@ describe("auth public register", () => {
             last_name: "Member",
             phone: "05550000000",
             tenant_slug: "hidden-clinic",
+            legal_consent: legalConsent,
           },
         } as any,
         {} as any
       )
     ).rejects.toEqual(expect.objectContaining<AppError>({ code: "SALON_NOT_PUBLIC", statusCode: 409 }));
+  });
+
+  it("rejects registration when mandatory legal declarations are missing", async () => {
+    const baseRequest = {
+      body: {
+        email: "owner@example.com",
+        password: "strong-pass",
+        first_name: "Clinic",
+        last_name: "Owner",
+        phone: "05550000000",
+        account_type: "CLINIC_ADMIN",
+      },
+    } as any;
+
+    await expect(AuthController.register(baseRequest, {} as any)).rejects.toEqual(
+      expect.objectContaining<AppError>({ code: "TERMS_REQUIRED", statusCode: 422 })
+    );
+
+    baseRequest.body.legal_consent = {
+      ...legalConsent,
+      privacy_notice_acknowledged: false,
+    };
+    await expect(AuthController.register(baseRequest, {} as any)).rejects.toEqual(
+      expect.objectContaining<AppError>({ code: "PRIVACY_NOTICE_REQUIRED", statusCode: 422 })
+    );
+  });
+
+  it("rejects a stale legal document version", async () => {
+    const req = {
+      body: {
+        email: "owner@example.com",
+        password: "strong-pass",
+        first_name: "Clinic",
+        last_name: "Owner",
+        phone: "05550000000",
+        account_type: "CLINIC_ADMIN",
+        legal_consent: { ...legalConsent, document_version: "stale-version" },
+      },
+    } as any;
+
+    await expect(AuthController.register(req, {} as any)).rejects.toEqual(
+      expect.objectContaining<AppError>({ code: "LEGAL_DOCUMENT_VERSION_MISMATCH", statusCode: 409 })
+    );
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getPendingSalonJoinIntent, type SalonJoinIntentSource } from "@/lib/local-preferences";
 import { getUserFacingMessage } from "@/lib/user-feedback";
@@ -10,6 +10,12 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";
+import {
+  createRegistrationLegalConsent,
+  EMPTY_LEGAL_CONSENT_SELECTION,
+  getLegalConsentValidationMessage,
+} from "@/lib/legal-consent";
+import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
 
 export default function ClinicMemberRegisterScreen() {
   const router = useRouter();
@@ -18,7 +24,7 @@ export default function ClinicMemberRegisterScreen() {
   const { memberBookingDraft } = useAppFlow();
   const { registerClinicMember } = useSession();
   const [joinSource, setJoinSource] = useState<SalonJoinIntentSource>("DEEPLINK");
-  const [agreed, setAgreed] = useState(true);
+  const [legalConsent, setLegalConsent] = useState(EMPTY_LEGAL_CONSENT_SELECTION);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -45,8 +51,9 @@ export default function ClinicMemberRegisterScreen() {
       setError("Şifreler eşleşmiyor.");
       return;
     }
-    if (!agreed) {
-      setError("KVKK ve kullanım koşullarını onaylamalısın.");
+    const legalError = getLegalConsentValidationMessage(legalConsent);
+    if (legalError) {
+      setError(legalError);
       return;
     }
 
@@ -61,6 +68,7 @@ export default function ClinicMemberRegisterScreen() {
         password: form.password,
         tenant_slug: slug,
         join_source: joinSource,
+        legal_consent: createRegistrationLegalConsent(legalConsent),
       });
       router.replace({
         pathname: memberBookingDraft.packageId
@@ -110,12 +118,7 @@ export default function ClinicMemberRegisterScreen() {
         <FormField inputId="member-register-phone" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
         <FormField inputId="member-register-password" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="En az 8 karakter" secureTextEntry />
         <FormField inputId="member-register-repeat" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry />
-        <Pressable onPress={() => setAgreed((value) => !value)} style={styles.checkboxRow}>
-          <View style={[styles.checkboxBox, agreed ? styles.checkboxBoxActive : null]}>
-            <Text style={styles.checkboxMark}>{agreed ? "✓" : ""}</Text>
-          </View>
-          <Text style={styles.checkboxText}>KVKK ve kullanım koşullarını kabul ediyorum</Text>
-        </Pressable>
+        <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="CLINIC_MEMBER" />
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </SurfaceCard>
     </MarketingShell>
@@ -127,10 +130,5 @@ const styles = StyleSheet.create({
   eyebrow: { color: tokens.colors.primaryStrong, fontSize: tokens.font.xs, fontFamily: tokens.fontFamily.bold },
   clinic: { color: tokens.colors.text, fontSize: tokens.font.lg, fontFamily: tokens.fontFamily.bold },
   helper: { color: tokens.colors.textMuted, fontSize: tokens.font.sm, lineHeight: tokens.lineHeight.normal, fontFamily: tokens.fontFamily.regular },
-  checkboxRow: { flexDirection: "row", alignItems: "center", gap: tokens.spacing.sm },
-  checkboxBox: { width: 22, height: 22, borderWidth: 1, borderColor: tokens.colors.border, alignItems: "center", justifyContent: "center" },
-  checkboxBoxActive: { backgroundColor: tokens.colors.primaryStrong, borderColor: tokens.colors.primaryStrong },
-  checkboxMark: { color: tokens.colors.surface, fontFamily: tokens.fontFamily.bold },
-  checkboxText: { flex: 1, color: tokens.colors.text, fontSize: tokens.font.sm, fontFamily: tokens.fontFamily.medium },
   error: { color: tokens.colors.danger, fontSize: tokens.font.xs, fontFamily: tokens.fontFamily.medium },
 });

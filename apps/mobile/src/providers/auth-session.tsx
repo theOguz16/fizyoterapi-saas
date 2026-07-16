@@ -15,6 +15,7 @@ import {
   sessionSnapshotReducer,
   type SessionEnvelopeInput,
 } from "@/lib/mobile-session";
+import type { RegistrationLegalConsent } from "@fitnes-saas/contracts";
 
 const TOKEN_KEY = "fizyoflow.access_token";
 
@@ -56,6 +57,7 @@ type RegisterInput = {
     rhythm: string;
     support_style: string;
   };
+  legal_consent: RegistrationLegalConsent;
 };
 
 type ClinicMemberRegisterInput = {
@@ -66,6 +68,7 @@ type ClinicMemberRegisterInput = {
   phone: string;
   tenant_slug: string;
   join_source: "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
+  legal_consent: RegistrationLegalConsent;
 };
 
 type InviteAcceptInput = {
