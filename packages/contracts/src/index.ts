@@ -21,6 +21,14 @@ export {
 export { LEGAL_DOCUMENT_VERSION } from "./legal-consent";
 export type { RegistrationLegalConsent, StoredRegistrationLegalConsent } from "./legal-consent";
 export type {
+  CalendarFeed,
+  CalendarFeedApprovalStatus,
+  CalendarFeedBadgeTone,
+  CalendarFeedEvent,
+  CalendarFeedRole,
+  CalendarFeedSource,
+} from "./calendar";
+export type {
   ProductEventMetadataValue,
   ProductEventName,
   ProductEventPayload,

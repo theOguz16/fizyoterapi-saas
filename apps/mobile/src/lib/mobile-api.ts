@@ -10,6 +10,7 @@ export * from "./api/admin";
 export * from "./api/subscription";
 export * from "./api/analytics";
 export * from "./api/notifications";
+export * from "./api/calendar";
 
 // Eski Turkce karakterli exportlar geriye uyumluluk icin korunuyor.
 export {

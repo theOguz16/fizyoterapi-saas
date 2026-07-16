@@ -14,6 +14,7 @@ import { internalClinicRequestsRoutes } from "./internal/clinic-requests.route";
 import { internalAuditLogsRoutes } from "./internal/audit-logs.route";
 import { internalE2ERoutes } from "./internal/e2e.route";
 import { successResponseEnvelope } from "../middlewares/success-response.middleware";
+import { calendarRoutes } from "./calendar.route";
 
 // admin
 import { adminDashboardRoutes } from "./admin/dashboard.route";
@@ -81,6 +82,7 @@ appRouter.use("/account/clinic-request", accountClinicRequestRoutes);
 appRouter.use("/internal/clinic-requests", internalClinicRequestsRoutes);
 appRouter.use("/internal/audit-logs", internalAuditLogsRoutes);
 appRouter.use("/internal/e2e", internalE2ERoutes);
+appRouter.use("/calendar", calendarRoutes);
 
 // Admin route'lari salon yonetim ekranlarini besler.
 appRouter.use("/admin/dashboard", adminDashboardRoutes);

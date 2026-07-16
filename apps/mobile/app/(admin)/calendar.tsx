@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
-import { getAdminBookingsApi, getAdminSessionsApi, getAdminSettingsApi } from "@/lib/mobile-api";
-import { formatStatusLabel, getStatusTone } from "@/theme/components/calendar-agenda";
+import { getCalendarFeedApi } from "@/lib/mobile-api";
+import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
+import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
 import { StatusBadge } from "@/theme/components/status-badge";
@@ -70,6 +70,7 @@ function DetailStat({ label, value }: { label: string; value: string | number | 
 export default function AdminCalendarScreen() {
   const router = useRouter();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const calendarRange = useMemo(() => createCalendarFeedRange(), []);
 
   const todayAnchor = useMemo(() => {
     const today = new Date();
@@ -77,68 +78,41 @@ export default function AdminCalendarScreen() {
     return today.toISOString();
   }, []);
 
-  const bookingsQuery = useQuery({
-    queryKey: ["admin-bookings-calendar"],
-    queryFn: () => getAdminBookingsApi(),
-  });
-
-  const sessionsQuery = useQuery({
-    queryKey: ["admin-sessions-calendar"],
-    queryFn: () => getAdminSessionsApi({ status: "SCHEDULED" }),
-  });
-
-  const settingsQuery = useQuery({
-    queryKey: ["admin-settings-calendar"],
-    queryFn: getAdminSettingsApi,
+  const calendarQuery = useQuery({
+    queryKey: ["admin-bookings-calendar", "feed", calendarRange.from, calendarRange.to],
+    queryFn: () => getCalendarFeedApi(calendarRange),
   });
 
   const rows = useMemo(() => {
-    const base = Array.isArray(bookingsQuery.data) ? bookingsQuery.data : [];
-    const sessionRows = Array.isArray(sessionsQuery.data)
-      ? sessionsQuery.data.filter((row: any) => row.is_group_class)
-      : [];
-
-    return [...sessionRows, ...base]
-      .filter((row: any, index: number, all: any[]) => {
-        const key = String(row.is_group_class ? row.group_class_id || row.id : row.id);
-
-        return (
-          all.findIndex((item) => String(item.is_group_class ? item.group_class_id || item.id : item.id) === key) === index
-        );
-      })
-      .filter((row: any) => !["CANCELED", "CANCELLED"].includes(String(row?.status || "").toUpperCase()));
-  }, [bookingsQuery.data, sessionsQuery.data]);
+    const events = Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events : [];
+    return events.map(calendarFeedEventToDetailRow);
+  }, [calendarQuery.data?.events]);
 
   const selectedBooking = useMemo(
-    () => rows.find((row: any) => String(row.id) === selectedBookingId) || null,
+    () => rows.find((row: any) => String(row.calendar_event_id) === selectedBookingId) || null,
     [rows, selectedBookingId]
   );
 
   const events = useMemo(
     () =>
       rows.map((row: any) => ({
-        id: String(row.id),
-        title: row.is_group_class ? row.lesson_name || row.session_title || "Grup dersi" : row.member_full_name || "Üye",
-        subtitle: row.is_group_class
-          ? `${row.trainer_full_name || "Eğitmen"} • ${row.recurrence_label || "Özel tarih"}`
-          : `${row.trainer_full_name || "Eğitmen"} • ${row.lesson_category_label || row.package_title || "Ders"}`,
+        id: String(row.calendar_event_id),
+        title: row.presentation.title,
+        subtitle: row.presentation.subtitle,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
-        badgeLabel: row.pending_schedule_change ? "Üye Onayı Bekliyor" : formatStatusLabel(row.status) || undefined,
-        badgeTone: row.pending_schedule_change ? "warning" : getStatusTone(row.status),
-        onPress: () => setSelectedBookingId(String(row.id)),
+        badgeLabel: row.presentation.badge_label,
+        badgeTone: row.presentation.badge_tone,
+        onPress: () => setSelectedBookingId(String(row.calendar_event_id)),
       })),
     [rows]
   );
 
   const businessHours = useMemo(() => {
-    const profile = (settingsQuery.data?.profile || settingsQuery.data || {}) as any;
-    const salonLocation = (profile.location || {}) as any;
-
-    return resolveBusinessHours([profile.business_hours, salonLocation.business_hours], {
-      locationTimezone: salonLocation.timezone,
+    return resolveBusinessHours([calendarQuery.data?.business_hours], {
+      locationTimezone: calendarQuery.data?.timezone,
     });
-  }, [settingsQuery.data]);
+  }, [calendarQuery.data?.business_hours, calendarQuery.data?.timezone]);
   const calendarEmptyState = resolveCalendarEmptyState(businessHours.is_configured);
 
   return (
@@ -147,11 +121,9 @@ export default function AdminCalendarScreen() {
       title="Salon Takvimi"
       subtitle="Ders akışını, eğitmen programını ve grup derslerini takip edin."
       icon="calendar"
-      refreshing={bookingsQuery.isRefetching || sessionsQuery.isRefetching || settingsQuery.isRefetching}
+      refreshing={calendarQuery.isRefetching}
       onRefresh={() => {
-        void bookingsQuery.refetch();
-        void sessionsQuery.refetch();
-        void settingsQuery.refetch();
+        void calendarQuery.refetch();
       }}
     >
       <WeeklyScheduler
@@ -164,12 +136,8 @@ export default function AdminCalendarScreen() {
         hideEmptyState
       />
 
-      {!bookingsQuery.isLoading &&
-      !sessionsQuery.isLoading &&
-      !settingsQuery.isLoading &&
-      !bookingsQuery.isError &&
-      !sessionsQuery.isError &&
-      !settingsQuery.isError &&
+      {!calendarQuery.isLoading &&
+      !calendarQuery.isError &&
       events.length === 0 ? (
         <EmptyState
           title={calendarEmptyState.title}
@@ -212,8 +180,8 @@ export default function AdminCalendarScreen() {
 
             {selectedBooking?.pending_schedule_change ? (
               <StatusBadge label="Üye Onayı Bekliyor" tone="warning" />
-            ) : selectedBooking?.status ? (
-              <StatusBadge label={formatStatusLabel(selectedBooking.status)} tone={getStatusTone(selectedBooking.status)} />
+            ) : selectedBooking?.presentation ? (
+              <StatusBadge label={selectedBooking.presentation.badge_label} tone={selectedBooking.presentation.badge_tone} />
             ) : null}
           </View>
 
@@ -224,7 +192,7 @@ export default function AdminCalendarScreen() {
             />
             <DetailRow label="Ders adı" value={selectedBooking?.lesson_name || selectedBooking?.session_title || selectedBooking?.lesson_category_label} />
             <DetailRow label="Paket" value={selectedBooking?.package_title || selectedBooking?.package_name} />
-            <DetailRow label="Durum" value={selectedBooking?.pending_schedule_change ? "Üye onayı bekleniyor" : formatStatusLabel(selectedBooking?.status)} />
+            <DetailRow label="Durum" value={selectedBooking?.presentation?.badge_label} />
           </View>
         </SurfaceCard>
 

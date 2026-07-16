@@ -5,9 +5,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
-import { getMemberAvailabilityApi, getMemberBookingsApi, getMemberHomeApi } from "@/lib/mobile-api";
-import { useSession } from "@/providers/auth-session";
-import { formatStatusLabel, getStatusTone } from "@/theme/components/calendar-agenda";
+import { getCalendarFeedApi } from "@/lib/mobile-api";
+import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -15,9 +14,6 @@ import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
 import { tokens } from "@/theme/tokens";
-
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const PROJECTED_WEEKS_AHEAD = 26;
 
 type MemberCalendarEvent = {
   id: string;
@@ -32,14 +28,6 @@ type MemberCalendarEvent = {
   raw?: any;
   onPress?: () => void;
 };
-
-function startOfIsoWeek(date: Date) {
-  const dt = new Date(date);
-  const day = dt.getDay() || 7;
-  dt.setDate(dt.getDate() - day + 1);
-  dt.setHours(0, 0, 0, 0);
-  return dt;
-}
 
 function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null) {
   if (!startsAt) return "-";
@@ -73,53 +61,6 @@ function formatEmpty(value: unknown) {
   return String(value);
 }
 
-function projectRecurringAvailabilityRows(rows: any[], from: Date, weeksAhead: number) {
-  const to = new Date(from.getTime() + weeksAhead * WEEK_MS);
-  const projected: any[] = [];
-  const seen = new Set<string>();
-
-  for (const row of rows) {
-    const templateStart = new Date(row?.starts_at);
-    const templateEnd = new Date(row?.ends_at);
-
-    if (Number.isNaN(templateStart.getTime()) || Number.isNaN(templateEnd.getTime()) || templateEnd <= templateStart) {
-      continue;
-    }
-
-    let offset = 0;
-
-    if (templateEnd <= from) {
-      offset = Math.floor((from.getTime() - templateStart.getTime()) / WEEK_MS);
-    }
-
-    let occurrenceStart = new Date(templateStart.getTime() + offset * WEEK_MS);
-    let occurrenceEnd = new Date(templateEnd.getTime() + offset * WEEK_MS);
-
-    while (occurrenceEnd <= from) {
-      occurrenceStart = new Date(occurrenceStart.getTime() + WEEK_MS);
-      occurrenceEnd = new Date(occurrenceEnd.getTime() + WEEK_MS);
-    }
-
-    while (occurrenceStart < to) {
-      const key = `${String(row?.package_title || "")}|${occurrenceStart.toISOString()}|${occurrenceEnd.toISOString()}`;
-
-      if (!seen.has(key)) {
-        seen.add(key);
-        projected.push({
-          ...row,
-          starts_at: occurrenceStart.toISOString(),
-          ends_at: occurrenceEnd.toISOString(),
-        });
-      }
-
-      occurrenceStart = new Date(occurrenceStart.getTime() + WEEK_MS);
-      occurrenceEnd = new Date(occurrenceEnd.getTime() + WEEK_MS);
-    }
-  }
-
-  return projected.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-}
-
 function DetailRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
     <View style={styles.detailRow}>
@@ -131,9 +72,8 @@ function DetailRow({ label, value }: { label: string; value: string | number | n
 
 export default function MemberCalendarScreen() {
   const router = useRouter();
-  const { pendingPaymentRequest } = useSession();
-
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const calendarRange = useMemo(() => createCalendarFeedRange(), []);
 
   const todayAnchor = useMemo(() => {
     const today = new Date();
@@ -141,98 +81,35 @@ export default function MemberCalendarScreen() {
     return today.toISOString();
   }, []);
 
-  const bookingsQuery = useQuery({
-    queryKey: ["member-bookings-calendar"],
-    queryFn: getMemberBookingsApi,
+  const calendarQuery = useQuery({
+    queryKey: ["member-bookings-calendar", "feed", calendarRange.from, calendarRange.to],
+    queryFn: () => getCalendarFeedApi(calendarRange),
   });
 
-  const availabilityQuery = useQuery({
-    queryKey: ["member-availability-calendar"],
-    queryFn: getMemberAvailabilityApi,
-  });
-
-  const homeQuery = useQuery({
-    queryKey: ["member-home-calendar"],
-    queryFn: getMemberHomeApi,
-  });
-
-  const bookings = useMemo(() => {
-    const base = Array.isArray(bookingsQuery.data)
-      ? bookingsQuery.data
-      : Array.isArray((bookingsQuery.data as any)?.items)
-        ? (bookingsQuery.data as any).items
-        : [];
-
-    return base.filter((booking: any) => !["CANCELED", "CANCELLED"].includes(String(booking?.status || "").toUpperCase()));
-  }, [bookingsQuery.data]);
-
-  const bookingEvents = useMemo<MemberCalendarEvent[]>(
-    () =>
-      bookings.map((booking: any) => ({
-        id: `booking-${String(booking.id)}`,
-        source: "booking",
-        bookingId: String(booking.id),
-        raw: booking,
-        title: booking.is_duo ? "Duo ders" : booking.session_title || booking.lesson_category_label || "Ders",
-        subtitle: `${booking.trainer_full_name || "Eğitmen"} • ${booking.package_title || booking.package_name || "Planlı seans"}${booking.is_duo ? " • Partner ödemesi beklenebilir" : ""}`,
-        startsAt: booking.starts_at,
-        endsAt: booking.ends_at,
-        badgeLabel: booking.pending_schedule_change ? "Saat Onayı Bekliyor" : formatStatusLabel(booking.status),
-        badgeTone: booking.pending_schedule_change ? "warning" : getStatusTone(booking.status),
-        onPress: () => setSelectedEventId(`booking-${String(booking.id)}`),
-      })),
-    [bookings]
-  );
-
-  const approvedAvailabilityEvents = useMemo<MemberCalendarEvent[]>(() => {
-    const rows = Array.isArray(availabilityQuery.data) ? availabilityQuery.data : [];
-    const projectedRows = projectRecurringAvailabilityRows(rows, startOfIsoWeek(new Date()), PROJECTED_WEEKS_AHEAD);
-
-    const bookingKeys = new Set(bookings.map((booking: any) => `${String(booking.starts_at || "")}|${String(booking.ends_at || "")}`));
-
-    return projectedRows
-      .filter((row: any) => row?.starts_at)
-      .filter((row: any) => !bookingKeys.has(`${String(row.starts_at || "")}|${String(row.ends_at || "")}`))
-      .map((row: any, index: number) => ({
-        id: `approved-availability-${index}-${String(row.starts_at)}`,
-        source: "approved-availability",
-        raw: row,
-        title: row.package_title || "Onaylı saat tercihin",
-        subtitle: "Admin onayı sonrası kaydedilen uygunluk",
-        startsAt: row.starts_at,
-        endsAt: row.ends_at,
-        badgeLabel: "Onaylandı",
-        badgeTone: "info" as const,
-        onPress: () => setSelectedEventId(`approved-availability-${index}-${String(row.starts_at)}`),
-      }));
-  }, [availabilityQuery.data, bookings]);
-
-  const pendingAvailabilityEvents = useMemo<MemberCalendarEvent[]>(() => {
-    const rows = Array.isArray(pendingPaymentRequest?.selected_days) ? pendingPaymentRequest.selected_days : [];
-
-    const bookingKeys = new Set(bookings.map((booking: any) => `${String(booking.starts_at || "")}|${String(booking.ends_at || "")}`));
-
-    return rows
-      .filter((row: any) => row?.starts_at)
-      .filter((row: any) => !bookingKeys.has(`${String(row.starts_at || "")}|${String(row.ends_at || "")}`))
-      .map((row: any, index: number) => ({
-        id: `pending-availability-${index}-${String(row.starts_at)}`,
-        source: "pending-availability",
-        raw: row,
-        title: row.label || "Saat tercihin",
-        subtitle: "Salon onayı bekleniyor",
-        startsAt: row.starts_at,
-        endsAt: row.ends_at,
-        badgeLabel: "Onay bekliyor",
-        badgeTone: "warning" as const,
-        onPress: () => setSelectedEventId(`pending-availability-${index}-${String(row.starts_at)}`),
-      }));
-  }, [bookings, pendingPaymentRequest?.selected_days]);
-
-  const schedulerEvents = useMemo(
-    () => [...pendingAvailabilityEvents, ...approvedAvailabilityEvents, ...bookingEvents],
-    [approvedAvailabilityEvents, bookingEvents, pendingAvailabilityEvents]
-  );
+  const schedulerEvents = useMemo<MemberCalendarEvent[]>(() => {
+    const events = Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events : [];
+    return events.map((event) => {
+      const raw = calendarFeedEventToDetailRow(event);
+      const source = event.source === "BOOKING"
+        ? "booking"
+        : event.source === "AVAILABILITY"
+          ? "approved-availability"
+          : "pending-availability";
+      return {
+        id: event.id,
+        source,
+        bookingId: event.details.booking_id || undefined,
+        raw,
+        title: event.presentation.title,
+        subtitle: event.presentation.subtitle,
+        startsAt: event.starts_at,
+        endsAt: event.ends_at,
+        badgeLabel: event.presentation.badge_label,
+        badgeTone: event.presentation.badge_tone,
+        onPress: () => setSelectedEventId(event.id),
+      };
+    });
+  }, [calendarQuery.data?.events]);
 
   const selectedEvent = useMemo(
     () => schedulerEvents.find((event) => event.id === selectedEventId) || null,
@@ -243,10 +120,10 @@ export default function MemberCalendarScreen() {
 
   const businessHours = useMemo(
     () =>
-      resolveBusinessHours([homeQuery.data?.calendar?.business_hours], {
-        locationTimezone: homeQuery.data?.calendar?.timezone,
+      resolveBusinessHours([calendarQuery.data?.business_hours], {
+        locationTimezone: calendarQuery.data?.timezone,
       }),
-    [homeQuery.data?.calendar?.business_hours, homeQuery.data?.calendar?.timezone]
+    [calendarQuery.data?.business_hours, calendarQuery.data?.timezone]
   );
 
   return (
@@ -255,11 +132,9 @@ export default function MemberCalendarScreen() {
       title="Takvim"
       subtitle="Ders programını, onaylı saatlerini ve bekleyen taleplerini takip et."
       icon="calendar"
-      refreshing={bookingsQuery.isRefetching || availabilityQuery.isRefetching || homeQuery.isRefetching}
+      refreshing={calendarQuery.isRefetching}
       onRefresh={() => {
-        void bookingsQuery.refetch();
-        void availabilityQuery.refetch();
-        void homeQuery.refetch();
+        void calendarQuery.refetch();
       }}
     >
       <WeeklyScheduler
@@ -314,7 +189,7 @@ export default function MemberCalendarScreen() {
                 {selectedBooking?.is_duo ? <DetailRow label="Duo durum" value={selectedBooking?.duo_status || "Partner ödemesi bekleniyor"} /> : null}
                 <DetailRow
                   label="Durum"
-                  value={selectedBooking?.pending_schedule_change ? "Saat onayı bekliyor" : formatStatusLabel(selectedBooking?.status)}
+                  value={selectedEvent?.badgeLabel}
                 />
               </View>
             </SurfaceCard>

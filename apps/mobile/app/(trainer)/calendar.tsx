@@ -10,9 +10,8 @@ import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import {
   createTrainerBookingApi,
   createTrainerScheduleChangeRequestApi,
+  getCalendarFeedApi,
   getTrainerAvailabilitiesApi,
-  getTrainerBookingsApi,
-  getTrainerGroupClassesApi,
   getTrainerMembersApi,
   getTrainerTodayApi,
   getTrainerMemberAttendanceApi,
@@ -23,8 +22,8 @@ import {
   type TrainerAvailabilityEntry,
   type TrainerScheduleEntry,
 } from "@/lib/mobile-api";
+import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
 import { type TrainerScheduleRequest } from "@/lib/trainer-scheduler";
-import { formatStatusLabel, getStatusTone } from "@/theme/components/calendar-agenda";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -370,6 +369,7 @@ function DetailStat({ label, value }: { label: string; value: string | number | 
 
 export default function TrainerCalendarScreen() {
   const router = useRouter();
+  const calendarRange = useMemo(() => createCalendarFeedRange(), []);
 
   const todayAnchor = useMemo(() => {
     const today = new Date();
@@ -383,9 +383,9 @@ export default function TrainerCalendarScreen() {
   const [placementRequestId, setPlacementRequestId] = useState<string | null>(null);
   const [selectedRescheduleDayKey, setSelectedRescheduleDayKey] = useState<string | null>(null);
 
-  const bookingQuery = useQuery({
-    queryKey: ["trainer-bookings-calendar"],
-    queryFn: getTrainerBookingsApi,
+  const calendarQuery = useQuery({
+    queryKey: ["trainer-bookings-calendar", "feed", calendarRange.from, calendarRange.to],
+    queryFn: () => getCalendarFeedApi(calendarRange),
   });
 
   const availabilityQuery = useQuery({
@@ -400,31 +400,23 @@ export default function TrainerCalendarScreen() {
     refetchOnMount: "always",
   });
 
-  const groupClassesQuery = useQuery({
-    queryKey: ["trainer-group-classes"],
-    queryFn: getTrainerGroupClassesApi,
-  });
-
   const membersQuery = useQuery({
     queryKey: ["trainer-members-calendar"],
     queryFn: getTrainerMembersApi,
   });
 
-  const liveBookings = useMemo(() => (Array.isArray(bookingQuery.data) ? bookingQuery.data : []), [bookingQuery.data]);
   const liveAvailabilities = useMemo(
     () => (Array.isArray(availabilityQuery.data) ? availabilityQuery.data : []),
     [availabilityQuery.data]
   );
 
-  const bookings: any[] = useMemo(
-    () =>
-      [
-        ...(Array.isArray(groupClassesQuery.data) ? (groupClassesQuery.data as any[]) : []),
-        ...liveBookings,
-      ]
-        .filter((row, index, all) => all.findIndex((item) => String(item.id) === String(row.id)) === index)
-        .filter((row) => !["CANCELED", "CANCELLED"].includes(String(row?.status || "").toUpperCase())),
-    [groupClassesQuery.data, liveBookings]
+  const calendarRows: any[] = useMemo(
+    () => (Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events.map(calendarFeedEventToDetailRow) : []),
+    [calendarQuery.data?.events]
+  );
+  const bookings = useMemo(
+    () => calendarRows.filter((row) => !row.is_cancelled),
+    [calendarRows]
   );
 
   const rawRequests = useMemo(() => buildTrainerRequests(liveAvailabilities), [liveAvailabilities]);
@@ -443,12 +435,10 @@ export default function TrainerCalendarScreen() {
   );
 
   const businessHours = useMemo(() => {
-    const calendar = (todayQuery.data?.calendar || {}) as any;
-
-    return resolveBusinessHours([calendar.business_hours], {
-      locationTimezone: calendar.timezone,
+    return resolveBusinessHours([calendarQuery.data?.business_hours], {
+      locationTimezone: calendarQuery.data?.timezone,
     });
-  }, [todayQuery.data?.calendar]);
+  }, [calendarQuery.data?.business_hours, calendarQuery.data?.timezone]);
 
   const minimumAdvanceHours = useMemo(
     () => Math.max(1, Number(todayQuery.data?.calendar?.booking_policy?.min_hours_before_start || 3)),
@@ -477,27 +467,23 @@ export default function TrainerCalendarScreen() {
 
   const events = useMemo(
     () =>
-      bookings.map((row) => ({
-        id: String(row.id),
-        title: row.is_group_class ? row.lesson_name || row.session_title || "Grup dersi" : row.is_duo ? `Duo: ${row.member_full_name || "Danışan"}` : row.member_full_name || "Danışan",
-        subtitle: row.is_group_class
-          ? `${row.recurrence_label || "Özel tarih"} • ${Number(row.joined_member_count || 0)} katılım`
-          : `${row.is_duo ? "İkili ders" : row.lesson_category_label || row.package_name || row.package_title || "Seans"} • ${
-              row.package_title || row.package_name || "Paket"
-            }`,
+      calendarRows.map((row) => ({
+        id: String(row.calendar_event_id),
+        title: row.presentation.title,
+        subtitle: row.presentation.subtitle,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
-        badgeLabel: row.pending_schedule_change ? "Üye Onayı Bekliyor" : formatStatusLabel(row.status) || undefined,
-        badgeTone: row.pending_schedule_change ? "warning" : getStatusTone(row.status),
+        badgeLabel: row.presentation.badge_label,
+        badgeTone: row.presentation.badge_tone,
         draggable: false,
-        onPress: () => setSelectedBookingId(String(row.id)),
+        onPress: () => setSelectedBookingId(String(row.calendar_event_id)),
       })),
-    [bookings]
+    [calendarRows]
   );
 
   const selectedBooking = useMemo(
-    () => bookings.find((item) => String(item.id) === selectedBookingId) || null,
-    [bookings, selectedBookingId]
+    () => calendarRows.find((item) => String(item.calendar_event_id) === selectedBookingId) || null,
+    [calendarRows, selectedBookingId]
   );
 
   const memberDetailQuery = useQuery({
@@ -732,8 +718,10 @@ export default function TrainerCalendarScreen() {
       title="Takvimim"
       subtitle="Ders programını yönet, talepleri planla ve değişiklik yap."
       icon="calendar"
-      refreshing={todayQuery.isRefetching}
+      refreshing={calendarQuery.isRefetching || availabilityQuery.isRefetching || todayQuery.isRefetching}
       onRefresh={() => {
+        void calendarQuery.refetch();
+        void availabilityQuery.refetch();
         void todayQuery.refetch();
       }}
     >
@@ -836,7 +824,7 @@ export default function TrainerCalendarScreen() {
         visible={Boolean(selectedBooking)}
         onClose={() => setSelectedBookingId(null)}
         title={selectedBooking?.is_group_class ? selectedBooking?.lesson_name || "Grup dersi" : selectedBooking?.is_duo ? `Duo: ${selectedBooking?.member_full_name || "Ders detayı"}` : selectedBooking?.member_full_name || "Ders detayı"}
-        subtitle={formatStatusLabel(selectedBooking?.status) || "Ders detayı"}
+        subtitle={selectedBooking?.presentation?.badge_label || "Ders detayı"}
       >
         <SurfaceCard tone="primary">
           <View style={styles.detailHeaderRow}>
@@ -845,8 +833,8 @@ export default function TrainerCalendarScreen() {
               <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at)}</Text>
             </View>
 
-            {selectedBooking?.status ? (
-              <StatusBadge label={formatStatusLabel(selectedBooking.status)} tone={getStatusTone(selectedBooking.status)} />
+            {selectedBooking?.presentation ? (
+              <StatusBadge label={selectedBooking.presentation.badge_label} tone={selectedBooking.presentation.badge_tone} />
             ) : null}
           </View>
 
@@ -1035,40 +1023,42 @@ export default function TrainerCalendarScreen() {
           )}
         </SurfaceCard>
 
-        <ActionButton
-          label="Takvimden kaldır"
-          variant="danger"
-          onPress={() => {
-            if (!selectedBooking?.id) return;
+        {!selectedBooking?.is_group_class ? (
+          <ActionButton
+            label="Takvimden kaldır"
+            variant="danger"
+            onPress={() => {
+              if (!selectedBooking?.id) return;
 
-            Alert.alert("Dersi kaldır", "Bu dersi takvimden kaldırıp planlama listesine geri almak istiyor musun?", [
-              { text: "Vazgeç", style: "cancel" },
-              {
-                text: "Kaldır",
-                style: "destructive",
-                onPress: () => {
-                  cancelBookingMutation.mutate(String(selectedBooking.id));
+              Alert.alert("Dersi kaldır", "Bu dersi takvimden kaldırıp planlama listesine geri almak istiyor musun?", [
+                { text: "Vazgeç", style: "cancel" },
+                {
+                  text: "Kaldır",
+                  style: "destructive",
+                  onPress: () => {
+                    cancelBookingMutation.mutate(String(selectedBooking.id));
+                  },
                 },
-              },
-            ]);
-          }}
-          loading={cancelBookingMutation.isPending}
-        />
+              ]);
+            }}
+            loading={cancelBookingMutation.isPending}
+          />
+        ) : null}
 
-        <ActionButton
-          label="Danışan detayına git"
-          icon="clients"
-          variant="ghost"
-          onPress={() => {
-            if (!selectedBooking?.member_id) return;
-
-            setSelectedBookingId(null);
-            router.push({
-              pathname: "/(trainer)/members/[id]",
-              params: { id: selectedBooking.member_id, backTo: "/(trainer)/calendar" },
-            } as never);
-          }}
-        />
+        {selectedBooking?.member_id ? (
+          <ActionButton
+            label="Danışan detayına git"
+            icon="clients"
+            variant="ghost"
+            onPress={() => {
+              setSelectedBookingId(null);
+              router.push({
+                pathname: "/(trainer)/members/[id]",
+                params: { id: selectedBooking.member_id, backTo: "/(trainer)/calendar" },
+              } as never);
+            }}
+          />
+        ) : null}
       </DetailSheet>
     </AppShell>
   );
