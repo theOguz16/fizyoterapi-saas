@@ -172,6 +172,7 @@ export default function AdminMembersScreen() {
         <VirtualListPanel
           data={items}
           maxHeight={520}
+          minHeight={320}
           keyExtractor={(item) => item.id}
           renderItem={(item, index) => (
             <SurfaceCard key={item.id} testID={`admin-person-card-${item.role.toLowerCase()}-${index}`}>

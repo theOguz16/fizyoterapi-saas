@@ -8,18 +8,42 @@ Kritik akışların hızlı smoke doğrulaması için YAML akışları.
 2. `Detox`
 Native seviye cihaz otomasyonu istenirse ikinci aşamada genişletilecek.
 
-Mevcut Maestro akışları:
-- `login-role-routing.yaml`
-- `member-onboarding.yaml`
-- `member-bookings-smoke.yaml`
-- `trainer-today-smoke.yaml`
-- `admin-owner-setup.yaml`
-- `admin-approvals-smoke.yaml`
+Release doğrulaması `release-role-matrix.txt` dosyasındaki rol ve yetenek
+envanterini kullanır. Matris 37 satırdır: 4 paylaşılan, 10 admin, 9 trainer ve
+14 member senaryosu. Aynı YAML hem paylaşılan rol yönlendirmesinde hem member
+login kapsamında yer aldığı için 36 benzersiz dosya çalıştırılır.
+
+Kapsanan ana alanlar:
+
+- Admin: login/yönlendirme, klinik sahibi girişi, onay merkezi, takvim,
+  eğitmen profili, grup dersi onayları, paket oluşturma/bağlama, abonelik ve
+  gelir raporu.
+- Trainer: login/yönlendirme, bugün ekranı, günlük operasyon, takvim ve
+  talepler, manuel check-in, grup dersi oluşturma ve silme kontrolü, atanmış dersler,
+  talep merkezi ve toplu bildirim ekranı.
+- Member: login/yönlendirme, onboarding, rezervasyonlar, takvim, grup dersleri,
+  ölçüm oluşturma, paket yenileme, intake/öneri, çoklu paket randevusu, klinik
+  bağlantıları/deep linkler, profil koruma ve ilerleme özeti.
+- Paylaşılan: rol routing, geri navigasyon, release edge-case sözleşmesi ve duo
+  paketin üç roldeki görünürlüğü.
 
 Çalıştırma:
 ```bash
 maestro test tests/e2e/maestro
 ```
+
+Release matrisini önce yazılı olarak incelemek veya rol bazında çalıştırmak için:
+
+```sh
+pnpm --filter @fitnes-saas/mobile test:e2e:matrix:list
+pnpm --filter @fitnes-saas/mobile test:e2e:matrix -- --role admin
+pnpm --filter @fitnes-saas/mobile test:e2e:matrix -- --role trainer
+pnpm --filter @fitnes-saas/mobile test:e2e:matrix -- --role member
+```
+
+Runner her akıştan önce rol, yetenek ve dosya adını; sonunda seçilen, geçen ve
+başarısız sayısını basar. Bir akış hata verse bile kalan matris çalıştırılır ve
+komut sonuçta hata koduyla kapanır.
 
 Release kritik dosyalarının yalnız syntax kontrolü için:
 
@@ -27,7 +51,30 @@ Release kritik dosyalarının yalnız syntax kontrolü için:
 pnpm release:e2e:mobile:syntax
 ```
 
-Bu komut cihaz sonucu üretmez. Release için `run-critical-e2e.sh` içindeki dokuz akış aynı production EAS build ID'siyle hem fiziksel iOS hem fiziksel Android cihazda çalıştırılır. Her platformun Maestro log/video kaydı `RELEASE_EVIDENCE` manifestindeki `maestro.ios` veya `maestro.android` alanına eklenir.
+Bu komut cihaz sonucu üretmez. Eski `test:e2e:critical` adı geriye dönük
+uyumluluk için korunur ve artık rol matrisinin tamamını çalıştırır. Release için
+matristeki akışlar aynı production EAS build ID'siyle hem fiziksel iOS hem
+fiziksel Android cihazda çalıştırılır. Her platformun Maestro log/video kaydı
+`RELEASE_EVIDENCE` manifestindeki `maestro.ios` veya `maestro.android` alanına
+eklenir.
+
+## Bilerek release simülatör matrisine alınmayanlar
+
+- `push/`: TestFlight/production-like build, gerçek cihaz, APNs/Expo token ve
+  harici bildirim gönderimi gerektirir; aşağıdaki ayrı cihaz matrisi kullanılır.
+- `marketing-*.yaml` ve `admin-subscription-screenshot.yaml`: ürün davranışı
+  doğrulamak yerine ekran görüntüsü üretir.
+- `debug-intake-packages.yaml`: tanı amaçlıdır, assertion tabanlı release gate
+  değildir.
+- Gerçek kamera QR kanıtları: simülatör deep link testinden farklıdır ve release
+  evidence kapsamında fiziksel cihazda tutulur.
+- Store sandbox satın alma/RevenueCat entitlement: gerçek store hesabı ve
+  transaction kanıtı gerektirdiğinden deterministik yerel simülatör matrisinin
+  parçası değildir.
+- Davetle yeni hesap açma ve zincirleme çapraz-rol grup dersi fixture akışları:
+  sabit seed üzerinde tekrar çalıştırıldığında veri biriktirir veya önceki flow
+  durumuna bağlıdır. Bunların bağımsız backend fixture/reset sözleşmesiyle ayrıca
+  izole edilmesi gerekir.
 
 Deep link ve fiziksel QR farklı kanıtlardır. Deep link URL/scheme açılışını; QR ise cihaz kamerası ile gerçek kod taramasını ve hedef salon ekranını kaydetmelidir. RevenueCat kanıtı da her platform için store sandbox transaction ID, entitlement sonucu ve backend senkronizasyon logunu ayrı tutar. Tam alan matrisi `docs/release-gate.md` içindedir.
 

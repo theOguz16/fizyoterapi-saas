@@ -8,4 +8,8 @@ appId: com.fizyoflow.mobile
     visible: "Gelir raporu"
     timeout: 20000
 - assertVisible: "Rapor aralığı"
+- scrollUntilVisible:
+    element: "CSV dışa aktar"
+    direction: DOWN
+    timeout: 10000
 - assertVisible: "CSV dışa aktar"

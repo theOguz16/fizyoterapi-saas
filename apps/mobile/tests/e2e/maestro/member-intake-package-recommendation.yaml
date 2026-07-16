@@ -7,19 +7,36 @@ appId: com.fizyoflow.mobile
 - assertVisible:
     id: "welcome-login-button"
 - openLink: "fizyoflow://(intake-member)"
-- assertVisible: "Seni en iyi hangi hedef tanımlar?"
+- assertVisible: "Kliniğine bağlan"
 - tapOn:
-    id: "member-intake-goal-agrilarimi-azaltmak-istiyorum"
-- assertVisible: "Şu an seni en çok zorlayan konu ne?"
+    id: "member-connect-discovery"
+- assertVisible: "Nasıl bir hizmeti incelemek istersin?"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-goal-grup-dersi"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
-    id: "member-intake-issue-skolyoz-postur-takibi"
-- assertVisible: "Salon seçerken en çok neye bakarsın?"
+    id: "member-intake-goal-grup-dersi"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-expectation-yakin-olsun"
+    direction: UP
+    timeout: 10000
 - tapOn:
     id: "member-intake-expectation-yakin-olsun"
-- assertVisible: "Haftada kaç gün ayırabilirsin?"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-weeklyDays-2-gun"
+    direction: UP
+    timeout: 10000
 - tapOn:
     id: "member-intake-weeklyDays-2-gun"
-- assertVisible: "Tercih ettiğin saat aralığı nedir?"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-timePreference-sabah"
+    direction: UP
+    timeout: 10000
 - tapOn:
     id: "member-intake-timePreference-sabah"
 - openLink: "fizyoflow://(intake-member)/packages?slug=demo-salon"
@@ -28,8 +45,9 @@ appId: com.fizyoflow.mobile
     element:
       id: "intake-package-recommended-surface"
     direction: DOWN
-    timeout: 10000
+    timeout: 30000
+    speed: 80
+    visibilityPercentage: 30
 - assertVisible: ".*Sana özel öneri.*"
-- assertVisible: ".*Skolyoz Seansı.*"
 - assertVisible:
     id: "intake-package-card-0"

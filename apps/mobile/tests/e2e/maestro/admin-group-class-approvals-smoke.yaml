@@ -20,10 +20,16 @@ appId: com.fizyoflow.mobile
 - inputText: "admin123"
 - tapOn:
     id: "login-submit-button"
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - waitForAnimationToEnd
 - openLink: "fizyoflow://(admin)/approvals"
 - waitForAnimationToEnd
-- assertVisible: "Onaylar"
+- assertVisible:
+    id: "admin-approvals-screen"
 - extendedWaitUntil:
     visible: "Bekleyen"
     timeout: 15000

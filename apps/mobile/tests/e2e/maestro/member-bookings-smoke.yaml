@@ -4,7 +4,21 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - openLink: "fizyoflow://e2e-reset"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fbookings"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil:
     visible:
       id: "member-bookings-screen"

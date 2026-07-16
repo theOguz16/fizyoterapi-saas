@@ -205,4 +205,77 @@ describe("public managed growth controller", () => {
     });
     expect(JSON.stringify(loggerSpy.mock.calls)).not.toContain("applicant ayse@dengefizyo.com rejected");
   });
+
+  it("silently accepts the demo form honeypot without persistence, email or audit side effects", async () => {
+    const repoSpy = vi.spyOn(AppDataSource, "getRepository");
+    const auditSpy = vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+    const emailSpy = vi.spyOn(DemoLeadEmailService, "send").mockResolvedValue({
+      configured: true,
+      adminDelivered: true,
+      applicantDelivered: true,
+      errors: [],
+    });
+    const res = createMockResponse();
+
+    await PublicController.createDemoLead(
+      {
+        body: {
+          website: "https://spam.example",
+          full_name: "Bot Request",
+          clinic_name: "Spam Clinic",
+          email: "bot@example.com",
+          phone: "5551112233",
+          consent: true,
+        },
+      } as any,
+      res as any
+    );
+
+    expect(res.statusCode).toBe(202);
+    expect(res.body).toEqual({ message: "Demo talebiniz alındı." });
+    expect(repoSpy).not.toHaveBeenCalled();
+    expect(auditSpy).not.toHaveBeenCalled();
+    expect(emailSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ full_name: "A" }, "Ad Soyad en az 2 karakter olmalıdır"],
+    [{ clinic_name: "K" }, "Klinik adı en az 2 karakter olmalıdır"],
+    [{ email: "invalid-email" }, "Geçerli bir e-posta adresi girilmelidir"],
+    [{ phone: "123" }, "Geçersiz telefon numarası"],
+    [{ city: "x".repeat(101) }, "Şehir/ilçe alanı çok uzun"],
+    [{ note: "x".repeat(1201) }, "Not çok uzun"],
+    [{ consent: false }, "Demo talebi için aydınlatma metni onayı gereklidir"],
+  ])("rejects invalid demo lead input before persistence: %s", async (override, message) => {
+    const repoSpy = vi.spyOn(AppDataSource, "getRepository");
+    const auditSpy = vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+    const emailSpy = vi.spyOn(DemoLeadEmailService, "send").mockResolvedValue({
+      configured: false,
+      adminDelivered: false,
+      applicantDelivered: false,
+      errors: [],
+    });
+
+    await expect(
+      PublicController.createDemoLead(
+        {
+          body: {
+            full_name: "Ayşe Yılmaz",
+            clinic_name: "Denge Fizyo",
+            email: "ayse@dengefizyo.com",
+            phone: "0555 111 22 33",
+            city: "Kadıköy",
+            note: "Demo almak istiyoruz",
+            consent: true,
+            ...override,
+          },
+        } as any,
+        createMockResponse() as any
+      )
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", statusCode: 400, message });
+
+    expect(repoSpy).not.toHaveBeenCalled();
+    expect(auditSpy).not.toHaveBeenCalled();
+    expect(emailSpy).not.toHaveBeenCalled();
+  });
 });

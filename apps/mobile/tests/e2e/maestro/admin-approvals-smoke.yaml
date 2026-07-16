@@ -27,6 +27,13 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-submit-button"
     retryTapIfNoChange: true
-- assertVisible: "Yönetim merkezi"
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
+- assertVisible:
+    id: "admin-dashboard-screen"
 - openLink: "fizyoflow://approvals"
-- assertVisible: "Onaylar"
+- assertVisible:
+    id: "admin-approvals-screen"

@@ -1,0 +1,41 @@
+# role|capability|flow
+# Keep the order deterministic: authentication/navigation first, then read paths,
+# then state-changing paths. Paths are relative to apps/mobile.
+shared|role routing|tests/e2e/maestro/login-role-routing.yaml
+shared|cross-role back navigation|tests/e2e/maestro/mobile-back-navigation-smoke.yaml
+# Integration contract probe intentionally runs outside the deterministic role matrix:
+# tests/e2e/maestro/release-edge-cases.yaml
+shared|duo package role contract|tests/e2e/maestro/duo-package-flow.yaml
+admin|login and admin routing|tests/e2e/maestro/release-admin-login.yaml
+admin|clinic owner entry|tests/e2e/maestro/admin-owner-setup.yaml
+admin|approval center|tests/e2e/maestro/admin-approvals-smoke.yaml
+admin|weekly calendar|tests/e2e/maestro/admin-calendar-smoke.yaml
+admin|trainer profile and assignment|tests/e2e/maestro/admin-trainer-profile-smoke.yaml
+admin|group-class approval queue|tests/e2e/maestro/admin-group-class-approvals-smoke.yaml
+admin|package creation|tests/e2e/maestro/admin-package-create-smoke.yaml
+admin|package and group-class linking|tests/e2e/maestro/admin-package-group-link-smoke.yaml
+admin|subscription navigation|tests/e2e/maestro/admin-subscription-flow.yaml
+admin|revenue report|tests/e2e/maestro/phase-three-admin-report-smoke.yaml
+trainer|login and trainer routing|tests/e2e/maestro/release-trainer-login.yaml
+trainer|today dashboard|tests/e2e/maestro/trainer-today-smoke.yaml
+trainer|daily lesson operations|tests/e2e/maestro/trainer-daily-operations.yaml
+trainer|weekly calendar and requests|tests/e2e/maestro/trainer-calendar-smoke.yaml
+trainer|manual member check-in|tests/e2e/maestro/trainer-manual-checkin-smoke.yaml
+trainer|group-class create request|tests/e2e/maestro/trainer-group-classes-smoke.yaml
+trainer|group-class delete control|tests/e2e/maestro/trainer-group-class-delete-request-smoke.yaml
+trainer|assigned lessons profile|tests/e2e/maestro/trainer-profile-assigned-lessons-smoke.yaml
+trainer|request center and bulk notification|tests/e2e/maestro/phase-three-trainer-tools-smoke.yaml
+member|member login and routing|tests/e2e/maestro/login-role-routing.yaml
+member|onboarding and clinic QR entry|tests/e2e/maestro/member-onboarding.yaml
+member|booking list and detail|tests/e2e/maestro/member-bookings-smoke.yaml
+member|weekly calendar|tests/e2e/maestro/member-calendar-smoke.yaml
+member|group-class discovery|tests/e2e/maestro/member-group-classes-smoke.yaml
+member|measurement creation|tests/e2e/maestro/member-measurement-smoke.yaml
+member|package renewal|tests/e2e/maestro/member-package-renewal-smoke.yaml
+member|intake and package recommendation|tests/e2e/maestro/member-intake-package-recommendation.yaml
+member|authenticated multi-package booking|tests/e2e/maestro/member-multi-package-time-selection-authenticated.yaml
+member|invalid clinic connection|tests/e2e/maestro/member-clinic-connection-smoke.yaml
+member|clinic QR deep link|tests/e2e/maestro/member-salon-qr-deeplink-smoke.yaml
+member|invalid clinic deep link|tests/e2e/maestro/member-salon-qr-invalid-salon.yaml
+member|warm discovery profile preservation|tests/e2e/maestro/member-discovery-preserves-profile.yaml
+member|progress and package usage|tests/e2e/maestro/phase-three-member-progress-smoke.yaml

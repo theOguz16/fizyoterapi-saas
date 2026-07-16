@@ -4,6 +4,13 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil:
     visible:
       id: "trainer-home-screen"
@@ -14,6 +21,13 @@ appId: com.fizyoflow.mobile
 - assertVisible:
     id: "trainer-checkin-screen"
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcheckin%3Fmode%3Dmanual%26backTo%3D%2F%28trainer%29%2Fhome"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil:
     visible:
       id: "trainer-checkin-screen"
@@ -26,7 +40,6 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "trainer-checkin-manual-input"
 - inputText: "MEM-DEMO001"
-- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "trainer-checkin-submit"

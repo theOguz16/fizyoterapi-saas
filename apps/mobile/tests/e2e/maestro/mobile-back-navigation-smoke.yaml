@@ -46,7 +46,8 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "app-shell-back-button"
 - extendedWaitUntil:
-    visible: "Bugün"
+    visible:
+      id: "trainer-home-screen"
     timeout: 10000
 
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3FbackTo%3D%2F%28admin%29%2Fsalon"
@@ -57,8 +58,7 @@ appId: com.fizyoflow.mobile
     text: "Open"
     optional: true
 - extendedWaitUntil:
-    visible:
-      id: "admin-subscription-hero"
+    visible: "Bu planla neleri yönetirsin?"
     timeout: 30000
 - tapOn:
     id: "app-shell-back-button"

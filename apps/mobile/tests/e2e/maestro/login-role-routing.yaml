@@ -4,6 +4,13 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - openLink: "fizyoflow://e2e-reset"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - assertVisible:
     id: "welcome-login-button"
 - tapOn:
@@ -26,6 +33,11 @@ appId: com.fizyoflow.mobile
 - inputText: "member123"
 - tapOn:
     id: "login-submit-button"
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "member-home-screen"

@@ -7,5 +7,13 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Gelişim"
     timeout: 20000
+- scrollUntilVisible:
+    element: "Dönem karşılaştırması"
+    direction: DOWN
+    timeout: 10000
 - assertVisible: "Dönem karşılaştırması"
+- scrollUntilVisible:
+    element: "Paket kullanım özeti"
+    direction: DOWN
+    timeout: 10000
 - assertVisible: "Paket kullanım özeti"

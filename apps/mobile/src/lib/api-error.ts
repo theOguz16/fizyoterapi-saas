@@ -23,6 +23,7 @@ const UI_ERROR_MAP: Record<string, string> = {
   INVALID_TOKEN: "Oturum doğrulanamadı. Lütfen tekrar giriş yapın.",
   INVALID_LOGIN: "E-posta veya şifre hatalı.",
   INVALID_TENANT: "Klinik bulunamadı.",
+  SALON_NOT_FOUND: "Salon bulunamadı",
   NO_TENANT: "Klinik bilgisine ulaşılamadı. Lütfen tekrar deneyin.",
   NO_TENANT_OR_AUTH: "Klinik veya oturum bilgisine ulaşılamadı. Lütfen tekrar giriş yapın.",
   FORBIDDEN: "Bu işlem için yetkiniz yok.",

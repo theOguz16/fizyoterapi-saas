@@ -4,6 +4,13 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 - openLink: "fizyoflow://join/demo-salon?code=FYF-DEMO-SALON-001"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil:
     visible:
       id: "intake-packages-screen"

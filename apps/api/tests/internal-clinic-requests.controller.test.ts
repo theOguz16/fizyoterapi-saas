@@ -98,4 +98,26 @@ describe("internal clinic requests controller", () => {
 
     expect(repoSpy).not.toHaveBeenCalled();
   });
+
+  it("returns not found without delete or audit side effects for an unknown demo lead", async () => {
+    const repo = {
+      findOne: vi.fn().mockResolvedValue(null),
+      remove: vi.fn(),
+    };
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === ProductDemoLead) return repo as any;
+      throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
+    });
+    const auditSpy = vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as any);
+
+    await expect(
+      InternalClinicRequestsController.hardDeleteDemoLead(
+        { params: { id: "22222222-2222-4222-8222-222222222222" } } as any,
+        createMockResponse() as any
+      )
+    ).rejects.toMatchObject({ code: "DEMO_LEAD_NOT_FOUND", statusCode: 404 });
+
+    expect(repo.remove).not.toHaveBeenCalled();
+    expect(auditSpy).not.toHaveBeenCalled();
+  });
 });

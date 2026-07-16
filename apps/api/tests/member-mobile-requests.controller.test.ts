@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemberMobileRequestsController } from "../controllers/member/mobile-requests.controller";
 import { AppDataSource } from "../data-source";
+import { MemberRequestCleanupService } from "../services/member-request-cleanup.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("member mobile requests controller", () => {
@@ -18,6 +19,33 @@ describe("member mobile requests controller", () => {
     await expect(MemberMobileRequestsController.createPaymentRequest(req, res as any)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",
       statusCode: 422,
+    });
+  });
+
+  it("returns the stable SALON_NOT_FOUND contract for an unknown salon slug", async () => {
+    vi.spyOn(MemberRequestCleanupService, "cleanupStaleApplicationsForAccount").mockResolvedValue(undefined);
+
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = entity?.name || "";
+      if (name.includes("Account")) return { findOne: vi.fn().mockResolvedValue({ id: "acc-1" }) } as any;
+      if (name.includes("Tenant")) return { findOne: vi.fn().mockResolvedValue(null) } as any;
+      if (name.includes("SalonMembership")) return { findOne: vi.fn().mockResolvedValue(null) } as any;
+      return {} as any;
+    });
+
+    const req = {
+      auth: { accountId: "acc-1", sub: "member-1" },
+      body: {
+        tenant_slug: " OLMAYAN-SALON ",
+        package_id: "pkg-1",
+        selected_days: [{ starts_at: "2026-05-20T09:00:00.000Z", ends_at: "2026-05-20T10:00:00.000Z" }],
+      },
+    } as any;
+
+    await expect(MemberMobileRequestsController.createPaymentRequest(req, createMockResponse() as any)).rejects.toMatchObject({
+      code: "SALON_NOT_FOUND",
+      statusCode: 404,
+      message: "Salon bulunamadı",
     });
   });
 

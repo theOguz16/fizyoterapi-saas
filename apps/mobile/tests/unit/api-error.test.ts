@@ -12,6 +12,12 @@ describe("mobile api errors", () => {
     );
   });
 
+  it("preserves the safe public copy for a missing salon", () => {
+    expect(resolveApiError({ error: { code: "SALON_NOT_FOUND", message: "Salon bulunamadı" } }, "fallback")).toBe(
+      "Salon bulunamadı"
+    );
+  });
+
   it("does not expose internal tenant or auth wording for known codes", () => {
     expect(
       resolveApiError(
