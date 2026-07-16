@@ -62,16 +62,14 @@ export class PublicController {
 
   private static normalizeCampaigns(raw: unknown) {
     const defaults = {
-      referral_campaigns: [
-        {
-          id: "ref-default-2",
-          required_referrals: 2,
-          reward_type: "GROUP_CLASS_CREDIT",
-          reward_value: 1,
-          reward_label: "1 Grup Dersi Hediyesi",
-          is_active: true,
-        },
-      ],
+      referral_campaigns: [] as Array<{
+        id: string;
+        required_referrals: number;
+        reward_type: string;
+        reward_value: number;
+        reward_label: string;
+        is_active: boolean;
+      }>,
       loyalty_campaigns: [] as Array<{
         id: string;
         min_lessons: number;
@@ -108,7 +106,7 @@ export class PublicController {
             reward_type: String(item.reward_type ?? "GROUP_CLASS_CREDIT"),
             reward_value: Math.max(0, Number(item.reward_value) || 0),
             reward_label: String(item.reward_label ?? "").trim() || "Ödül",
-            is_active: item.is_active === undefined ? true : Boolean(item.is_active),
+            is_active: item.is_active === true,
           };
         })
         .filter((row) => row.required_referrals > 0),
@@ -121,7 +119,7 @@ export class PublicController {
             reward_type: String(item.reward_type ?? "GROUP_CLASS_CREDIT"),
             reward_value: Math.max(0, Number(item.reward_value) || 0),
             reward_label: String(item.reward_label ?? "").trim() || "Ödül",
-            is_active: item.is_active === undefined ? true : Boolean(item.is_active),
+            is_active: item.is_active === true,
           };
         })
         .filter((row) => row.min_lessons > 0),

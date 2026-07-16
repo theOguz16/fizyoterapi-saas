@@ -209,7 +209,7 @@ describe("member home controller", () => {
     expect(payload.referral_wallet.group_class_credits).toBe(7);
     expect(payload.campaigns).toEqual({
       active_referral_campaigns: 1,
-      active_loyalty_campaigns: 2,
+      active_loyalty_campaigns: 1,
       cancellation_policy: {
         min_hours_before_start: 6,
         refund_policy: "NO_REFUND",

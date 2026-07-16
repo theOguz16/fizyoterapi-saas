@@ -251,7 +251,7 @@ async function createSalonProfile(
             reward_type: "GROUP_CLASS_CREDIT",
             reward_value: 1,
             reward_label: "1 Grup Dersi Hediyesi",
-            is_active: true,
+            is_active: false,
           },
         ],
         loyalty_campaigns: [],

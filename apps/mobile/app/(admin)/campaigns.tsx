@@ -59,7 +59,7 @@ export default function AdminCampaignsScreen() {
   return (
     <AppShell
       title="Kampanyalar"
-      subtitle="Referans, sadakat ve indirim kurallarını aktif veya pasif olarak yönet."
+      subtitle="Referans ve katılım ödüllerini, hedef kitlesi ve teslimatıyla yönet."
       icon="campaigns"
       rightAction={<ActionButton label="Yeni" icon="spark" fullWidth={false} onPress={() => router.push({ pathname: "/(admin)/campaign-create", params: { backTo: "/(admin)/campaigns" } } as never)} />}
       refreshing={query.isRefetching}
@@ -82,13 +82,11 @@ export default function AdminCampaignsScreen() {
                 <StatusBadge label={formatRewardType(item.reward_type)} tone="info" />
               </View>
               <Text style={styles.copy}>
-                {item.required_referrals
-                  ? `${item.required_referrals} referans sonrası ödül tetiklenir.`
-                  : item.min_lessons
-                    ? `${item.min_lessons} ders tamamlama koşulu var.`
-                    : "Hedef kitle ve ödül tipi ayarlardan okunuyor."}
+                {item.audience_label || "Tüm aktif üyeler"} · {item.trigger_label || "Koşul tanımlı"}
               </Text>
-              <Text style={styles.hint}>Bu kampanya profil, referans ve paket yenileme yüzeylerinde kullanılır.</Text>
+              <Text style={styles.copy}>Ödül: {item.reward_label || "Ücretsiz grup dersi"} · Alıcı: {item.target_label || "Üye"}</Text>
+              <Text style={styles.hint}>{item.fulfillment_label || "Ödül üyenin kredi cüzdanına otomatik eklenir."}</Text>
+              <Text style={styles.copy}>Teslim edilen: {item.fulfillment_count || 0} ödül / {item.fulfilled_credits || 0} kredi</Text>
               <View style={styles.actionsRow}>
                 <ActionButton
                   label="Düzenle"
@@ -158,8 +156,6 @@ function formatRewardType(value?: string | null) {
     case "FREE_CLASS":
     case "GROUP_CLASS_CREDIT":
       return "Ücretsiz ders";
-    case "DISCOUNT":
-      return "İndirim";
     default:
       return "Kural";
   }

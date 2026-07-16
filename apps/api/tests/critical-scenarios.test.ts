@@ -5,7 +5,9 @@ import { SlotValidationContractService } from "../services/slot-validation-contr
 import { messageForCode } from "../errors/error-catalog";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { JobLockService } from "../services/job-lock.service";
-import { ReferralAutomationService } from "../services/referral-automation.service";
+import { CampaignEngineService } from "../services/campaign-engine.service";
+import { AppDataSource } from "../data-source";
+import { CampaignAudience, CampaignFulfillmentType, CampaignRewardTarget, CampaignRewardType, CampaignTriggerType } from "../entities/campaign.entity";
 
 describe("Critical Scenario Set", () => {
   it("maps known error code to Turkish message", () => {
@@ -254,60 +256,30 @@ describe("Critical Scenario Set", () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 
-  it("grants referral campaign reward only once for a reached milestone", async () => {
-    const service = ReferralAutomationService as any;
-    const getCampaignsSpy = vi
-      .spyOn(service, "getReferralCampaigns")
-      .mockResolvedValue([
-        {
-          id: "ref-2",
-          required_referrals: 2,
-          reward_type: "GROUP_CLASS_CREDIT",
-          reward_value: 1,
-          reward_label: "2 kişiye 1 ders",
-          is_active: true,
-        },
-      ]);
-    const countSpy = vi.spyOn(service, "countQualifiedReferrals").mockResolvedValue(2);
-    const hasRewardSpy = vi.spyOn(service, "hasCampaignRewardAlready").mockResolvedValue(false);
-    const grantSpy = vi.spyOn(service, "grantCampaignReward").mockResolvedValue(undefined);
+  it("applies BOTH referral target to inviter and referred member", async () => {
+    const campaign = {
+      id: "6b474a08-a765-4c57-aeca-63f90aaa5923", tenant_id: "tenant-1", name: "İki taraflı",
+      audience: CampaignAudience.ALL, audience_config: {}, trigger_type: CampaignTriggerType.REFERRAL,
+      trigger_count: 2, reward_type: CampaignRewardType.GROUP_CLASS_CREDIT, reward_value: 1,
+      reward_target: CampaignRewardTarget.BOTH, fulfillment_type: CampaignFulfillmentType.MEMBER_CREDIT_WALLET,
+      is_active: true,
+    } as any;
+    vi.spyOn(CampaignEngineService, "list").mockResolvedValue([campaign]);
+    vi.spyOn(AppDataSource, "getRepository").mockReturnValue({ count: vi.fn().mockResolvedValue(2) } as any);
+    const fulfill = vi.spyOn(CampaignEngineService as any, "fulfill").mockResolvedValue(true);
 
-    const granted = await service.applyReferralCampaignRewards("tenant-1", "member-1");
-    expect(granted).toBe(1);
-    expect(grantSpy).toHaveBeenCalledTimes(1);
-    expect(hasRewardSpy).toHaveBeenCalledWith("tenant-1", "member-1", "ref-2", 2, "GROUP_CLASS_CREDIT");
-
-    getCampaignsSpy.mockRestore();
-    countSpy.mockRestore();
-    hasRewardSpy.mockRestore();
-    grantSpy.mockRestore();
+    await expect(CampaignEngineService.processReferral("tenant-1", "inviter-1", "referred-1")).resolves.toBe(2);
+    expect(fulfill).toHaveBeenCalledTimes(2);
+    expect(fulfill.mock.calls.map((call) => call[1])).toEqual(["inviter-1", "referred-1"]);
   });
 
-  it("skips referral reward grant when campaign milestone is already rewarded", async () => {
-    const service = ReferralAutomationService as any;
-    const getCampaignsSpy = vi
-      .spyOn(service, "getReferralCampaigns")
-      .mockResolvedValue([
-        {
-          id: "ref-2",
-          required_referrals: 2,
-          reward_type: "GROUP_CLASS_CREDIT",
-          reward_value: 1,
-          reward_label: "2 kişiye 1 ders",
-          is_active: true,
-        },
-      ]);
-    const countSpy = vi.spyOn(service, "countQualifiedReferrals").mockResolvedValue(2);
-    const hasRewardSpy = vi.spyOn(service, "hasCampaignRewardAlready").mockResolvedValue(true);
-    const grantSpy = vi.spyOn(service, "grantCampaignReward").mockResolvedValue(undefined);
+  it("does not fulfill a referral campaign before its threshold", async () => {
+    const campaign = { trigger_count: 3, reward_target: CampaignRewardTarget.REFERRER } as any;
+    vi.spyOn(CampaignEngineService, "list").mockResolvedValue([campaign]);
+    vi.spyOn(AppDataSource, "getRepository").mockReturnValue({ count: vi.fn().mockResolvedValue(2) } as any);
+    const fulfill = vi.spyOn(CampaignEngineService as any, "fulfill").mockResolvedValue(true);
 
-    const granted = await service.applyReferralCampaignRewards("tenant-1", "member-1");
-    expect(granted).toBe(0);
-    expect(grantSpy).not.toHaveBeenCalled();
-
-    getCampaignsSpy.mockRestore();
-    countSpy.mockRestore();
-    hasRewardSpy.mockRestore();
-    grantSpy.mockRestore();
+    await expect(CampaignEngineService.processReferral("tenant-1", "inviter-1", "referred-1")).resolves.toBe(0);
+    expect(fulfill).not.toHaveBeenCalled();
   });
 });

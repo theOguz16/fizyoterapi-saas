@@ -358,6 +358,13 @@ export type AdminCampaign = {
   reward_label?: string | null;
   reward_target?: "REFERRER" | "REFERRED" | "BOTH" | "MEMBER" | null;
   is_active?: boolean;
+  audience_label?: string;
+  trigger_label?: string;
+  target_label?: string;
+  fulfillment_label?: string;
+  fulfillment_count?: number;
+  fulfilled_credits?: number;
+  last_fulfilled_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -371,13 +378,6 @@ export type AdminCampaignListResponse = {
       refund_policy?: string | null;
     } | null;
   };
-  audit?: Array<{
-    id: string;
-    action: string;
-    summary: string;
-    actor_id?: string | null;
-    created_at: string;
-  }>;
   items?: AdminCampaign[];
   summary?: {
     total: number;

@@ -286,7 +286,7 @@ export async function createAdminCampaignApi(payload: {
   audience: "ALL" | "RISK" | "NEW";
   trigger_type: "REFERRAL" | "ATTENDANCE";
   trigger_count: number;
-  reward_type: "DISCOUNT" | "FREE_CLASS";
+  reward_type: "GROUP_CLASS_CREDIT";
   reward_value: number;
   reward_target?: "REFERRER" | "REFERRED" | "BOTH";
   is_active?: boolean;
@@ -303,7 +303,7 @@ export async function updateAdminCampaignApi(
     name?: string;
     audience?: "ALL" | "RISK" | "NEW";
     trigger_count?: number;
-    reward_type?: "DISCOUNT" | "FREE_CLASS";
+    reward_type?: "GROUP_CLASS_CREDIT";
     reward_value?: number;
     reward_target?: "REFERRER" | "REFERRED" | "BOTH";
     is_active?: boolean;

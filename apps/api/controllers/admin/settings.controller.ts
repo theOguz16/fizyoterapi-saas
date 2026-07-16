@@ -78,20 +78,20 @@ export class AdminSettingsController {
 
   private static normalizeCampaigns(value: unknown) {
     const defaults = {
-      referral_campaigns: [
-        {
-          id: "ref-default-2",
-          name: "Varsayılan referans kampanyası",
-          audience: "ALL",
-          trigger_type: "REFERRAL",
-          required_referrals: 2,
-          reward_type: "FREE_CLASS",
-          reward_value: 1,
-          reward_label: "2 kişi getirene 1 ücretsiz grup dersi",
-          reward_target: "REFERRER",
-          is_active: true,
-        },
-      ],
+      referral_campaigns: [] as Array<{
+        id: string;
+        name?: string;
+        audience?: string;
+        trigger_type?: string;
+        required_referrals: number;
+        reward_type: string;
+        reward_value: number;
+        reward_label: string;
+        reward_target?: string;
+        is_active: boolean;
+        created_at?: string;
+        updated_at?: string;
+      }>,
       loyalty_campaigns: [] as Array<{
         id: string;
         name?: string;
@@ -138,7 +138,7 @@ export class AdminSettingsController {
             reward_value: Math.max(0, Number(row.reward_value) || 0),
             reward_label: String(row.reward_label ?? "").trim() || "Ödül",
             reward_target: String(row.reward_target ?? "REFERRER"),
-            is_active: row.is_active === undefined ? true : Boolean(row.is_active),
+            is_active: row.is_active === true,
             created_at:
               typeof row.created_at === "string" && !Number.isNaN(new Date(row.created_at).getTime())
                 ? new Date(row.created_at).toISOString()
@@ -163,7 +163,7 @@ export class AdminSettingsController {
             reward_value: Math.max(0, Number(row.reward_value) || 0),
             reward_label: String(row.reward_label ?? "").trim() || "Ödül",
             reward_target: String(row.reward_target ?? "MEMBER"),
-            is_active: row.is_active === undefined ? true : Boolean(row.is_active),
+            is_active: row.is_active === true,
             created_at:
               typeof row.created_at === "string" && !Number.isNaN(new Date(row.created_at).getTime())
                 ? new Date(row.created_at).toISOString()

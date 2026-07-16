@@ -12,13 +12,12 @@ import {
 import { ClassSession, LessonCategory, SessionStatus } from "../../entities/class-session.entity";
 import { User, UserRole } from "../../entities/user.entity";
 import { UserPackage } from "../../entities/user-package.entity";
-import { CreditLedger, CreditLedgerSource } from "../../entities/credit-ledger.entity";
+import { CreditLedgerSource } from "../../entities/credit-ledger.entity";
 import { MemberCreditWalletService } from "../../services/member-credit-wallet.service";
-import { SalonProfile } from "../../entities/salon-profile.entity";
-import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
 import { MobileNotificationService } from "../../services/mobile-notification.service";
 import { AuditLogService } from "../../services/audit-log.service";
 import { Package, PackageType } from "../../entities/package.entity";
+import { CampaignEngineService } from "../../services/campaign-engine.service";
 
 type CheckinParams = {
   req: AuthenticatedRequest;
@@ -33,20 +32,7 @@ type SessionCheckinContext = {
   session?: ClassSession | null;
 };
 
-type LoyaltyCampaign = {
-  id: string;
-  min_lessons: number;
-  reward_type: string;
-  reward_value: number;
-  reward_label: string;
-  is_active: boolean;
-};
-
 export class TrainerCheckinController {
-  private static isDirectCreditRewardType(rewardType: string) {
-    return rewardType === "GROUP_CLASS_CREDIT" || rewardType === "FREE_CLASS";
-  }
-
   private static getActorTrainerId(req: AuthenticatedRequest) {
     return req.auth?.linkedUserId || req.auth?.sub || null;
   }
@@ -171,177 +157,8 @@ export class TrainerCheckinController {
     return qb.getOne();
   }
 
-  private static normalizeLoyaltyCampaigns(raw: unknown): LoyaltyCampaign[] {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
-
-    const source = raw as Record<string, unknown>;
-    const rows = Array.isArray(source.loyalty_campaigns) ? source.loyalty_campaigns : [];
-
-    return rows
-      .map((entry, index) => {
-        const item = (entry ?? {}) as Record<string, unknown>;
-
-        return {
-          id: String(item.id ?? "").trim() || `loy-${index + 1}`,
-          min_lessons: Math.max(1, Math.floor(Number(item.min_lessons) || 0)),
-          reward_type: String(item.reward_type ?? "FREE_CLASS"),
-          reward_value: Math.max(0, Number(item.reward_value) || 0),
-          reward_label: String(item.reward_label ?? "").trim() || "Sadakat ödülü",
-          is_active: item.is_active === undefined ? true : Boolean(item.is_active),
-        };
-      })
-      .filter((row) => row.is_active)
-      .sort((a, b) => a.min_lessons - b.min_lessons);
-  }
-
-  private static async getLoyaltyCampaigns(tenantId: string): Promise<LoyaltyCampaign[]> {
-    const profile = await AppDataSource.getRepository(SalonProfile).findOne({
-      where: { tenant_id: tenantId },
-      order: { created_at: "DESC" },
-      select: ["id", "location"],
-    });
-
-    const location =
-      profile?.location && typeof profile.location === "object" && !Array.isArray(profile.location)
-        ? (profile.location as Record<string, unknown>)
-        : {};
-
-    const campaigns =
-      location.campaigns && typeof location.campaigns === "object" && !Array.isArray(location.campaigns)
-        ? (location.campaigns as Record<string, unknown>)
-        : {};
-
-    return TrainerCheckinController.normalizeLoyaltyCampaigns(campaigns);
-  }
-
-  private static async hasLoyaltyRewardAlready(
-    tenantId: string,
-    memberId: string,
-    campaignId: string,
-    milestone: number,
-    rewardType: string
-  ) {
-    if (TrainerCheckinController.isDirectCreditRewardType(rewardType)) {
-      const ledger = await AppDataSource.getRepository(CreditLedger)
-        .createQueryBuilder("cl")
-        .where("cl.tenant_id = :tenantId", { tenantId })
-        .andWhere("cl.member_id = :memberId", { memberId })
-        .andWhere("cl.meta ->> 'campaign_id' = :campaignId", { campaignId })
-        .andWhere("cl.meta ->> 'milestone' = :milestone", { milestone: String(milestone) })
-        .getOne();
-
-      return Boolean(ledger);
-    }
-
-    const claim = await AppDataSource.getRepository(NotificationEvent)
-      .createQueryBuilder("ne")
-      .where("ne.tenant_id = :tenantId", { tenantId })
-      .andWhere("ne.member_id = :memberId", { memberId })
-      .andWhere("ne.type = :type", { type: "CAMPAIGN_REWARD_CLAIM" })
-      .andWhere("ne.payload ->> 'campaign_id' = :campaignId", { campaignId })
-      .andWhere("ne.payload ->> 'milestone' = :milestone", { milestone: String(milestone) })
-      .getOne();
-
-    return Boolean(claim);
-  }
-
-  private static async grantLoyaltyReward(tenantId: string, memberId: string, campaign: LoyaltyCampaign) {
-    const rewardValue = Math.max(1, Math.floor(campaign.reward_value || 1));
-
-    if (TrainerCheckinController.isDirectCreditRewardType(campaign.reward_type)) {
-      await MemberCreditWalletService.addCredits({
-        tenantId,
-        memberId,
-        amount: rewardValue,
-        source: CreditLedgerSource.MANUAL_ADJUST,
-        referenceType: "LOYALTY_CAMPAIGN",
-        referenceId: campaign.id,
-        meta: {
-          campaign_id: campaign.id,
-          milestone: campaign.min_lessons,
-          reward_type: campaign.reward_type,
-          reward_label: campaign.reward_label,
-        },
-      });
-
-      await MobileNotificationService.queuePush({
-        tenantId,
-        userId: memberId,
-        roleScope: "MEMBER",
-        type: "CAMPAIGN_REWARD_EARNED",
-        title: "Sadakat ödülü kazandın",
-        body: campaign.reward_label,
-        deepLink: "/(member)/campaigns",
-        meta: {
-          campaign_id: campaign.id,
-          reward_type: campaign.reward_type,
-          reward_value: rewardValue,
-        },
-      });
-
-      return;
-    }
-
-    await AppDataSource.getRepository(NotificationEvent).save(
-      AppDataSource.getRepository(NotificationEvent).create({
-        tenant_id: tenantId,
-        member_id: memberId,
-        type: "CAMPAIGN_REWARD_CLAIM",
-        payload: {
-          campaign_id: campaign.id,
-          milestone: campaign.min_lessons,
-          reward_type: campaign.reward_type,
-          reward_value: rewardValue,
-          reward_label: campaign.reward_label,
-          status: "PENDING_CLAIM",
-        },
-        status: NotificationEventStatus.PROCESSED,
-        processed_at: new Date(),
-      })
-    );
-
-    await MobileNotificationService.queuePush({
-      tenantId,
-      userId: memberId,
-      roleScope: "MEMBER",
-      type: "CAMPAIGN_REWARD_EARNED",
-      title: "Sadakat ödülü hazır",
-      body: campaign.reward_label,
-      deepLink: "/(member)/campaigns",
-      meta: {
-        campaign_id: campaign.id,
-        reward_type: campaign.reward_type,
-        reward_value: rewardValue,
-      },
-    });
-  }
-
   private static async applyLoyaltyCampaignRewards(tenantId: string, memberId: string) {
-    const [campaigns, totalAttendance] = await Promise.all([
-      TrainerCheckinController.getLoyaltyCampaigns(tenantId),
-      AppDataSource.getRepository(Attendance)
-        .createQueryBuilder("a")
-        .where("a.tenant_id = :tenantId", { tenantId })
-        .andWhere("a.member_id = :memberId", { memberId })
-        .andWhere("a.result = :result", { result: AttendanceResult.CREDIT_DEDUCTED })
-        .getCount(),
-    ]);
-
-    for (const campaign of campaigns) {
-      if (totalAttendance < campaign.min_lessons) continue;
-
-      const alreadyGranted = await TrainerCheckinController.hasLoyaltyRewardAlready(
-        tenantId,
-        memberId,
-        campaign.id,
-        campaign.min_lessons,
-        campaign.reward_type
-      );
-
-      if (alreadyGranted) continue;
-
-      await TrainerCheckinController.grantLoyaltyReward(tenantId, memberId, campaign);
-    }
+    await CampaignEngineService.processAttendance(tenantId, memberId);
   }
 
   static async listLogs(req: AuthenticatedRequest, res: Response) {

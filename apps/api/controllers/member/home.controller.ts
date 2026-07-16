@@ -185,13 +185,13 @@ export class MemberHomeController {
       const activeReferralCampaigns = Array.isArray(campaigns.referral_campaigns)
         ? campaigns.referral_campaigns.filter((row) => {
             const item = row as Record<string, unknown>;
-            return item.is_active === undefined ? true : Boolean(item.is_active);
+            return item.is_active === true;
           }).length
         : 0;
       const activeLoyaltyCampaigns = Array.isArray(campaigns.loyalty_campaigns)
         ? campaigns.loyalty_campaigns.filter((row) => {
             const item = row as Record<string, unknown>;
-            return item.is_active === undefined ? true : Boolean(item.is_active);
+            return item.is_active === true;
           }).length
         : 0;
       const cancellationPolicy =

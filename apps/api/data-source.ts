@@ -33,6 +33,7 @@ import { SalonMembership } from "./entities/salon-membership.entity";
 import { SalonApplication } from "./entities/salon-application.entity";
 import { AuditLog } from "./entities/audit-log.entity";
 import { BackgroundJob } from "./entities/background-job.entity";
+import { Campaign } from "./entities/campaign.entity";
 
 // TypeORM icin merkezi veritabani baglanti tanimi.
 // Yeni entity eklendiginde hem runtime hem test senaryolari icin burada listelenmesi gerekir.
@@ -46,7 +47,7 @@ export const AppDataSource = new DataSource({
     Availability, Booking, Measurement, RetentionScore,
     Referral, ReferralReward, SalonProfile, SalonImage, Lead, NotificationTemplate, TrainerMemberNote, TrainerMemberNoteHistory,
     Invite, NotificationEvent, NotificationDelivery, DeviceToken, MemberCreditWallet, CreditLedger, TrainerSkill,
-    PackageTrainerAssignment, Account, SalonMembership, SalonApplication, AuditLog, BackgroundJob
+    PackageTrainerAssignment, Account, SalonMembership, SalonApplication, AuditLog, BackgroundJob, Campaign
   ],
   // migrations: ["src/migrations/*.ts"],
 });

@@ -23,8 +23,7 @@ const TRIGGER_TYPES = [
 ];
 
 const REWARD_TYPES = [
-  { label: "İndirim", value: "DISCOUNT" },
-  { label: "Ücretsiz grup dersi", value: "FREE_CLASS" },
+  { label: "Ücretsiz grup dersi", value: "GROUP_CLASS_CREDIT" },
 ];
 
 const REWARD_TARGETS = [
@@ -43,9 +42,10 @@ export default function AdminCampaignCreateScreen() {
   const [triggerType, setTriggerType] = useState("REFERRAL");
   const [triggerCount, setTriggerCount] = useState("");
 
-  const [rewardType, setRewardType] = useState("DISCOUNT");
+  const [rewardType, setRewardType] = useState("GROUP_CLASS_CREDIT");
   const [rewardValue, setRewardValue] = useState("");
   const [rewardTarget, setRewardTarget] = useState("REFERRER");
+  const [isActive, setIsActive] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: ["admin-campaign", campaignId],
@@ -61,40 +61,45 @@ export default function AdminCampaignCreateScreen() {
     setAudience(String(campaign.audience || "ALL"));
     setTriggerType(campaign.required_referrals ? "REFERRAL" : "ATTENDANCE");
     setTriggerCount(String(campaign.required_referrals || campaign.min_lessons || ""));
-    setRewardType(campaign.reward_type === "DISCOUNT" ? "DISCOUNT" : "FREE_CLASS");
+    setRewardType("GROUP_CLASS_CREDIT");
     setRewardValue(String(campaign.reward_value || ""));
     setRewardTarget(String(campaign.reward_target || "REFERRER"));
+    setIsActive(campaign.is_active === true);
   }, [detailQuery.data]);
 
   const isEditing = useMemo(() => Boolean(campaignId), [campaignId]);
+  const ruleLocked = Number(detailQuery.data?.campaign?.fulfillment_count || 0) > 0;
 
   const mutation = useMutation({
   mutationFn: async () =>
     isEditing
-      ? updateAdminCampaignApi(campaignId || "", {
+      ? updateAdminCampaignApi(campaignId || "", ruleLocked ? {
+          name: name.trim(),
+          is_active: isActive,
+        } : {
           name: name.trim(),
           audience: audience as "ALL" | "RISK" | "NEW",
           trigger_count: Number(triggerCount),
-          reward_type: rewardType as "DISCOUNT" | "FREE_CLASS",
+          reward_type: "GROUP_CLASS_CREDIT",
           reward_value: Number(rewardValue),
           reward_target:
             triggerType === "REFERRAL"
               ? (rewardTarget as "REFERRER" | "REFERRED" | "BOTH")
               : undefined,
-          is_active: true,
+          is_active: isActive,
         })
       : createAdminCampaignApi({
           name: name.trim(),
           audience: audience as "ALL" | "RISK" | "NEW",
           trigger_type: triggerType as "REFERRAL" | "ATTENDANCE",
           trigger_count: Number(triggerCount),
-          reward_type: rewardType as "DISCOUNT" | "FREE_CLASS",
+          reward_type: "GROUP_CLASS_CREDIT",
           reward_value: Number(rewardValue),
           reward_target:
             triggerType === "REFERRAL"
               ? (rewardTarget as "REFERRER" | "REFERRED" | "BOTH")
               : undefined,
-          is_active: true,
+          is_active: isActive,
         }),
 
   meta: {
@@ -143,11 +148,7 @@ export default function AdminCampaignCreateScreen() {
       conditionText = `${triggerCount || "X"} derse katılım sağlandığında`;
     }
 
-    if (rewardType === "DISCOUNT") {
-      rewardText = `%${rewardValue || "X"} indirim uygulanacak`;
-    } else if (rewardType === "FREE_CLASS") {
-      rewardText = `${rewardValue || "X"} ücretsiz grup dersi tanımlanacak`;
-    }
+    rewardText = `${rewardValue || "X"} ücretsiz grup dersi kredisi cüzdana otomatik tanımlanacak`;
 
     return `${conditionText}, ${rewardText}${targetText}.`;
   };
@@ -174,7 +175,7 @@ export default function AdminCampaignCreateScreen() {
               key={option.value} 
               label={option.label} 
               active={audience === option.value} 
-              onPress={() => setAudience(option.value)} 
+              onPress={() => { if (!ruleLocked) setAudience(option.value); }}
             />
           ))}
         </View>
@@ -188,7 +189,7 @@ export default function AdminCampaignCreateScreen() {
               key={option.value} 
               label={option.label} 
               active={triggerType === option.value} 
-              onPress={() => setTriggerType(option.value)} 
+              onPress={() => { if (!ruleLocked) setTriggerType(option.value); }}
             />
           ))}
         </View>
@@ -200,6 +201,7 @@ export default function AdminCampaignCreateScreen() {
             onChangeText={setTriggerCount} 
             placeholder="Gerekli kayıt sayısını girin" 
             keyboardType="numeric" 
+            editable={!ruleLocked}
           />
         )}
 
@@ -210,6 +212,7 @@ export default function AdminCampaignCreateScreen() {
             onChangeText={setTriggerCount} 
             placeholder="Gerekli ders sayısını girin" 
             keyboardType="numeric" 
+            editable={!ruleLocked}
           />
         )}
       </SurfaceCard>
@@ -222,28 +225,19 @@ export default function AdminCampaignCreateScreen() {
               key={option.value} 
               label={option.label} 
               active={rewardType === option.value} 
-              onPress={() => setRewardType(option.value)} 
+              onPress={() => { if (!ruleLocked) setRewardType(option.value); }}
             />
           ))}
         </View>
 
-        {rewardType === "DISCOUNT" && (
-          <FormField 
-            label="İndirim oranı (%)" 
-            value={rewardValue} 
-            onChangeText={setRewardValue} 
-            placeholder="İndirim oranını girin" 
-            keyboardType="numeric" 
-          />
-        )}
-
-        {rewardType === "FREE_CLASS" && (
+        {rewardType === "GROUP_CLASS_CREDIT" && (
           <FormField 
             label="Grup dersi adedi" 
             value={rewardValue} 
             onChangeText={setRewardValue} 
             placeholder="Hediye ders adedini girin" 
             keyboardType="numeric" 
+            editable={!ruleLocked}
           />
         )}
 
@@ -256,7 +250,7 @@ export default function AdminCampaignCreateScreen() {
                   key={option.value} 
                   label={option.label} 
                   active={rewardTarget === option.value} 
-                  onPress={() => setRewardTarget(option.value)} 
+                  onPress={() => { if (!ruleLocked) setRewardTarget(option.value); }}
                 />
               ))}
             </View>
@@ -267,6 +261,19 @@ export default function AdminCampaignCreateScreen() {
       <SurfaceCard>
         <Text style={styles.sectionTitle}>Kural özeti</Text>
         <Text style={styles.summaryText}>{generateSummary()}</Text>
+        <Text style={styles.helperText}>Hedef kitle kontrolü ödülü alacak üye için yapılır. Ödül kampanya başına bir kez teslim edilir.</Text>
+        {ruleLocked ? <Text style={styles.lockedText}>Bu kampanyada ödül teslim edildiği için geçmiş raporun doğruluğunu koruyan kural alanları kilitlidir.</Text> : null}
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <Text style={styles.sectionTitle}>Yayın durumu</Text>
+        <View style={styles.chips}>
+          <SelectionChip label="Taslak" active={!isActive} onPress={() => setIsActive(false)} />
+          <SelectionChip label="Aktif" active={isActive} onPress={() => setIsActive(true)} />
+        </View>
+        <Text style={styles.helperText}>
+          {isActive ? "Koşulu sağlayan uygun üyelere ödül otomatik verilir." : "Kampanya kaydedilir ancak siz aktifleştirene kadar ödül üretmez."}
+        </Text>
       </SurfaceCard>
 
       <ActionButton
@@ -297,5 +304,19 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.md,
     fontFamily: tokens.fontFamily.medium,
     lineHeight: 22,
+  },
+  helperText: {
+    color: tokens.colors.textMuted,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
+    marginTop: tokens.spacing.xs,
+  },
+  lockedText: {
+    color: tokens.colors.warning,
+    fontSize: tokens.font.xs,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.medium,
+    marginTop: tokens.spacing.sm,
   },
 });
