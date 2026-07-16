@@ -21,27 +21,13 @@ appId: com.fizyoflow.mobile
     id: "role-option-admin"
 - tapOn:
     id: "role-option-admin"
-- assertVisible: "İlk günden hangi alanı daha sıkı yönetmek istiyorsun?"
-- tapOn:
-    id: "role-step-primarygoal-operations"
-- assertVisible: "Klinik yönetiminde günlerin çoğunlukla nasıl geçiyor?"
-- tapOn:
-    id: "role-step-rhythm-steady"
-- assertVisible: "Panel kullanımında nasıl bir yapı beklersin?"
-- tapOn:
-    id: "role-step-supportstyle-control"
-- assertVisible: "Klinik ve salon sahipleri için"
-- swipe:
-    start: "50%,85%"
-    end: "50%,20%"
-    duration: 1000
-- swipe:
-    start: "50%,85%"
-    end: "50%,20%"
-    duration: 1000
-- tapOn:
-    point: "50%,89%"
-- assertVisible: "Hesabını oluştur"
+- extendedWaitUntil:
+    visible: "Hesabını oluştur"
+    timeout: 10000
 - assertVisible: "Klinik sahibi hesabı"
-- assertVisible:
-    id: "register-email-input"
+- scrollUntilVisible:
+    element:
+      id: "register-email-input"
+    direction: DOWN
+    timeout: 10000
+- assertNotVisible: "₺349.99"

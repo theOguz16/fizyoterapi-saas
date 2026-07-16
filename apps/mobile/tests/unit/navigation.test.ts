@@ -159,7 +159,7 @@ describe("mobile navigation rules", () => {
         selectedPersona: "ADMIN",
         segments: ["(auth)", "welcome"],
       })
-    ).toEqual({ type: "replace", href: "/(auth)/owner-plan", reason: "SIGNUP_FLOW_GUARD" });
+    ).toEqual({ type: "replace", href: "/(auth)/register", reason: "SIGNUP_FLOW_GUARD" });
   });
 
   it("prioritizes mobile access and notification permission guards", () => {

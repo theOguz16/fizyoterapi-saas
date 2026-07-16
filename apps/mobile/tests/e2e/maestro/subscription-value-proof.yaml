@@ -5,13 +5,20 @@ appId: com.fizyoflow.mobile
     clearKeychain: true
 - openLink: "fizyoflow://owner-plan"
 - waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+- waitForAnimationToEnd:
     timeout: 5000
 - assertVisible:
     id: "owner-plan-value-proof"
-- assertVisible: "Bu planla neleri yönetirsin?"
-- scrollUntilVisible:
-    element: "Gelir ve seans görünümü"
-    direction: DOWN
+- assertVisible: "İlk oturumun sonunda hazır olacaklar"
+- assertVisible: "İlk hizmet veya paket"
+- assertNotVisible: "₺349.99"
+- assertNotVisible: "sınırlı süreli"
 - scrollUntilVisible:
     element:
       id: "owner-plan-start-trial"

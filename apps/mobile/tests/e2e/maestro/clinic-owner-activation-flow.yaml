@@ -1,0 +1,99 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+
+- openLink: "fizyoflow://e2e-reset"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsalon%2Fsetup"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
+- extendedWaitUntil:
+    visible:
+      id: "admin-clinic-activation-step-1"
+    timeout: 20000
+- assertVisible: "1 / 4"
+
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fpackages%3Factivation%3D1"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+
+- extendedWaitUntil:
+    visible:
+      id: "admin-packages-screen"
+    timeout: 20000
+- assertVisible: "2 / 4 · İlk hizmetini oluştur"
+
+- scrollUntilVisible:
+    element:
+      id: "admin-package-title-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-package-title-input"
+- inputText: "Aktivasyon E2E Paket"
+- hideKeyboard
+
+- runFlow:
+    when:
+      visible:
+        id: "admin-package-save-button"
+    commands:
+      - tapOn:
+          id: "admin-package-save-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "admin-clinic-activation-step-3"
+    timeout: 20000
+- assertVisible: "3 / 4 · Takvim düzenini belirle"
+
+- assertVisible:
+    id: "admin-working-hours-save"
+- tapOn:
+    id: "admin-working-hours-save"
+
+- extendedWaitUntil:
+    visible:
+      id: "admin-clinic-activation-step-4"
+    timeout: 20000
+- assertVisible: "4 / 4 · Kliniğin paylaşılmaya hazır"
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-qr-preview"
+    direction: DOWN
+    timeout: 15000
+
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-activation-complete"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "admin-clinic-activation-review-plan"
+
+- tapOn:
+    id: "admin-clinic-activation-review-plan"
+- extendedWaitUntil:
+    visible:
+      id: "admin-subscription-value-proof"
+    timeout: 20000

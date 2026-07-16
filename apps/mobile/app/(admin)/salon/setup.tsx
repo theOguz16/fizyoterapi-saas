@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { createClinıcRequestApi } from "@/lib/mobile-api";
 import { useSession } from "@/providers/auth-session";
 import { TURKEY_CITIES, TURKEY_DISTRICTS_BY_CITY } from "@/lib/turkey-locations";
+import { getClinicActivationNextRoute } from "@/lib/clinic-activation";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
 import { AppShell } from "@/theme/components/app-shell";
@@ -63,7 +64,7 @@ export default function AdminSalonSetupScreen() {
 
   onSuccess: async () => {
     await refreshMe();
-    router.replace("/(admin)/dashboard" as never);
+    router.replace(getClinicActivationNextRoute("clinic") as never);
   },
 });
 
@@ -105,9 +106,9 @@ export default function AdminSalonSetupScreen() {
 
   return (
     <>
-      <AppShell title="Salon kurulumunu tamamla" subtitle="Salon kartında görünecek temel bilgileri ekle. Kurulum tamamlandığında salon ayarları ve çalışma saatleri ekranı açılır." icon="clinic" showBackButton={false}>
+      <AppShell testID="admin-clinic-activation-step-1" title="Klinik bilgileri" subtitle="Dört adımlı kurulumun ilk adımında kliniğinin temel bilgilerini oluştur." icon="clinic" showBackButton={false}>
         <View style={styles.metricsRow}>
-          <MetricCard label="Kurulum" value="1. adım" hint="Temel bilgiler" icon="clinic" />
+          <MetricCard label="Kurulum" value="1 / 4" hint="Klinik bilgileri" icon="clinic" />
           <MetricCard label="Süre" value="2 dk" hint="Hızlı tamamlanır" icon="clock" />
         </View>
 
@@ -132,13 +133,15 @@ export default function AdminSalonSetupScreen() {
           <Text style={styles.section}>Salon bilgileri</Text>
           <FormField
             label="Salon / klinik adı"
+            inputId="admin-clinic-name-input"
             value={form.clinic_name}
             onChangeText={(value) => setForm((prev) => ({ ...prev, clinic_name: value }))}
             placeholder="Salon veya klinik adını gir"
           />
-          <PickerField label="Şehir" value={form.city} placeholder="Şehir seç" onPress={() => openPicker("city")} />
+          <PickerField testID="admin-clinic-city-picker" label="Şehir" value={form.city} placeholder="Şehir seç" onPress={() => openPicker("city")} />
           <PickerField
             label="İlçe"
+            testID="admin-clinic-district-picker"
             value={form.district}
             placeholder={form.city ? "İlçe seç" : "Önce şehir seç"}
             onPress={() => openPicker("district")}
@@ -146,6 +149,7 @@ export default function AdminSalonSetupScreen() {
           />
           <FormField
             label="Telefon"
+            inputId="admin-clinic-phone-input"
             value={form.phone}
             onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))}
             placeholder="05xx xxx xx xx"
@@ -171,7 +175,7 @@ export default function AdminSalonSetupScreen() {
           </View>
         </SurfaceCard>
 
-        <ActionButton label="Salon kurulumunu tamamla" icon="clinic" onPress={handleSubmit} loading={mutation.isPending} />
+        <ActionButton testID="admin-clinic-activation-next" label="Kliniği oluştur ve pakete geç" icon="clinic" onPress={handleSubmit} loading={mutation.isPending} />
       </AppShell>
 
       <Modal visible={pickerMode !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={closePicker}>
@@ -212,12 +216,14 @@ export default function AdminSalonSetupScreen() {
 }
 
 function PickerField({
+  testID,
   label,
   value,
   placeholder,
   onPress,
   disabled = false,
 }: {
+  testID?: string;
   label: string;
   value: string;
   placeholder: string;
@@ -227,7 +233,7 @@ function PickerField({
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.fieldButton, disabled ? styles.fieldButtonDisabled : null, pressed ? styles.fieldButtonPressed : null]}>
+      <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.fieldButton, disabled ? styles.fieldButtonDisabled : null, pressed ? styles.fieldButtonPressed : null]}>
         <Text style={[styles.fieldValue, !value ? styles.fieldPlaceholder : null]}>{value || placeholder}</Text>
         <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
       </Pressable>

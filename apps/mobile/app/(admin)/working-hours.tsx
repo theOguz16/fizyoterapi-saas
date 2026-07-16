@@ -18,6 +18,7 @@ import { ActionButton } from "@/theme/components/action-button";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
+import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
 
 const DAY_OPTIONS = [
   { value: 1, label: "Pzt" },
@@ -59,7 +60,7 @@ function formatTime(value: number) {
 
 export default function AdminWorkingHoursScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; activation?: string | string[] }>();
 
   const query = useQuery({
     queryKey: calendarKeys.admin.workingHours(),
@@ -72,6 +73,7 @@ export default function AdminWorkingHoursScreen() {
 
   const settings = query.data || {};
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const activation = isClinicActivationFlow(params.activation);
   const profile = settings.profile || settings;
   const location = profile.location || {};
 
@@ -183,6 +185,11 @@ export default function AdminWorkingHoursScreen() {
     onSuccess: async () => {
       await query.refetch();
 
+      if (activation) {
+        router.replace(getClinicActivationNextRoute("working_hours") as never);
+        return;
+      }
+
       showInfoAlert(
         "Çalışma saatleri güncellendi",
         "Salon takvimi ve bağlı kullanıcı ekranları yeni çalışma düzenine göre yenilendi."
@@ -269,13 +276,25 @@ export default function AdminWorkingHoursScreen() {
   return (
     <>
       <AppShell
-        title="Çalışma saatlerini düzenle"
+        testID="admin-clinic-activation-step-3"
+        title={activation ? "Çalışma saatleri" : "Çalışma saatlerini düzenle"}
         subtitle="Açılış, kapanış, öğle arası ve slot süresi salon takvimini doğrudan belirler."
         icon="clock"
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}
         onBack={() => router.replace((backTo || "/(admin)/salon") as never)}
+        footer={
+          activation ? (
+            <ActionButton testID="admin-working-hours-save" label="Saatleri kaydet ve QR'a geç" icon="clock" onPress={handleSave} loading={mutation.isPending} />
+          ) : undefined
+        }
       >
+        {activation ? (
+          <SurfaceCard tone="primary">
+            <Text style={styles.cardTitle}>3 / 4 · Takvim düzenini belirle</Text>
+            <Text style={styles.copy}>Saatleri kaydettiğinde paylaşılabilir klinik QR'ın açılır.</Text>
+          </SurfaceCard>
+        ) : null}
         <View style={styles.metricsRow}>
           <MetricCard label="Açılış" value={form.start_time || "Seçilmedi"} hint="Gün başlangıcı" icon="clock" />
           <MetricCard label="Kapanış" value={form.end_time || "Seçilmedi"} hint="Gün sonu" icon="calendar" />
@@ -415,7 +434,9 @@ export default function AdminWorkingHoursScreen() {
           </View>
         </SurfaceCard>
 
-        <ActionButton label="Değişiklikleri kaydet" icon="clock" onPress={handleSave} loading={mutation.isPending} />
+        {!activation ? (
+          <ActionButton testID="admin-working-hours-save" label="Değişiklikleri kaydet" icon="clock" onPress={handleSave} loading={mutation.isPending} />
+        ) : null}
       </AppShell>
 
       <Modal visible={activeField !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setActiveField(null)}>

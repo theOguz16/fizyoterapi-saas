@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Share, StyleSheet, Text, View } from "react-native";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import { getAdminClinicQrApi } from "@/lib/mobile-api";
@@ -14,6 +14,7 @@ import { EmptyPanel } from "@/theme/components/empty-panel";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
 import { trackProductEvent } from "@/lib/product-analytics";
+import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
 
 type AdminClinicQrPayload = {
   tenant_id?: string | null;
@@ -75,9 +76,10 @@ function resolveQrMode(detourUrl: string, joinUrl: string) {
 
 export default function AdminClinicQrScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; activation?: string | string[] }>();
   const [feedback, setFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const qrShotRef = useRef<ViewShot>(null);
 
   const query = useQuery({
@@ -86,6 +88,7 @@ export default function AdminClinicQrScreen() {
   });
 
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const activation = isClinicActivationFlow(params.activation);
   const data = unwrapQrData(query.data as AdminClinicQrResponse | undefined);
   const currentCode = normalizeText(data.qr_code);
   const joinUrl = normalizeText(data.join_url);
@@ -143,15 +146,44 @@ export default function AdminClinicQrScreen() {
     }
   }
 
+  async function handleShareQr() {
+    const shareUrl = joinUrl || detourUrl || qrPayload;
+    if (!shareUrl || isSharing) return;
+
+    try {
+      setIsSharing(true);
+      void trackProductEvent("member_invite_started", {
+        screen: "admin_clinic_qr",
+        source: "share_qr_link",
+      });
+      await Share.share({
+        title: `${salonName} · FizyoFlow`,
+        message: `${salonName} kliniğine FizyoFlow üzerinden katıl: ${shareUrl}`,
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Paylaşım açılamadı", "Klinik bağlantısı şu anda paylaşılamadı. Lütfen tekrar dene.");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
   return (
     <AppShell
-      title="Salon QR kodu"
+      testID={activation ? "admin-clinic-activation-step-4" : "admin-clinic-qr-screen"}
+      title={activation ? "QR paylaşımı" : "Salon QR kodu"}
       subtitle="Danışanların salon sayfana hızlıca ulaşsın diye QR kodunu galeriye kaydedebilirsin."
       icon="qr"
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
       onBack={() => router.replace((backTo || "/(admin)/dashboard") as never)}
     >
+      {activation ? (
+        <SurfaceCard tone="primary">
+          <Text style={styles.title}>4 / 4 · Kliniğin paylaşılmaya hazır</Text>
+          <Text style={styles.copy}>QR veya klinik bağlantısını paylaşarak ilk danışanını doğru kliniğe yönlendir.</Text>
+        </SurfaceCard>
+      ) : null}
       <SurfaceCard tone="primary">
         <View style={styles.heroBlock}>
           <View style={styles.heroTopRow}>
@@ -271,6 +303,15 @@ export default function AdminClinicQrScreen() {
         </View>
 
         <ActionButton
+          testID="admin-clinic-qr-share-button"
+          label="Klinik bağlantısını paylaş"
+          icon="external"
+          onPress={() => void handleShareQr()}
+          loading={isSharing}
+          disabled={!qrPayload || query.isLoading || query.isError || isSharing}
+        />
+
+        <ActionButton
           testID="admin-clinic-qr-save-button"
           label={isSaving ? "QR kaydediliyor..." : "QR’ı galeriye kaydet"}
           icon="download"
@@ -281,6 +322,26 @@ export default function AdminClinicQrScreen() {
 
         {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
       </SurfaceCard>
+
+      {activation && qrPayload ? (
+        <SurfaceCard testID="admin-clinic-activation-complete" tone="success">
+          <Text style={styles.section}>Dört adım tamamlandı</Text>
+          <Text style={styles.copy}>Kliniğin, ilk paketin, çalışma saatlerin ve paylaşılabilir QR'ın hazır. Artık plan veya ücretsiz deneme seçeneğini değerlendirebilirsin.</Text>
+          <ActionButton
+            testID="admin-clinic-activation-review-plan"
+            label="Plan ve denemeyi incele"
+            icon="subscription"
+            onPress={() => router.replace(getClinicActivationNextRoute("qr") as never)}
+          />
+          <ActionButton
+            testID="admin-clinic-activation-dashboard"
+            label="Yönetim merkezine geç"
+            icon="dashboard"
+            variant="ghost"
+            onPress={() => router.replace("/(admin)/dashboard" as never)}
+          />
+        </SurfaceCard>
+      ) : null}
 
       <SurfaceCard>
         <View style={styles.header}>

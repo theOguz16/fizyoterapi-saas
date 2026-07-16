@@ -239,7 +239,6 @@ export class AdminDashboardController {
       package: totalPackages > 0,
       working_hours: workingHoursReady,
       clinic_qr: Boolean(clinicProfile.profile?.slug),
-      dashboard_preview: true,
     };
     const quickSetupCompleted = Object.values(quickSetupSteps).filter(Boolean).length;
 

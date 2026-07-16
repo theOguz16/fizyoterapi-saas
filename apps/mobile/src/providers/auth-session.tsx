@@ -418,7 +418,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     await activateAuthenticatedSession({ ...data, accessToken: data.accessToken }, {
       refreshBiometric: true,
-      allowNotificationPrompt: true,
+      allowNotificationPrompt: false,
     });
   }, [activateAuthenticatedSession]);
 

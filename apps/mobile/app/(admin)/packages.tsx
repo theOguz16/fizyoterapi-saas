@@ -27,6 +27,7 @@ import { DetailSheet } from "@/theme/components/detail-sheet";
 import { StyleSheet, Text, TextInput, View, Pressable, Alert } from "react-native";
 import { tokens } from "@/theme/tokens";
 import { resolvePackagesEmptyState } from "@/lib/admin-empty-states";
+import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
 
 type LessonVariant = {
   key: string;
@@ -191,7 +192,7 @@ function buildVariantDefaults(
 
 export default function AdminPackagesScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ backTo?: string | string[]; subscriptionBackTo?: string | string[] }>();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; subscriptionBackTo?: string | string[]; activation?: string | string[] }>();
   const packagesQuery = useQuery({ queryKey: ["admin-packages"], queryFn: getAdminPackagesApi });
   const templatesQuery = useQuery({ queryKey: ["admin-package-templates"], queryFn: getAdminPackageFormOptionsApi });
   const trainersQuery = useQuery({ queryKey: ["admin-trainers-for-packages"], queryFn: getAdminTrainersApi });
@@ -266,6 +267,7 @@ export default function AdminPackagesScreen() {
   const weeklyRuleSummary = useMemo(() => deriveWeeklyRuleSummary(form.total_credits), [form.total_credits]);
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const subscriptionBackTo = Array.isArray(params.subscriptionBackTo) ? params.subscriptionBackTo[0] : params.subscriptionBackTo;
+  const activation = isClinicActivationFlow(params.activation);
   const filteredPackages = useMemo(
     () =>
       packages.filter((pkg) => {
@@ -466,6 +468,12 @@ export default function AdminPackagesScreen() {
 },
 
   onSuccess: () => {
+    if (activation && !editingPackageId) {
+      resetForm();
+      router.replace(getClinicActivationNextRoute("package") as never);
+      return;
+    }
+
     showInfoAlert(
       editingPackageId ? "Paket güncellendi" : "Paket oluşturuldu",
       editingPackageId
@@ -652,11 +660,22 @@ export default function AdminPackagesScreen() {
   return (
     <AppShell
       testID="admin-packages-screen"
-      title="Paketler"
+      title={activation ? "İlk hizmet veya paket" : "Paketler"}
       subtitle="Paket oluştur, fiyat ve komisyon belirle, ardından paketi eğitmene bağla. Ücretsiz deneme dersi paketi de buradan açılır."
       icon="package"
       refreshing={packagesQuery.isRefetching}
       onRefresh={() => void packagesQuery.refetch()}
+      footer={
+        activation ? (
+          <ActionButton
+            testID="admin-package-save-button"
+            label={editingPackageId ? "Değişiklikleri kaydet" : "Paketi oluştur ve saatlere geç"}
+            icon="package"
+            onPress={() => saveMutation.mutate()}
+            loading={saveMutation.isPending}
+          />
+        ) : undefined
+      }
       onBack={
         backTo
           ? () =>
@@ -667,6 +686,12 @@ export default function AdminPackagesScreen() {
           : undefined
       }
     >
+      {activation ? (
+        <SurfaceCard tone="primary">
+          <Text style={styles.title}>2 / 4 · İlk hizmetini oluştur</Text>
+          <Text style={styles.copy}>İlk paket kaydedildiğinde çalışma saatleri adımına otomatik geçilir.</Text>
+        </SurfaceCard>
+      ) : null}
       <SurfaceCard tone="primary">
         <Text style={styles.title}>Paket yönetimi</Text>
         <Text style={styles.copy}>Katalogdan ana kategori ve alt kategoriyi seç; fiyat, kapasite ve komisyon otomatik gelsin, gerektiğinde düzenle.</Text>
@@ -817,7 +842,9 @@ export default function AdminPackagesScreen() {
           </View>
         ) : null}
 
-        <ActionButton testID="admin-package-save-button" label={editingPackageId ? "Değişiklikleri kaydet" : isTrialPackage ? "Deneme paketini oluştur" : "Paketi oluştur"} icon="package" onPress={() => saveMutation.mutate()} loading={saveMutation.isPending} />
+        {!activation ? (
+          <ActionButton testID="admin-package-save-button" label={editingPackageId ? "Değişiklikleri kaydet" : isTrialPackage ? "Deneme paketini oluştur" : "Paketi oluştur"} icon="package" onPress={() => saveMutation.mutate()} loading={saveMutation.isPending} />
+        ) : null}
         {editingPackageId ? <ActionButton testID="admin-package-cancel-button" label="Düzenlemeyi iptal et" icon="arrow-left" variant="ghost" onPress={resetForm} /> : null}
       </SurfaceCard>
 

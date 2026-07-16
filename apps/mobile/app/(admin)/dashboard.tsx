@@ -97,6 +97,21 @@ export default function AdminDashboardScreen() {
               }
             />
           ) : null}
+
+          {quickSetup.canReviewPlan ? (
+            <ActionButton
+              testID="admin-quick-setup-review-plan"
+              label="Plan ve deneme seçeneklerini incele"
+              icon="subscription"
+              variant="ghost"
+              onPress={() =>
+                router.push({
+                  pathname: "/(admin)/subscription",
+                  params: { backTo: "/(admin)/dashboard" },
+                } as never)
+              }
+            />
+          ) : null}
         </SurfaceCard>
       ) : null}
 

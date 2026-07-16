@@ -335,7 +335,7 @@ export function resolveRootNavigation(input: RootNavigationInput): RootNavigatio
     input.signupFlowState === "assessment"
       ? ["role-assessment"]
       : input.selectedPersona === "ADMIN"
-        ? ["owner-plan", "register"]
+        ? ["register", "owner-plan"]
         : input.selectedPersona === "TRAINER"
           ? ["trainer-invite-guide", "invite-accept"]
           : ["register"];

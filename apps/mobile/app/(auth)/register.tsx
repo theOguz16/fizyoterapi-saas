@@ -96,7 +96,7 @@ export default function RegisterScreen() {
   return (
     <MarketingShell
       title="Hesabını oluştur"
-      subtitle="Klinik sahibi hesabını oluştur. Klinik kurulumu ve plan ayarları girişten hemen sonra devam edecek."
+      subtitle="Klinik sahibi hesabını oluştur. Ardından klinik, ilk paket, çalışma saatleri ve QR adımlarını tamamla."
       icon="spark"
       animateContent={false}
       footer={

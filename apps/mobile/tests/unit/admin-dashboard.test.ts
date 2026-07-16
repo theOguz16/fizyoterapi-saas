@@ -93,21 +93,21 @@ describe("admin dashboard helpers", () => {
           package: false,
           working_hours: true,
           clinic_qr: true,
-          dashboard_preview: true,
         },
-        completed: 4,
-        total: 5,
+        completed: 3,
+        total: 4,
         is_complete: false,
       },
     });
 
-    expect(checklist.completed).toBe(4);
-    expect(checklist.total).toBe(5);
+    expect(checklist.completed).toBe(3);
+    expect(checklist.total).toBe(4);
     expect(checklist.isComplete).toBe(false);
     expect(checklist.nextStep).toMatchObject({
       key: "package",
       route: "/(admin)/packages",
     });
+    expect(checklist.canReviewPlan).toBe(false);
   });
 
   it("marks quick setup complete when every real operation is ready", () => {
@@ -118,13 +118,24 @@ describe("admin dashboard helpers", () => {
           package: true,
           working_hours: true,
           clinic_qr: true,
-          dashboard_preview: true,
         },
       },
     });
 
-    expect(checklist.completed).toBe(5);
+    expect(checklist.completed).toBe(4);
     expect(checklist.isComplete).toBe(true);
     expect(checklist.nextStep).toBeNull();
+    expect(checklist.canReviewPlan).toBe(true);
+  });
+
+  it("does not expose the plan decision before the first package exists", () => {
+    const checklist = buildQuickSetupChecklist({
+      quick_setup: {
+        steps: { clinic: true, package: false, working_hours: false, clinic_qr: true },
+      },
+    });
+
+    expect(checklist.canReviewPlan).toBe(false);
+    expect(checklist.nextStep?.key).toBe("package");
   });
 });

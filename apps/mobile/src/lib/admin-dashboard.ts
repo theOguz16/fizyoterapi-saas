@@ -29,7 +29,7 @@ type DashboardDataLike = {
   risk_preview?: unknown[] | null;
 } | null;
 
-export type QuickSetupStepKey = "clinic" | "package" | "working_hours" | "clinic_qr" | "dashboard_preview";
+export type QuickSetupStepKey = "clinic" | "package" | "working_hours" | "clinic_qr";
 
 export type QuickSetupStep = {
   key: QuickSetupStepKey;
@@ -69,13 +69,6 @@ const QUICK_SETUP_DEFINITIONS: Omit<QuickSetupStep, "complete">[] = [
     route: "/(admin)/clinic-qr",
     icon: "qr",
   },
-  {
-    key: "dashboard_preview",
-    title: "Yönetim özeti",
-    description: "Operasyon göstergelerin bu ekranda hazır.",
-    route: null,
-    icon: "dashboard",
-  },
 ];
 
 export function buildQuickSetupChecklist(data?: DashboardDataLike) {
@@ -91,6 +84,7 @@ export function buildQuickSetupChecklist(data?: DashboardDataLike) {
     completed,
     total: steps.length,
     isComplete: completed === steps.length,
+    canReviewPlan: Boolean(rawSteps.package),
     nextStep: steps.find((step) => !step.complete && step.route) || null,
   };
 }

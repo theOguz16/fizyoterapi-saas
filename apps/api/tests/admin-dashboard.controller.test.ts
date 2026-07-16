@@ -113,10 +113,9 @@ describe("admin dashboard controller", () => {
           package: true,
           working_hours: true,
           clinic_qr: true,
-          dashboard_preview: true,
         },
-        completed: 5,
-        total: 5,
+        completed: 4,
+        total: 4,
         is_complete: true,
       },
       kpis: {
