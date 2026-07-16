@@ -132,7 +132,7 @@ export function DemoLeadForm({ compact = false }: { compact?: boolean }) {
               <option value="" disabled>Seçin</option>
               <option value="Seans ve takvim düzeni">Seans ve takvim düzeni</option>
               <option value="Paket ve kalan hak takibi">Paket ve kalan hak takibi</option>
-              <option value="Fizyoterapist check-in akışı">Fizyoterapist check-in akışı</option>
+              <option value="Uzman check-in akışı">Uzman check-in akışı</option>
               <option value="Danışan mobil deneyimi">Danışan mobil deneyimi</option>
               <option value="Tüm klinik operasyonu">Tüm klinik operasyonu</option>
             </select>

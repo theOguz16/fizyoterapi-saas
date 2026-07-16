@@ -83,7 +83,9 @@ function main() {
   requireFile("public/brand/fizyoflow-og.svg");
   requireFile("public/llms.txt");
   requireFile("public/llms-full.txt");
-  requireSourceContains("components/home-page/sections.tsx", /Fizyoflow nedir\?/, "home product explanation");
+  requireSourceContains("components/home-page/sections.tsx", /FizyoFlow nedir\?/, "home product explanation");
+  requireSourceContains("components/home-page/sections.tsx", /15 dakikalık demo talep et/, "clinic-owner primary CTA");
+  requireSourceContains("components/home-page/sections.tsx", /Kliniğini kur/, "clinic setup secondary CTA");
   requireSourceContains("app/page.tsx", /OperationalFlowSection/, "home clinic flow section");
   requireSourceContains("components/home-page/sections.tsx", /Gerçek ürün ekranları/, "home product screen gallery");
   requireSourceContains("components/home-page/sections.tsx", /Güven ve kontrol/, "home trust section");

@@ -7,7 +7,7 @@ export function BrandLockup({ className = "", compact = false }: BrandLockupProp
   return (
     <span className={`brand-lockup${compact ? " is-compact" : ""}${className ? ` ${className}` : ""}`}>
       <img src="/brand/fizyoflow-current-mark.png" alt="" aria-hidden="true" />
-      <strong>Fizyoflow</strong>
+      <strong>FizyoFlow</strong>
     </span>
   );
 }

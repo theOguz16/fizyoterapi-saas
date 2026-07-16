@@ -8,74 +8,53 @@ import { trackMarketingEvent } from "./site-analytics";
 
 const storySteps = [
   {
-    role: "Klinik yönetimi",
+    role: "Klinik",
     title: "Klinik güne tek ekrandan başlar.",
-    text: "Yönetici bugünkü seansları, aktif danışanları, ekip yoğunluğunu ve takip gerektiren paketleri aynı yönetim merkezinde görür.",
+    text: "Klinik sahibi bugünkü seansları, aktif danışanları, uzman yoğunluğunu ve takip gerektiren paketleri aynı yönetim merkezinde görür.",
     image: "/product-screens/admin-dashboard.png",
-    details: ["Günlük operasyon özeti", "Gelir ve ekip görünürlüğü", "Paket bitiş takibi"],
+    details: ["Günlük operasyon özeti", "Gelir ve uzman görünürlüğü", "Paket bitiş takibi"],
   },
   {
-    role: "Klinik yönetimi",
-    title: "Danışan ve ekip kaydı tek yerde tutulur.",
-    text: "Yönetici aktif danışanları, fizyoterapistleri, paket durumunu ve takip ihtiyacını aynı listeden ayırır.",
-    image: "/product-screens/admin-members.png",
-    details: ["Danışan listesi", "Fizyoterapist görünümü", "Rol ve durum filtreleri"],
-  },
-  {
-    role: "Klinik yönetimi",
+    role: "Klinik",
     title: "Paket ve gelir akışı görünür kalır.",
     text: "Paket kurgusu, hizmet ücretleri ve dönemsel gelir görünümü klinik sahibinin karar ekranında birleşir.",
     image: "/product-screens/admin-revenue-detail.png",
     details: ["Gelir detayı", "Paket takibi", "Dönemsel görünüm"],
   },
   {
-    role: "Ekip operasyonu",
-    title: "Fizyoterapist günün akışını cebinde görür.",
+    role: "Uzman",
+    title: "Uzman günün akışını cebinde görür.",
     text: "Bugünkü seanslar, sıradaki danışan ve yapılacak check-in işlemi masa başına dönmeden hazır olur.",
     image: "/product-screens/trainer-home.png",
     details: ["Bugünkü seanslar", "Danışan bilgisi", "Günlük akış"],
   },
   {
-    role: "Ekip operasyonu",
-    title: "Danışan dosyası sahada hazırdır.",
-    text: "Aktif paket, kalan hak, son katılım, QR kodu ve ölçüm bilgileri fizyoterapistin danışan detayında görünür.",
-    image: "/product-screens/trainer-client-detail.png",
-    details: ["Aktif paket", "Kalan hak", "Ölçüm ve katılım"],
-  },
-  {
-    role: "Ekip operasyonu",
+    role: "Uzman",
     title: "Check-in işlendiğinde paket hakkı güncellenir.",
     text: "QR veya manuel MEM kodu ile seans katılımı kaydedilir; doğru paketten hak düşer ve kayıt güncel kalır.",
     image: "/product-screens/trainer-checkin.png",
     details: ["QR check-in", "Manuel MEM kodu", "Otomatik hak düşümü"],
   },
   {
-    role: "Danışan deneyimi",
+    role: "Danışan",
     title: "Danışan kendi sürecini uygulamada takip eder.",
     text: "Yaklaşan seans, kalan hak, grup dersleri, ölçüm ve bildirimler danışanın mobil deneyiminde bir araya gelir.",
     image: "/product-screens/member-home.png",
     details: ["Yaklaşan seans", "Ölçüm takibi", "Mobil bildirimler"],
   },
   {
-    role: "Danışan deneyimi",
+    role: "Danışan",
     title: "Paket geçmişi ve yenileme ihtiyacı görünür kalır.",
     text: "Kalan hak, geçmiş paketler, ek paket talebi ve yenileme adımı danışanın paket ekranında takip edilir.",
     image: "/product-screens/member-package.png",
     details: ["Kalan hak", "Paket geçmişi", "Yenileme akışı"],
   },
-  {
-    role: "Danışan deneyimi",
-    title: "Ölçüm ve gelişim kayıtları kaybolmaz.",
-    text: "Danışan güncel ölçümlerini, geçmiş değerlerini ve gelişim özetini uygulama içinde takip eder.",
-    image: "/product-screens/member-measurements.png",
-    details: ["Ölçüm özeti", "Geçmiş kayıt", "Gelişim takibi"],
-  },
 ];
 
 const roleTone: Record<string, string> = {
-  "Klinik yönetimi": "role-admin",
-  "Ekip operasyonu": "role-trainer",
-  "Danışan deneyimi": "role-member",
+  Klinik: "role-admin",
+  Uzman: "role-trainer",
+  Danışan: "role-member",
 };
 
 type ProductShowcaseProps = {
@@ -121,7 +100,7 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
       <div className={hero ? "showcase-inner" : "product-shell"}>
         <div className="showcase-heading">
           <p className="product-kicker">Klinik operasyonu çalışırken</p>
-          <h2 id="showcase-title">Yönetim merkezindeki her güncelleme ekip ve danışan ekranlarına bağlanır.</h2>
+          <h2 id="showcase-title">Klinikteki her güncelleme uzman ve danışan ekranlarına bağlanır.</h2>
         </div>
 
         <div
@@ -157,7 +136,7 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
                 >
                   <Image
                     src={step.image}
-                    alt={position === "active" ? "Fizyoflow uygulama ekranı" : ""}
+                    alt={position === "active" ? "FizyoFlow uygulama ekranı" : ""}
                     width={1206}
                     height={2622}
                     sizes={position === "active" ? "(max-width: 620px) 170px, 220px" : "(max-width: 620px) 125px, 165px"}
@@ -178,7 +157,7 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
               </div>
               <div key={activeStep.image} className="iphone showcase-phone">
                 <div className="iphone-island" />
-                <Image src={activeStep.image} alt="Fizyoflow uygulama ekranı" width={1206} height={2622} sizes="244px" loading="lazy" quality={72} />
+                <Image src={activeStep.image} alt="FizyoFlow uygulama ekranı" width={1206} height={2622} sizes="244px" loading="lazy" quality={72} />
               </div>
             </div>
           )}
@@ -186,7 +165,7 @@ export function ProductShowcase({ hero = false }: ProductShowcaseProps) {
 
         <div
           className={`showcase-story-rail${hero ? " is-compact" : ""}`}
-          aria-label="Fizyoflow ürün akışı adımları"
+          aria-label="FizyoFlow ürün akışı adımları"
           onMouseEnter={() => setInteractionPaused(true)}
           onMouseLeave={() => setInteractionPaused(false)}
           onFocusCapture={() => setInteractionPaused(true)}

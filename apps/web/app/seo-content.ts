@@ -6,35 +6,35 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
   "fizyoterapi-klinik-yonetim-sistemi": {
     eyebrow: "Fizyoterapi klinik yönetim sistemi",
     title: "Fizyoterapi ve pilates kliniklerinde tüm operasyon tek mobil akışta.",
-    description: "Fizyoflow, klinik sahibinin randevu, paket, danışan, ekip, QR ve gelir/seans süreçlerini tek merkezden yönettiği mobil klinik yönetim platformudur.",
+    description: "FizyoFlow, klinik sahibinin randevu, paket, danışan, uzman, QR ve gelir/seans süreçlerini tek merkezden yönettiği mobil klinik yönetim platformudur.",
     slug: "fizyoterapi-klinik-yonetim-sistemi",
     ctaText: "Klinik akışını birlikte çıkaralım",
-    metaTitle: "Fizyoterapi Klinik Yönetim Sistemi | Fizyoflow",
-    metaDescription: "Fizyoflow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
+    metaTitle: "Fizyoterapi Klinik Yönetim Sistemi | FizyoFlow",
+    metaDescription: "FizyoFlow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, uzman, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
     image: "/product-screens/admin-dashboard.png",
-    imageAlt: "Fizyoflow fizyoterapi klinik yönetim merkezi ekranı",
+    imageAlt: "FizyoFlow fizyoterapi klinik yönetim merkezi ekranı",
     outcomes: [
       "Klinik sahibi günlük seansları ve takip bekleyen işleri görür.",
-      "Fizyoterapist kendi seans akışını mobilde takip eder.",
+      "Uzman kendi seans akışını mobilde takip eder.",
       "Danışan kalan hakkını ve yaklaşan seansını uygulamada görür.",
     ],
     sections: [
       {
         title: "Klinik operasyonu tek yerden okunur",
-        text: "Fizyoflow; başvuru, seans planı, paket hakkı, ödeme durumu, check-in ve ölçüm geçmişini birbirine bağlar. Böylece klinik sahibi günlük akışı farklı mesajlar ve tablolar arasında aramak zorunda kalmaz.",
+        text: "FizyoFlow; başvuru, seans planı, paket hakkı, ödeme durumu, check-in ve ölçüm geçmişini birbirine bağlar. Böylece klinik sahibi günlük akışı farklı mesajlar ve tablolar arasında aramak zorunda kalmaz.",
       },
       {
-        title: "Klinik sahibi yönetir, ekip ve danışanlar akışa katılır",
-        text: "Klinik sahibi operasyonun tamamını yönetir; fizyoterapist günlük seansını, danışan ise kendi seans ve paket bilgisini görür. Ekip ve danışan deneyimi klinik yönetiminin güncel kayıtlarına bağlı ilerler.",
+        title: "Klinik sahibi yönetir, uzman ve danışanlar akışa katılır",
+        text: "Klinik sahibi operasyonun tamamını yönetir; uzman günlük seansını, danışan ise kendi seans ve paket bilgisini görür. Uzman ve danışan deneyimi klinik yönetiminin güncel kayıtlarına bağlı ilerler.",
       },
     ],
     faq: [
       {
-        question: "Fizyoflow hangi klinikler için uygundur?",
-        answer: "Fizyoflow; fizyoterapi klinikleri, klinik pilates hizmeti veren merkezler ve seans-paket takibini düzenli yürütmek isteyen sağlık odaklı ekipler için uygundur.",
+        question: "FizyoFlow hangi klinikler için uygundur?",
+        answer: "FizyoFlow; fizyoterapi klinikleri, klinik pilates hizmeti veren merkezler ve seans-paket takibini düzenli yürütmek isteyen sağlık odaklı ekipler için uygundur.",
       },
       {
-        question: "Fizyoflow sadece takvim uygulaması mı?",
+        question: "FizyoFlow sadece takvim uygulaması mı?",
         answer: "Hayır. Takvimle birlikte paket hakkı, check-in, danışan takibi, ölçüm geçmişi ve yönetim görünürlüğünü aynı akışta toplar.",
       },
     ],
@@ -42,13 +42,13 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
   "seans-paket-takibi": {
     eyebrow: "Seans ve paket takibi",
     title: "Klinik seansları işlendiğinde paket hakkı güncel kalır.",
-    description: "Fizyoflow, danışanın katılımını, kalan paket hakkını, paket geçmişini ve yenileme ihtiyacını aynı kayıt üzerinde takip eder.",
+    description: "FizyoFlow, danışanın katılımını, kalan paket hakkını, paket geçmişini ve yenileme ihtiyacını aynı kayıt üzerinde takip eder.",
     slug: "seans-paket-takibi",
     ctaText: "Paket takip akışını konuşalım",
-    metaTitle: "Seans ve Paket Takibi Yazılımı | Fizyoflow",
-    metaDescription: "Fizyoflow ile fizyoterapi kliniklerinde seans, paket hakkı, kalan hak, ödeme durumu ve paket yenileme takibi tek akışta ilerler.",
+    metaTitle: "Seans ve Paket Takibi Yazılımı | FizyoFlow",
+    metaDescription: "FizyoFlow ile fizyoterapi kliniklerinde seans, paket hakkı, kalan hak, ödeme durumu ve paket yenileme takibi tek akışta ilerler.",
     image: "/product-screens/admin-packages.png",
-    imageAlt: "Fizyoflow paket yönetimi ve kalan hak takibi ekranı",
+    imageAlt: "FizyoFlow paket yönetimi ve kalan hak takibi ekranı",
     outcomes: [
       "Kalan hak manuel listelerde kaybolmaz.",
       "Paket bitişleri ve yenileme ihtiyacı görünür kalır.",
@@ -61,13 +61,13 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
       },
       {
         title: "Yenileme ihtiyacı daha erken fark edilir",
-        text: "Paket geçmişi, kalan hak ve bitiş bilgisi yönetici ekranında görünür kaldığı için takip gerektiren danışanlar daha kolay ayrışır.",
+        text: "Paket geçmişi, kalan hak ve bitiş bilgisi klinik ekranında görünür kaldığı için takip gerektiren danışanlar daha kolay ayrışır.",
       },
     ],
     faq: [
       {
         question: "Paket hakkı otomatik düşer mi?",
-        answer: "Check-in akışı işlendiğinde ilgili danışanın paket hakkı güncellenir. Yönetici kalan hak ve paket geçmişini aynı sistemde takip eder.",
+        answer: "Check-in akışı işlendiğinde ilgili danışanın paket hakkı güncellenir. Klinik sahibi kalan hak ve paket geçmişini aynı sistemde takip eder.",
       },
       {
         question: "Ek paket veya yenileme takibi yapılabilir mi?",
@@ -76,51 +76,51 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
     ],
   },
   "fizyoterapist-check-in": {
-    eyebrow: "Klinik ekip ve check-in yönetimi",
-    title: "Klinik ekibi günlük seansını görür, katılımı mobilde işler.",
-    description: "Fizyoflow, klinik yönetiminin parçası olarak fizyoterapistin günlük akışını ve danışan check-in işlemini mobilde tamamlamasını sağlar.",
+    eyebrow: "Klinik uzman ve check-in yönetimi",
+    title: "Klinikteki uzman günlük seansını görür, katılımı mobilde işler.",
+    description: "FizyoFlow, klinik yönetiminin parçası olarak uzmanın günlük akışını ve danışan check-in işlemini mobilde tamamlamasını sağlar.",
     slug: "fizyoterapist-check-in",
     ctaText: "Check-in akışını birlikte kuralım",
-    metaTitle: "Klinik Ekip ve Check-in Yönetimi | Fizyoflow",
-    metaDescription: "Fizyoflow klinik yönetimiyle fizyoterapistler günlük seanslarını görür, QR veya manuel kodla check-in işler; paket hakkı güncel kalır.",
+    metaTitle: "Klinik Uzman ve Check-in Yönetimi | FizyoFlow",
+    metaDescription: "FizyoFlow klinik yönetimiyle uzmanlar günlük seanslarını görür, QR veya manuel kodla check-in işler; paket hakkı güncel kalır.",
     image: "/product-screens/trainer-checkin.png",
-    imageAlt: "Fizyoflow fizyoterapist check-in ekranı",
+    imageAlt: "FizyoFlow uzman check-in ekranı",
     outcomes: [
-      "Fizyoterapist sıradaki danışanı mobilde görür.",
+      "Uzman sıradaki danışanı mobilde görür.",
       "QR veya manuel kodla katılım işlenir.",
-      "İşlenen seans yönetici ve danışan kayıtlarına yansır.",
+      "İşlenen seans klinik ve danışan kayıtlarına yansır.",
     ],
     sections: [
       {
-        title: "Günlük seans akışı fizyoterapistin cebinde olur",
-        text: "Fizyoterapist bugünkü seanslarını, danışan bilgisini ve katılım işlemini mobil ekrandan takip eder. Bu sayede günlük akış sadece yönetim masasındaki takvimde kalmaz.",
+        title: "Günlük seans akışı uzmanın cebinde olur",
+        text: "Uzman bugünkü seanslarını, danışan bilgisini ve katılım işlemini mobil ekrandan takip eder. Bu sayede günlük akış sadece yönetim masasındaki takvimde kalmaz.",
       },
       {
         title: "Check-in paket takibiyle birlikte çalışır",
-        text: "Katılım kaydı işlendiğinde ilgili seans, danışan ve paket bilgisi aynı sistemde güncellenir. Yönetici ayrıca tekrar bilgi girmek zorunda kalmaz.",
+        text: "Katılım kaydı işlendiğinde ilgili seans, danışan ve paket bilgisi aynı sistemde güncellenir. Klinik sahibi ayrıca tekrar bilgi girmek zorunda kalmaz.",
       },
     ],
     faq: [
       {
         question: "Check-in QR ile yapılabilir mi?",
-        answer: "Evet. Fizyoflow check-in akışı QR veya manuel kod üzerinden katılım işlenmesini destekler.",
+        answer: "Evet. FizyoFlow check-in akışı QR veya manuel kod üzerinden katılım işlenmesini destekler.",
       },
       {
-        question: "Fizyoterapist tüm klinik verisini görür mü?",
-        answer: "Hayır. Rol bazlı deneyim sayesinde fizyoterapist kendi görev akışına uygun ekranları kullanır.",
+        question: "Uzman tüm klinik verisini görür mü?",
+        answer: "Hayır. Rol bazlı deneyim sayesinde uzman kendi görev akışına uygun ekranları kullanır.",
       },
     ],
   },
   "danisan-takibi-olcum": {
     eyebrow: "Klinik danışan ve ölçüm takibi",
     title: "Danışan deneyimi kliniğin güncel seans ve paket akışına bağlı kalır.",
-    description: "Fizyoflow, klinik yönetiminin parçası olarak danışanın yaklaşan seansını, kalan hakkını ve ölçüm geçmişini mobilde görünür tutar.",
+    description: "FizyoFlow, klinik yönetiminin parçası olarak danışanın yaklaşan seansını, kalan hakkını ve ölçüm geçmişini mobilde görünür tutar.",
     slug: "danisan-takibi-olcum",
     ctaText: "Danışan takip akışını inceleyelim",
-    metaTitle: "Klinikler İçin Danışan ve Ölçüm Takibi | Fizyoflow",
-    metaDescription: "Fizyoflow klinik yönetimi; danışanın yaklaşan seansını, kalan paket hakkını, ölçüm geçmişini ve yenileme ihtiyacını mobilde görünür tutar.",
+    metaTitle: "Klinikler İçin Danışan ve Ölçüm Takibi | FizyoFlow",
+    metaDescription: "FizyoFlow klinik yönetimi; danışanın yaklaşan seansını, kalan paket hakkını, ölçüm geçmişini ve yenileme ihtiyacını mobilde görünür tutar.",
     image: "/product-screens/member-package.png",
-    imageAlt: "Fizyoflow danışan paket ve kalan hak takibi ekranı",
+    imageAlt: "FizyoFlow danışan paket ve kalan hak takibi ekranı",
     outcomes: [
       "Danışan yaklaşan seansını uygulamada görür.",
       "Kalan paket hakkı ve paket geçmişi görünür kalır.",
@@ -129,7 +129,7 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
     sections: [
       {
         title: "Danışan temel bilgileri tekrar tekrar sormaz",
-        text: "Yaklaşan seans, kalan hak, grup dersleri ve bildirimler danışanın mobil ekranında yer alır. Klinik ekibi temel bilgi talepleriyle daha az bölünür.",
+        text: "Yaklaşan seans, kalan hak, grup dersleri ve bildirimler danışanın mobil ekranında yer alır. Uzmanlar temel bilgi talepleriyle daha az bölünür.",
       },
       {
         title: "Ölçüm ve gelişim takibi operasyonla birlikte ilerler",
@@ -142,7 +142,7 @@ export const seoLandingPages: Record<string, SeoLandingContent & { metaTitle: st
         answer: "Evet. Danışan kalan hakkını, paket geçmişini ve yaklaşan seansını mobil uygulamada takip eder.",
       },
       {
-        question: "Ölçüm takibi klinik ekibi tarafından görülebilir mi?",
+        question: "Ölçüm takibi klinikteki uzmanlar tarafından görülebilir mi?",
         answer: "Ölçüm geçmişi danışan sürecinin parçası olarak sistemde tutulur ve rol bazlı erişimle ilgili kullanıcıların ekranında görünür.",
       },
     ],

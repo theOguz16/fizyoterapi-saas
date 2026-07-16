@@ -7,8 +7,8 @@ const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATIO
 const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || "";
 
 export const metadata: Metadata = {
-  title: "Fizyoflow | Mobil Klinik Yönetim Platformu",
-  description: "Fizyoflow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
+  title: "FizyoFlow | Mobil Klinik Yönetim Platformu",
+  description: "FizyoFlow; fizyoterapi ve pilates klinikleri için randevu, paket, danışan, uzman, QR ve gelir/seans takibini tek mobil yönetim platformunda toplar.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com"),
   icons: {
     icon: "/icon.png",
@@ -16,24 +16,24 @@ export const metadata: Metadata = {
     apple: "/icon.png",
   },
   openGraph: {
-    title: "Fizyoflow | Mobil Klinik Yönetim Platformu",
-    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, danışan, ekip, QR ve gelir/seans takibini tek mobil akışta birleştiren yönetim platformu.",
+    title: "FizyoFlow | Mobil Klinik Yönetim Platformu",
+    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, danışan, uzman, QR ve gelir/seans takibini tek mobil akışta birleştiren yönetim platformu.",
     url: "https://fizyoflow.com",
-    siteName: "Fizyoflow",
+    siteName: "FizyoFlow",
     type: "website",
     images: [
       {
         url: "/brand/fizyoflow-og.svg",
         width: 1200,
         height: 630,
-        alt: "Fizyoflow mobil klinik yönetim sistemi",
+        alt: "FizyoFlow mobil klinik yönetim sistemi",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fizyoflow | Mobil Klinik Yönetimi",
-    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, ekip, QR, danışan ve gelir/seans takibini tek akışta toplayan mobil yönetim platformu.",
+    title: "FizyoFlow | Mobil Klinik Yönetimi",
+    description: "Fizyoterapi ve pilates klinikleri için randevu, paket, uzman, QR, danışan ve gelir/seans takibini tek akışta toplayan mobil yönetim platformu.",
     images: ["/brand/fizyoflow-og.svg"],
   },
   verification: {
