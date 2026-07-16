@@ -13,8 +13,14 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-identity-input"
 - inputText: "elisauyar@gmail.com"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "login-password-input"
+    direction: DOWN
 - tapOn:
     id: "login-password-input"
+    retryTapIfNoChange: true
 - inputText: "trainer123"
 - tapOn:
     id: "login-submit-button"

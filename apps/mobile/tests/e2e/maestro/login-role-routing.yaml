@@ -15,8 +15,11 @@ appId: com.fizyoflow.mobile
     id: "login-identity-input"
     retryTapIfNoChange: true
 - inputText: "member@gmail.com"
-- assertVisible:
-    id: "login-password-input"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "login-password-input"
+    direction: DOWN
 - tapOn:
     id: "login-password-input"
     retryTapIfNoChange: true

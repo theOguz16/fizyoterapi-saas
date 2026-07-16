@@ -8,5 +8,10 @@ appId: com.fizyoflow.mobile
     visible:
       id: "salon-detail-screen"
     timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "salon-view-packages-button"
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     id: "salon-view-packages-button"
