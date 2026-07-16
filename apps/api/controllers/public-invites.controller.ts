@@ -321,7 +321,7 @@ export class PublicInvitesController {
               type: "DUO_PARTNER_ACCEPTED",
               title: "Duo partner daveti kabul etti",
               body: `${meta.package_title || "Duo paket"} için partner daveti kabul edildi. Kalan %50 ödeme salon onayına gönderildi.`,
-              deepLink: "fizyoflow://member/package",
+              deepLink: "/(member)/package",
               meta: {
                 invite_id: invite.id,
                 partner_payment_event_id: event.id,
@@ -336,7 +336,7 @@ export class PublicInvitesController {
             type: "DUO_PARTNER_PAYMENT_REQUESTED",
             title: "Duo ödeme onaya gönderildi",
             body: `${meta.package_title || "Duo paket"} için %50 payın salon onayına gönderildi.`,
-            deepLink: "fizyoflow://member/package",
+            deepLink: "/(member)/package",
             meta: {
               invite_id: invite.id,
               partner_payment_event_id: event.id,

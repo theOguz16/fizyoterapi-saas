@@ -7,8 +7,9 @@ import { NotificationDelivery, NotificationDeliveryChannel, NotificationDelivery
 import { NotificationEvent, NotificationEventStatus } from "../entities/notification-event.entity";
 import { SalonMembership } from "../entities/salon-membership.entity";
 import { Tenant } from "../entities/tenant.entity";
+import type { PushDeepLinkHref, PushNotificationData, SessionRole } from "@fitnes-saas/contracts";
 
-type RoleScope = "MEMBER" | "TRAINER" | "ADMIN";
+type RoleScope = SessionRole;
 
 type QueuePushInput = {
   tenantId: string;
@@ -17,7 +18,7 @@ type QueuePushInput = {
   type: string;
   title: string;
   body: string;
-  deepLink?: string;
+  deepLink: PushDeepLinkHref;
   meta?: Record<string, unknown>;
 };
 
@@ -38,6 +39,42 @@ type DeliveryResult = {
 
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 const EXPO_PUSH_BATCH_SIZE = 100;
+const CANONICAL_PUSH_PATHS: Record<RoleScope, ReadonlySet<string>> = {
+  ADMIN: new Set(["/(admin)/approvals", "/(admin)/calendar", "/(admin)/subscription"]),
+  TRAINER: new Set(["/(trainer)/bookings", "/(trainer)/calendar", "/(trainer)/checkin", "/(trainer)/group-classes"]),
+  MEMBER: new Set([
+    "/(member)/attendance",
+    "/(member)/bookings",
+    "/(member)/calendar",
+    "/(member)/campaigns",
+    "/(member)/group-classes",
+    "/(member)/home",
+    "/(member)/package",
+    "/(member)/referrals",
+  ]),
+};
+
+export function resolveCanonicalPushHref(roleScope: RoleScope, input: string): PushDeepLinkHref {
+  const href = String(input || "").trim();
+  if (
+    !/^\/\((admin|trainer|member|auth)\)\/[a-z0-9][a-z0-9/_%-]*(?:\?[^#\s]*)?$/i.test(href) ||
+    href.includes("#") ||
+    href.includes("\\") ||
+    href.includes("..") ||
+    href.includes("://")
+  ) {
+    throw new Error("INVALID_PUSH_DEEP_LINK");
+  }
+
+  const parsed = new URL(href, "https://push.fizyoflow.local");
+  const isRoleRoute = CANONICAL_PUSH_PATHS[roleScope].has(parsed.pathname);
+  const isMemberInviteRoute = roleScope === "MEMBER" && parsed.pathname === "/(auth)/invite-accept";
+  if (parsed.origin !== "https://push.fizyoflow.local" || (!isRoleRoute && !isMemberInviteRoute)) {
+    throw new Error("PUSH_DEEP_LINK_ROLE_MISMATCH");
+  }
+
+  return href as PushDeepLinkHref;
+}
 
 function isExpoPushToken(token: string) {
   return /^ExponentPushToken\[.+\]$/.test(token) || /^ExpoPushToken\[.+\]$/.test(token);
@@ -139,7 +176,8 @@ export class MobileNotificationService {
   }
 
   static async queuePush(input: QueuePushInput) {
-    const { tenantId, userId, roleScope, type, title, body, deepLink, meta } = input;
+    const { tenantId, userId, roleScope, type, title, body, meta } = input;
+    const deepLink = resolveCanonicalPushHref(roleScope, input.deepLink);
     const preferenceDecision = await MobileNotificationService.shouldSendToUser({ tenantId, userId, type });
     if (!preferenceDecision.allowed) {
       return { queued: false, reason: preferenceDecision.reason };
@@ -163,9 +201,9 @@ export class MobileNotificationService {
     const eventRepo = AppDataSource.getRepository(NotificationEvent);
     const deliveryRepo = AppDataSource.getRepository(NotificationDelivery);
     const tenantSlug = await MobileNotificationService.resolveTenantSlug(tenantId);
-    const notificationData: Record<string, unknown> = {
+    const notificationData: PushNotificationData = {
       ...(meta || {}),
-      href: deepLink || null,
+      href: deepLink,
       role: roleScope,
       tenant_slug: tenantSlug,
       type,
@@ -180,7 +218,7 @@ export class MobileNotificationService {
           type,
           title,
           body,
-          deep_link: deepLink || null,
+          deep_link: deepLink,
           tenant_slug: tenantSlug,
           role_scope: roleScope,
           meta: meta || {},

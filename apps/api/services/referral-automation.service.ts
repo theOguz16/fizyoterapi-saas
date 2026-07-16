@@ -185,7 +185,7 @@ export class ReferralAutomationService {
         type: "CAMPAIGN_REWARD_EARNED",
         title: "Kampanya ödülü kazandın",
         body: campaign.reward_label,
-        deepLink: "fizyoflow://member/referrals",
+        deepLink: "/(member)/referrals",
         meta: {
           campaign_id: campaign.id,
           reward_type: campaign.reward_type,
@@ -219,7 +219,7 @@ export class ReferralAutomationService {
       type: "CAMPAIGN_REWARD_EARNED",
       title: "Kampanya ödülü hazır",
       body: campaign.reward_label,
-      deepLink: "fizyoflow://member/referrals",
+      deepLink: "/(member)/referrals",
       meta: {
         campaign_id: campaign.id,
         reward_type: campaign.reward_type,

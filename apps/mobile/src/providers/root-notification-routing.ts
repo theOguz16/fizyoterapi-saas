@@ -20,7 +20,6 @@ export function useRootNotificationRouting(input: {
 
       const href = resolveNotificationResponseHref(response, {
         role: input.role,
-        onboardingState: input.onboardingState,
       });
       if (!href) return;
 

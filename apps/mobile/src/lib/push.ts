@@ -3,19 +3,33 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import type { PushDeepLinkHref, SessionRole } from "@fitnes-saas/contracts";
 import { httpRequest } from "./http-client";
-import { resolveAdminHome, resolveMemberHome } from "./navigation";
 
 export type PushPermissionStatus = "granted" | "denied" | "undetermined";
 
 type NotificationPayload = Record<string, unknown>;
 type NotificationRouteContext = {
   role?: string | null;
-  onboardingState?: string | null;
 };
 
 type RegisterResult = {
   token: string | null;
+};
+
+const CANONICAL_PUSH_PATHS: Record<SessionRole, ReadonlySet<string>> = {
+  ADMIN: new Set(["/(admin)/approvals", "/(admin)/calendar", "/(admin)/subscription"]),
+  TRAINER: new Set(["/(trainer)/bookings", "/(trainer)/calendar", "/(trainer)/checkin", "/(trainer)/group-classes"]),
+  MEMBER: new Set([
+    "/(member)/attendance",
+    "/(member)/bookings",
+    "/(member)/calendar",
+    "/(member)/campaigns",
+    "/(member)/group-classes",
+    "/(member)/home",
+    "/(member)/package",
+    "/(member)/referrals",
+  ]),
 };
 
 function normalizePermissionStatus(status: Notifications.PermissionStatus | string | undefined): PushPermissionStatus {
@@ -25,29 +39,30 @@ function normalizePermissionStatus(status: Notifications.PermissionStatus | stri
   return "undetermined";
 }
 
-function pickFirstString(payload: NotificationPayload, keys: string[]) {
-  for (const key of keys) {
-    const value = payload[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-  return null;
+function normalizeRole(value: unknown): SessionRole | null {
+  const role = String(value || "").trim().toUpperCase();
+  return role === "ADMIN" || role === "TRAINER" || role === "MEMBER" ? role : null;
 }
 
-function appendQueryParams(pathname: string, params?: unknown) {
-  if (!params || typeof params !== "object" || Array.isArray(params)) {
-    return pathname;
-  }
+function resolveCanonicalPushHref(role: SessionRole, value: unknown): PushDeepLinkHref | null {
+  const href = typeof value === "string" ? value.trim() : "";
+  if (
+    !/^\/\((admin|trainer|member|auth)\)\/[a-z0-9][a-z0-9/_%-]*(?:\?[^#\s]*)?$/i.test(href) ||
+    href.includes("#") ||
+    href.includes("\\") ||
+    href.includes("..") ||
+    href.includes("://")
+  ) return null;
 
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null) continue;
-    query.set(key, String(value));
+  try {
+    const parsed = new URL(href, "https://push.fizyoflow.local");
+    const isRoleRoute = CANONICAL_PUSH_PATHS[role].has(parsed.pathname);
+    const isMemberInviteRoute = role === "MEMBER" && parsed.pathname === "/(auth)/invite-accept";
+    if (parsed.origin !== "https://push.fizyoflow.local" || (!isRoleRoute && !isMemberInviteRoute)) return null;
+    return href as PushDeepLinkHref;
+  } catch {
+    return null;
   }
-
-  const suffix = query.toString();
-  return suffix ? `${pathname}?${suffix}` : pathname;
 }
 
 export function resolveNotificationHref(payload: unknown, context: NotificationRouteContext = {}) {
@@ -56,60 +71,10 @@ export function resolveNotificationHref(payload: unknown, context: NotificationR
   }
 
   const data = payload as NotificationPayload;
-  const explicitHref = pickFirstString(data, ["href", "path", "pathname", "route"]);
-  if (explicitHref?.startsWith("/")) {
-    return appendQueryParams(explicitHref, data.params);
-  }
-
-  const screen = pickFirstString(data, ["screen", "target_screen", "targetScreen"]);
-  const role = (pickFirstString(data, ["role", "target_role", "targetRole"]) || context.role || "").toUpperCase();
-  const entity = (pickFirstString(data, ["entity", "resource", "kind"]) || "").toUpperCase();
-  const bookingId = pickFirstString(data, ["booking_id", "bookingId", "id"]);
-  const memberId = pickFirstString(data, ["member_id", "memberId", "profile_id", "profileId"]);
-  const measurementId = pickFirstString(data, ["measurement_id", "measurementId", "record_id", "recordId"]);
-  const approvalId = pickFirstString(data, ["approval_id", "approvalId", "application_id", "applicationId", "id"]);
-
-  if (role === "ADMIN") {
-    if (screen === "APPROVAL_DETAIL" && approvalId) return `/(admin)/approval/${approvalId}`;
-    if (screen === "MEMBER_DETAIL" && memberId) return `/(admin)/members/${memberId}`;
-    if (screen === "RISK_PREVIEW") return "/(admin)/dashboard/risk-preview";
-    if (screen === "REVENUE_DETAIL") return "/(admin)/dashboard/revenue-detail";
-    if (screen === "NOTIFICATIONS") return "/(admin)/notifications";
-    if (entity === "APPROVAL" && approvalId) return `/(admin)/approval/${approvalId}`;
-    if (entity === "MEMBER" && memberId) return `/(admin)/members/${memberId}`;
-    return resolveAdminHome(context.onboardingState);
-  }
-
-  if (role === "TRAINER") {
-    if (screen === "CHECKIN") {
-      return appendQueryParams("/(trainer)/checkin", bookingId ? { sessionId: bookingId } : data.params);
-    }
-    if (screen === "MEMBER_DETAIL" && memberId) return `/(trainer)/members/${memberId}`;
-    if (screen === "CALENDAR") return "/(trainer)/calendar";
-    if (screen === "NOTES" && memberId) return appendQueryParams("/(trainer)/notes", { memberId });
-    if (entity === "MEMBER" && memberId) return `/(trainer)/members/${memberId}`;
-    if (entity === "BOOKING" && bookingId) {
-      return appendQueryParams("/(trainer)/checkin", { sessionId: bookingId });
-    }
-    return "/(trainer)/home";
-  }
-
-  if (role === "MEMBER") {
-    if (screen === "BOOKING_DETAIL" && bookingId) return `/(member)/booking/${bookingId}`;
-    if (screen === "MEASUREMENT_DETAIL" && measurementId) return `/(member)/measurement/${measurementId}`;
-    if (screen === "CALENDAR") return "/(member)/calendar";
-    if (screen === "PACKAGE") return "/(member)/package";
-    if (screen === "PROFILE") return "/(member)/profile";
-    if (entity === "BOOKING" && bookingId) return `/(member)/booking/${bookingId}`;
-    if (entity === "MEASUREMENT" && measurementId) return `/(member)/measurement/${measurementId}`;
-    return resolveMemberHome(context.onboardingState);
-  }
-
-  if (screen === "NOTIFICATION_SETTINGS") {
-    return "/(shared)/notification-settings";
-  }
-
-  return null;
+  const role = normalizeRole(data.role);
+  const activeRole = normalizeRole(context.role);
+  if (!role || (activeRole && activeRole !== role)) return null;
+  return resolveCanonicalPushHref(role, data.href);
 }
 
 export function resolveNotificationResponseHref(

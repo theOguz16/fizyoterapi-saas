@@ -233,7 +233,7 @@ export class MemberBookingsController {
         type: "BOOKING_CANCELED",
         title: "Randevu iptal edildi",
         body: `${booking.starts_at.toLocaleString("tr-TR")} tarihli randevu iptal edildi.`,
-        deepLink: "fizyoflow://member/bookings",
+        deepLink: "/(member)/bookings",
         meta: {
           booking_id: booking.id,
           refund: false,
@@ -247,7 +247,7 @@ export class MemberBookingsController {
           type: "BOOKING_CANCELED",
           title: "Randevu iptali bildirimi",
           body: "Üye randevuyu iptal etti.",
-          deepLink: "fizyoflow://trainer/bookings",
+          deepLink: "/(trainer)/bookings",
           meta: {
             booking_id: booking.id,
             member_id: memberId,

@@ -11,3 +11,4 @@ export type { ClinicSummary, PublicClinicProfile, PublicClinicService, PublicTra
 export type { AdminPackage, PackageOption } from "./package";
 export type { WorkingHours, WorkingHoursInput } from "./working-hours";
 export type { AdminClinicSubscription, SubscriptionRecommendedAction, SubscriptionSyncState } from "./subscription";
+export type { PushDeepLinkHref, PushNotificationData } from "./push";

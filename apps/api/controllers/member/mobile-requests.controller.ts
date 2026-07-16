@@ -95,7 +95,7 @@ export class MemberMobileRequestsController {
     type: string;
     title: string;
     body: string;
-    deepLink: string;
+    deepLink: Parameters<typeof MobileNotificationService.queuePush>[0]["deepLink"];
     meta?: Record<string, unknown>;
   }) {
     try {
@@ -287,7 +287,7 @@ export class MemberMobileRequestsController {
       body: `${account.first_name || "Üye"} ${account.last_name || ""}`.trim()
         ? `${`${account.first_name || "Üye"} ${account.last_name || ""}`.trim()} için ${selectedPackages[0]?.package_title || "paket"} ödeme onayı bekliyor.`
         : `${selectedPackages[0]?.package_title || "Paket"} için ödeme onayı bekliyor.`,
-      deepLink: "fizyoflow://approvals",
+      deepLink: "/(admin)/approvals",
       meta: {
         approval_id: `payment:${event.id}`,
         package_id: normalizedPackageIds[0],
@@ -414,7 +414,7 @@ export class MemberMobileRequestsController {
       type: "CHANGE_APPROVAL_REQUESTED",
       title: "Yeni üye talebi",
       body: `${formatChangeRequestLabel(type)} için admin kararı bekleniyor.`,
-      deepLink: "fizyoflow://approvals",
+      deepLink: "/(admin)/approvals",
       meta: {
         approval_id: `change:${event.id}`,
         request_type: type,

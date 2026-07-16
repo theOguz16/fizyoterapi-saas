@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppDataSource } from "../data-source";
-import { isWithinQuietHours, MobileNotificationService } from "../services/mobile-notification.service";
+import { isWithinQuietHours, MobileNotificationService, resolveCanonicalPushHref } from "../services/mobile-notification.service";
 
 describe("MobileNotificationService", () => {
   afterEach(() => {
@@ -24,6 +24,29 @@ describe("MobileNotificationService", () => {
     ).toBe(false);
   });
 
+  it.each([
+    ["package", "MEMBER", "/(member)/package"],
+    ["referral", "MEMBER", "/(member)/referrals"],
+    ["approval", "ADMIN", "/(admin)/approvals"],
+    ["member booking", "MEMBER", "/(member)/bookings"],
+    ["trainer booking", "TRAINER", "/(trainer)/bookings"],
+    ["check-in", "MEMBER", "/(member)/attendance"],
+    ["campaign", "MEMBER", "/(member)/campaigns"],
+    ["trial", "ADMIN", "/(admin)/subscription"],
+  ] as const)("accepts the canonical %s target", (_category, role, href) => {
+    expect(resolveCanonicalPushHref(role, href)).toBe(href);
+  });
+
+  it("allows only the member invite auth route outside a role group", () => {
+    expect(resolveCanonicalPushHref("MEMBER", "/(auth)/invite-accept?token=safe-token")).toBe(
+      "/(auth)/invite-accept?token=safe-token"
+    );
+    expect(() => resolveCanonicalPushHref("ADMIN", "/(member)/package")).toThrow("PUSH_DEEP_LINK_ROLE_MISMATCH");
+    expect(() => resolveCanonicalPushHref("MEMBER", "fizyoflow://member/package")).toThrow("INVALID_PUSH_DEEP_LINK");
+    expect(() => resolveCanonicalPushHref("MEMBER", "/(member)/../admin")).toThrow("INVALID_PUSH_DEEP_LINK");
+    expect(() => resolveCanonicalPushHref("MEMBER", "/(member)/unknown-screen")).toThrow("PUSH_DEEP_LINK_ROLE_MISMATCH");
+  });
+
   it("returns NO_ACTIVE_DEVICE when no token exists", async () => {
     const tokenRepo = {
       find: vi.fn().mockResolvedValue([]),
@@ -42,6 +65,7 @@ describe("MobileNotificationService", () => {
       type: "BOOKING_CREATED",
       title: "Yeni randevu",
       body: "Yeni randevu planlandı",
+      deepLink: "/(member)/bookings",
     });
 
     expect(result).toEqual({ queued: false, reason: "NO_ACTIVE_DEVICE" });
@@ -73,7 +97,7 @@ describe("MobileNotificationService", () => {
       if (name.includes("Tenant")) return tenantRepo as any;
       return {} as any;
     });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({ data: [{ status: "ok" }] }),
     } as Response);
@@ -85,12 +109,21 @@ describe("MobileNotificationService", () => {
       type: "BOOKING_CREATED",
       title: "Yeni randevu",
       body: "Yeni randevu planlandı",
-      deepLink: "fizyoflow://member/bookings",
+      deepLink: "/(member)/bookings",
       meta: { booking_id: "book-1" },
     });
 
     expect(result).toEqual({ queued: true, count: 1, failedCount: 0, eventId: "evt-1" });
     expect(eventRepo.save).toHaveBeenCalledTimes(2);
     expect(deliveryRepo.save).toHaveBeenCalledTimes(1);
+    expect(eventRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      payload: expect.objectContaining({ deep_link: "/(member)/bookings", role_scope: "MEMBER" }),
+    }));
+    const messages = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body || "[]"));
+    expect(messages[0]?.data).toEqual(expect.objectContaining({
+      href: "/(member)/bookings",
+      role: "MEMBER",
+      type: "BOOKING_CREATED",
+    }));
   });
 });

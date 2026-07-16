@@ -111,52 +111,47 @@ describe("push registration", () => {
     });
   });
 
-  it("resolves explicit href payloads with query params", async () => {
+  it.each([
+    ["package", "MEMBER", "/(member)/package"],
+    ["referral", "MEMBER", "/(member)/referrals"],
+    ["approval", "ADMIN", "/(admin)/approvals"],
+    ["member booking", "MEMBER", "/(member)/bookings"],
+    ["trainer booking", "TRAINER", "/(trainer)/bookings"],
+    ["check-in", "MEMBER", "/(member)/attendance"],
+    ["campaign", "MEMBER", "/(member)/campaigns"],
+    ["trial", "ADMIN", "/(admin)/subscription"],
+  ] as const)("resolves the canonical %s target", async (_category, role, href) => {
+    const { resolveNotificationHref } = await import("@/lib/push");
+
+    expect(resolveNotificationHref({ href, role }, { role })).toBe(href);
+  });
+
+  it("preserves a canonical query string", async () => {
     const { resolveNotificationHref } = await import("@/lib/push");
 
     expect(
-      resolveNotificationHref({
-        href: "/(trainer)/checkin",
-        params: { sessionId: "booking-1", source: "push" },
-      })
-    ).toBe("/(trainer)/checkin?sessionId=booking-1&source=push");
+      resolveNotificationHref({ href: "/(trainer)/checkin?sessionId=booking-42&source=push", role: "TRAINER" }, { role: "TRAINER" })
+    ).toBe("/(trainer)/checkin?sessionId=booking-42&source=push");
   });
 
-  it("resolves trainer booking notifications to check-in", async () => {
+  it("accepts the member invite route and rejects legacy payload formats", async () => {
     const { resolveNotificationHref } = await import("@/lib/push");
 
-    expect(
-      resolveNotificationHref(
-        {
-          role: "TRAINER",
-          entity: "BOOKING",
-          booking_id: "booking-42",
-        },
-        { role: "TRAINER" }
-      )
-    ).toBe("/(trainer)/checkin?sessionId=booking-42");
+    expect(resolveNotificationHref(
+      { href: "/(auth)/invite-accept?token=safe-token", role: "MEMBER" },
+      { role: "MEMBER" }
+    )).toBe("/(auth)/invite-accept?token=safe-token");
+    expect(resolveNotificationHref({ href: "fizyoflow://member/package", role: "MEMBER" }, { role: "MEMBER" })).toBeNull();
+    expect(resolveNotificationHref({ path: "/(member)/package", role: "MEMBER" }, { role: "MEMBER" })).toBeNull();
+    expect(resolveNotificationHref({ role: "MEMBER", screen: "PACKAGE" }, { role: "MEMBER" })).toBeNull();
   });
 
-  it("resolves member measurement notifications to detail screen", async () => {
+  it("rejects role mismatch and unsafe paths", async () => {
     const { resolveNotificationHref } = await import("@/lib/push");
 
-    expect(
-      resolveNotificationHref(
-        {
-          role: "MEMBER",
-          screen: "MEASUREMENT_DETAIL",
-          measurement_id: "measure-9",
-        },
-        { role: "MEMBER", onboardingState: "ACTIVE_SALON" }
-      )
-    ).toBe("/(member)/measurement/measure-9");
-  });
-
-  it("falls back to admin home when payload has no specific target", async () => {
-    const { resolveNotificationHref } = await import("@/lib/push");
-
-    expect(resolveNotificationHref({ role: "ADMIN" }, { role: "ADMIN", onboardingState: "NO_CLINIC" })).toBe(
-      "/(admin)/salon/setup"
-    );
+    expect(resolveNotificationHref({ href: "/(member)/package", role: "MEMBER" }, { role: "ADMIN" })).toBeNull();
+    expect(resolveNotificationHref({ href: "/(admin)/approvals", role: "MEMBER" }, { role: "MEMBER" })).toBeNull();
+    expect(resolveNotificationHref({ href: "/(member)/../admin", role: "MEMBER" }, { role: "MEMBER" })).toBeNull();
+    expect(resolveNotificationHref({ href: "/(member)/unknown-screen", role: "MEMBER" }, { role: "MEMBER" })).toBeNull();
   });
 });

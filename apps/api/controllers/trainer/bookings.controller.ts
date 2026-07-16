@@ -1219,7 +1219,7 @@ export class TrainerBookingsController {
         type: "BOOKING_CREATED",
         title: "Dersiniz planlandı",
         body: `${startsAt.toLocaleString("tr-TR")} saatindeki dersiniz planlanmıştır.`,
-        deepLink: "fizyoflow://member/bookings",
+        deepLink: "/(member)/bookings",
         meta: {
           booking_id: booking.id,
           status: booking.status,

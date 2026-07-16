@@ -271,7 +271,7 @@ export class TrainerCheckinController {
         type: "CAMPAIGN_REWARD_EARNED",
         title: "Sadakat ödülü kazandın",
         body: campaign.reward_label,
-        deepLink: "fizyoflow://member/home",
+        deepLink: "/(member)/campaigns",
         meta: {
           campaign_id: campaign.id,
           reward_type: campaign.reward_type,
@@ -307,7 +307,7 @@ export class TrainerCheckinController {
       type: "CAMPAIGN_REWARD_EARNED",
       title: "Sadakat ödülü hazır",
       body: campaign.reward_label,
-      deepLink: "fizyoflow://member/home",
+      deepLink: "/(member)/campaigns",
       meta: {
         campaign_id: campaign.id,
         reward_type: campaign.reward_type,
@@ -1039,7 +1039,7 @@ export class TrainerCheckinController {
           type: "CHECKIN_RECORDED",
           title: "Ders katılımı kaydedildi",
           body: "Katılım işlendi ve hak düşümü tamamlandı.",
-          deepLink: "fizyoflow://member/attendance",
+          deepLink: "/(member)/attendance",
           meta: {
             attendance_id: attendance.id,
             booking_id: bookingId,
@@ -1280,7 +1280,7 @@ export class TrainerCheckinController {
       type: "CHECKIN_RECORDED",
       title: "Ders katılımı kaydedildi",
       body: "Katılım işlendi ve paket hakkından 1 ders düşüldü.",
-      deepLink: "fizyoflow://member/attendance",
+      deepLink: "/(member)/attendance",
       meta: {
         attendance_id: attendance.id,
         booking_id: bookingId,

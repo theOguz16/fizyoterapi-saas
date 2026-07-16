@@ -129,7 +129,7 @@ export class AdminMobileApprovalsController {
       type: "DUO_INVITE_SENT",
       title: "Duo partner daveti hazır",
       body: `${packageTitle} için partner daveti oluşturuldu. Partner kalan %50 payı tamamlayınca paket aktifleşir.`,
-      deepLink: "fizyoflow://member/package",
+      deepLink: "/(member)/package",
       meta: {
         invite_id: invite.id,
         payment_event_id: params.event.id,
@@ -149,7 +149,7 @@ export class AdminMobileApprovalsController {
         type: "DUO_PARTNER_INVITED",
         title: "Duo ders davetin var",
         body: `${packageTitle} için partner olarak davet edildin. Daveti kabul edip kendi %50 payını onaya gönderebilirsin.`,
-        deepLink: `fizyoflow://(auth)/invite-accept?token=${encodeURIComponent(token)}`,
+        deepLink: `/(auth)/invite-accept?token=${encodeURIComponent(token)}`,
         meta: {
           invite_id: invite.id,
           primary_payment_event_id: params.event.id,
@@ -308,7 +308,7 @@ export class AdminMobileApprovalsController {
         type: "DUO_PACKAGE_ACTIVATED",
         title: "Duo paketin aktif",
         body: `${packageTitle} için partner ödemesi onaylandı. İkili ders takvimin aktifleşti.`,
-        deepLink: "fizyoflow://member/calendar",
+        deepLink: "/(member)/calendar",
         meta: {
           primary_payment_event_id: primaryEventId,
           partner_user_id: partnerUserId,
@@ -322,7 +322,7 @@ export class AdminMobileApprovalsController {
         type: "DUO_PACKAGE_ACTIVATED",
         title: "Duo paketin aktif",
         body: `${packageTitle} için ödeme onaylandı. İkili ders takvimin aktifleşti.`,
-        deepLink: "fizyoflow://member/calendar",
+        deepLink: "/(member)/calendar",
         meta: {
           primary_payment_event_id: primaryEventId,
           partner_payment_event_id: params.payload.duo_partner_payment_event_id || null,
@@ -337,7 +337,7 @@ export class AdminMobileApprovalsController {
           type: "DUO_BOOKING_ACTIVATED",
           title: "Duo ders takvimine eklendi",
           body: `${packageTitle} için iki kişilik ders onaylandı.`,
-          deepLink: "fizyoflow://trainer/calendar",
+          deepLink: "/(trainer)/calendar",
           meta: {
             primary_member_user_id: primaryMemberUserId,
             partner_user_id: partnerUserId,
@@ -803,7 +803,7 @@ export class AdminMobileApprovalsController {
             decision === "APPROVE"
               ? `${payload.package_title || "Paket"} için ödeme onaylandı.`
               : `${payload.package_title || "Paket"} için ödeme talebi reddedildi.`,
-          deepLink: "fizyoflow://member/package",
+          deepLink: "/(member)/package",
           meta: {
             approval_id: rawId,
             package_id: payload.package_id || null,
@@ -907,7 +907,7 @@ export class AdminMobileApprovalsController {
         type: decision === "APPROVE" ? "CHANGE_REQUEST_APPROVED" : "CHANGE_REQUEST_REJECTED",
         title: decision === "APPROVE" ? "Talebin onaylandı" : "Talebin reddedildi",
         body: `${humanizeChangeRequestType(requestType)} ${decision === "APPROVE" ? "onaylandı" : "reddedildi"}.`,
-        deepLink: isTrainerGroupClassRequest ? "fizyoflow://trainer/group-classes" : "fizyoflow://member/package",
+        deepLink: isTrainerGroupClassRequest ? "/(trainer)/group-classes" : "/(member)/package",
         meta: {
           approval_id: rawId,
           request_type: requestType,
