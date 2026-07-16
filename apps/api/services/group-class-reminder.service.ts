@@ -25,8 +25,13 @@ function parseToleranceMinutes() {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TOLERANCE_MINUTES;
 }
 
+export function isReminderDueWithinWindow(startsAt: Date, hoursBefore: number, from: Date, to: Date) {
+  const reminderDueAt = new Date(startsAt.getTime() - hoursBefore * 60 * 60 * 1000);
+  return reminderDueAt >= from && reminderDueAt <= to;
+}
+
 export class GroupClassReminderService {
-  static async triggerAllTenants() {
+  static async triggerAllTenants(scanWindow?: { from: Date; now: Date }) {
     const hours = parseReminderHours();
     const toleranceMinutes = parseToleranceMinutes();
 
@@ -37,22 +42,27 @@ export class GroupClassReminderService {
       });
 
       for (const tenant of tenants) {
-        await GroupClassReminderService.triggerTenant(tenant.id, hours, toleranceMinutes);
+        await GroupClassReminderService.triggerTenant(tenant.id, hours, toleranceMinutes, scanWindow);
       }
 
       return { tenantCount: tenants.length };
     });
   }
 
-  static async triggerTenant(tenantId: string, reminderHours = parseReminderHours(), toleranceMinutes = parseToleranceMinutes()) {
+  static async triggerTenant(
+    tenantId: string,
+    reminderHours = parseReminderHours(),
+    toleranceMinutes = parseToleranceMinutes(),
+    scanWindow?: { from: Date; now: Date }
+  ) {
     const sessionRepo = AppDataSource.getRepository(ClassSession);
     const userRepo = AppDataSource.getRepository(User);
-    const now = new Date();
+    const now = scanWindow?.now || new Date();
 
     for (const hour of reminderHours) {
       const alreadySentKey = `group_class_reminder_${hour}h_sent_at`;
-      const windowStart = new Date(now.getTime() + hour * 60 * 60 * 1000);
-      const windowEnd = new Date(windowStart.getTime() + toleranceMinutes * 60 * 1000);
+      const dueWindowStart = scanWindow?.from || now;
+      const dueWindowEnd = new Date(now.getTime() + toleranceMinutes * 60 * 1000);
 
       const sessions = await sessionRepo.find({
         where: {
@@ -66,7 +76,7 @@ export class GroupClassReminderService {
         const meta = (session.meta || {}) as Record<string, unknown>;
         if (meta[alreadySentKey]) return false;
         const startsAt = new Date(session.starts_at);
-        return startsAt >= windowStart && startsAt <= windowEnd;
+        return isReminderDueWithinWindow(startsAt, hour, dueWindowStart, dueWindowEnd);
       });
 
       if (candidateSessions.length === 0) continue;

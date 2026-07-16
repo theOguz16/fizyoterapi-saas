@@ -5,9 +5,15 @@ import { TenantScopedEntity } from "./base.entity";
 
 export enum NotificationDeliveryChannel {
   MOCK_PUSH = "MOCK_PUSH",
+  EXPO_PUSH = "EXPO_PUSH",
 }
 
 export enum NotificationDeliveryStatus {
+  QUEUED = "QUEUED",
+  SENDING = "SENDING",
+  AWAITING_RECEIPT = "AWAITING_RECEIPT",
+  RETRY_SCHEDULED = "RETRY_SCHEDULED",
+  DELIVERED = "DELIVERED",
   SENT = "SENT",
   FAILED = "FAILED",
 }
@@ -25,12 +31,58 @@ export class NotificationDelivery extends TenantScopedEntity {
   @Column({ type: "enum", enum: NotificationDeliveryChannel, default: NotificationDeliveryChannel.MOCK_PUSH })
   channel!: NotificationDeliveryChannel;
 
-  @Column({ type: "enum", enum: NotificationDeliveryStatus, default: NotificationDeliveryStatus.SENT })
+  @Column({ type: "enum", enum: NotificationDeliveryStatus, default: NotificationDeliveryStatus.QUEUED })
   status!: NotificationDeliveryStatus;
 
-  @Column({ type: "varchar", length: 240, nullable: true })
-  error_message?: string;
+  @Index()
+  @Column({ type: "uuid", nullable: true })
+  device_token_id?: string | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  token_snapshot?: string | null;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  platform?: string | null;
+
+  @Column({ type: "text", nullable: true })
+  title?: string | null;
+
+  @Column({ type: "text", nullable: true })
+  body?: string | null;
+
+  @Column({ type: "jsonb", default: {} })
+  data!: Record<string, unknown>;
+
+  @Index()
+  @Column({ type: "varchar", length: 120, nullable: true })
+  provider_ticket_id?: string | null;
+
+  @Column({ type: "integer", default: 0 })
+  attempt_count!: number;
+
+  @Column({ type: "integer", default: 4 })
+  max_attempts!: number;
+
+  @Column({ type: "integer", default: 0 })
+  receipt_attempt_count!: number;
+
+  @Index()
+  @Column({ type: "timestamptz", nullable: true })
+  next_attempt_at?: Date | null;
+
+  @Index()
+  @Column({ type: "timestamptz", nullable: true })
+  receipt_check_at?: Date | null;
 
   @Column({ type: "timestamptz", nullable: true })
-  sent_at?: Date;
+  last_attempt_at?: Date | null;
+
+  @Column({ type: "timestamptz", nullable: true })
+  delivered_at?: Date | null;
+
+  @Column({ type: "varchar", length: 240, nullable: true })
+  error_message?: string | null;
+
+  @Column({ type: "timestamptz", nullable: true })
+  sent_at?: Date | null;
 }

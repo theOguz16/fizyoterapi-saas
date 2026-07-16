@@ -898,6 +898,19 @@ export class AdminSettingsController {
             select: ["id", "first_name", "last_name", "email"],
           })
         : [];
+      const eventIds = rows.map((row) => row.id);
+      const deliveries = eventIds.length
+        ? await AppDataSource.getRepository(NotificationDelivery).find({
+            where: { tenant_id: tenantId, event_id: In(eventIds) } as any,
+            order: { created_at: "DESC" },
+          })
+        : [];
+      const deliveriesByEvent = new Map<string, NotificationDelivery[]>();
+      for (const delivery of deliveries) {
+        const current = deliveriesByEvent.get(delivery.event_id) || [];
+        current.push(delivery);
+        deliveriesByEvent.set(delivery.event_id, current);
+      }
       const memberMap = new Map(
         members.map((member) => [
           member.id,
@@ -921,6 +934,18 @@ export class AdminSettingsController {
           member_email: memberMap.get(row.member_id)?.email || String(row.payload?.member_email || "") || null,
           title: String(row.payload?.title || row.payload?.template_type || row.type || "Bildirim"),
           body: String(row.payload?.body || row.payload?.message || ""),
+          delivery_summary: row.payload?.delivery_summary || null,
+          deliveries: (deliveriesByEvent.get(row.id) || []).map((delivery) => ({
+            id: delivery.id,
+            channel: delivery.channel,
+            status: delivery.status,
+            platform: delivery.platform || null,
+            attempt_count: delivery.attempt_count || 0,
+            provider_ticket_id: delivery.provider_ticket_id || null,
+            error_message: delivery.error_message || null,
+            sent_at: delivery.sent_at || null,
+            delivered_at: delivery.delivered_at || null,
+          })),
         })),
       });
     } catch (error) {

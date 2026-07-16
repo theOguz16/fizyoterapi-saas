@@ -97,11 +97,15 @@ describe("MobileNotificationService", () => {
       if (name.includes("Tenant")) return tenantRepo as any;
       return {} as any;
     });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: [{ status: "ok" }] }),
-    } as Response);
-
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (task: any) => task({
+      getRepository: (entity: any) => {
+        const name = entity?.name || "";
+        if (name.includes("NotificationEvent")) return eventRepo;
+        if (name.includes("NotificationDelivery")) return deliveryRepo;
+        throw new Error(`Unexpected transaction repository: ${name}`);
+      },
+    }));
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await MobileNotificationService.queuePush({
       tenantId: "tenant-1",
       userId: "user-1",
@@ -119,11 +123,17 @@ describe("MobileNotificationService", () => {
     expect(eventRepo.create).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({ deep_link: "/(member)/bookings", role_scope: "MEMBER" }),
     }));
-    const messages = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body || "[]"));
-    expect(messages[0]?.data).toEqual(expect.objectContaining({
-      href: "/(member)/bookings",
-      role: "MEMBER",
-      type: "BOOKING_CREATED",
+    expect(deliveryRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+      status: "QUEUED",
+      channel: "EXPO_PUSH",
+      device_token_id: "dev-1",
+      token_snapshot: "ExponentPushToken[x]",
+      data: expect.objectContaining({
+        href: "/(member)/bookings",
+        role: "MEMBER",
+        type: "BOOKING_CREATED",
+      }),
     }));
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

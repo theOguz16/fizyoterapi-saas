@@ -214,11 +214,16 @@ describe("Critical Scenario Set", () => {
   });
 
   it("runs job once when advisory lock is acquired", async () => {
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce([{ locked: true }])
+      .mockResolvedValueOnce([{ ok: true }]);
     const dataSource = {
-      query: vi
-        .fn()
-        .mockResolvedValueOnce([{ locked: true }])
-        .mockResolvedValueOnce([{ ok: true }]),
+      createQueryRunner: vi.fn().mockReturnValue({
+        connect: vi.fn().mockResolvedValue(undefined),
+        query,
+        release: vi.fn().mockResolvedValue(undefined),
+      }),
     } as any;
 
     const task = vi.fn().mockResolvedValue("done");
@@ -227,12 +232,17 @@ describe("Critical Scenario Set", () => {
     expect(result.executed).toBe(true);
     expect(result.result).toBe("done");
     expect(task).toHaveBeenCalledOnce();
-    expect(dataSource.query).toHaveBeenCalledTimes(2);
+    expect(query).toHaveBeenCalledTimes(2);
   });
 
   it("skips job when advisory lock is not acquired", async () => {
+    const query = vi.fn().mockResolvedValueOnce([{ locked: false }]);
     const dataSource = {
-      query: vi.fn().mockResolvedValueOnce([{ locked: false }]),
+      createQueryRunner: vi.fn().mockReturnValue({
+        connect: vi.fn().mockResolvedValue(undefined),
+        query,
+        release: vi.fn().mockResolvedValue(undefined),
+      }),
     } as any;
 
     const task = vi.fn().mockResolvedValue("done");
@@ -241,7 +251,7 @@ describe("Critical Scenario Set", () => {
     expect(result.executed).toBe(false);
     expect(result.result).toBeNull();
     expect(task).not.toHaveBeenCalled();
-    expect(dataSource.query).toHaveBeenCalledTimes(1);
+    expect(query).toHaveBeenCalledTimes(1);
   });
 
   it("grants referral campaign reward only once for a reached milestone", async () => {

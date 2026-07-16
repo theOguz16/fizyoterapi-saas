@@ -5,13 +5,13 @@ import "reflect-metadata";
 import { createApp } from "./app";
 import { AppDataSource } from "./data-source";
 import { Tenant } from "./entities/tenant.entity";
-import { GroupClassReminderService } from "./services/group-class-reminder.service";
 import { JobLockService } from "./services/job-lock.service";
 import { LoggerService } from "./services/logger.service";
 import { RiskNotificationService } from "./services/risk-notification.service";
 import { SchemaMaintenanceService } from "./services/schema-maintenance.service";
 import { StartupConfigService } from "./services/startup-config.service";
-import { TrialSubscriptionReminderService } from "./services/trial-subscription-reminder.service";
+import { PersistentBackgroundJobService } from "./services/persistent-background-job.service";
+import { PushDeliveryWorkerService } from "./services/push-delivery-worker.service";
 
 // HTTP sunucusu ve zamanlanmis batch isleri ayni process'te ayaga kalkiyor.
 // Bu dosya operasyonel bootstrap noktasi olarak davranir.
@@ -51,6 +51,7 @@ async function bootstrap() {
   // DataSource initialize edilmeden repository'ler kullanilamaz.
   await AppDataSource.initialize();
   await SchemaMaintenanceService.ensureRuntimeColumns(AppDataSource);
+  await PersistentBackgroundJobService.ensureJobs();
 
   const app = createApp();
   const port = Number(process.env.PORT || 5501);
@@ -71,35 +72,16 @@ async function bootstrap() {
     }, dayMs);
   }
 
-  if (process.env.ENABLE_GROUP_CLASS_REMINDER_BATCH !== "false") {
-    const intervalMs = 15 * 60 * 1000;
-    const warmupMs = 25 * 1000;
-    setTimeout(() => {
-      GroupClassReminderService.triggerAllTenants().catch((error) =>
-        LoggerService.error("group_class_reminder_warmup_failed", error)
-      );
-    }, warmupMs);
-    setInterval(() => {
-      GroupClassReminderService.triggerAllTenants().catch((error) =>
-        LoggerService.error("group_class_reminder_interval_failed", error)
-      );
-    }, intervalMs);
-  }
-
-  if (process.env.ENABLE_TRIAL_SUBSCRIPTION_REMINDER_BATCH !== "false") {
-    const intervalMs = 30 * 60 * 1000;
-    const warmupMs = 35 * 1000;
-    setTimeout(() => {
-      TrialSubscriptionReminderService.triggerAllTenants().catch((error) =>
-        LoggerService.error("trial_subscription_reminder_warmup_failed", error)
-      );
-    }, warmupMs);
-    setInterval(() => {
-      TrialSubscriptionReminderService.triggerAllTenants().catch((error) =>
-        LoggerService.error("trial_subscription_reminder_interval_failed", error)
-      );
-    }, intervalMs);
-  }
+  const runPersistentWorkers = async () => {
+    await PersistentBackgroundJobService.runDue();
+    await PushDeliveryWorkerService.runOnce();
+  };
+  setTimeout(() => {
+    runPersistentWorkers().catch((error) => LoggerService.error("persistent_worker_warmup_failed", error));
+  }, 2_000);
+  setInterval(() => {
+    runPersistentWorkers().catch((error) => LoggerService.error("persistent_worker_interval_failed", error));
+  }, 10_000);
 }
 
 process.on("unhandledRejection", (error) => {

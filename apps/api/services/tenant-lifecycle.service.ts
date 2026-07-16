@@ -147,7 +147,7 @@ export class TenantLifecycleService {
       },
     });
 
-    if (pushResult.reason === "QUIET_HOURS") return;
+    if ("reason" in pushResult && pushResult.reason === "QUIET_HOURS") return;
 
     await eventRepo.save(
       eventRepo.create({

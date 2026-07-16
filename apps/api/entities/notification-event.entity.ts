@@ -33,5 +33,5 @@ export class NotificationEvent extends TenantScopedEntity {
   processed_at?: Date;
 
   @Column({ type: "varchar", length: 240, nullable: true })
-  error_message?: string;
+  error_message?: string | null;
 }
