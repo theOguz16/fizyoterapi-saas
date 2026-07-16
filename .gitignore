@@ -16,6 +16,7 @@ dist
 coverage
 uploads
 release-evidence/
+*.tsbuildinfo
 
 # Mobile build artifacts
 apps/mobile/build/
