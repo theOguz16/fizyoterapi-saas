@@ -41,8 +41,8 @@ Sunucuda `.env.production.vds.example` dosyasını `.env.production` olarak kopy
 - `NEXT_PUBLIC_API_BASE`
 - `ACME_EMAIL`
 - `CLOUDFLARE_API_TOKEN`
-- `NEXT_PUBLIC_IOS_APP_URL` opsiyonel
-- `NEXT_PUBLIC_ANDROID_APP_URL` opsiyonel
+- `NEXT_PUBLIC_IOS_APP_URL` zorunlu App Store fallback adresi
+- `NEXT_PUBLIC_ANDROID_APP_URL` zorunlu Play Store fallback adresi
 - `NEXT_PUBLIC_GA_ID` opsiyonel
 - `NEXT_PUBLIC_POSTHOG_KEY` opsiyonel
 - `NEXT_PUBLIC_POSTHOG_HOST` opsiyonel
@@ -63,7 +63,11 @@ https://app.fizyoflow.com,https://fizyoflow.com,https://www.fizyoflow.com
 NEXT_PUBLIC_WEB_BASE_URL=https://fizyoflow.com
 NEXT_PUBLIC_APP_URL=https://app.fizyoflow.com
 NEXT_PUBLIC_API_BASE=https://api.fizyoflow.com/api
+NEXT_PUBLIC_IOS_APP_URL=https://apps.apple.com/tr/app/fizyoflow/id6771870032
+NEXT_PUBLIC_ANDROID_APP_URL=https://play.google.com/store/apps/details?id=<ANDROID_PACKAGE_ID>
 ```
+
+Store adresleri örnek değerlerle bırakılmamalıdır. Strict preflight yalnız `apps.apple.com` ve `play.google.com` üzerindeki HTTPS fallback adreslerini kabul eder.
 
 ## Deploy
 

@@ -129,20 +129,35 @@ describe("notification preferences storage", () => {
   });
 
   it("persists a sourced salon intent for 24-hour onboarding continuation", async () => {
-    const { getPendingSalonJoinIntent, getPendingSalonJoinSlug, setPendingSalonJoinSlug, clearPendingSalonJoinSlug } = await import("@/lib/local-preferences");
+    const { getPendingSalonJoinIntent, getPendingSalonJoinSlug, setPendingSalonJoinIntent, clearPendingSalonJoinSlug } = await import("@/lib/local-preferences");
     const now = new Date("2026-07-14T08:00:00.000Z");
 
-    await setPendingSalonJoinSlug("Demo-Salon", "QR", now);
+    await setPendingSalonJoinIntent({ slug: "Demo-Salon", source: "QR", code: "FYF-DEMO_001", now });
     await expect(getPendingSalonJoinSlug(new Date("2026-07-15T07:59:59.000Z"))).resolves.toBe("demo-salon");
     await expect(getPendingSalonJoinIntent(new Date("2026-07-15T07:59:59.000Z"))).resolves.toEqual({
       slug: "demo-salon",
       source: "QR",
+      code: "FYF-DEMO_001",
       createdAt: "2026-07-14T08:00:00.000Z",
       expiresAt: "2026-07-15T08:00:00.000Z",
     });
 
     await clearPendingSalonJoinSlug();
     await expect(getPendingSalonJoinSlug()).resolves.toBeNull();
+  });
+
+  it("does not persist unsafe join codes in the salon intent", async () => {
+    const { getPendingSalonJoinIntent, setPendingSalonJoinIntent } = await import("@/lib/local-preferences");
+    const now = new Date("2026-07-14T08:00:00.000Z");
+
+    await setPendingSalonJoinIntent({ slug: "demo-salon", source: "DEEPLINK", code: "unsafe code/value", now });
+
+    await expect(getPendingSalonJoinIntent(now)).resolves.toEqual({
+      slug: "demo-salon",
+      source: "DEEPLINK",
+      createdAt: "2026-07-14T08:00:00.000Z",
+      expiresAt: "2026-07-15T08:00:00.000Z",
+    });
   });
 
   it("expires stale salon intents and replaces them when another clinic is selected", async () => {

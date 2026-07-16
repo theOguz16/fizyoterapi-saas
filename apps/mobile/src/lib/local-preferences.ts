@@ -11,6 +11,7 @@ const SIGNUP_ONBOARDING_ROLE_KEY = "fizyoflow.signup_onboarding_role.v1";
 const LEGACY_PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_slug.v1";
 const PENDING_SALON_JOIN_KEY = "fizyoflow.pending_salon_join_intent.v2";
 const SALON_JOIN_INTENT_TTL_MS = 24 * 60 * 60 * 1000;
+const SALON_JOIN_CODE_PATTERN = /^[a-z0-9_-]{1,128}$/i;
 export const LOCAL_GROUP_CLASSES_KEY = "fizyoflow.local_group_classes.v1";
 const RESETTABLE_KEYS = [
   PREF_KEY,
@@ -52,8 +53,16 @@ export type SalonJoinIntentSource = "QR" | "DEEPLINK" | "INVITE" | "DISCOVERY";
 export type SalonJoinIntent = {
   slug: string;
   source: SalonJoinIntentSource;
+  code?: string;
   createdAt: string;
   expiresAt: string;
+};
+
+export type CreateSalonJoinIntentInput = {
+  slug: string;
+  source?: SalonJoinIntentSource;
+  code?: string | null;
+  now?: Date;
 };
 
 type SalonJoinIntentListener = (intent: SalonJoinIntent | null) => void;
@@ -190,6 +199,8 @@ function normalizeSalonJoinIntent(raw: string | null, now: Date): SalonJoinInten
     const parsed = JSON.parse(raw) as Partial<SalonJoinIntent>;
     const slug = String(parsed.slug || "").trim().toLowerCase();
     const source = parsed.source;
+    const codeValue = String(parsed.code || "").trim();
+    const code = SALON_JOIN_CODE_PATTERN.test(codeValue) ? codeValue : undefined;
     const createdAt = new Date(String(parsed.createdAt || ""));
     const expiresAt = new Date(String(parsed.expiresAt || ""));
     const validSource = source === "QR" || source === "DEEPLINK" || source === "INVITE" || source === "DISCOVERY";
@@ -202,6 +213,7 @@ function normalizeSalonJoinIntent(raw: string | null, now: Date): SalonJoinInten
     return {
       slug,
       source,
+      ...(code ? { code } : {}),
       createdAt: createdAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
     };
@@ -234,15 +246,28 @@ export async function setPendingSalonJoinSlug(
   source: SalonJoinIntentSource = "DEEPLINK",
   now = new Date()
 ) {
+  return setPendingSalonJoinIntent({ slug, source, now });
+}
+
+export async function setPendingSalonJoinIntent({
+  slug,
+  source = "DEEPLINK",
+  code: rawCode,
+  now = new Date(),
+}: CreateSalonJoinIntentInput) {
   const normalized = String(slug || "").trim().toLowerCase();
   if (!normalized) {
     await clearPendingSalonJoinSlug();
     return null;
   }
 
+  const codeValue = String(rawCode || "").trim();
+  const code = SALON_JOIN_CODE_PATTERN.test(codeValue) ? codeValue : undefined;
+
   const intent: SalonJoinIntent = {
     slug: normalized,
     source,
+    ...(code ? { code } : {}),
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + SALON_JOIN_INTENT_TTL_MS).toISOString(),
   };

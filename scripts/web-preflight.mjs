@@ -17,13 +17,28 @@ function requireSourceContains(relativePath, pattern, label) {
   assert.ok(pattern.test(source), `Missing required web source signal: ${label || pattern}`);
 }
 
-function assertHttpsUrl(name, value, { requireApiPath = false } = {}) {
+function assertHttpsUrl(name, value, { requireApiPath = false, expectedHost } = {}) {
   assert.ok(value, `${name} is required`);
   const url = new URL(value);
   assert.equal(url.protocol, "https:", `${name} must use https`);
   assert.ok(!["localhost", "127.0.0.1", "0.0.0.0"].includes(url.hostname), `${name} cannot point to localhost`);
+  if (expectedHost) {
+    assert.equal(url.hostname, expectedHost, `${name} must use ${expectedHost}`);
+  }
   if (requireApiPath) {
     assert.ok(url.pathname.replace(/\/$/, "").endsWith("/api"), `${name} must include /api path`);
+  }
+  return url;
+}
+
+function assertStoreUrl(name, value, platform) {
+  const expectedHost = platform === "ios" ? "apps.apple.com" : "play.google.com";
+  const url = assertHttpsUrl(name, value, { expectedHost });
+  if (platform === "ios") {
+    assert.ok(url.pathname.split("/").some((segment) => /^id\d+$/.test(segment)), `${name} must point to an App Store app listing`);
+  } else {
+    assert.equal(url.pathname, "/store/apps/details", `${name} must point to a Play Store app listing`);
+    assert.ok(url.searchParams.get("id"), `${name} must include the Android package id`);
   }
   return url;
 }
@@ -93,8 +108,8 @@ function main() {
     assertHttpsUrl("NEXT_PUBLIC_API_BASE", process.env.NEXT_PUBLIC_API_BASE || "https://api.fizyoflow.com/api", { requireApiPath: true });
     const iosUrl = process.env.NEXT_PUBLIC_IOS_APP_URL || process.env.NEXT_PUBLIC_APP_STORE_URL;
     const androidUrl = process.env.NEXT_PUBLIC_ANDROID_APP_URL || process.env.NEXT_PUBLIC_PLAY_STORE_URL;
-    if (iosUrl) assertHttpsUrl("NEXT_PUBLIC_IOS_APP_URL/NEXT_PUBLIC_APP_STORE_URL", iosUrl);
-    if (androidUrl) assertHttpsUrl("NEXT_PUBLIC_ANDROID_APP_URL/NEXT_PUBLIC_PLAY_STORE_URL", androidUrl);
+    assertStoreUrl("NEXT_PUBLIC_IOS_APP_URL/NEXT_PUBLIC_APP_STORE_URL", iosUrl, "ios");
+    assertStoreUrl("NEXT_PUBLIC_ANDROID_APP_URL/NEXT_PUBLIC_PLAY_STORE_URL", androidUrl, "android");
   }
 
   assertMiddlewareCases();

@@ -26,6 +26,20 @@ describe("incoming mobile links", () => {
       type: "salon",
       slug: "demo-salon",
     });
+    expect(resolveIncomingLinkAction("fizyoflow://join/demo-salon?code=FYF-DEMO_001")).toEqual({
+      type: "salon",
+      slug: "demo-salon",
+      code: "FYF-DEMO_001",
+    });
+    expect(resolveIncomingLinkAction("https://fizyoflow.com/join/demo-salon?code=FYF-DEMO_001")).toEqual({
+      type: "salon",
+      slug: "demo-salon",
+      code: "FYF-DEMO_001",
+    });
+    expect(resolveIncomingLinkAction("fizyoflow://join/demo-salon?code=unsafe%20code%2Fvalue")).toEqual({
+      type: "salon",
+      slug: "demo-salon",
+    });
     expect(resolveIncomingLinkAction("https://example.com/unrelated")).toEqual({ type: "none" });
   });
 

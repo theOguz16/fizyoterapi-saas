@@ -6,7 +6,7 @@ import { resolveIncomingLinkAction } from "@/lib/incoming-link";
 import {
   clearPendingSalonJoinSlug,
   getPendingSalonJoinIntent,
-  setPendingSalonJoinSlug as persistPendingSalonJoinSlug,
+  setPendingSalonJoinIntent,
   subscribeSalonJoinIntent,
   type SalonJoinIntent,
 } from "@/lib/local-preferences";
@@ -63,7 +63,7 @@ export function useRootDeepLinkRouting(input: {
 
       if (action.type !== "salon") return;
 
-      await persistPendingSalonJoinSlug(action.slug, "DEEPLINK");
+      await setPendingSalonJoinIntent({ slug: action.slug, source: "DEEPLINK", code: action.code });
 
       const nextRoute = resolvePendingRoute(action.slug);
       if (nextRoute) {

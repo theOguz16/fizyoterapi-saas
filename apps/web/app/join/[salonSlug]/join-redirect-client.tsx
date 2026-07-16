@@ -74,7 +74,7 @@ export function JoinRedirectClient({
             </div>
             <div className="join-tags">
               <span>Salon: {salonSlug}</span>
-              {salonCode ? <span>Kod: {salonCode}</span> : null}
+              {salonCode ? <span>Davet kodu bağlantıya eklendi</span> : null}
             </div>
           </div>
           <div className="join-status-card">

@@ -6,10 +6,11 @@ type IncomingLinkOptions = {
 
 export type IncomingLinkAction =
   | { type: "internal"; href: string }
-  | { type: "salon"; slug: string }
+  | { type: "salon"; slug: string; code?: string }
   | { type: "none" };
 
 const ROUTE_GROUP_PATTERN = /^\([a-z0-9-]+\)$/i;
+const JOIN_CODE_PATTERN = /^[a-z0-9_-]{1,128}$/i;
 
 export function resolveInternalHrefFromIncomingUrl(
   rawUrl: string | null | undefined,
@@ -56,10 +57,20 @@ export function resolveIncomingLinkAction(
 
   const salonSlug = extractSalonSlugFromQrPayload(String(rawUrl || ""));
   if (salonSlug) {
-    return { type: "salon", slug: salonSlug };
+    const code = extractJoinCode(rawUrl);
+    return { type: "salon", slug: salonSlug, ...(code ? { code } : {}) };
   }
 
   return { type: "none" };
+}
+
+function extractJoinCode(rawUrl: string | null | undefined) {
+  try {
+    const value = new URL(String(rawUrl || "")).searchParams.get("code")?.trim() || "";
+    return JOIN_CODE_PATTERN.test(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function normalizePathname(value: string) {

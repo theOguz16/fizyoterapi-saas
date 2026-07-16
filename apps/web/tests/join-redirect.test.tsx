@@ -6,25 +6,37 @@ import { buildJoinDeepLink, resolveJoinRedirect, resolveJoinStoreUrl } from "@/l
 
 describe("clinic join redirect", () => {
   it("encodes the clinic slug in the mobile deep link", () => {
-    expect(buildJoinDeepLink(" test klinik/istanbul ")).toBe(
-      "fizyoflow://(intake-member)/salons/test%20klinik%2Fistanbul"
+    expect(buildJoinDeepLink(" Test-Klinik ")).toBe("fizyoflow://join/test-klinik");
+    expect(buildJoinDeepLink(" Test-Klinik ", "FYF-DEMO_001")).toBe(
+      "fizyoflow://join/test-klinik?code=FYF-DEMO_001"
     );
+    expect(buildJoinDeepLink(" Test-Klinik ", "unsafe code/value")).toBe("fizyoflow://join/test-klinik");
   });
 
   it("uses configured stores and falls back to the deep link when absent", () => {
     expect(resolveJoinRedirect({
       salonSlug: " test-klinik ",
-      iosStoreUrl: " https://apps.apple.com/test ",
-      androidStoreUrl: " https://play.google.com/test ",
+      salonCode: " FYF-DEMO-001 ",
+      iosStoreUrl: " https://apps.apple.com/tr/app/fizyoflow/id6771870032 ",
+      androidStoreUrl: " https://play.google.com/store/apps/details?id=com.fizyoflow.mobile ",
     })).toEqual({
       salonSlug: "test-klinik",
-      deepLink: "fizyoflow://(intake-member)/salons/test-klinik",
-      iosStoreUrl: "https://apps.apple.com/test",
-      androidStoreUrl: "https://play.google.com/test",
+      salonCode: "FYF-DEMO-001",
+      deepLink: "fizyoflow://join/test-klinik?code=FYF-DEMO-001",
+      iosStoreUrl: "https://apps.apple.com/tr/app/fizyoflow/id6771870032",
+      androidStoreUrl: "https://play.google.com/store/apps/details?id=com.fizyoflow.mobile",
     });
     expect(resolveJoinRedirect({ salonSlug: "test-klinik" }).iosStoreUrl).toBe(
-      "fizyoflow://(intake-member)/salons/test-klinik"
+      "fizyoflow://join/test-klinik"
     );
+    expect(resolveJoinRedirect({
+      salonSlug: "test-klinik",
+      iosStoreUrl: "javascript:alert(1)",
+      androidStoreUrl: "https://example.com/not-the-play-store",
+    })).toEqual(expect.objectContaining({
+      iosStoreUrl: "fizyoflow://join/test-klinik",
+      androidStoreUrl: "fizyoflow://join/test-klinik",
+    }));
   });
 
   it("selects Android only for Android user agents and preserves manual actions", () => {
@@ -35,13 +47,14 @@ describe("clinic join redirect", () => {
       <JoinRedirectClient
         salonSlug="test-klinik"
         salonCode="ABC123"
-        deepLink="fizyoflow://(intake-member)/salons/test-klinik"
-        iosStoreUrl="https://apps.apple.com/test"
-        androidStoreUrl="https://play.google.com/test"
+        deepLink="fizyoflow://join/test-klinik?code=ABC123"
+        iosStoreUrl="https://apps.apple.com/tr/app/fizyoflow/id6771870032"
+        androidStoreUrl="https://play.google.com/store/apps/details?id=com.fizyoflow.mobile"
       />
     );
     expect(html).toContain("Uygulamayı Aç");
     expect(html).toContain("Salon: test-klinik");
-    expect(html).toContain("Kod: ABC123");
+    expect(html).toContain("Davet kodu bağlantıya eklendi");
+    expect(html).not.toContain("Kod: ABC123");
   });
 });

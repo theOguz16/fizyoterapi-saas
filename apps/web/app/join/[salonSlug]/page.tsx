@@ -17,9 +17,9 @@ export const metadata: Metadata = {
 };
 
 export default function SalonJoinPage({ params, searchParams }: SalonJoinPageProps) {
-  const salonCode = String(searchParams?.code || "").trim();
-  const { salonSlug, deepLink, iosStoreUrl, androidStoreUrl } = resolveJoinRedirect({
+  const { salonSlug, salonCode, deepLink, iosStoreUrl, androidStoreUrl } = resolveJoinRedirect({
     salonSlug: params.salonSlug,
+    salonCode: searchParams?.code,
     iosStoreUrl: process.env.NEXT_PUBLIC_IOS_APP_URL || process.env.NEXT_PUBLIC_APP_STORE_URL,
     androidStoreUrl: process.env.NEXT_PUBLIC_ANDROID_APP_URL || process.env.NEXT_PUBLIC_PLAY_STORE_URL,
   });
