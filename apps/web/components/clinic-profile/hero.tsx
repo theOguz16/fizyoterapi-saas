@@ -1,5 +1,7 @@
+import Image from "next/image";
 import { TrackedLink } from "../public-event";
 import { CLINIC_API_BASE, type ClinicProfileViewModel } from "../../lib/clinic-profile";
+import { ClinicImage } from "./clinic-image";
 
 const ribbonItems = [
   "Mobil klinik yönetimi",
@@ -19,11 +21,22 @@ export function ClinicHero({ model }: { model: ClinicProfileViewModel }) {
   return (
     <>
       <section className="clinic-hero" style={{ ["--clinic-color" as string]: data.primary_color || "#0ea5e9" }}>
-        {heroImage ? <img className="hero-photo" src={heroImage} alt={`${data.name} klinik vitrini`} fetchPriority="high" /> : null}
+        {heroImage ? (
+          <ClinicImage
+            className="hero-photo"
+            src={heroImage}
+            alt={`${data.name} klinik vitrini`}
+            width={1600}
+            height={1000}
+            sizes="(max-width: 980px) 100vw, 52vw"
+            priority
+            quality={82}
+          />
+        ) : null}
         <div className="clinic-hero-overlay" />
         <div className="container clinic-hero-content">
           <a className="brand on-hero" href="/">
-            <span className="brand-mark"><img src="/brand/fizyoflow-current-mark.png" alt="" /></span>
+            <span className="brand-mark"><Image src="/brand/fizyoflow-current-mark.png" alt="" width={44} height={44} /></span>
             <span>Fizyoflow</span>
           </a>
           <p className="eyebrow">{[data.business_category || "Fizyoterapi Kliniği", data.location?.district, data.location?.city].filter(Boolean).join(" · ")}</p>
@@ -38,11 +51,11 @@ export function ClinicHero({ model }: { model: ClinicProfileViewModel }) {
           <div className="clinic-product-orbit" aria-label="Fizyoflow klinik vitrini ürün katmanı">
             <div className="orbit-phone">
               <div className="phone-speaker" />
-              <div className="phone-screen screenshot-screen"><img src="/product-screens/admin-dashboard.png" alt="Fizyoflow yönetim merkezi" width="1206" height="2622" /></div>
+              <div className="phone-screen screenshot-screen"><Image src="/product-screens/admin-dashboard.png" alt="FizyoFlow yönetim merkezi" width={1206} height={2622} sizes="220px" /></div>
             </div>
             <div className="orbit-card orbit-card-seo"><span>SEO</span><strong>{serviceArea[0] ? `${serviceArea[0]} klinik vitrini` : "Yerel klinik vitrini"}</strong></div>
             <div className="orbit-card orbit-card-lead"><span>İletişim</span><strong>{whatsapp ? "WhatsApp + Harita" : "Form + Telefon"}</strong></div>
-            <div className="orbit-card orbit-card-brand"><img src="/brand/fizyoflow-current-mark.png" alt="" /><strong>Fizyoflow ile yayında</strong></div>
+            <div className="orbit-card orbit-card-brand"><Image src="/brand/fizyoflow-current-mark.png" alt="" width={36} height={36} /><strong>FizyoFlow ile yayında</strong></div>
           </div>
         </div>
       </section>

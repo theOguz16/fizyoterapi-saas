@@ -9,11 +9,57 @@ export type ClinicPageProps = {
 };
 
 export const CLINIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "http://localhost:4949/api";
-const WEB_BASE = process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com";
+export const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
+export const CLINIC_ROOT_DOMAIN = (process.env.NEXT_PUBLIC_CLINIC_ROOT_DOMAIN || new URL(WEB_BASE).hostname)
+  .trim()
+  .toLowerCase()
+  .replace(/^www\./, "");
 const DEFAULT_SHARE_IMAGE = "/brand/fizyoflow-og.svg";
 export const ROOT_LEGAL_BASE = "https://fizyoflow.com";
+const CLINIC_FETCH_TIMEOUT_MS = 5_000;
+const CLINIC_STALE_TTL_MS = 24 * 60 * 60 * 1_000;
+const CLINIC_PROFILE_REVALIDATE_SECONDS = 300;
+const MAX_MEMORY_SNAPSHOTS = 500;
 const weekdayLabels = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const schemaWeekdayLabels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+type ClinicProfileSnapshot = { data: SalonPageData; cachedAt: number };
+const clinicProfileSnapshots = new Map<string, ClinicProfileSnapshot>();
+
+export type ClinicProfileLoadResult =
+  | { status: "found"; data: SalonPageData; cacheStatus: "fresh" | "stale" }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: "network" | "upstream" | "invalid_response" };
+
+function normalizeClinicSlug(slug: string) {
+  const normalized = String(slug || "").trim().toLowerCase();
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized) ? normalized : "";
+}
+
+function readStaleClinicProfile(slug: string, now: number): ClinicProfileLoadResult | null {
+  const snapshot = clinicProfileSnapshots.get(slug);
+  if (!snapshot) return null;
+  if (now - snapshot.cachedAt > CLINIC_STALE_TTL_MS) {
+    clinicProfileSnapshots.delete(slug);
+    return null;
+  }
+  return { status: "found", data: snapshot.data, cacheStatus: "stale" };
+}
+
+function writeClinicProfileSnapshot(slug: string, data: SalonPageData, now: number) {
+  clinicProfileSnapshots.set(slug, { data, cachedAt: now });
+  if (clinicProfileSnapshots.size <= MAX_MEMORY_SNAPSHOTS) return;
+  const oldestSlug = clinicProfileSnapshots.keys().next().value;
+  if (oldestSlug) clinicProfileSnapshots.delete(oldestSlug);
+}
+
+function parseClinicProfilePayload(payload: unknown): SalonPageData | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  const candidate = record.data && typeof record.data === "object" ? record.data as Record<string, unknown> : record;
+  if (typeof candidate.id !== "string" || typeof candidate.name !== "string" || typeof candidate.slug !== "string") return null;
+  return candidate as SalonPageData;
+}
 
 export function publicClinicUrl(path?: string | null) {
   if (!path) return "";
@@ -22,25 +68,68 @@ export function publicClinicUrl(path?: string | null) {
   return `${apiOrigin}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export async function getClinicProfile(slug: string): Promise<SalonPageData | null> {
+export async function loadClinicProfile(
+  slug: string,
+  fetcher: typeof fetch = fetch,
+  now = Date.now(),
+): Promise<ClinicProfileLoadResult> {
+  const normalizedSlug = normalizeClinicSlug(slug);
+  if (!normalizedSlug) return { status: "not_found" };
+
   try {
-    const response = await fetch(`${CLINIC_API_BASE}/public/salons/${slug}`, {
-      next: { revalidate: 300 },
+    const response = await fetcher(`${CLINIC_API_BASE}/public/salons/${encodeURIComponent(normalizedSlug)}`, {
+      next: { revalidate: CLINIC_PROFILE_REVALIDATE_SECONDS, tags: [`clinic-profile-${normalizedSlug}`] },
+      signal: AbortSignal.timeout(CLINIC_FETCH_TIMEOUT_MS),
     });
-    if (response.status === 404 || !response.ok) return null;
-    return response.json();
+    if (response.status === 404) {
+      clinicProfileSnapshots.delete(normalizedSlug);
+      return { status: "not_found" };
+    }
+    if (!response.ok) {
+      return readStaleClinicProfile(normalizedSlug, now) || { status: "unavailable", reason: "upstream" };
+    }
+    const data = parseClinicProfilePayload(await response.json());
+    if (!data || normalizeClinicSlug(data.slug) !== normalizedSlug) {
+      return readStaleClinicProfile(normalizedSlug, now) || { status: "unavailable", reason: "invalid_response" };
+    }
+    writeClinicProfileSnapshot(normalizedSlug, data, now);
+    return { status: "found", data, cacheStatus: "fresh" };
   } catch {
-    return null;
+    return readStaleClinicProfile(normalizedSlug, now) || { status: "unavailable", reason: "network" };
   }
 }
 
+export function getClinicProfileResult(slug: string) {
+  return loadClinicProfile(slug);
+}
+
+export async function getClinicProfile(slug: string): Promise<SalonPageData | null> {
+  const result = await getClinicProfileResult(slug);
+  return result.status === "found" ? result.data : null;
+}
+
+export function clearClinicProfileSnapshotsForTests() {
+  clinicProfileSnapshots.clear();
+}
+
 export function getClinicCanonical(slug: string) {
+  const normalizedSlug = normalizeClinicSlug(slug);
+  if (!normalizedSlug) return WEB_BASE;
   try {
     const root = new URL(WEB_BASE);
-    return `${root.protocol}//${slug}.${root.hostname.replace(/^www\./, "")}`;
+    return `${root.protocol}//${normalizedSlug}.${CLINIC_ROOT_DOMAIN}`;
   } catch {
-    return `https://${slug}.fizyoflow.com`;
+    return `https://${normalizedSlug}.fizyoflow.com`;
   }
+}
+
+export function buildUnavailableClinicMetadata(slug: string): Metadata {
+  return {
+    title: "Klinik sayfasına geçici olarak ulaşılamıyor | FizyoFlow",
+    description: "Klinik bilgileri şu anda yenilenemiyor. Lütfen kısa süre sonra tekrar deneyin.",
+    alternates: { canonical: getClinicCanonical(slug) },
+    robots: { index: false, follow: false },
+  };
 }
 
 export function resolveClinicSeo(data: SalonPageData) {

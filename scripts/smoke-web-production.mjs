@@ -26,6 +26,20 @@ async function expectHtmlIncludes(url, expectedTexts) {
       throw new Error(`${url} is missing expected text: ${expectedText}`);
     }
   }
+  return html;
+}
+
+async function expectClinicCanonicalAndSitemap(clinicUrl) {
+  const html = await expectHtmlIncludes(clinicUrl, ["Bilgi ve Randevu Talebi", "Dijital Güven"]);
+  const canonicalSignals = [`rel="canonical" href="${clinicUrl}"`, `href="${clinicUrl}" rel="canonical"`];
+  if (!canonicalSignals.some((signal) => html.includes(signal))) {
+    throw new Error(`${clinicUrl} does not publish its exact canonical URL`);
+  }
+  const sitemapResponse = await expectStatus(`${WEB_BASE}/sitemap.xml`);
+  const sitemapXml = await sitemapResponse.text();
+  if (!sitemapXml.includes(`<loc>${clinicUrl}</loc>`)) {
+    throw new Error(`${clinicUrl} is missing from the production sitemap`);
+  }
 }
 
 async function postJson(url, body, expectedStatuses = [200, 201, 202]) {
@@ -45,26 +59,18 @@ async function main() {
   await check("api_health", () => expectStatus(`${API_BASE.replace(/\/api$/, "")}/health`));
   await check("web_home", () =>
     expectHtmlIncludes(WEB_BASE, [
-      "Fizyoflow",
-      "Satın alma nedeni",
-      "Paket beklentisi",
-      "Büyüme ölçümü",
-      "Kurulum bilgileri",
-      "Canlıya hazır mı?",
-      "Demo Talep Et",
+      "FizyoFlow",
+      "mobil klinik yönetim platformu",
+      "15 dakikalık demo talep et",
+      "Kliniğini kur",
     ])
   );
   await check("admin_login", () => expectHtmlIncludes(`${ADMIN_BASE}/login`, ["Giriş"]));
   await check("sitemap", () => expectStatus(`${WEB_BASE}/sitemap.xml`));
   await check("robots", () => expectStatus(`${WEB_BASE}/robots.txt`));
   await check("thanks_page", () => expectHtmlIncludes(`${WEB_BASE}/tesekkurler`, ["Demo talebi alındı", "Hazırlık için"]));
-  await check("public_clinic", () =>
-    expectHtmlIncludes(`${new URL(WEB_BASE).protocol}//${PUBLIC_SLUG}.${new URL(WEB_BASE).hostname.replace(/^www\./, "")}`, [
-      "Fizyoflow",
-      "Bilgi ve Randevu Talebi",
-      "Dijital Güven",
-    ])
-  );
+  const clinicUrl = `${new URL(WEB_BASE).protocol}//${PUBLIC_SLUG}.${new URL(WEB_BASE).hostname.replace(/^www\./, "")}`;
+  await check("wildcard_clinic_canonical_and_sitemap", () => expectClinicCanonicalAndSitemap(clinicUrl));
   await check("join_redirect_page", () => expectHtmlIncludes(`${WEB_BASE}/join/${PUBLIC_SLUG}?code=FYF-SMOKE`, ["Klinik daveti"]));
   await check("public_event", async () => {
     await postJson(`${API_BASE}/public/salons/${PUBLIC_SLUG}/events`, {

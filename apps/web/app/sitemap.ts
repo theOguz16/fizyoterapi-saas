@@ -1,25 +1,68 @@
 import type { MetadataRoute } from "next";
+import { getClinicCanonical, WEB_BASE } from "../lib/clinic-profile";
 import { seoLandingPages } from "./seo-content";
 
-const WEB_BASE = (process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com").replace(/\/$/, "");
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "";
+const PUBLIC_SALON_STALE_TTL_MS = 24 * 60 * 60 * 1_000;
 
 type PublicSalon = {
   slug: string;
   updated_at?: string;
 };
 
-async function getPublicSalons(): Promise<PublicSalon[]> {
-  if (!API_BASE) return [];
+let publicSalonSnapshot: { rows: PublicSalon[]; cachedAt: number } | null = null;
+
+function readStalePublicSalons(now: number) {
+  if (!publicSalonSnapshot || now - publicSalonSnapshot.cachedAt > PUBLIC_SALON_STALE_TTL_MS) return [];
+  return publicSalonSnapshot.rows;
+}
+
+function normalizePublicSalons(payload: unknown) {
+  if (!payload || typeof payload !== "object") return [];
+  const rows = (payload as { data?: unknown }).data;
+  if (!Array.isArray(rows)) return [];
+  const unique = new Map<string, PublicSalon>();
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const slug = String(record.slug || "").trim().toLowerCase();
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) continue;
+    unique.set(slug, { slug, updated_at: typeof record.updated_at === "string" ? record.updated_at : undefined });
+  }
+  return [...unique.values()];
+}
+
+export async function getPublicSalons(fetcher: typeof fetch = fetch, now = Date.now()): Promise<PublicSalon[]> {
+  if (!API_BASE) return readStalePublicSalons(now);
 
   try {
-    const response = await fetch(`${API_BASE}/public/salons`, { next: { revalidate: 3600 } });
-    if (!response.ok) return [];
-    const payload = (await response.json()) as { data?: PublicSalon[] };
-    return Array.isArray(payload.data) ? payload.data : [];
+    const response = await fetcher(`${API_BASE}/public/salons`, { next: { revalidate: 3600, tags: ["public-clinic-sitemap"] } });
+    if (!response.ok) return readStalePublicSalons(now);
+    const rows = normalizePublicSalons(await response.json());
+    publicSalonSnapshot = { rows, cachedAt: now };
+    return rows;
   } catch {
-    return [];
+    return readStalePublicSalons(now);
   }
+}
+
+export function clearPublicSalonSnapshotForTests() {
+  publicSalonSnapshot = null;
+}
+
+function safeLastModified(value: string | undefined, fallback: Date) {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+export function buildClinicSitemapRows(salons: PublicSalon[], now: Date): MetadataRoute.Sitemap {
+  return salons.map((salon) => ({
+    url: getClinicCanonical(salon.slug),
+    lastModified: safeLastModified(salon.updated_at, now),
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -52,14 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  const host = new URL(WEB_BASE).hostname.replace(/^www\./, "");
-  const protocol = new URL(WEB_BASE).protocol;
-  const salonRows = (await getPublicSalons()).map((salon) => ({
-    url: `${protocol}//${salon.slug}.${host}`,
-    lastModified: salon.updated_at ? new Date(salon.updated_at) : now,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
+  const salonRows = buildClinicSitemapRows(await getPublicSalons(), now);
 
   return [...baseRows, ...salonRows];
 }

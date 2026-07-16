@@ -175,6 +175,7 @@
 
 .gallery-grid img {
   width: 100%;
+  height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 8px;
@@ -184,6 +185,53 @@
 .gallery-grid img:hover {
   transform: translateY(-4px) scale(1.01);
   box-shadow: 0 24px 48px -34px rgba(16, 32, 29, 0.9);
+}
+
+.clinic-unavailable {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  background: #f4f8f5;
+}
+
+.clinic-unavailable-panel {
+  width: min(100%, 680px);
+  padding: 40px;
+  border: 1px solid rgba(111, 146, 116, 0.2);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 30px 80px -58px rgba(31, 41, 55, 0.6);
+}
+
+.clinic-unavailable-panel .product-brand {
+  display: inline-flex;
+  margin-bottom: 40px;
+}
+
+.clinic-unavailable-panel h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  line-height: 1.05;
+}
+
+.clinic-unavailable-panel > p:not(.eyebrow) {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.clinic-unavailable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+@media (max-width: 620px) {
+  .clinic-unavailable-panel { padding: 28px 22px; }
+  .clinic-unavailable-actions { display: grid; }
 }
 
 .journey-grid {

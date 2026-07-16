@@ -37,8 +37,10 @@ Sunucuda `.env.production.vds.example` dosyasını `.env.production` olarak kopy
 - `JWT_EXPIRES_IN`
 - `PRODUCTION_CORS_ORIGIN`
 - `NEXT_PUBLIC_WEB_BASE_URL`
+- `NEXT_PUBLIC_CLINIC_ROOT_DOMAIN` wildcard klinik canonical alan adı
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_API_BASE`
+- `NEXT_PUBLIC_CLINIC_IMAGE_ORIGINS` API dışındaki izinli HTTPS görsel origin'leri, virgülle ayrılmış
 - `ACME_EMAIL`
 - `CLOUDFLARE_API_TOKEN`
 - `NEXT_PUBLIC_IOS_APP_URL` zorunlu App Store fallback adresi
@@ -61,13 +63,15 @@ https://app.fizyoflow.com,https://fizyoflow.com,https://www.fizyoflow.com
 
 ```txt
 NEXT_PUBLIC_WEB_BASE_URL=https://fizyoflow.com
+NEXT_PUBLIC_CLINIC_ROOT_DOMAIN=fizyoflow.com
 NEXT_PUBLIC_APP_URL=https://app.fizyoflow.com
 NEXT_PUBLIC_API_BASE=https://api.fizyoflow.com/api
+NEXT_PUBLIC_CLINIC_IMAGE_ORIGINS=https://images.unsplash.com
 NEXT_PUBLIC_IOS_APP_URL=https://apps.apple.com/tr/app/fizyoflow/id6771870032
 NEXT_PUBLIC_ANDROID_APP_URL=https://play.google.com/store/apps/details?id=<ANDROID_PACKAGE_ID>
 ```
 
-Store adresleri örnek değerlerle bırakılmamalıdır. Strict preflight yalnız `apps.apple.com` ve `play.google.com` üzerindeki HTTPS fallback adreslerini kabul eder.
+Store adresleri örnek değerlerle bırakılmamalıdır. Strict preflight yalnız `apps.apple.com` ve `play.google.com` üzerindeki HTTPS fallback adreslerini kabul eder. Aynı kontrol klinik root domain'inin web domain'iyle eşleştiğini ve ek görsel origin'lerinin HTTPS olduğunu da doğrular.
 
 ## Deploy
 
@@ -117,7 +121,8 @@ Smoke beklenenleri:
 - Ana ürün sitesi 200 döner ve kurulum/yayın hazırlığı içeriklerini taşır.
 - Admin login 200 döner ve giriş ekranı içeriği gelir.
 - Sitemap ve robots 200 döner.
-- Pilot klinik subdomain'i 200 döner ve klinik lead/iletişim içerikleri gelir.
+- Pilot klinik subdomain'i wildcard DNS ve TLS üzerinden 200 döner.
+- Pilot kliniğin canonical etiketi ile sitemap URL'si canlı subdomain URL'siyle bire bir eşleşir.
 - Join redirect sayfası 200 döner.
 - Public event endpoint'i 200/202 döner.
 - `WEB_SMOKE_SUBMIT_LEADS=1` verilirse ürün demo lead'i, klinik lead'i ve lead submit event'i de test edilir.

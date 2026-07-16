@@ -100,14 +100,24 @@ function main() {
   requireSourceContains("components/clinic-profile/clinic-profile-page.tsx", /ScrollDepthTracker/, "clinic scroll depth tracking");
   requireSourceContains("components/clinic-profile/details.tsx", /data-track-section="location"/, "clinic location section");
   requireSourceContains("lib/clinic-profile.ts", /LocalBusiness/, "clinic LocalBusiness structured data");
+  requireSourceContains("lib/clinic-profile.ts", /status: "unavailable"/, "clinic unavailable state");
+  requireSourceContains("app/sitemap.ts", /getClinicCanonical/, "shared clinic canonical contract");
+  requireSourceContains("components/clinic-profile/hero.tsx", /from "next\/image"/, "optimized clinic hero image");
   requireSourceContains("components/public-event.tsx", /utm_source/, "clinic UTM attribution tracking");
   requireSourceContains("components/demo-lead-form.tsx", /primary_need/, "demo form lead qualification");
   requireSourceContains("components/lead-form.tsx", /Sonraki adım/, "clinic lead next-step state");
 
   if (process.env.WEB_PREFLIGHT_STRICT === "1") {
-    assertHttpsUrl("NEXT_PUBLIC_WEB_BASE_URL", process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com");
+    const webUrl = assertHttpsUrl("NEXT_PUBLIC_WEB_BASE_URL", process.env.NEXT_PUBLIC_WEB_BASE_URL || "https://fizyoflow.com");
     assertHttpsUrl("NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL || "https://app.fizyoflow.com");
     assertHttpsUrl("NEXT_PUBLIC_API_BASE", process.env.NEXT_PUBLIC_API_BASE || "https://api.fizyoflow.com/api", { requireApiPath: true });
+    const clinicRootDomain = String(process.env.NEXT_PUBLIC_CLINIC_ROOT_DOMAIN || "").trim().toLowerCase();
+    assert.ok(clinicRootDomain, "NEXT_PUBLIC_CLINIC_ROOT_DOMAIN is required for wildcard clinic canonical URLs");
+    assert.ok(!clinicRootDomain.includes(":") && !clinicRootDomain.includes("/"), "NEXT_PUBLIC_CLINIC_ROOT_DOMAIN must be a hostname");
+    assert.equal(clinicRootDomain, webUrl.hostname.replace(/^www\./, ""), "Clinic root domain must match NEXT_PUBLIC_WEB_BASE_URL");
+    for (const origin of String(process.env.NEXT_PUBLIC_CLINIC_IMAGE_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)) {
+      assertHttpsUrl("NEXT_PUBLIC_CLINIC_IMAGE_ORIGINS entry", origin);
+    }
     const iosUrl = process.env.NEXT_PUBLIC_IOS_APP_URL || process.env.NEXT_PUBLIC_APP_STORE_URL;
     const androidUrl = process.env.NEXT_PUBLIC_ANDROID_APP_URL || process.env.NEXT_PUBLIC_PLAY_STORE_URL;
     assertStoreUrl("NEXT_PUBLIC_IOS_APP_URL/NEXT_PUBLIC_APP_STORE_URL", iosUrl, "ios");

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LeadForm } from "../lead-form";
 import { TrackedLink } from "../public-event";
 import {
@@ -7,6 +8,7 @@ import {
   type ClinicProfileViewModel,
   withWhatsAppMessage,
 } from "../../lib/clinic-profile";
+import { ClinicImage } from "./clinic-image";
 
 export function ClinicContactSection({ model }: { model: ClinicProfileViewModel }) {
   const { data, locationText, mapsUrl, openStatus, phone, seo, serviceArea, telHref, whatsapp, whatsappWithMessage, workingHourText } = model;
@@ -32,7 +34,7 @@ export function ClinicContactSection({ model }: { model: ClinicProfileViewModel 
           </div>
         </div>
         <aside className="contact-card">
-          <div className="contact-card-brand"><img src="/brand/fizyoflow-current-mark.png" alt="" /><span>Fizyoflow lead formu</span></div>
+          <div className="contact-card-brand"><Image src="/brand/fizyoflow-current-mark.png" alt="" width={32} height={32} /><span>FizyoFlow lead formu</span></div>
           <p className="eyebrow">Hızlı İletişim</p>
           <h3>Bilgi ve Randevu Talebi</h3>
           <p className="small">Formu doldurun; klinik ekibi size uygun zaman ve hizmet bilgisiyle dönüş yapar.</p>
@@ -135,7 +137,20 @@ export function ClinicLocationAndGallery({ model }: { model: ClinicProfileViewMo
       {gallery.length ? (
         <section className="section-band" data-track-section="gallery">
           <div className="container section-heading"><p className="eyebrow">Galeri</p><h2>Kliniği yakından görün</h2></div>
-          <div className="container gallery-grid">{gallery.map((image) => <img key={image.id} src={publicClinicUrl(image.url)} alt={`${data.name} galeri`} loading="lazy" />)}</div>
+          <div className="container gallery-grid">
+            {gallery.map((image, index) => (
+              <ClinicImage
+                key={image.id}
+                src={publicClinicUrl(image.url)}
+                alt={`${data.name} galeri görseli ${index + 1}`}
+                width={1200}
+                height={900}
+                sizes="(max-width: 720px) 100vw, (max-width: 980px) 50vw, 33vw"
+                quality={78}
+                style={{ width: "100%", height: "auto" }}
+              />
+            ))}
+          </div>
         </section>
       ) : null}
     </>
