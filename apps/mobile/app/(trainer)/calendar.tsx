@@ -19,11 +19,23 @@ import {
   getTrainerMemberMeasurementsApi,
   getTrainerMemberNotesApi,
   patchTrainerBookingStatusApi,
-  type TrainerAvailabilityEntry,
-  type TrainerScheduleEntry,
 } from "@/lib/mobile-api";
-import { calendarFeedEventToDetailRow, canShowTrainerCalendarCheckin, createCalendarFeedRange } from "@/lib/calendar-feed";
-import { collectMemberAssignableSlots, type TrainerScheduleRequest } from "@/lib/trainer-scheduler";
+import { calendarFeedEventToDetailRow, canShowTrainerCalendarCheckin, createCalendarFeedRange, type CalendarDetailRow } from "@/lib/calendar-feed";
+import { collectMemberAssignableSlots } from "@/lib/trainer-scheduler";
+import {
+  addCalendarMinutes,
+  buildRequestPlacementSlots,
+  buildSelectedGroupMembers,
+  buildTrainerRequests,
+  formatTrainerDateTime,
+  formatTrainerDateTimeRange,
+  groupTrainerSlotsByDay,
+  isOutsideMinimumLeadTime,
+  slotFitsBusinessHours,
+  trainerCalendarRangesOverlap,
+  type AvailableSlot,
+  type CalendarRequest,
+} from "@/lib/trainer-calendar";
 import { resolveTrainerFocusedBookingEventId } from "@/lib/trainer-today";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
@@ -36,293 +48,9 @@ import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
 import { tokens } from "@/theme/tokens";
 
-type CalendarRequest = TrainerScheduleRequest & {
-  request_date_key: string;
-  request_date_label: string;
-};
-
-type BusinessHours = {
-  start_time?: string | null;
-  end_time?: string | null;
-  lunch_break_start?: string | null;
-  lunch_break_end?: string | null;
-  slot_minutes?: number | null;
-  break_duration_minutes?: number | null;
-  working_days?: number[] | null;
-};
-
-type AvailableSlot = {
-  key: string;
-  startsAt: string;
-  endsAt: string;
-  label: string;
-  dayKey: string;
-  dayLabel: string;
-};
-type SelectedGroupMember = {
-  id: string;
-  name: string;
-  status: string;
-};
-
-function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null, timezone = "Europe/Istanbul") {
-  if (!startsAt) return "-";
-
-  const start = new Date(startsAt);
-  const end = endsAt ? new Date(endsAt) : null;
-
-  const day = start.toLocaleDateString("tr-TR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    timeZone: timezone,
-  });
-
-  const startTime = start.toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: timezone,
-  });
-
-  const endTime = end
-    ? end.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: timezone,
-      })
-    : "--:--";
-
-  return `${day} • ${startTime} - ${endTime}`;
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-
-  return new Date(value).toLocaleString("tr-TR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function formatEmpty(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
   return String(value);
-}
-
-function isOutsideMinimumLeadTime(startsAt: string, minHours: number, now = new Date()) {
-  return new Date(startsAt).getTime() - now.getTime() < minHours * 60 * 60 * 1000;
-}
-
-function toDateKey(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function timeToMinutes(value?: string | null, fallback = 0) {
-  if (!value) return fallback;
-
-  const [hour, minute] = String(value)
-    .split(":")
-    .map((piece) => Number(piece || 0));
-
-  return hour * 60 + minute;
-}
-
-function isoDayNumber(date: Date) {
-  const day = date.getDay();
-  return day === 0 ? 7 : day;
-}
-
-function addMinutes(dateInput: Date, minutes: number) {
-  return new Date(dateInput.getTime() + minutes * 60 * 1000);
-}
-
-function buildTrainerRequests(rows: TrainerAvailabilityEntry[]) {
-  const groups = new Map<string, CalendarRequest>();
-
-  for (const row of rows) {
-    if (!row.starts_at) continue;
-
-    const dayKey = String(row.starts_at).slice(0, 10);
-    const groupKey = `${row.member_id || row.member_full_name}-${dayKey}-${row.package_id || row.package_title || "paket"}`;
-    const current = groups.get(groupKey);
-
-    if (current) {
-      if (!current.note && row.note) current.note = row.note;
-
-      if (row.starts_at) {
-        const exists = current.assignable_slots.some((slot) => slot.starts_at === row.starts_at);
-
-        if (!exists) {
-          current.assignable_slots.push({
-            starts_at: row.starts_at,
-            ends_at: row.ends_at || addMinutes(new Date(row.starts_at), 60).toISOString(),
-          });
-        }
-      }
-
-      continue;
-    }
-
-    groups.set(groupKey, {
-      id: groupKey,
-      member_id: String(row.member_id || ""),
-      member_full_name: row.member_full_name || "Danışan",
-      package_id: row.package_id || null,
-      package_title: row.package_title || "Paket",
-      note: row.note || null,
-      request_date_key: dayKey,
-      request_date_label: new Date(`${dayKey}T00:00:00`).toLocaleDateString("tr-TR", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-      }),
-      assignable_slots: [
-        {
-          starts_at: row.starts_at,
-          ends_at: row.ends_at || addMinutes(new Date(row.starts_at), 60).toISOString(),
-        },
-      ],
-    });
-  }
-
-  return Array.from(groups.values()).sort(
-    (first, second) =>
-      new Date(`${first.request_date_key}T00:00:00`).getTime() -
-      new Date(`${second.request_date_key}T00:00:00`).getTime()
-  );
-}
-
-function rangesOverlap(startA: Date, endA: Date, startB?: string | null, endB?: string | null) {
-  if (!startB) return false;
-
-  const rangeStartB = new Date(startB);
-  const rangeEndB = endB ? new Date(endB) : addMinutes(rangeStartB, 60);
-
-  return startA < rangeEndB && endA > rangeStartB;
-}
-
-function slotFitsBusinessHours(slot: { starts_at: string; ends_at?: string | null }, businessHours: BusinessHours | null) {
-  if (!businessHours?.start_time || !businessHours?.end_time) return false;
-
-  const start = new Date(slot.starts_at);
-  const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours.slot_minutes || 60)).toISOString());
-
-  const workingDays =
-    Array.isArray(businessHours.working_days) && businessHours.working_days.length
-      ? businessHours.working_days
-      : [];
-
-  if (!workingDays.includes(isoDayNumber(start))) return false;
-
-  const businessStart = timeToMinutes(businessHours.start_time);
-  const businessEnd = timeToMinutes(businessHours.end_time);
-  const slotStart = start.getHours() * 60 + start.getMinutes();
-  const slotEnd = end.getHours() * 60 + end.getMinutes();
-
-  if (slotStart < businessStart || slotEnd > businessEnd) return false;
-
-  const lunchStart = timeToMinutes(businessHours.lunch_break_start, -1);
-  const lunchEnd = timeToMinutes(businessHours.lunch_break_end, -1);
-
-  if (lunchStart >= 0 && lunchEnd >= 0 && slotStart < lunchEnd && slotEnd > lunchStart) {
-    return false;
-  }
-
-  return true;
-}
-
-function buildRequestPlacementSlots(
-  request: CalendarRequest,
-  businessHours: BusinessHours | null,
-  bookings: TrainerScheduleEntry[],
-  minHoursBeforeStart: number
-) {
-  const dayBookings = bookings.filter((booking) => toDateKey(booking.starts_at) === request.request_date_key);
-  const requestedSlots = Array.isArray(request.assignable_slots) ? request.assignable_slots : [];
-
-  return requestedSlots
-    .filter((slot) => String(slot.starts_at).slice(0, 10) === request.request_date_key)
-    .filter((slot) => slotFitsBusinessHours(slot, businessHours))
-    .filter((slot) => !isOutsideMinimumLeadTime(slot.starts_at, minHoursBeforeStart))
-    .filter((slot) => {
-      const start = new Date(slot.starts_at);
-      const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
-
-      return !dayBookings.some((booking) => rangesOverlap(start, end, booking.starts_at, booking.ends_at));
-    })
-    .map((slot) => {
-      const start = new Date(slot.starts_at);
-      const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
-
-      return {
-        key: `${request.request_date_key}-${start.toLocaleTimeString("tr-TR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
-        startsAt: slot.starts_at,
-        endsAt: end.toISOString(),
-        label: `${start.toLocaleTimeString("tr-TR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })} - ${end.toLocaleTimeString("tr-TR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
-        dayKey: request.request_date_key,
-        dayLabel: request.request_date_label,
-      } satisfies AvailableSlot;
-    })
-    .sort((first, second) => new Date(first.startsAt).getTime() - new Date(second.startsAt).getTime());
-}
-
-function groupSlotsByDay(slots: Array<{ starts_at: string; ends_at?: string | null }>) {
-  const groups = new Map<string, AvailableSlot[]>();
-
-  for (const slot of slots) {
-    if (!slot.starts_at) continue;
-
-    const dateKey = String(slot.starts_at).slice(0, 10);
-    const dayDate = new Date(`${dateKey}T00:00:00`);
-    const start = new Date(slot.starts_at);
-    const end = new Date(slot.ends_at || addMinutes(start, 60).toISOString());
-
-    const entry: AvailableSlot = {
-      key: `${dateKey}-${start.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
-      startsAt: slot.starts_at,
-      endsAt: slot.ends_at || addMinutes(start, 60).toISOString(),
-      label: `${start.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} - ${end.toLocaleTimeString("tr-TR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      dayKey: dateKey,
-      dayLabel: dayDate.toLocaleDateString("tr-TR", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
-      }),
-    };
-
-    groups.set(dateKey, [...(groups.get(dateKey) || []), entry]);
-  }
-
-  return Array.from(groups.entries())
-    .map(([dayKey, entries]) => ({
-      dayKey,
-      dayLabel: entries[0]?.dayLabel || dayKey,
-      slots: entries.sort((first, second) => new Date(first.startsAt).getTime() - new Date(second.startsAt).getTime()),
-    }))
-    .sort((first, second) => new Date(`${first.dayKey}T00:00:00`).getTime() - new Date(`${second.dayKey}T00:00:00`).getTime());
 }
 
 function RequestCard({
@@ -416,13 +144,10 @@ export default function TrainerCalendarScreen() {
     queryFn: getTrainerMembersApi,
   });
 
-  const liveAvailabilities = useMemo(
-    () => (Array.isArray(availabilityQuery.data) ? availabilityQuery.data : []),
-    [availabilityQuery.data]
-  );
+  const liveAvailabilities = useMemo(() => availabilityQuery.data || [], [availabilityQuery.data]);
 
-  const calendarRows: any[] = useMemo(
-    () => (Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events.map(calendarFeedEventToDetailRow) : []),
+  const calendarRows: CalendarDetailRow[] = useMemo(
+    () => (calendarQuery.data?.events || []).map(calendarFeedEventToDetailRow),
     [calendarQuery.data?.events]
   );
   const bookings = useMemo(
@@ -550,10 +275,10 @@ export default function TrainerCalendarScreen() {
   });
 
   const groupMemberNameMap = useMemo(() => {
-    const rows = Array.isArray(membersQuery.data) ? membersQuery.data : [];
+    const rows = membersQuery.data || [];
 
     return new Map(
-      rows.map((row: any) => [
+      rows.map((row) => [
         String(row.id || ""),
         String(row.full_name || row.email || row.phone || "Salon üyesi"),
       ])
@@ -598,7 +323,7 @@ export default function TrainerCalendarScreen() {
       void calendarQuery.refetch();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showErrorAlert("Ders planlanamadı", error, "Seçilen saat için ders planı oluşturulamadı.");
     },
   });
@@ -629,7 +354,7 @@ export default function TrainerCalendarScreen() {
       void calendarQuery.refetch();
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showErrorAlert("Ders kaldırılamadı", error, "Ders takvimden çıkarılamadı. Lütfen tekrar deneyin.");
     },
   });
@@ -668,57 +393,23 @@ export default function TrainerCalendarScreen() {
       );
     },
 
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       showErrorAlert("Saat değişikliği gönderilemedi", error, "Yeni saat önerisi oluşturulamadı. Lütfen tekrar deneyin.");
     },
   });
 
-  const latestMeasurement = Array.isArray(memberMeasurementsQuery.data) ? memberMeasurementsQuery.data[0] : null;
-  const latestAttendance = Array.isArray(memberAttendanceQuery.data) ? memberAttendanceQuery.data[0] : null;
+  const latestMeasurement = memberMeasurementsQuery.data?.[0] || null;
+  const latestAttendance = memberAttendanceQuery.data?.[0] || null;
 
-  const recentNotes = Array.isArray(memberNotesQuery.data?.data)
-    ? memberNotesQuery.data.data.slice(0, 2)
-    : Array.isArray(memberNotesQuery.data)
-      ? memberNotesQuery.data.slice(0, 2)
-      : [];
+  const recentNotes = memberNotesQuery.data?.items.slice(0, 2) || [];
 
   const memberStats = memberDetailQuery.data?.stats || {};
-  const packageSummary = Array.isArray(memberDetailQuery.data?.package_summary)
-    ? memberDetailQuery.data.package_summary[0]
-    : null;
+  const packageSummary = memberDetailQuery.data?.package_summary?.[0] || null;
 
-  const selectedGroupMembers = useMemo<SelectedGroupMember[]>(() => {
-  if (!selectedBooking?.is_group_class) return [];
-
-  const participants = Array.isArray(selectedBooking.participants)
-    ? selectedBooking.participants
-    : [];
-
-  if (participants.length > 0) {
-    return participants.map((participant: any) => ({
-      id: String(participant.member_id || participant.id || ""),
-      name: String(participant.full_name || participant.email || participant.phone || "Salon üyesi"),
-      status: String(participant.status || "").toUpperCase(),
-    }));
-  }
-
-  const invitedIds = Array.isArray(selectedBooking.invited_member_ids)
-    ? selectedBooking.invited_member_ids
-    : [];
-
-  return invitedIds
-    .map((id: string) => {
-      const name = groupMemberNameMap.get(String(id));
-      if (!name) return null;
-
-      return {
-        id: String(id),
-        name,
-        status: "INVITED",
-      };
-    })
-    .filter((item: SelectedGroupMember | null): item is SelectedGroupMember => Boolean(item));
-}, [groupMemberNameMap, selectedBooking]);
+  const selectedGroupMembers = useMemo(
+    () => buildSelectedGroupMembers(selectedBooking, groupMemberNameMap),
+    [groupMemberNameMap, selectedBooking]
+  );
 
   const rescheduleDayGroups = useMemo(() => {
     if (!rescheduleBooking?.member_id) return [];
@@ -727,14 +418,14 @@ export default function TrainerCalendarScreen() {
       .filter((slot) => !isOutsideMinimumLeadTime(slot.starts_at, minimumAdvanceHours))
       .filter((slot) => {
         const start = new Date(slot.starts_at);
-        const end = new Date(slot.ends_at || addMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
+        const end = new Date(slot.ends_at || addCalendarMinutes(start, Number(businessHours?.slot_minutes || 60)).toISOString());
         return !bookings.some(
           (booking) =>
             String(booking.id) !== String(rescheduleBooking.id) &&
-            rangesOverlap(start, end, booking.starts_at, booking.ends_at)
+            trainerCalendarRangesOverlap(start, end, booking.starts_at, booking.ends_at)
         );
       });
-    return groupSlotsByDay(slots);
+    return groupTrainerSlotsByDay(slots);
   }, [bookings, businessHours, minimumAdvanceHours, rawRequests, rescheduleBooking?.id, rescheduleBooking?.member_id]);
 
   const selectedRescheduleDay = useMemo(
@@ -868,7 +559,7 @@ export default function TrainerCalendarScreen() {
           {selectedRequest?.assignable_slots?.length ? (
             <Text style={styles.detailText}>
               Seçilen saatler:{" "}
-              {selectedRequest.assignable_slots.map((slot) => formatDateTimeRange(slot.starts_at, slot.ends_at, calendarTimezone)).join(" • ")}
+              {selectedRequest.assignable_slots.map((slot) => formatTrainerDateTimeRange(slot.starts_at, slot.ends_at, calendarTimezone)).join(" • ")}
             </Text>
           ) : null}
         </SurfaceCard>
@@ -921,7 +612,7 @@ export default function TrainerCalendarScreen() {
           <View style={styles.detailHeaderRow}>
             <View style={styles.detailHeaderText}>
               <Text style={styles.detailTitle}>Ders özeti</Text>
-              <Text style={styles.detailText}>{formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)}</Text>
+              <Text style={styles.detailText}>{formatTrainerDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)}</Text>
             </View>
 
             {selectedBooking?.presentation ? (
@@ -947,7 +638,7 @@ export default function TrainerCalendarScreen() {
             />
             {selectedBooking?.is_duo ? <DetailRow label="Duo partner" value={selectedBooking?.duo_partner_name || "Partner daveti bekleniyor"} /> : null}
             {selectedBooking?.is_duo ? <DetailRow label="Duo durum" value={selectedBooking?.duo_status || "Partner ödemesi bekleniyor"} /> : null}
-            <DetailRow label="Planlanan saat" value={formatDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)} />
+            <DetailRow label="Planlanan saat" value={formatTrainerDateTimeRange(selectedBooking?.starts_at, selectedBooking?.ends_at, calendarTimezone)} />
           </View>
         </SurfaceCard>
 
@@ -1005,7 +696,7 @@ export default function TrainerCalendarScreen() {
             </View>
 
             <View style={styles.detailGrid}>
-              <DetailRow label="Son katılım" value={latestAttendance?.created_at ? formatDateTime(latestAttendance.created_at) : "Kayıt yok"} />
+              <DetailRow label="Son katılım" value={latestAttendance?.created_at ? formatTrainerDateTime(latestAttendance.created_at) : "Kayıt yok"} />
               <DetailRow
                 label="Son ölçüm"
                 value={
@@ -1029,7 +720,7 @@ export default function TrainerCalendarScreen() {
             <View style={styles.pendingBox}>
               <DetailRow
                 label="Önerilen yeni saat"
-                value={formatDateTimeRange(
+                value={formatTrainerDateTimeRange(
                   selectedBooking.pending_schedule_change.proposed_starts_at,
                   selectedBooking.pending_schedule_change.proposed_ends_at,
                   calendarTimezone
@@ -1046,7 +737,7 @@ export default function TrainerCalendarScreen() {
             <Text style={styles.detailText}>Bu danışan için kayıtlı not yok.</Text>
           ) : (
             <ScrollPanel maxHeight={160}>
-              {recentNotes.map((note: any) => (
+              {recentNotes.map((note) => (
                 <View key={note.id || note.created_at} style={styles.noteItem}>
                   <Text style={styles.noteTitle}>{note.title || note.category || "Not"}</Text>
                   <Text style={styles.detailText}>{note.body || note.note || "-"}</Text>
@@ -1063,6 +754,7 @@ export default function TrainerCalendarScreen() {
             icon="calendar"
             variant="ghost"
             onPress={() => {
+              if (!selectedBooking) return;
               setRescheduleBookingId(String(selectedBooking.calendar_event_id));
               setSelectedBookingId(null);
             }}
@@ -1079,7 +771,7 @@ export default function TrainerCalendarScreen() {
 
               Alert.alert(
                 "Dersi takvimden kaldır",
-                `${selectedBooking.member_full_name || "Bu danışan"} için ${formatDateTimeRange(selectedBooking.starts_at, selectedBooking.ends_at, calendarTimezone)} seansını kaldırmak istiyor musun?`,
+                `${selectedBooking.member_full_name || "Bu danışan"} için ${formatTrainerDateTimeRange(selectedBooking.starts_at, selectedBooking.ends_at, calendarTimezone)} seansını kaldırmak istiyor musun?`,
                 [
                 { text: "Vazgeç", style: "cancel" },
                 {
@@ -1120,7 +812,7 @@ export default function TrainerCalendarScreen() {
       >
         <SurfaceCard tone="primary">
           <Text style={styles.detailTitle}>Mevcut seans</Text>
-          <Text style={styles.detailText}>{formatDateTimeRange(rescheduleBooking?.starts_at, rescheduleBooking?.ends_at, calendarTimezone)}</Text>
+          <Text style={styles.detailText}>{formatTrainerDateTimeRange(rescheduleBooking?.starts_at, rescheduleBooking?.ends_at, calendarTimezone)}</Text>
         </SurfaceCard>
 
         {rescheduleDayGroups.length === 0 ? (
@@ -1163,13 +855,13 @@ export default function TrainerCalendarScreen() {
                   key={slot.key}
                   testID={`trainer-calendar-reschedule-${slot.key}`}
                   accessibilityRole="button"
-                  accessibilityLabel={`Yeni saat ${formatDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)}`}
+                  accessibilityLabel={`Yeni saat ${formatTrainerDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)}`}
                   style={styles.slotOption}
                   onPress={() => {
                     if (!rescheduleBooking?.id || !rescheduleBooking?.member_id) return;
                     Alert.alert(
                       "Yeni saati doğrula",
-                      `${formatDateTimeRange(rescheduleBooking.starts_at, rescheduleBooking.ends_at, calendarTimezone)} yerine ${formatDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)} önerilecek.`,
+                      `${formatTrainerDateTimeRange(rescheduleBooking.starts_at, rescheduleBooking.ends_at, calendarTimezone)} yerine ${formatTrainerDateTimeRange(slot.startsAt, slot.endsAt, calendarTimezone)} önerilecek.`,
                       [
                         { text: "Vazgeç", style: "cancel" },
                         {

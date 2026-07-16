@@ -3,8 +3,10 @@ import { AdminPackagesController } from "../controllers/admin/packages.controlle
 import { AppDataSource } from "../data-source";
 import { AuditLogService } from "../services/audit-log.service";
 import { createMockResponse } from "./helpers/route-chain";
+import { ClassSession } from "../entities/class-session.entity";
 
 vi.mock("../services/package.service", () => ({
+  catalogLabelForCode: vi.fn(() => null),
   derivePackageFromCatalog: vi.fn(),
   enrichPackageRowForDisplay: vi.fn((pkg) => ({ ...pkg, pricing_label: `${pkg.display_price} TL` })),
   normalizeLessonCatalogServices: vi.fn((services) => services || []),
@@ -38,6 +40,49 @@ describe("admin packages controller", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
       data: [{ id: "pkg-1", title: "Starter", display_price: 4200, pricing_label: "4200 TL" }],
+    });
+  });
+
+  it("returns typed package templates and linkable group classes", async () => {
+    const { normalizeLessonCatalogServices } = await import("../services/package.service");
+    vi.mocked(normalizeLessonCatalogServices).mockReturnValue([
+      {
+        code: "REFORMER",
+        title: "Reformer Pilates",
+        active: true,
+        category_group: "PILATES",
+        category_label: "Pilates",
+        capacity_label: "1 kişi",
+        starting_price: "2400",
+        trainer_commission_rate: "30",
+        package_type: "REFORMER",
+        lesson_mode: "PRIVATE",
+      },
+    ] as never);
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      if (entity === ClassSession) {
+        return {
+          find: vi.fn().mockResolvedValue([
+            {
+              id: "session-1",
+              title: "Reformer Grup",
+              starts_at: "2026-07-20T09:00:00.000Z",
+              ends_at: "2026-07-20T10:00:00.000Z",
+              special_date: null,
+              recurrence_label: "Her pazartesi",
+            },
+          ]),
+        } as any;
+      }
+      return { findOne: vi.fn().mockResolvedValue({ services: [] }) } as any;
+    });
+
+    const res = createMockResponse();
+    await AdminPackagesController.formOptions({ tenantId: "tenant-1" } as any, res as any);
+
+    expect((res.body as any).data).toMatchObject({
+      templates: [expect.objectContaining({ service_key: "REFORMER", lesson_mode: "PRIVATE", suggested_capacity: 1 })],
+      linkable_group_classes: [expect.objectContaining({ id: "session-1", is_group_class: true })],
     });
   });
 

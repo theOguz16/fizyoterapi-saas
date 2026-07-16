@@ -4,7 +4,17 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { getAdminMembersApi, getAdminTrainersApi, type AdminCompactMember } from "@/lib/mobile-api";
+import { getAdminMembersApi, getAdminTrainersApi } from "@/lib/mobile-api";
+import {
+  buildAdminDirectory,
+  filterAdminDirectory,
+  getAdminDirectoryMetrics,
+  getDirectoryPersonStatus,
+  getDirectoryRiskLabel,
+  isDirectoryPersonRisky,
+  type AdminDirectoryRoleFilter,
+  type AdminDirectoryStatusFilter,
+} from "@/lib/admin-members-directory";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
 import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
@@ -19,50 +29,26 @@ import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { tokens } from "@/theme/tokens";
 import { resolveMembersEmptyState } from "@/lib/admin-empty-states";
 
-type DirectoryItem = AdminCompactMember & {
-  role: "MEMBER" | "TRAINER";
-  status?: string;
-  membership_status?: string;
-  retention?: { reasom?: string; score?: number };
-  risk_reasom?: string;
-  retention_score?: number;
-};
-
-function getPersonStatus(item: DirectoryItem) {
-  if (typeof item.is_active === "boolean") return item.is_active ? "ACTIVE" : "PASSIVE";
-  return String(item.status || item.membership_status || "ACTIVE").toUpperCase();
-}
-
-function getRiskLabel(item: DirectoryItem) {
-  if (item.role === "TRAINER") return "Kazanç, tamamlanan ders ve yetkinlik detayları profil ekranında görüntülenir.";
-  if (item.retention?.reasom || item.risk_reasom) return String(item.retention?.reasom || item.risk_reasom);
-  if (item.retention?.score || item.retention_score) return "Risk takibi gerekiyor";
-  return "Son geliş ve paket kullanımı detay ekranında incelenmeli.";
-}
-
 export default function AdminMembersScreen() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "PASSIVE" | "RISK">("ALL");
-  const [roleFilter, setRoleFilter] = useState<"ALL" | "MEMBER" | "TRAINER">("ALL");
+  const [statusFilter, setStatusFilter] = useState<AdminDirectoryStatusFilter>("ALL");
+  const [roleFilter, setRoleFilter] = useState<AdminDirectoryRoleFilter>("ALL");
   const query = useQuery({
     queryKey: ["admin-members-v3"],
     queryFn: async () => {
       const [members, trainers] = await Promise.all([getAdminMembersApi(), getAdminTrainersApi()]);
-      return [
-        ...members.map((item) => ({ ...item, role: "MEMBER" as const })),
-        ...trainers,
-      ] satisfies DirectoryItem[];
+      return buildAdminDirectory(members, trainers);
     },
   });
-  function handleRoleFilterChange(nextRole: "ALL" | "MEMBER" | "TRAINER") {
+  function handleRoleFilterChange(nextRole: AdminDirectoryRoleFilter) {
     if (statusFilter === "RISK" && nextRole === "TRAINER") {
       setStatusFilter("ALL");
     }
     setRoleFilter(nextRole);
   }
 
-  function handleStatusFilterChange(nextStatus: "ALL" | "ACTIVE" | "PASSIVE" | "RISK") {
+  function handleStatusFilterChange(nextStatus: AdminDirectoryStatusFilter) {
     if (nextStatus === "RISK" && roleFilter === "TRAINER") {
       setRoleFilter("MEMBER");
     }
@@ -70,27 +56,10 @@ export default function AdminMembersScreen() {
   }
 
   const items = useMemo(() => {
-    const source = Array.isArray(query.data) ? (query.data as DirectoryItem[]) : [];
-    return source.filter((item) => {
-      const fullName = [item.first_name, item.last_name].filter(Boolean).join(" ").toLowerCase();
-      const haystack = `${fullName} ${item.phone || ""} ${item.email || ""}`.toLowerCase();
-      const searchOk = !search.trim() || haystack.includes(search.trim().toLowerCase());
-      const statusOk =
-        statusFilter === "ALL" ||
-        (statusFilter === "RISK" && item.role === "MEMBER" && Boolean(item.retention?.score || item.retention_score || item.risk_reasom)) ||
-        (statusFilter !== "RISK" && getPersonStatus(item) === statusFilter);
-      const roleOk = roleFilter === "ALL" || item.role === roleFilter;
-      return searchOk && statusOk && roleOk;
-    });
+    return filterAdminDirectory(query.data || [], { search, status: statusFilter, role: roleFilter });
   }, [query.data, search, statusFilter, roleFilter]);
   const metrics = useMemo(() => {
-    const source = Array.isArray(query.data) ? (query.data as DirectoryItem[]) : [];
-    return {
-      total: source.length,
-      active: source.filter((item) => getPersonStatus(item).includes("ACTIVE")).length,
-      trainers: source.filter((item) => item.role === "TRAINER").length,
-      members: source.filter((item) => item.role === "MEMBER").length,
-    };
+    return getAdminDirectoryMetrics(query.data || []);
   }, [query.data]);
   const hasFilters = roleFilter !== "ALL" || statusFilter !== "ALL";
   const hasSearchOrFilters = Boolean(search.trim()) || hasFilters;
@@ -213,7 +182,7 @@ export default function AdminMembersScreen() {
                 </View>
                 {item.role === "TRAINER" ? (
                   <StatusBadge label="Eğitmen" tone="info" />
-                ) : (item as any).retention?.score || (item as any).retention_score || (item as any).risk_reasom ? (
+                ) : isDirectoryPersonRisky(item) ? (
                   <StatusBadge label="Riskli üye" tone="danger" />
                 ) : null}
               </View>
@@ -224,14 +193,14 @@ export default function AdminMembersScreen() {
                 </View>
                 <View style={styles.metaPill}>
                   <AppIcon name="profile" size="sm" tone="neutral" />
-                  <Text style={styles.meta}>Durum: {getPersonStatus(item) === "ACTIVE" ? "Aktif" : "Pasif"}</Text>
+                  <Text style={styles.meta}>Durum: {getDirectoryPersonStatus(item) === "ACTIVE" ? "Aktif" : "Pasif"}</Text>
                 </View>
                 <View style={styles.metaPill}>
                   <AppIcon name="calendar" size="sm" tone="neutral" />
                   <Text style={styles.meta}>Kayıt: {item.created_at ? new Date(item.created_at).toLocaleDateString("tr-TR") : "Yeni"}</Text>
                 </View>
               </View>
-              <Text style={styles.hint}>{getRiskLabel(item)}</Text>
+              <Text style={styles.hint}>{getDirectoryRiskLabel(item)}</Text>
               <ActionButton
                 testID={`admin-person-detail-${item.role.toLowerCase()}-${index}`}
                 label="Detayı gör"

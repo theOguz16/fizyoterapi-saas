@@ -7,7 +7,11 @@
 import type {
   ActiveMembership as ContractActiveMembership,
   AdminClinicSubscription as ContractAdminClinicSubscription,
+  AdminDirectoryPerson as ContractAdminDirectoryPerson,
   AdminPackage as ContractAdminPackage,
+  AdminPackageAssignment as ContractAdminPackageAssignment,
+  AdminPackageFormOptions as ContractAdminPackageFormOptions,
+  AdminPackageFormTemplate as ContractAdminPackageFormTemplate,
   ClinicSummary as ContractClinicSummary,
   MembershipLifecycleState as ContractMembershipLifecycleState,
   PackageOption as ContractPackageOption,
@@ -17,6 +21,16 @@ import type {
   SessionUser as ContractSessionUser,
   ProductEventName as ContractProductEventName,
   ProductEventPayload as ContractProductEventPayload,
+  PurchaseDaySelection as ContractPurchaseDaySelection,
+  MemberPurchaseDraft as ContractMemberPurchaseDraft,
+  TrainerClientSummary as ContractTrainerClientSummary,
+  TrainerMemberAttendance as ContractTrainerMemberAttendance,
+  TrainerMemberDetail as ContractTrainerMemberDetail,
+  TrainerMemberMeasurement as ContractTrainerMemberMeasurement,
+  TrainerMemberNote as ContractTrainerMemberNote,
+  TrainerMemberNoteState as ContractTrainerMemberNoteState,
+  TrainerMemberNotes as ContractTrainerMemberNotes,
+  TrainerOption as ContractTrainerOption,
 } from "@fitnes-saas/contracts";
 
 export type SessionRole = ContractSessionRole;
@@ -27,79 +41,24 @@ export type ActiveMembership = ContractActiveMembership;
 export type SalonDiscoverySummary = ContractClinicSummary;
 export type PackageOption = ContractPackageOption;
 export type AdminPackage = ContractAdminPackage;
+export type AdminPackageAssignment = ContractAdminPackageAssignment;
+export type AdminPackageFormOptions = ContractAdminPackageFormOptions;
+export type AdminPackageFormTemplate = ContractAdminPackageFormTemplate;
+export type AdminCompactMember = ContractAdminDirectoryPerson;
+export type TrainerMemberListItem = ContractTrainerClientSummary;
+export type TrainerMemberDetail = ContractTrainerMemberDetail;
+export type TrainerMemberMeasurement = ContractTrainerMemberMeasurement;
+export type TrainerMemberAttendance = ContractTrainerMemberAttendance;
+export type TrainerMemberNotes = ContractTrainerMemberNotes;
+export type TrainerMemberNoteState = ContractTrainerMemberNoteState;
+export type StructuredTrainerNote = ContractTrainerMemberNote;
+export type TrainerOption = ContractTrainerOption;
+export type PurchaseDaySelection = ContractPurchaseDaySelection;
+export type MemberPurchaseDraft = ContractMemberPurchaseDraft;
 
 export type ProductEventName = ContractProductEventName;
 export type ProductEventPayload = ContractProductEventPayload;
 
-export type PurchaseDaySelection = {
-  starts_at: string;
-  ends_at: string;
-  label: string;
-  package_id?: string;
-  package_title?: string;
-  weekday?: number;
-  weekday_label?: string;
-  time_range_label?: string;
-  lesson_name?: string | null;
-  group_class_id?: string | null;
-  group_title?: string | null;
-  is_group_class?: boolean | null;
-  is_recurring?: boolean | null;
-  recurrence_label?: string | null;
-  special_date?: string | null;
-  price?: string | number | null;
-  capacity?: number | null;
-  joined_count?: number | null;
-  trainer_can_invite_members?: boolean | null;
-  notification_scope?: "SALON_MEMBERS" | "INVITED_MEMBERS" | null;
-  requires_admin_approval?: boolean | null;
-};
-
-export type AdminPackageFormTemplate = {
-  service_key: string;
-  lesson_category: string;
-  service_name: string;
-  category_group?: string | null;
-  category_label?: string | null;
-  sub_category_key?: string | null;
-  sub_category_label?: string | null;
-  capacity_label: string;
-  suggested_capacity: number;
-  starting_price: string;
-  trainer_commission_rate: string;
-  package_type: string;
-  package_type_label?: string | null;
-  session_duration_minutes?: number;
-  break_duration_minutes?: number;
-  lesson_mode?: "PRIVATE" | "DUO" | "GROUP" | string;
-  lesson_mode_label?: string | null;
-  sub_lessons?: string[];
-  default_title?: string | null;
-};
-
-export type AdminPackageFormOptions = {
-  templates?: AdminPackageFormTemplate[];
-  lesson_mode_options?: Array<{ value: "PRIVATE" | "DUO" | "GROUP" | string; label: string; suggested_capacity: number }>;
-  linkable_group_classes?: AdminSession[];
-};
-
-export type AdminPackageAssignment = {
-  id: string;
-  package_id: string;
-  trainer_id: string;
-  is_active: boolean;
-  package_type?: string | null;
-  package_title?: string | null;
-  package_display_price?: string | number | null;
-  package_service_name?: string | null;
-  package_lesson_category?: string | null;
-  package_capacity_label?: string | null;
-  package_commission_label?: string | null;
-  package_is_active?: boolean | null;
-  trainer_full_name?: string | null;
-  trainer_email?: string | null;
-  trainer_is_active?: boolean | null;
-};
 
 export type TrainerAssignedPackage = {
   id: string;
@@ -119,20 +78,6 @@ export type TrainerAssignedPackage = {
   break_duration_minutes?: number | null;
 };
 
-export type TrainerOption = {
-  id: string;
-  full_name: string;
-  specialties?: string[];
-  bio?: string | null;
-  rating_label?: string | null;
-  compatibility_note?: string | null;
-  avatar_label?: string | null;
-  matching_slots?: number | null;
-  required_matching_slots?: number | null;
-  is_available?: boolean;
-  unavailable_reason?: string | null;
-};
-
 export type PaymentRequest = {
   id: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "VERIFIED";
@@ -145,32 +90,6 @@ export type PaymentRequest = {
   tenant_name?: string | null;
   note?: string | null;
   selected_days?: PurchaseDaySelection[];
-};
-
-export type MemberPurchaseDraft = {
-  tenant_slug: string;
-  selected_days: PurchaseDaySelection[];
-  package_id: string;
-  package_ids?: string[];
-  selected_packages?: Array<{
-    package_id: string;
-    package_title?: string;
-    package_price?: string | number | null;
-    preferred_slots?: PurchaseDaySelection[];
-    weekly_frequency?: number;
-    duo_partner_name?: string;
-    duo_partner_contact?: string;
-  }>;
-  trainer_id?: string;
-  selected_sub_lesson?: string;
-  duo_partner_name?: string;
-  duo_partner_contact?: string;
-  note?: string;
-  availability_context?: {
-    source: "MEMBER_AVAILABILITY";
-    visibility: "TRAINER_HIDDEN";
-    selected_by: "MEMBER";
-  };
 };
 
 export type MemberChangeRequest = {
@@ -440,15 +359,6 @@ export type MemberAttendanceHistoryItem = {
   session_title?: string | null;
 };
 
-export type TrainerMemberListItem = {
-  id: string;
-  full_name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  is_active?: boolean;
-  qr_code?: string | null;
-};
-
 export type AdminApprovalItem = {
   id: string;
   type: "APPLICATION" | "PAYMENT" | "CHANGE_REQUEST";
@@ -522,16 +432,6 @@ export type QrScanResult = {
   membership_id?: string | null;
   member_id?: string | null;
   member_full_name?: string | null;
-};
-
-export type StructuredTrainerNote = {
-  id: string;
-  title?: string | null;
-  body: string;
-  note: string;
-  category: "GENERAL" | "GOAL" | "RISK" | "FOLLOW_UP";
-  created_at?: string | null;
-  updated_at?: string | null;
 };
 
 export type BookingReschedulePayload = {
@@ -675,17 +575,6 @@ export type ClinicIntakeResult = {
   recommended_modules: string[];
   estimated_roi_copy: string;
   price_preview: string;
-};
-
-export type AdminCompactMember = {
-  id: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  is_active?: boolean;
-  created_at?: string;
-  role?: "MEMBER" | "TRAINER";
 };
 
 export type AdminMemberDetail = {

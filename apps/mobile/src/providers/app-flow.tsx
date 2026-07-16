@@ -2,6 +2,7 @@
 // Ekranlar arasi tekrar eden baglam ihtiyaci bu dosya uzerinden yonetilir.
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 import type { SignupOnboardingProfile } from "@/lib/signup-onboarding";
+import type { PurchaseDaySelection } from "@fitnes-saas/contracts";
 
 export type AppPersona = "MEMBER" | "TRAINER" | "ADMIN";
 export type AppPersoma = AppPersona;
@@ -36,13 +37,7 @@ export type MemberBookingDraft = {
     weekly_class_hours?: number;
     required_preference_slots?: number;
     required_trainer_free_slots?: number;
-    preferred_slots?: Array<{
-      starts_at: string;
-      ends_at: string;
-      label: string;
-      package_id?: string;
-      package_title?: string;
-    }>;
+    preferred_slots?: PurchaseDaySelection[];
     weekly_frequency?: number;
     trainer_id?: string;
     trainer_name?: string;
@@ -63,13 +58,7 @@ export type MemberBookingDraft = {
   requiredTrainerFreeSlots?: number;
   trainerId?: string;
   trainerName?: string;
-  preferredSlots: Array<{
-    starts_at: string;
-    ends_at: string;
-    label: string;
-    package_id?: string;
-    package_title?: string;
-  }>;
+  preferredSlots: PurchaseDaySelection[];
   weeklyFrequency?: number;
   note?: string;
   groupClassFlow?: {

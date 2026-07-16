@@ -176,7 +176,15 @@ describe("public day options controller", () => {
 
     expect(packageFindOne).not.toHaveBeenCalled();
     expect(res.body).toEqual({
-      data: [expect.objectContaining({ id: trainer.id, compatibility_note: "Salon için uygun eğitmen." })],
+      data: [expect.objectContaining({
+        id: trainer.id,
+        full_name: "Elisa Uyar",
+        compatibility_note: "Salon için uygun eğitmen.",
+        matching_slots: 2,
+        required_matching_slots: 2,
+        is_available: true,
+        unavailable_reason: null,
+      })],
     });
   });
 });

@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   type AdminPackage,
   type AdminPackageAssignment,
+  type AdminCompactMember,
   type AdminPackageFormTemplate,
   createAdminPackageApi,
   createAdminPackageAssignmentApi,
@@ -16,7 +17,27 @@ import {
   updateAdminPackageApi,
 } from "@/lib/mobile-api";
 import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
-import { packageTypeLabel } from "@/lib/labels";
+import {
+  DEFAULT_SESSION_DURATION,
+  LESSON_CATEGORIES,
+  LESSON_VARIANTS,
+  buildVariantDefaults,
+  capacityForLessonMode,
+  categoryKeyForTemplate,
+  categoryLabelFromKey,
+  deriveWeeklyRuleSummary,
+  filterAdminPackages,
+  findBestTemplateForVariant,
+  lessonModeLabel,
+  normalizePackageText,
+  sanitizeDecimalInput,
+  sanitizeIntegerInput,
+  templateDefaultTitle,
+  templateDisplayName,
+  templateLooksLikeTrial,
+  templateTypeLabel,
+  toTestIdSegment,
+} from "@/lib/admin-packages";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
@@ -29,167 +50,6 @@ import { tokens } from "@/theme/tokens";
 import { resolvePackagesEmptyState } from "@/lib/admin-empty-states";
 import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
 
-type LessonVariant = {
-  key: string;
-  categoryKey: string;
-  categoryLabel: string;
-  label: string;
-  packageType: string;
-  isTrial?: boolean;
-};
-
-const LESSON_VARIANTS: LessonVariant[] = [
-  { key: "PT", categoryKey: "PT", categoryLabel: "PT", label: "Kişisel Antrenman", packageType: "PT" },
-  { key: "SCOLIOSIS", categoryKey: "REHAB", categoryLabel: "Rehabilitasyon", label: "Skolyoz", packageType: "SCOLIOSIS" },
-  { key: "POSTURE", categoryKey: "REHAB", categoryLabel: "Rehabilitasyon", label: "Postür ve Denge", packageType: "OTHER" },
-  { key: "MANUAL", categoryKey: "REHAB", categoryLabel: "Rehabilitasyon", label: "Manuel Terapi", packageType: "MANUAL" },
-  { key: "REFORMER", categoryKey: "PILATES", categoryLabel: "Pilates", label: "Reformer Pilates", packageType: "REFORMER" },
-  { key: "PILATES", categoryKey: "PILATES", categoryLabel: "Pilates", label: "Pilates", packageType: "OTHER" },
-  { key: "PILATES_YOGA", categoryKey: "PILATES", categoryLabel: "Pilates", label: "Pilates Yoga", packageType: "OTHER" },
-  { key: "CLINICAL_PILATES", categoryKey: "PILATES", categoryLabel: "Pilates", label: "Klinik Pilates", packageType: "OTHER" },
-  { key: "STANDARD", categoryKey: "STANDARD", categoryLabel: "Standart", label: "Standart Paket", packageType: "OTHER" },
-  { key: "FREE_TRIAL", categoryKey: "FREE", categoryLabel: "Ücretsiz", label: "Ücretsiz Ders", packageType: "OTHER", isTrial: true },
-];
-
-const LESSON_CATEGORIES = Array.from(
-  new Map(
-    LESSON_VARIANTS.map((item) => [item.categoryKey, { key: item.categoryKey, label: item.categoryLabel }])
-  ).values()
-);
-const DEFAULT_SESSION_DURATION = 45;
-
-function sanitizeIntegerInput(value: string) {
-  return value.replace(/[^\d]/g, "");
-}
-
-function sanitizeDecimalInput(value: string) {
-  const normalized = value.replace(",", ".");
-  const [integerPart = "", decimalPart = ""] = normalized.split(".");
-  const safeInteger = integerPart.replace(/[^\d]/g, "");
-  const safeDecimal = decimalPart.replace(/[^\d]/g, "").slice(0, 2);
-  return safeDecimal ? `${safeInteger}.${safeDecimal}` : safeInteger;
-}
-
-function toTestIdSegment(value: string) {
-  return String(value || "")
-    .toLocaleLowerCase("en-US")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
-}
-
-function templateTypeLabel(template?: AdminPackageFormTemplate | null) {
-  const type = String(template?.package_type || "").toUpperCase();
-  if (template?.package_type_label) return String(template.package_type_label);
-  return packageTypeLabel(template?.sub_category_key || template?.service_key || type);
-}
-
-function categoryKeyForTemplate(template: AdminPackageFormTemplate) {
-  return (
-    String(template.category_group || "").trim() ||
-    String(template.package_type || "OTHER").trim() ||
-    "OTHER"
-  );
-}
-
-function categoryLabelFromKey(key: string, explicitLabel?: string | null) {
-  if (explicitLabel && String(explicitLabel).trim()) return String(explicitLabel).trim();
-  return String(key || "OTHER")
-    .replace(/_/g, " ")
-    .toLocaleLowerCase("tr-TR")
-    .replace(/(^|\s)\S/g, (char) => char.toLocaleUpperCase("tr-TR"));
-}
-
-function lessonModeLabel(mode?: string | null) {
-  const normalized = String(mode || "").toUpperCase();
-  if (normalized === "GROUP") return "Grup";
-  if (normalized === "DUO") return "Duo";
-  return "Özel";
-}
-
-function capacityForLessonMode(mode: string, fallback: number) {
-  if (mode === "PRIVATE") return 1;
-  if (mode === "DUO") return 2;
-  return Math.max(3, fallback || 4);
-}
-
-function templateDefaultTitle(template?: AdminPackageFormTemplate | null) {
-  if (!template) return "";
-  return String(template.default_title || (template.service_name ? `${template.service_name} Paketi` : "")).trim();
-}
-
-function templateDisplayName(template: AdminPackageFormTemplate) {
-  return String(template.sub_category_label || template.service_name || template.service_key || "").trim();
-}
-
-function templateLooksLikeTrial(template?: AdminPackageFormTemplate | null) {
-  if (!template) return false;
-  const search = normalizeText(`${template.service_key} ${template.service_name} ${template.starting_price}`);
-  return Number(template.starting_price || 0) === 0 || search.includes("ucretsiz") || search.includes("deneme");
-}
-
-function normalizeText(value: string) {
-  return value
-    .toLocaleLowerCase("tr-TR")
-    .replace(/ı/g, "i")
-    .replace(/ğ/g, "g")
-    .replace(/ü/g, "u")
-    .replace(/ş/g, "s")
-    .replace(/ö/g, "o")
-    .replace(/ç/g, "c");
-}
-
-function findBestTemplateForVariant(
-  variantKey: string,
-  templates: AdminPackageFormTemplate[]
-): AdminPackageFormTemplate | null {
-  const variant = LESSON_VARIANTS.find((item) => item.key === variantKey);
-  if (!variant || templates.length === 0) return templates[0] || null;
-  const byType = templates.filter((item) => String(item.package_type || "").toUpperCase() === variant.packageType);
-  const pool = byType.length > 0 ? byType : templates;
-  const label = normalizeText(variant.label);
-  return (
-    pool.find((item) => normalizeText(String(item.service_name || "")).includes(label)) ||
-    pool.find((item) => label.includes(normalizeText(String(item.service_name || "")))) ||
-    pool[0] ||
-    null
-  );
-}
-
-function deriveWeeklyRuleSummary(totalCreditsRaw: string) {
-  const totalCredits = Number(totalCreditsRaw || 0);
-  if (!Number.isFinite(totalCredits) || totalCredits <= 0) {
-    return null;
-  }
-
-  const weeklyClassHours = Math.min(7, Math.max(1, Math.round(totalCredits / 4)));
-  const requiredPreferenceSlots = weeklyClassHours * 3;
-  const requiredTrainerFreeSlots = weeklyClassHours * 2;
-
-  return {
-    weeklyClassHours,
-    requiredPreferenceSlots,
-    requiredTrainerFreeSlots,
-  };
-}
-
-function buildVariantDefaults(
-  variant: LessonVariant | undefined,
-  template: AdminPackageFormTemplate | null
-) {
-  const isGroup = variant?.packageType === "GROUP";
-  return {
-    total_credits: isGroup ? "8" : "4",
-    duration_days: "30",
-    display_price: sanitizeDecimalInput(String(template?.starting_price || (isGroup ? "200" : "0"))),
-    trainer_commission_rate: sanitizeDecimalInput(String(template?.trainer_commission_rate || "25")),
-    capacity: String(template?.suggested_capacity || (isGroup ? 4 : 1)),
-    session_duration_minutes: String(template?.session_duration_minutes || DEFAULT_SESSION_DURATION),
-    break_duration_minutes: String(template?.break_duration_minutes || 0),
-    lesson_mode: template?.lesson_mode || (isGroup ? "GROUP" : "PRIVATE"),
-  };
-}
-
 export default function AdminPackagesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ backTo?: string | string[]; subscriptionBackTo?: string | string[]; activation?: string | string[] }>();
@@ -199,7 +59,7 @@ export default function AdminPackagesScreen() {
   const assignmentsQuery = useQuery({ queryKey: ["admin-package-assignments"], queryFn: getAdminPackageAssignmentsApi });
 
   const templates: AdminPackageFormTemplate[] = useMemo(
-    () => (Array.isArray(templatesQuery.data?.templates) ? templatesQuery.data?.templates || [] : []),
+    () => templatesQuery.data?.templates || [],
     [templatesQuery.data?.templates]
   );
   const templateCategories = useMemo(() => {
@@ -261,7 +121,7 @@ export default function AdminPackagesScreen() {
     [selectedCategoryKey]
   );
   const selectedTrainer = useMemo(() => {
-    return trainers.find((trainer: any) => String(trainer.id || trainer.user_id || "") === selectedTrainerId) || null;
+    return trainers.find((trainer: AdminCompactMember) => String(trainer.id || trainer.user_id || "") === selectedTrainerId) || null;
   }, [selectedTrainerId, trainers]);
   const selectedServiceLabel = selectedTemplate ? templateDisplayName(selectedTemplate) : selectedVariant?.label || "Ders seç";
   const weeklyRuleSummary = useMemo(() => deriveWeeklyRuleSummary(form.total_credits), [form.total_credits]);
@@ -269,16 +129,7 @@ export default function AdminPackagesScreen() {
   const subscriptionBackTo = Array.isArray(params.subscriptionBackTo) ? params.subscriptionBackTo[0] : params.subscriptionBackTo;
   const activation = isClinicActivationFlow(params.activation);
   const filteredPackages = useMemo(
-    () =>
-      packages.filter((pkg) => {
-        const normalizedSearch = search.trim().toLocaleLowerCase("tr-TR");
-        const searchOk =
-          !normalizedSearch ||
-          String(pkg.title || "").toLocaleLowerCase("tr-TR").includes(normalizedSearch) ||
-          String(pkg.service_name || "").toLocaleLowerCase("tr-TR").includes(normalizedSearch);
-        const statusOk = statusFilter === "ALL" || (statusFilter === "ACTIVE" ? pkg.is_active : !pkg.is_active);
-        return searchOk && statusOk;
-      }),
+    () => filterAdminPackages(packages, search, statusFilter),
     [packages, search, statusFilter]
   );
   const packagesEmptyState = resolvePackagesEmptyState(packages.length);
@@ -624,7 +475,7 @@ export default function AdminPackagesScreen() {
     setSelectedService(String(pkg.service_key || ""));
     const matchedTemplate = templates.find((item) => item.service_key === pkg.service_key);
     const matchedVariant =
-      LESSON_VARIANTS.find((item) => normalizeText(String(pkg.service_name || pkg.title || "")).includes(normalizeText(item.label))) ||
+      LESSON_VARIANTS.find((item) => normalizePackageText(String(pkg.service_name || pkg.title || "")).includes(normalizePackageText(item.label))) ||
       LESSON_VARIANTS.find((item) => item.isTrial && Number(pkg.display_price || 0) === 0 && Number(pkg.total_credits || 0) === 1) ||
       LESSON_VARIANTS.find((item) => item.packageType === String(pkg.type || "").toUpperCase()) ||
       LESSON_VARIANTS.find((item) => item.key === "STANDARD");
@@ -1005,7 +856,7 @@ export default function AdminPackagesScreen() {
           <Text style={styles.sheetOptionTitle}>Sonra atarım</Text>
           <Text style={styles.sheetOptionMeta}>Paket önce oluşturulur, eğitmen bağlantısı daha sonra yapılır.</Text>
         </Pressable>
-        {trainers.map((trainer: any) => {
+        {trainers.map((trainer: AdminCompactMember) => {
           const trainerId = String(trainer.id || trainer.user_id || "");
           const label = `${trainer.first_name || ""} ${trainer.last_name || ""}`.trim() || trainer.email || "Eğitmen";
           return (

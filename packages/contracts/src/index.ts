@@ -8,7 +8,20 @@ export type {
   SessionUser,
 } from "./session";
 export type { ClinicSummary, PublicClinicProfile, PublicClinicService, PublicTrainerOption } from "./clinic";
-export type { AdminPackage, PackageOption } from "./package";
+export type { AdminPackage, AdminPackageAssignment, AdminPackageFormOptions, AdminPackageFormTemplate, PackageOption } from "./package";
+export type { MemberPurchaseDraft, PurchaseDaySelection, TrainerOption } from "./booking";
+export type {
+  AdminDirectoryPerson,
+  RetentionSignal,
+  TrainerClientSummary,
+  TrainerMemberAttendance,
+  TrainerMemberDetail,
+  TrainerMemberMeasurement,
+  TrainerMemberNote,
+  TrainerMemberNoteState,
+  TrainerMemberNotes,
+  TrainerMemberPackageSummary,
+} from "./member";
 export type { WorkingHours, WorkingHoursInput } from "./working-hours";
 export type { AdminClinicSubscription, SubscriptionRecommendedAction, SubscriptionSyncState } from "./subscription";
 export type { PushDeepLinkHref, PushNotificationData } from "./push";

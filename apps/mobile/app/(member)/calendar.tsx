@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getCalendarFeedApi } from "@/lib/mobile-api";
-import { calendarFeedEventToDetailRow, createCalendarFeedRange } from "@/lib/calendar-feed";
+import { calendarFeedEventToDetailRow, createCalendarFeedRange, type CalendarDetailRow } from "@/lib/calendar-feed";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -25,7 +25,7 @@ type MemberCalendarEvent = {
   badgeLabel?: string;
   badgeTone?: "success" | "warning" | "danger" | "info" | "neutral";
   bookingId?: string;
-  raw?: any;
+  raw?: CalendarDetailRow;
   onPress?: () => void;
 };
 
@@ -90,7 +90,7 @@ export default function MemberCalendarScreen() {
   });
 
   const schedulerEvents = useMemo<MemberCalendarEvent[]>(() => {
-    const events = Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events : [];
+    const events = calendarQuery.data?.events || [];
     return events.map((event) => {
       const raw = calendarFeedEventToDetailRow(event);
       const source = event.source === "BOOKING"

@@ -1,6 +1,6 @@
 // Mobile API trainer domain endpointleri.
 import { httpRequest } from "../http-client";
-import type { BookingReschedulePayload, GroupClassSession, QrScanContext, QrScanResult, StructuredTrainerNote, TrainerAssignedPackage, TrainerAvailabilityEntry, TrainerGroupClassFormOptions, TrainerMemberListItem, TrainerRequestCenterItem, TrainerScheduleChangeRequest, TrainerScheduleEntry } from "./types";
+import type { BookingReschedulePayload, GroupClassSession, QrScanContext, QrScanResult, StructuredTrainerNote, TrainerAssignedPackage, TrainerAvailabilityEntry, TrainerGroupClassFormOptions, TrainerMemberAttendance, TrainerMemberDetail, TrainerMemberListItem, TrainerMemberMeasurement, TrainerMemberNoteState, TrainerMemberNotes, TrainerRequestCenterItem, TrainerScheduleChangeRequest, TrainerScheduleEntry } from "./types";
 
 type TrainerBookingFormOptions = {
   packages?: TrainerAssignedPackage[];
@@ -155,26 +155,26 @@ export async function getTrainerMembersApi() {
 }
 
 export async function getTrainerMemberDetailApi(id: string) {
-  return httpRequest<any>(`/trainer/members/${id}`);
+  return httpRequest<TrainerMemberDetail>(`/trainer/members/${encodeURIComponent(id)}`);
 }
 
 export async function getTrainerMemberAttendanceApi(id: string) {
-  return httpRequest<any>(`/trainer/members/${id}/attendance`);
+  return httpRequest<TrainerMemberAttendance[]>(`/trainer/members/${encodeURIComponent(id)}/attendance`);
 }
 
 export async function getTrainerMemberMeasurementsApi(id: string) {
-  return httpRequest<any>(`/trainer/members/${id}/measurements`);
+  return httpRequest<TrainerMemberMeasurement[]>(`/trainer/members/${encodeURIComponent(id)}/measurements`);
 }
 
 export async function getTrainerMemberNotesApi(id: string) {
-  return httpRequest<any>(`/trainer/members/${id}/notes`);
+  return httpRequest<TrainerMemberNotes>(`/trainer/members/${encodeURIComponent(id)}/notes`);
 }
 
 export async function updateTrainerMemberNotesApi(
   id: string,
   note: { title?: string | null; body: string; category: StructuredTrainerNote["category"] }
 ) {
-  return httpRequest<any>(`/trainer/members/${id}/notes`, {
+  return httpRequest<TrainerMemberNoteState>(`/trainer/members/${encodeURIComponent(id)}/notes`, {
     method: "PUT",
     body: note,
   });
@@ -184,7 +184,7 @@ export async function createTrainerMemberNoteApi(
   id: string,
   note: { title?: string | null; body: string; category: StructuredTrainerNote["category"] }
 ) {
-  return httpRequest<any>(`/trainer/members/${id}/notes`, {
+  return httpRequest<TrainerMemberNoteState>(`/trainer/members/${encodeURIComponent(id)}/notes`, {
     method: "POST",
     body: note,
   });
@@ -195,20 +195,20 @@ export async function patchTrainerMemberNoteApi(
   noteId: string,
   note: { title?: string | null; body: string; category: StructuredTrainerNote["category"] }
 ) {
-  return httpRequest<any>(`/trainer/members/${id}/notes/${encodeURIComponent(noteId)}`, {
+  return httpRequest<TrainerMemberNoteState>(`/trainer/members/${encodeURIComponent(id)}/notes/${encodeURIComponent(noteId)}`, {
     method: "PATCH",
     body: note,
   });
 }
 
 export async function deleteTrainerMemberNoteApi(id: string, noteId: string) {
-  return httpRequest<any>(`/trainer/members/${id}/notes/${encodeURIComponent(noteId)}`, {
+  return httpRequest<{ deleted: boolean }>(`/trainer/members/${encodeURIComponent(id)}/notes/${encodeURIComponent(noteId)}`, {
     method: "DELETE",
   });
 }
 
 export async function trainerRescheduleBookingApi(id: string, payload: BookingReschedulePayload) {
-  return httpRequest<any>(`/trainer/bookings/${encodeURIComponent(id)}/reschedule`, {
+  return httpRequest<TrainerScheduleEntry>(`/trainer/bookings/${encodeURIComponent(id)}/reschedule`, {
     method: "PATCH",
     body: payload,
   });

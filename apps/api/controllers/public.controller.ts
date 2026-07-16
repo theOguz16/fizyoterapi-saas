@@ -1,7 +1,7 @@
 // Bu controller genel tarafindaki public.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Request, Response } from "express";
-import { PUBLIC_PRODUCT_EVENT_NAMES, type ClinicSummary, type PackageOption, type ProductEventName, type PublicClinicProfile } from "@fitnes-saas/contracts";
+import { PUBLIC_PRODUCT_EVENT_NAMES, type ClinicSummary, type PackageOption, type ProductEventName, type PublicClinicProfile, type TrainerOption } from "@fitnes-saas/contracts";
 import { In } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { SalonProfile } from "../entities/salon-profile.entity";
@@ -354,7 +354,7 @@ export class PublicController {
       ? await PublicController.countTrainerFreeSlotsByTrainer(tenant.id, trainers.map((row) => row.id), selectedDayRows)
       : new Map<string, number>(trainers.map((row) => [row.id, requiredMatchingSlots]));
 
-    const data = trainers
+    const data: TrainerOption[] = trainers
       .filter((trainer) => {
         if (!allowedCategories.length) return true;
         const trainerSkills = skillMap.get(trainer.id) || [];

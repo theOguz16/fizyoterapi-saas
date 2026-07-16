@@ -17,6 +17,9 @@ import {
   getMemberReferralsApi,
   adminSalonEntryScanApi,
   getTrainerRiskApi,
+  getTrainerMembersApi,
+  getTrainerMemberDetailApi,
+  getTrainerMemberNotesApi,
   getTrainerTodayApi,
   loginApi,
   trainerManualCheckinApi,
@@ -242,6 +245,35 @@ describe("mobile api contract helpers", () => {
         is_active: true,
       },
     });
+  });
+
+  it("reads trainer client list, detail and notes from one typed response shape", async () => {
+    const list = [{ id: "member-1", full_name: "Ada Yılmaz", is_active: true }];
+    const detail = {
+      id: "member-1",
+      full_name: "Ada Yılmaz",
+      email: "ada@example.com",
+      phone: "555",
+      is_active: true,
+      package_summary: [],
+    };
+    const notes = {
+      member_id: "member-1",
+      note: "Takip",
+      title: null,
+      body: "Takip",
+      category: "FOLLOW_UP",
+      items: [{ id: "note-1", body: "Takip", note: "Takip", category: "FOLLOW_UP" }],
+      count: 1,
+    };
+    httpRequest.mockResolvedValueOnce(list).mockResolvedValueOnce(detail).mockResolvedValueOnce(notes);
+
+    await expect(getTrainerMembersApi()).resolves.toEqual(list);
+    await expect(getTrainerMemberDetailApi("member-1")).resolves.toEqual(detail);
+    await expect(getTrainerMemberNotesApi("member-1")).resolves.toEqual(notes);
+    expect(httpRequest).toHaveBeenNthCalledWith(1, "/trainer/members");
+    expect(httpRequest).toHaveBeenNthCalledWith(2, "/trainer/members/member-1");
+    expect(httpRequest).toHaveBeenNthCalledWith(3, "/trainer/members/member-1/notes");
   });
 
   it("loads admin clinic qr payload, syncs subscription and sends salon entry scan requests", async () => {

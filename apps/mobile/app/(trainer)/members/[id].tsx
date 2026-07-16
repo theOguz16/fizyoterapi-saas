@@ -9,6 +9,10 @@ import {
   getTrainerMemberDetailApi,
   getTrainerMemberMeasurementsApi,
   getTrainerMemberNotesApi,
+  type TrainerMemberAttendance,
+  type TrainerMemberDetail,
+  type TrainerMemberMeasurement,
+  type TrainerMemberNotes,
 } from "@/lib/mobile-api";
 import { summarizeSignupOnboarding } from "@/lib/signup-onboarding";
 import { ActionButton } from "@/theme/components/action-button";
@@ -22,84 +26,6 @@ import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { TrainerMemberMeasurementChart } from "@/theme/components/trainer-member-measurement-chart";
 import { tokens } from "@/theme/tokens";
-
-type TrainerMemberDetail = {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  is_active: boolean;
-  onboarding_profile?: {
-    role?: "MEMBER" | "TRAINER" | "ADMIN";
-    primary_goal?: string;
-    rhythm?: string;
-    support_style?: string;
-  } | null;
-  qr_code?: string | null;
-  stats?: {
-    booking_count?: number;
-    checkin_count?: number;
-    latest_measured_at?: string | null;
-  };
-  package_summary?: Array<{
-    user_package_id: string;
-    package_id: string;
-    package_title?: string | null;
-    package_type?: string | null;
-    package_total_credits?: number | null;
-    package_duration_days?: number | null;
-    package_price?: number | null;
-    package_rules?: Record<string, unknown> | null;
-    remaining_credits: number;
-    is_active: boolean;
-    starts_at?: string | null;
-    expires_at?: string | null;
-    is_expired?: boolean;
-    trainer_summary?: string | null;
-  }>;
-  campaign_rewards?: Array<{
-    id: string;
-    credits_granted: number;
-    rule_name: string;
-    granted_at: string;
-  }>;
-};
-
-type AttendanceRow = {
-  id: string;
-  created_at: string;
-  result?: string | null;
-  credits_deducted?: number | null;
-  session_title?: string | null;
-  lesson_category?: string | null;
-};
-
-type MeasurementRow = {
-  id: string;
-  measured_at: string;
-  height_cm: string | number | null;
-  weight_kg: string | number | null;
-  fat_percent: string | number | null;
-  muscle_kg: string | number | null;
-};
-
-type NoteRow = {
-  id: string;
-  title?: string | null;
-  note?: string | null;
-  body?: string | null;
-  category?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-type NotesPayload = {
-  note?: string | null;
-  body?: string | null;
-  category?: string | null;
-  updated_at?: string | null;
-  items?: NoteRow[];
-};
 
 function formatDate(value?: string | null) {
   if (!value) return "Belirtilmedi";
@@ -161,7 +87,7 @@ function noteCategoryIcon(value?: string | null): AppIconName {
   return "notes";
 }
 
-function filterMeasurementsByRange(rows: MeasurementRow[], range: "30" | "90" | "ALL") {
+function filterMeasurementsByRange(rows: TrainerMemberMeasurement[], range: "30" | "90" | "ALL") {
   if (range === "ALL") return rows;
   const days = Number(range);
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -211,31 +137,24 @@ export default function TrainerClientDetailScreen() {
     queryKey: ["trainer-member-detail", params.id],
     queryFn: () => getTrainerMemberDetailApi(String(params.id)),
   });
-  const attendanceQuery = useQuery<AttendanceRow[]>({
+  const attendanceQuery = useQuery<TrainerMemberAttendance[]>({
     queryKey: ["trainer-member-attendance", params.id],
     queryFn: () => getTrainerMemberAttendanceApi(String(params.id)),
   });
-  const measurementsQuery = useQuery<MeasurementRow[]>({
+  const measurementsQuery = useQuery<TrainerMemberMeasurement[]>({
     queryKey: ["trainer-member-measurements", params.id],
     queryFn: () => getTrainerMemberMeasurementsApi(String(params.id)),
   });
-  const notesQuery = useQuery<NotesPayload>({
+  const notesQuery = useQuery<TrainerMemberNotes>({
     queryKey: ["trainer-member-notes", params.id],
     queryFn: () => getTrainerMemberNotesApi(String(params.id)),
   });
 
   const detail = detailQuery.data;
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
-  const attendance = useMemo(
-    () => (Array.isArray(attendanceQuery.data) ? attendanceQuery.data : []),
-    [attendanceQuery.data]
-  );
-  const measurements = useMemo(
-    () => (Array.isArray(measurementsQuery.data) ? measurementsQuery.data : []),
-    [measurementsQuery.data]
-  );
-  const notesPayload = notesQuery.data || {};
-  const noteItems = Array.isArray(notesPayload.items) ? notesPayload.items : [];
+  const attendance = useMemo(() => attendanceQuery.data || [], [attendanceQuery.data]);
+  const measurements = useMemo(() => measurementsQuery.data || [], [measurementsQuery.data]);
+  const noteItems = notesQuery.data?.items || [];
 
   const activePackageCount = (detail?.package_summary || []).filter((pkg) => pkg.is_active && !pkg.is_expired).length;
   const totalRemainingCredits = (detail?.package_summary || []).reduce((sum, pkg) => sum + Number(pkg.remaining_credits || 0), 0);

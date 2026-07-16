@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { getTrainerMembersApi } from "@/lib/mobile-api";
-import { filterTrainerClients, isTrainerClientRisky, type TrainerClientFilter } from "@/lib/trainer-clients";
+import { getTrainerMembersApi, type TrainerMemberListItem } from "@/lib/mobile-api";
+import { filterTrainerClients, getTrainerClientMetrics, isTrainerClientRisky, type TrainerClientFilter } from "@/lib/trainer-clients";
 import { AppShell } from "@/theme/components/app-shell";
 import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -26,13 +26,9 @@ export default function TrainerClientsScreen() {
     queryFn: getTrainerMembersApi,
   });
 
-  const source = useMemo(
-    () => (Array.isArray(result.data) ? result.data : Array.isArray((result.data as any)?.data) ? (result.data as any).data : []),
-    [result.data]
-  );
+  const source = useMemo(() => result.data || [], [result.data]);
   const items = useMemo(() => filterTrainerClients(source, { query, filter }), [filter, query, source]);
-  const activeCount = source.filter((item: any) => item.is_active !== false).length;
-  const riskCount = source.filter((item: any) => isTrainerClientRisky(item)).length;
+  const metrics = useMemo(() => getTrainerClientMetrics(source), [source]);
 
   return (
     <AppShell
@@ -46,7 +42,7 @@ export default function TrainerClientsScreen() {
     >
       <View style={styles.metricsRow}>
         <MetricCard label="Toplam danışan" value={source.length} hint="Portföy görünümü" icon="members" />
-        <MetricCard label="Aktif danışan" value={activeCount} hint="Derse devam edenler" icon="calendar" />
+        <MetricCard label="Aktif danışan" value={metrics.active} hint="Derse devam edenler" icon="calendar" />
       </View>
 
       <SurfaceCard tone="primary">
@@ -54,7 +50,7 @@ export default function TrainerClientsScreen() {
         <Text style={styles.copy}>Danışan havuzunda öncelikli takip sinyalini öne çıkarır.</Text>
         <View style={styles.focusRow}>
           <AppIcon name="risk" size="sm" tone="danger" />
-          <Text style={styles.copy}>Riskli danışan sayısı: {riskCount}</Text>
+          <Text style={styles.copy}>Riskli danışan sayısı: {metrics.risky}</Text>
         </View>
       </SurfaceCard>
 
@@ -79,8 +75,8 @@ export default function TrainerClientsScreen() {
         <VirtualListPanel
           data={items}
           maxHeight={520}
-          keyExtractor={(item: any) => String(item.id)}
-          renderItem={(item: any) => (
+          keyExtractor={(item: TrainerMemberListItem) => String(item.id)}
+          renderItem={(item: TrainerMemberListItem) => (
             <Pressable
               key={item.id}
               accessibilityRole="button"

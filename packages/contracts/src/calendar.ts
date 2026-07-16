@@ -45,12 +45,32 @@ export type CalendarFeedEvent = {
     duo_partner_name?: string | null;
     duo_status?: string | null;
     recurrence_label?: string | null;
+    note?: string | null;
+    payment_status?: string | null;
+    checkin_status?: string | null;
+    capacity?: number | null;
+    joined_member_count?: number | null;
+    invited_member_count?: number | null;
+    approved_member_count?: number | null;
+    price?: string | number | null;
+    planned_total_revenue?: string | number | null;
+    trainer_planned_earning?: string | number | null;
+    notification_scope?: "SALON_MEMBERS" | "INVITED_MEMBERS" | null;
+    participants?: Array<{
+      member_id?: string | null;
+      id?: string | null;
+      member_full_name?: string | null;
+      full_name?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      status?: string | null;
+    }> | null;
+    invited_member_ids?: string[] | null;
     pending_schedule_change?: {
       request_id: string;
       proposed_starts_at: string;
       proposed_ends_at: string;
     } | null;
-    [key: string]: unknown;
   };
 };
 

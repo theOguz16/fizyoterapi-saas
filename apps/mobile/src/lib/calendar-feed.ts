@@ -1,5 +1,23 @@
 import type { CalendarFeedEvent } from "@fitnes-saas/contracts";
 
+export type CalendarDetailRow = CalendarFeedEvent["details"] & {
+  id: string;
+  calendar_event_id: string;
+  source: CalendarFeedEvent["source"];
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  approval_status: CalendarFeedEvent["approval_status"];
+  is_cancelled: boolean;
+  conflict: CalendarFeedEvent["conflict"];
+  pending_schedule_change: CalendarFeedEvent["details"]["pending_schedule_change"];
+  is_group_class: boolean;
+  is_duo: boolean;
+  lesson_name: string | null;
+  package_name: string | null;
+  presentation: CalendarFeedEvent["presentation"];
+};
+
 export type CalendarFeedRange = {
   from: string;
   to: string;
@@ -13,7 +31,7 @@ export function createCalendarFeedRange(now = new Date()): CalendarFeedRange {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-export function calendarFeedEventToDetailRow(event: CalendarFeedEvent): Record<string, any> {
+export function calendarFeedEventToDetailRow(event: CalendarFeedEvent): CalendarDetailRow {
   return {
     ...event.details,
     id: event.details.booking_id || event.details.session_id || event.entity_id,

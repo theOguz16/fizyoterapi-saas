@@ -87,18 +87,18 @@ export default function AdminCalendarScreen() {
   });
 
   const rows = useMemo(() => {
-    const events = Array.isArray(calendarQuery.data?.events) ? calendarQuery.data.events : [];
+    const events = calendarQuery.data?.events || [];
     return events.map(calendarFeedEventToDetailRow);
   }, [calendarQuery.data?.events]);
 
   const selectedBooking = useMemo(
-    () => rows.find((row: any) => String(row.calendar_event_id) === selectedBookingId) || null,
+    () => rows.find((row) => String(row.calendar_event_id) === selectedBookingId) || null,
     [rows, selectedBookingId]
   );
 
   const events = useMemo(
     () =>
-      rows.map((row: any) => ({
+      rows.map((row) => ({
         id: String(row.calendar_event_id),
         title: row.presentation.title,
         subtitle: row.presentation.subtitle,

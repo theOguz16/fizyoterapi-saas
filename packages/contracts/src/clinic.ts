@@ -21,6 +21,7 @@ export type PublicTrainerOption = {
   matching_slots?: number | null;
   required_matching_slots?: number | null;
   is_available?: boolean;
+  unavailable_reason?: string | null;
   membership_id?: string | null;
   member_id?: string | null;
   member_full_name?: string | null;

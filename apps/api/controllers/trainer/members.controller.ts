@@ -1,6 +1,7 @@
 // Bu controller trainer tarafindaki members.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Response } from "express";
+import type { TrainerClientSummary } from "@fitnes-saas/contracts";
 import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { Attendance } from "../../entities/attendance.entity";
@@ -324,16 +325,15 @@ export class TrainerMembersController {
         .addOrderBy("u.last_name", "ASC")
         .getMany();
 
-      return res.json({
-        data: members.map((member) => ({
-          id: member.id,
-          full_name: `${member.first_name} ${member.last_name}`.trim(),
-          email: member.email,
-          phone: member.phone,
-          is_active: member.is_active,
-          qr_code: member.qr_code ?? null,
-        })),
-      });
+      const data: TrainerClientSummary[] = members.map((member) => ({
+        id: member.id,
+        full_name: `${member.first_name} ${member.last_name}`.trim(),
+        email: member.email,
+        phone: member.phone,
+        is_active: member.is_active,
+        qr_code: member.qr_code ?? null,
+      }));
+      return res.json({ data });
     } catch (error) {
       if (error instanceof AppError) throw error;
       console.error("Trainer members list error:", error);

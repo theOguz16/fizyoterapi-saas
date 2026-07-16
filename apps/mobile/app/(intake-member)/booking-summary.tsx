@@ -8,6 +8,7 @@ import {
 } from "@/lib/mobile-api";
 import { formatGroupClassPrice, getGroupClassAudienceLabel, isGroupClassBookingFlow } from "@/lib/group-classes";
 import { applyCurrentPackageToDraft, findCurrentPackage, findNextUnsubmittedPackage } from "@/lib/member-package-queue";
+import { buildBookingSummaryModel, buildMemberPurchaseDraft } from "@/lib/booking-summary";
 import { safeBack } from "@/lib/navigation";
 import { useAppFlow } from "@/providers/app-flow";
 import { useSession } from "@/providers/auth-session";
@@ -29,6 +30,7 @@ export default function BookingSummaryScreen() {
   const { refreshMe, user } = useSession();
   const isGroupFlow = isGroupClassBookingFlow(memberBookingDraft);
   const currentPackage = findCurrentPackage(memberBookingDraft);
+  const requiresTrainer = !isGroupFlow;
   const selectedDaysForCurrentPackage = currentPackage?.preferred_slots || memberBookingDraft.preferredSlots;
   const isDuoFlow = String(currentPackage?.lesson_mode || memberBookingDraft.lessonMode || "").toUpperCase() === "DUO";
   const duoPartnerName = currentPackage?.duo_partner_name || memberBookingDraft.duoPartnerName || "";
@@ -37,28 +39,17 @@ export default function BookingSummaryScreen() {
 
   const trainerQuery = useQuery({
     queryKey: ["trainer-options", params.slug, currentPackage?.package_id || memberBookingDraft.packageId, selectedDaysForCurrentPackage],
-    queryFn: () => getSalonTrainerOptionsApi(String(params.slug), currentPackage?.package_id || memberBookingDraft.packageId, selectedDaysForCurrentPackage as any),
+    queryFn: () => getSalonTrainerOptionsApi(String(params.slug), currentPackage?.package_id || memberBookingDraft.packageId, selectedDaysForCurrentPackage),
   });
 
-  const trainers = useMemo(() => {
-    const source = trainerQuery.data;
-    if (Array.isArray(source)) return source;
-    return Array.isArray((source as any)?.data) ? (source as any).data : [];
-  }, [trainerQuery.data]);
-
-  const requiresTrainer = !isGroupFlow;
-  const selectedTrainer = requiresTrainer
-    ? trainers.find((item: any) => String(item.id) === String(memberBookingDraft.trainerId)) || trainers.find((item: any) => item.is_available !== false) || trainers[0]
-    : null;
-  const trainerWasAutoSelected = requiresTrainer && Boolean(selectedTrainer?.id) && !memberBookingDraft.trainerId && !currentPackage?.trainer_id;
-  const requiredPreferenceSlots = memberBookingDraft.requiredPreferenceSlots || 0;
-  const requiredTrainerFreeSlots = memberBookingDraft.requiredTrainerFreeSlots || 0;
+  const trainers = useMemo(() => trainerQuery.data || [], [trainerQuery.data]);
+  const summary = useMemo(
+    () => buildBookingSummaryModel(memberBookingDraft, trainers, requiresTrainer),
+    [memberBookingDraft, requiresTrainer, trainers]
+  );
+  const { selectedTrainer, trainerWasAutoSelected, requiredPreferenceSlots, requiredTrainerFreeSlots } = summary;
   const normalizedSelectedSlotCount = selectedDaysForCurrentPackage.length;
-  const matchingSlotCount = Number(selectedTrainer?.matching_slots || 0);
-  const missingPreferenceSlots = Math.max(0, requiredPreferenceSlots - normalizedSelectedSlotCount);
-  const missingTrainerSlots = requiresTrainer ? Math.max(0, requiredTrainerFreeSlots - matchingSlotCount) : 0;
-  const hasTrainerSelection = !requiresTrainer || Boolean(selectedTrainer?.id || currentPackage?.trainer_id || memberBookingDraft.trainerId);
-  const canSubmit = Boolean(currentPackage?.package_id || memberBookingDraft.packageId) && missingPreferenceSlots === 0 && hasTrainerSelection;
+  const { missingPreferenceSlots, missingTrainerSlots, hasTrainerSelection, canSubmit } = summary;
 
   function handleSubmissionSuccess() {
     const currentPackageId = String(currentPackage?.package_id || memberBookingDraft.packageId || "");
@@ -132,45 +123,13 @@ export default function BookingSummaryScreen() {
       return { ok: true };
     }
 
-    return createMemberPaymentRequestApi({
-      tenant_slug: String(params.slug),
-      selected_days: (selectedDaysForCurrentPackage as any) || [],
-      package_id: String(currentPackage?.package_id || memberBookingDraft.packageId || ""),
-      package_ids: currentPackage?.package_id
-        ? [String(currentPackage.package_id)]
-        : undefined,
-      selected_packages: currentPackage
-        ? [
-            {
-              package_id: currentPackage.package_id,
-              package_title: currentPackage.package_title,
-              package_price: currentPackage.package_price,
-              preferred_slots: currentPackage.preferred_slots,
-              weekly_frequency: currentPackage.weekly_frequency,
-              duo_partner_name: currentPackage.duo_partner_name,
-              duo_partner_contact: currentPackage.duo_partner_contact,
-            },
-          ]
-        : undefined,
-      trainer_id: requiresTrainer
-        ? String(
-            selectedTrainer?.id ||
-              currentPackage?.trainer_id ||
-              memberBookingDraft.trainerId ||
-              ""
-          )
-        : undefined,
-      selected_sub_lesson:
-        currentPackage?.selected_sub_lesson || memberBookingDraft.selectedSubLesson,
-      duo_partner_name: isDuoFlow ? duoPartnerName : undefined,
-      duo_partner_contact: isDuoFlow ? duoPartnerContact : undefined,
+    return createMemberPaymentRequestApi(buildMemberPurchaseDraft({
+      slug: String(params.slug),
+      draft: memberBookingDraft,
+      trainers,
+      requiresTrainer,
       note: memberIntent.note,
-      availability_context: {
-        source: "MEMBER_AVAILABILITY",
-        visibility: "TRAINER_HIDDEN",
-        selected_by: "MEMBER",
-      },
-    });
+    }));
   },
 
   meta: {

@@ -241,6 +241,7 @@ describe("trainer members controller", () => {
         .fn()
         .mockResolvedValueOnce(historyRow)
         .mockResolvedValueOnce(historyRow)
+        .mockResolvedValueOnce(historyRow)
         .mockResolvedValueOnce(historyRow),
       find: vi.fn().mockResolvedValue([historyRow]),
       remove: vi.fn().mockResolvedValue(undefined),
@@ -259,6 +260,37 @@ describe("trainer members controller", () => {
       return {} as any;
     });
     vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
+
+    const getReq = {
+      tenantId: "tenant-1",
+      auth: { sub: "trainer-1", role: "TRAINER" },
+      params: { id: member.id },
+    } as any;
+    const getRes = createMockResponse();
+    await TrainerMembersController.getNotes(getReq, getRes as any);
+
+    expect(getRes.body).toEqual({
+      data: {
+        member_id: member.id,
+        note: "Yakın takip",
+        title: "Risk notu",
+        body: "Yakın takip",
+        category: "RISK",
+        updated_at: "2026-05-01T09:00:00.000Z",
+        items: [
+          {
+            id: "note-1",
+            title: "Risk notu",
+            body: "Yakın takip",
+            note: "Yakın takip",
+            category: "RISK",
+            created_at: "2026-05-01T09:00:00.000Z",
+            updated_at: "2026-05-01T09:00:00.000Z",
+          },
+        ],
+        count: 1,
+      },
+    });
 
     const createReq = {
       tenantId: "tenant-1",
