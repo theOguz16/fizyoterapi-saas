@@ -95,6 +95,9 @@ describe("account clinic request controller", () => {
     await AccountClinicRequestController.createOrUpdate(
       {
         auth: { accountId: "account-1" },
+        method: "POST",
+        originalUrl: "/api/account/clinic-request",
+        headers: { "x-fizyoflow-funnel-id": "funnel-1" },
         body: {
           clinic_name: "Owner Fizyo",
           city: "Bursa",
@@ -175,11 +178,11 @@ describe("account clinic request controller", () => {
       })
     );
     expect(productEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ event_name: "clinic_created", tenant_id: "tenant-1" }),
+      expect.objectContaining({ event_name: "clinic_created", tenant_id: "tenant-1", actor_account_id: "account-1", funnel_id: "funnel-1" }),
       expect.anything()
     );
     expect(productEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1" }),
+      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1", actor_account_id: "account-1", funnel_id: "funnel-1" }),
       expect.anything()
     );
   });

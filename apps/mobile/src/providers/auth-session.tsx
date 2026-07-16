@@ -5,6 +5,7 @@ import * as SecureStore from "expo-secure-store";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { setAuthToken } from "@/lib/http-client";
+import { flushProductEventQueue } from "@/lib/product-analytics";
 import { deleteAccountApi, inviteAcceptApi, loginApi, logoutApi, meApi, registerApi, registerClinicMemberApi, SessionEnvelope, SessionRole, SessionUser, switchRoleApi } from "@/lib/mobile-api";
 import { clearPendingSalonJoinSlug, getNotificationPermissionPromptState, setNotificationPermissionPromptState } from "@/lib/local-preferences";
 import { getPushPermissionStatus, registerPushDeviceIfPermitted, requestPushPermissionAndRegister, type PushPermissionStatus, unregisterPushDevice } from "@/lib/push";
@@ -277,6 +278,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     setAuthToken(data.accessToken);
+    void flushProductEventQueue().catch(() => undefined);
     setAuthRuntime((current) => ({ ...current, token: data.accessToken }));
     applySessionPayload(data);
     await syncNotificationPermissionSafely({
@@ -332,6 +334,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
 
         setAuthToken(stored);
+        void flushProductEventQueue().catch(() => undefined);
         setAuthRuntime((current) => ({ ...current, token: stored }));
         const me = await meApi();
         if (!mounted) return;
@@ -465,6 +468,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       queryClient.clear();
       setAuthToken(stored);
+      void flushProductEventQueue().catch(() => undefined);
       setAuthRuntime((current) => ({ ...current, token: stored }));
       const me = await meApi();
       if (me.available_surfaces?.mobile === false) {

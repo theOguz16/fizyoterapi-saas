@@ -62,4 +62,22 @@ export class AuditLog extends BaseEntityWithTimestamps {
 
   @Column({ type: "jsonb", nullable: true })
   metadata!: Record<string, unknown> | null;
+
+  @Column({ type: "varchar", length: 40, nullable: true })
+  product_event_name!: string | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  product_event_id!: string | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  product_funnel_id!: string | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  product_install_id!: string | null;
+
+  @Column({ type: "varchar", length: 120, nullable: true })
+  product_session_id!: string | null;
+
+  @Column({ type: "timestamptz", nullable: true })
+  product_occurred_at!: Date | null;
 }

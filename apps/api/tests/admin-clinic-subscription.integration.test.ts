@@ -102,7 +102,7 @@ describe("admin clinic subscription integration", () => {
       ],
       {
         method: "POST",
-        headers: { authorization: `Bearer ${token}`, "user-agent": "vitest" },
+        headers: { authorization: `Bearer ${token}`, "user-agent": "vitest", "x-fizyoflow-funnel-id": "funnel-1" },
         cookies: {},
         ip: "127.0.0.1",
       }
@@ -125,7 +125,7 @@ describe("admin clinic subscription integration", () => {
     );
     expect(tenantRepo.save).toHaveBeenCalledTimes(1);
     expect(productEventSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1" })
+      expect.objectContaining({ event_name: "trial_started", tenant_id: "tenant-1", actor_account_id: "account-1", funnel_id: "funnel-1" })
     );
   });
 

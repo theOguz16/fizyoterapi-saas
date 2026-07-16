@@ -93,10 +93,11 @@ export function setAuthToken(token: string | null) {
   authToken = token;
 }
 
-export function setProductAnalyticsHeaders(input: { installId?: string | null; sessionId?: string | null }) {
+export function setProductAnalyticsHeaders(input: { installId?: string | null; sessionId?: string | null; funnelId?: string | null }) {
   productAnalyticsHeaders = {
     ...(input.installId ? { "X-FizyoFlow-Install-ID": input.installId } : {}),
     ...(input.sessionId ? { "X-FizyoFlow-Session-ID": input.sessionId } : {}),
+    ...(input.funnelId ? { "X-FizyoFlow-Funnel-ID": input.funnelId } : {}),
   };
 }
 

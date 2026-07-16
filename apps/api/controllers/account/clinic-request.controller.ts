@@ -320,10 +320,7 @@ export class AccountClinicRequestController {
         await membershipRepo.save(trainerMembership);
       }
 
-      const productContext = {
-        install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
-        session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
-      };
+      const productContext = AuditLogService.productContextFromRequest(req);
 
       if (isClinicActivation) {
         await AuditLogService.logProductEvent({

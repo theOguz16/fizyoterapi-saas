@@ -680,8 +680,7 @@ export class AdminSettingsController {
       if (businessHoursChanged) {
         await AuditLogService.logProductEvent({
           event_name: "working_hours_saved",
-          install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
-          session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
+          ...AuditLogService.productContextFromRequest(req),
           tenant_id: tenantId,
           actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
           actor_account_id: req.auth?.accountId || null,

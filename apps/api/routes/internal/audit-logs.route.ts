@@ -5,4 +5,5 @@ import { internalAdminMiddleware } from "../../middlewares/internal-admin.middle
 export const internalAuditLogsRoutes = Router();
 
 internalAuditLogsRoutes.use(internalAdminMiddleware);
+internalAuditLogsRoutes.get("/funnel", InternalAuditLogsController.funnel);
 internalAuditLogsRoutes.get("/", InternalAuditLogsController.list);

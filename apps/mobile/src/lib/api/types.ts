@@ -15,6 +15,8 @@ import type {
   SessionEnvelope as ContractSessionEnvelope,
   SessionRole as ContractSessionRole,
   SessionUser as ContractSessionUser,
+  ProductEventName as ContractProductEventName,
+  ProductEventPayload as ContractProductEventPayload,
 } from "@fitnes-saas/contracts";
 
 export type SessionRole = ContractSessionRole;
@@ -26,22 +28,8 @@ export type SalonDiscoverySummary = ContractClinicSummary;
 export type PackageOption = ContractPackageOption;
 export type AdminPackage = ContractAdminPackage;
 
-export type ProductEventName =
-  | "app_opened"
-  | "clinic_signup_started"
-  | "clinic_qr_viewed"
-  | "member_invite_started"
-  | "subscription_viewed"
-  | "purchase_started";
-
-export type ProductEventPayload = {
-  event_name: ProductEventName;
-  event_id: string;
-  occurred_at: string;
-  install_id: string;
-  session_id: string;
-  metadata: Record<string, string | null>;
-};
+export type ProductEventName = ContractProductEventName;
+export type ProductEventPayload = ContractProductEventPayload;
 
 export type PurchaseDaySelection = {
   starts_at: string;

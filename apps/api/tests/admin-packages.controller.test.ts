@@ -96,7 +96,7 @@ describe("admin packages controller", () => {
 
     const req = {
       tenantId: "tenant-1",
-      auth: { sub: "admin-1", role: "ADMIN" },
+      auth: { sub: "admin-1", accountId: "account-1", role: "ADMIN" },
       body: {
         title: "QA Smoke Paket",
         total_credits: 6,
@@ -107,7 +107,7 @@ describe("admin packages controller", () => {
       },
       method: "POST",
       originalUrl: "/api/admin/packages",
-      headers: { "user-agent": "vitest" },
+      headers: { "user-agent": "vitest", "x-fizyoflow-funnel-id": "funnel-1" },
       requestId: "req-2",
       ip: "127.0.0.1",
     } as any;
@@ -135,6 +135,8 @@ describe("admin packages controller", () => {
       expect.objectContaining({
         event_name: "package_created",
         tenant_id: "tenant-1",
+        actor_account_id: "account-1",
+        funnel_id: "funnel-1",
         target_id: "pkg-2",
       })
     );

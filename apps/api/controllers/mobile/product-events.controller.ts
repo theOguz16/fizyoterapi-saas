@@ -1,14 +1,10 @@
 import { Response } from "express";
+import { AUTHENTICATED_PRODUCT_EVENT_NAMES, type ProductEventName } from "@fitnes-saas/contracts";
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
-import { AuditLogService, ProductEventName } from "../../services/audit-log.service";
+import { AuditLogService } from "../../services/audit-log.service";
 
-const AUTHENTICATED_PRODUCT_EVENTS = new Set<ProductEventName>([
-  "clinic_qr_viewed",
-  "member_invite_started",
-  "subscription_viewed",
-  "purchase_started",
-]);
+const AUTHENTICATED_PRODUCT_EVENTS = new Set<ProductEventName>(AUTHENTICATED_PRODUCT_EVENT_NAMES);
 
 export class MobileProductEventsController {
   static async track(req: AuthenticatedRequest, res: Response) {
@@ -28,6 +24,7 @@ export class MobileProductEventsController {
       occurred_at: req.body?.occurred_at,
       install_id: req.body?.install_id,
       session_id: req.body?.session_id,
+      funnel_id: req.body?.funnel_id,
       tenant_id: req.auth?.tenantId || null,
       actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
       actor_account_id: req.auth?.accountId || null,

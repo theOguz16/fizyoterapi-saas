@@ -424,8 +424,7 @@ export class AdminClinicController {
 
       await AuditLogService.logProductEvent({
         event_name: "trial_started",
-        install_id: typeof req.headers?.["x-fizyoflow-install-id"] === "string" ? req.headers["x-fizyoflow-install-id"] : null,
-        session_id: typeof req.headers?.["x-fizyoflow-session-id"] === "string" ? req.headers["x-fizyoflow-session-id"] : null,
+        ...AuditLogService.productContextFromRequest(req),
         tenant_id: tenant.id,
         actor_user_id: req.auth?.linkedUserId || req.auth?.sub || null,
         actor_account_id: req.auth?.accountId || null,

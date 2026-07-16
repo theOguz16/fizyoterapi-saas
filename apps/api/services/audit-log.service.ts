@@ -1,4 +1,9 @@
 import { randomUUID } from "crypto";
+import {
+  PRODUCT_EVENT_NAMES,
+  type ProductEventName,
+  type ProductFunnelReport,
+} from "@fitnes-saas/contracts";
 import { Response } from "express";
 import { EntityManager } from "typeorm";
 import { AppDataSource } from "../data-source";
@@ -32,20 +37,8 @@ type AuditLogInput = {
   metadata?: Record<string, unknown> | null;
 };
 
-export const PRODUCT_EVENT_NAMES = [
-  "app_opened",
-  "clinic_signup_started",
-  "clinic_created",
-  "trial_started",
-  "package_created",
-  "working_hours_saved",
-  "clinic_qr_viewed",
-  "member_invite_started",
-  "subscription_viewed",
-  "purchase_started",
-] as const;
-
-export type ProductEventName = (typeof PRODUCT_EVENT_NAMES)[number];
+export { PRODUCT_EVENT_NAMES };
+export type { ProductEventName };
 
 type ProductEventInput = {
   event_name: ProductEventName;
@@ -53,6 +46,7 @@ type ProductEventInput = {
   occurred_at?: string | Date | null;
   install_id?: string | null;
   session_id?: string | null;
+  funnel_id?: string | null;
   tenant_id?: string | null;
   actor_user_id?: string | null;
   actor_account_id?: string | null;
@@ -91,6 +85,15 @@ export function attachAuditError(res: Response, code?: string | null, message?: 
 }
 
 export class AuditLogService {
+  static productContextFromRequest(req: { headers?: Record<string, unknown> }) {
+    const read = (name: string) => typeof req.headers?.[name] === "string" ? req.headers[name] as string : null;
+    return {
+      install_id: read("x-fizyoflow-install-id"),
+      session_id: read("x-fizyoflow-session-id"),
+      funnel_id: read("x-fizyoflow-funnel-id"),
+    };
+  }
+
   static ensureRequestId(req: AuthenticatedRequest) {
     const existing = sanitizeText(req.headers?.["x-request-id"], 120);
     const requestId = existing || randomUUID();
@@ -148,13 +151,16 @@ export class AuditLogService {
 
     try {
       const duplicate = await repo.findOne({
-        where: { event_type: eventType, request_id: eventId },
+        where: { product_event_name: input.event_name, product_event_id: eventId },
         select: ["id"],
       });
       if (duplicate) return false;
 
       const occurredAtRaw = input.occurred_at instanceof Date ? input.occurred_at : new Date(input.occurred_at || Date.now());
       const occurredAt = Number.isNaN(occurredAtRaw.getTime()) ? new Date() : occurredAtRaw;
+      const installId = sanitizeText(input.install_id, 120);
+      const sessionId = sanitizeText(input.session_id, 120);
+      const funnelId = sanitizeText(input.funnel_id, 120) || installId || sanitizeText(input.actor_account_id, 120);
 
       const entity = repo.create({
         tenant_id: input.tenant_id || null,
@@ -172,20 +178,80 @@ export class AuditLogService {
         user_agent: sanitizeText(input.user_agent, 1000),
         target_type: sanitizeText(input.target_type, 120),
         target_id: sanitizeText(input.target_id, 120),
+        product_event_name: input.event_name,
+        product_event_id: eventId,
+        product_funnel_id: funnelId,
+        product_install_id: installId,
+        product_session_id: sessionId,
+        product_occurred_at: occurredAt,
         metadata: sanitizeMetadata({
+          ...(input.metadata || {}),
           event_name: input.event_name,
           event_id: eventId,
           occurred_at: occurredAt.toISOString(),
-          install_id: sanitizeText(input.install_id, 120),
-          session_id: sanitizeText(input.session_id, 120),
-          ...(input.metadata || {}),
+          install_id: installId,
+          session_id: sessionId,
+          funnel_id: funnelId,
         }),
       });
       await repo.save(entity);
       return true;
     } catch (error) {
+      if ((error as { code?: string })?.code === "23505") return false;
       console.error("Product event write error:", error);
-      return false;
+      throw error;
     }
+  }
+
+  static async getProductFunnelReport(input: {
+    from: Date;
+    to: Date;
+    tenant_id?: string | null;
+  }): Promise<ProductFunnelReport> {
+    const query = AppDataSource.getRepository(AuditLog)
+      .createQueryBuilder("audit")
+      .select("audit.product_event_name", "event_name")
+      .addSelect("COUNT(audit.id)", "event_count")
+      .addSelect("COUNT(DISTINCT audit.product_funnel_id)", "unique_funnels")
+      .addSelect("COUNT(DISTINCT audit.actor_account_id)", "unique_accounts")
+      .addSelect("COUNT(DISTINCT audit.tenant_id)", "unique_tenants")
+      .where("audit.product_event_name IN (:...eventNames)", { eventNames: [...PRODUCT_EVENT_NAMES] })
+      .andWhere("audit.product_occurred_at >= :from", { from: input.from })
+      .andWhere("audit.product_occurred_at <= :to", { to: input.to })
+      .groupBy("audit.product_event_name");
+
+    if (input.tenant_id) query.andWhere("audit.tenant_id = :tenantId", { tenantId: input.tenant_id });
+    const rows = await query.getRawMany<{
+      event_name: ProductEventName;
+      event_count: string;
+      unique_funnels: string;
+      unique_accounts: string;
+      unique_tenants: string;
+    }>();
+    const byName = new Map(rows.map((row) => [row.event_name, row]));
+    let previousFunnels: number | null = null;
+    const steps = PRODUCT_EVENT_NAMES.map((eventName) => {
+      const row = byName.get(eventName);
+      const uniqueFunnels = Number(row?.unique_funnels || 0);
+      const conversion = previousFunnels === null || previousFunnels === 0
+        ? null
+        : Math.round((uniqueFunnels / previousFunnels) * 1000) / 10;
+      previousFunnels = uniqueFunnels;
+      return {
+        event_name: eventName,
+        event_count: Number(row?.event_count || 0),
+        unique_funnels: uniqueFunnels,
+        unique_accounts: Number(row?.unique_accounts || 0),
+        unique_tenants: Number(row?.unique_tenants || 0),
+        conversion_from_previous_percent: conversion,
+      };
+    });
+
+    return {
+      from: input.from.toISOString(),
+      to: input.to.toISOString(),
+      tenant_id: input.tenant_id || null,
+      steps,
+    };
   }
 }

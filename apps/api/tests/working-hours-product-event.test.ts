@@ -45,7 +45,7 @@ describe("working hours product event", () => {
         auth: { sub: "admin-1", accountId: "account-1", role: "ADMIN" },
         method: "PUT",
         originalUrl: "/api/admin/settings",
-        headers: {},
+        headers: { "x-fizyoflow-funnel-id": "funnel-1" },
         body: {
           profile: {
             business_hours: {
@@ -67,6 +67,8 @@ describe("working hours product event", () => {
       expect.objectContaining({
         event_name: "working_hours_saved",
         tenant_id: "tenant-1",
+        actor_account_id: "account-1",
+        funnel_id: "funnel-1",
         metadata: expect.objectContaining({ working_days_count: 6 }),
       })
     );

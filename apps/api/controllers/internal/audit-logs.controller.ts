@@ -4,6 +4,7 @@ import { AppDataSource } from "../../data-source";
 import { AuditLog } from "../../entities/audit-log.entity";
 import { Tenant } from "../../entities/tenant.entity";
 import { AppError } from "../../errors/AppError";
+import { AuditLogService } from "../../services/audit-log.service";
 
 function normalizeRoleFilter(value: unknown) {
   const role = String(value || "").trim().toUpperCase();
@@ -31,6 +32,27 @@ function applyDateFilter<T extends ObjectLiteral>(
 }
 
 export class InternalAuditLogsController {
+  static async funnel(req: any, res: Response) {
+    const now = new Date();
+    const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const parseDate = (value: unknown, fallback: Date) => {
+      if (typeof value !== "string" || !value.trim()) return fallback;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) throw new AppError("INVALID_DATE_RANGE", 400, "Tarih aralığı geçersiz");
+      return parsed;
+    };
+    const from = parseDate(req.query?.from, defaultFrom);
+    const to = parseDate(req.query?.to, now);
+    if (from > to || to.getTime() - from.getTime() > 366 * 24 * 60 * 60 * 1000) {
+      throw new AppError("INVALID_DATE_RANGE", 400, "Funnel raporu en fazla 366 günlük bir aralıkta alınabilir");
+    }
+    const tenantId = typeof req.query?.tenant_id === "string" && req.query.tenant_id.trim()
+      ? req.query.tenant_id.trim()
+      : null;
+    const report = await AuditLogService.getProductFunnelReport({ from, to, tenant_id: tenantId });
+    return res.json({ data: report });
+  }
+
   static async list(req: any, res: Response) {
     try {
       const rawLimit = req.query.limit ? Number(req.query.limit) : 100;

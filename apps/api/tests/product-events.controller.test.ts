@@ -28,6 +28,7 @@ describe("product event controllers", () => {
           event_id: "event-1",
           install_id: "install-1",
           session_id: "session-1",
+          funnel_id: "funnel-1",
           tenant_id: "spoofed-tenant",
           metadata: { screen: "welcome", source: "primary_cta", private_value: "drop-me" },
         },
@@ -41,6 +42,7 @@ describe("product event controllers", () => {
       expect.objectContaining({
         event_name: "clinic_signup_started",
         install_id: "install-1",
+        funnel_id: "funnel-1",
         metadata: {
           source: "primary_cta",
           screen: "welcome",
@@ -80,6 +82,7 @@ describe("product event controllers", () => {
         body: {
           event_name: "purchase_started",
           event_id: "event-2",
+          funnel_id: "funnel-2",
           tenant_id: "spoofed-tenant",
           metadata: { screen: "admin_subscription", billing_cycle: "yearly" },
         },
@@ -94,6 +97,7 @@ describe("product event controllers", () => {
         tenant_id: "tenant-1",
         actor_user_id: "linked-user-1",
         actor_account_id: "account-1",
+        funnel_id: "funnel-2",
         metadata: expect.objectContaining({ billing_cycle: "yearly" }),
       })
     );

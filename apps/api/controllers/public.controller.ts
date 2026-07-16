@@ -1,7 +1,7 @@
 // Bu controller genel tarafindaki public.controller endpointlerinin is akisini yonetir.
 // Request validation sonrasi gereken repository ve servis cagrilari burada orkestre edilir.
 import { Request, Response } from "express";
-import type { ClinicSummary, PackageOption, PublicClinicProfile } from "@fitnes-saas/contracts";
+import { PUBLIC_PRODUCT_EVENT_NAMES, type ClinicSummary, type PackageOption, type ProductEventName, type PublicClinicProfile } from "@fitnes-saas/contracts";
 import { In } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { SalonProfile } from "../entities/salon-profile.entity";
@@ -20,12 +20,11 @@ import { GroupClassService } from "../services/group-class.service";
 import { UserPackage } from "../entities/user-package.entity";
 import { isReservedPublicSlug } from "../constants/reserved-slugs";
 import { DemoLeadEmailService } from "../services/demo-lead-email.service";
-import { ProductEventName } from "../services/audit-log.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
   private static readonly UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  private static readonly ANONYMOUS_PRODUCT_EVENTS = new Set<ProductEventName>(["app_opened", "clinic_signup_started"]);
+  private static readonly ANONYMOUS_PRODUCT_EVENTS = new Set<ProductEventName>(PUBLIC_PRODUCT_EVENT_NAMES);
 
   static async trackProductEvent(req: Request, res: Response) {
     const eventName = String(req.body?.event_name || "").trim().toLowerCase() as ProductEventName;
@@ -39,6 +38,7 @@ export class PublicController {
       occurred_at: req.body?.occurred_at,
       install_id: req.body?.install_id,
       session_id: req.body?.session_id,
+      funnel_id: req.body?.funnel_id,
       method: req.method,
       path: req.originalUrl,
       ip_address: req.ip || null,
