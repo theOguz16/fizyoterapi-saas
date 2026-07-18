@@ -1,6 +1,6 @@
 // Mobile API member domain endpointleri.
-import { httpRequest } from "../http-client";
-import type { GroupClassSession, MemberAttendanceHistoryItem, MemberChangeRequest, MemberGroupClassWaitlist, MemberOwnedPackage, MemberPurchaseDraft, PaymentRequest } from "./types";
+import { httpRequest, httpRequestEnvelope } from "../http-client";
+import type { GroupClassSession, MemberAttendanceHistoryItem, MemberAttendanceResponse, MemberChangeRequest, MemberGroupClassWaitlist, MemberOwnedPackage, MemberPurchaseDraft, PaymentRequest } from "./types";
 
 export async function createSalonApplicationApi(payload: { tenant_slug: string; note?: string }) {
   // Uye satin alma akisi ilerledikce secimler note/payload icinde tasinabiliyor.
@@ -71,8 +71,9 @@ export async function patchMemberWeeklyTarget(weekly_class_hours: number) {
   });
 }
 
-export async function getMemberAttendanceApi() {
-  return httpRequest<any>("/member/attendance/history");
+export async function getMemberAttendanceApi(): Promise<MemberAttendanceResponse> {
+  const response = await httpRequestEnvelope<MemberAttendanceHistoryItem[]>("/member/attendance/history");
+  return response as unknown as MemberAttendanceResponse;
 }
 
 export async function getMemberBookingsApi() {

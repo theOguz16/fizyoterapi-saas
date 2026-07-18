@@ -4,9 +4,27 @@ name: Fizyoflow admin marketing screenshots
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
 - openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
 
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil: { visible: "Yönetim merkezi", timeout: 20000 }
 - waitForAnimationToEnd: { timeout: 1800 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-dashboard"
@@ -15,17 +33,6 @@ name: Fizyoflow admin marketing screenshots
 - extendedWaitUntil: { visible: "Salon Takvimi", timeout: 20000 }
 - waitForAnimationToEnd: { timeout: 1800 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-calendar"
-- swipe: { start: "50%,76%", end: "50%,28%" }
-- waitForAnimationToEnd: { timeout: 1200 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-group-classes"
-
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
-- extendedWaitUntil: { visible: "Onaylar", timeout: 20000 }
-- waitForAnimationToEnd: { timeout: 1500 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-approvals"
-- tapOn: { index: 0, text: ".*detay.*|.*Ödeme.*|.*Başvuru.*", optional: true }
-- waitForAnimationToEnd: { timeout: 1200 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-approval-detail"
 
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fmembers"
 - extendedWaitUntil: { visible: "Üyeler", timeout: 20000 }
@@ -39,37 +46,11 @@ name: Fizyoflow admin marketing screenshots
 - waitForAnimationToEnd: { timeout: 1600 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-member-detail"
 
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fmembers"
-- extendedWaitUntil: { visible: "Üyeler", timeout: 20000 }
-- tapOn: { id: "admin-members-role-filter-TRAINER" }
-- waitForAnimationToEnd: { timeout: 1200 }
-- swipe: { start: "50%,78%", end: "50%,30%" }
-- waitForAnimationToEnd: { timeout: 800 }
-- tapOn: { id: "admin-person-detail-trainer-0" }
-- extendedWaitUntil: { visible: "Aylık kazanç", timeout: 15000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-trainer-detail"
-
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fpackages"
 - extendedWaitUntil: { visible: "Paketler", timeout: 20000 }
 - waitForAnimationToEnd: { timeout: 1500 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-packages"
 
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Frisk-members"
-- extendedWaitUntil: { visible: "Riskli üyeler", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-risk-members"
-
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard%2Frevenue-detail"
 - extendedWaitUntil: { visible: "Gelir Detayı", timeout: 20000 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-revenue-detail"
-
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fcampaigns"
-- extendedWaitUntil: { visible: "Kampanyalar", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-campaigns"
-
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fentry-scan"
-- extendedWaitUntil: { visible: "Salon giriş tarama", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-entry-scan"
-
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fclinic-qr"
-- extendedWaitUntil: { visible: "Salon QR kodu", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/admin-clinic-qr"

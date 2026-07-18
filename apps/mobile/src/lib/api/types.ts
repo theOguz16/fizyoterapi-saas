@@ -357,6 +357,33 @@ export type MemberAttendanceHistoryItem = {
   created_at?: string | null;
   result?: string | null;
   session_title?: string | null;
+  trainer_full_name?: string | null;
+  lesson_category?: string | null;
+  lesson_category_label?: string | null;
+  package_name?: string | null;
+  package_title?: string | null;
+  remaining_credits?: number | null;
+};
+
+export type MemberAttendanceResponse = {
+  data: MemberAttendanceHistoryItem[];
+  summary: {
+    total_attendance_count: number;
+    group_attendance_count: number;
+    remaining_total_credits: number;
+  };
+  package_balances: Array<{
+    user_package_id: string;
+    package_id: string;
+    package_name?: string | null;
+    package_title?: string | null;
+    total_credits?: number | null;
+    used_credits?: number | null;
+    remaining_credits?: number | null;
+  }>;
+  upcoming_bookings?: unknown[];
+  past_bookings?: unknown[];
+  limit?: number;
 };
 
 export type AdminApprovalItem = {

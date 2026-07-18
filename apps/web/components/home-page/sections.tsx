@@ -10,7 +10,6 @@ import {
   CANONICAL_DESCRIPTION,
   comparisonItems,
   faqItems,
-  featuredScreens,
   productExplainers,
   screenGroups,
   trustItems,
@@ -53,11 +52,6 @@ export function HomeHero() {
             <MarketingLink className="product-secondary" href={APP_STORE_URL} target="_blank" rel="noreferrer" eventName="app_store_click" eventSource="hero">
               Kliniğini kur
             </MarketingLink>
-          </div>
-          <div className="product-proof" aria-label="FizyoFlow ürün kapsamı">
-            <span>6 temel operasyon, tek akış</span>
-            <span>Klinik, uzman ve danışan ekranları</span>
-            <span>15 dakikalık ürün demosu</span>
           </div>
         </div>
         <ProductShowcase hero />
@@ -145,19 +139,6 @@ export function OperationalFlowSection() {
   );
 }
 
-function FeaturedScreens() {
-  return (
-    <div className="featured-screens" aria-label="FizyoFlow öne çıkan ürün ekranları">
-      {featuredScreens.map((screen) => (
-        <article className="featured-screen-card" key={screen.title}>
-          <div className="iphone featured-screen-phone" aria-hidden="true"><ProductScreenImage src={screen.image} fallbackSrc={screen.fallbackImage} alt="" priority={false} /></div>
-          <div><span>{screen.role}</span><h3>{screen.title}</h3><p>{screen.text}</p></div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
 export function ProductScreensSection() {
   return (
     <section id="urun" className="product-screens-section">
@@ -167,7 +148,6 @@ export function ProductScreensSection() {
           <h2>Klinik yönetiminden uzman ve danışan deneyimine uzanan tek ürün.</h2>
           <p>Klinik sahibi operasyonu yönetir; uzman seansı işler, danışan kendi sürecini uygulamada görür.</p>
         </div>
-        <FeaturedScreens />
         <TrackedGallery className="role-screen-gallery">
           {screenGroups.map((group, groupIndex) => (
             <section className="role-screen-group" key={group.role} aria-label={`${group.role} ekranları`}>

@@ -17,11 +17,16 @@ describe("web home page", () => {
     expect(screen.getByRole("link", { name: "15 dakikalık demo talep et" })).toHaveAttribute("href", "#demo");
     expect(screen.getByRole("link", { name: "Kliniğini kur" })).toHaveAttribute("href", APP_STORE_URL);
     expect(screen.getByRole("link", { name: "Demo" })).toHaveAttribute("href", "#demo");
-    expect(screen.getByText("6 temel operasyon, tek akış")).toBeInTheDocument();
+    expect(screen.queryByText("6 temel operasyon, tek akış")).not.toBeInTheDocument();
+    expect(screen.queryByText("Klinik, uzman ve danışan ekranları")).not.toBeInTheDocument();
+    expect(screen.queryByText("15 dakikalık ürün demosu")).not.toBeInTheDocument();
+    expect(screen.queryByText("Operasyon görünümü")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sahada danışan dosyası")).not.toBeInTheDocument();
+    expect(screen.queryByText("Kalan hak ve ölçüm")).not.toBeInTheDocument();
     expect(screen.getByText("WhatsApp + Excel yerine FizyoFlow")).toBeInTheDocument();
     expect(screen.getByText("Gerçek ürün ekranları")).toBeInTheDocument();
     expect(screenGroups).toHaveLength(3);
-    expect(screenGroups.every((group) => group.screens.length === 2)).toBe(true);
+    expect(screenGroups.every((group) => group.screens.length === 6)).toBe(true);
   });
 
   it("publishes the expected organization, product, FAQ and canonical entities", () => {

@@ -1,10 +1,30 @@
 appId: com.fizyoflow.mobile
 name: Fizyoflow member marketing screenshots
 ---
-- launchApp: { clearState: true, clearKeychain: true }
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
 - openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
 
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - extendedWaitUntil: { visible: "Kalan hak|Merhaba", timeout: 20000 }
 - waitForAnimationToEnd: { timeout: 1500 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-home"
@@ -13,20 +33,9 @@ name: Fizyoflow member marketing screenshots
 - extendedWaitUntil: { visible: "Takvim", timeout: 20000 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-calendar"
 
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fbookings"
-- extendedWaitUntil: { visible: "Yaklaşan", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-bookings"
-- tapOn: { text: ".*Onaylandı.*|.*Yaklaşan ders.*", index: 0, optional: true }
-- waitForAnimationToEnd: { timeout: 1000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-booking-detail"
-
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
 - extendedWaitUntil: { visible: "Paket ve Geçmiş|Paketlerim", timeout: 20000 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-package"
-
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fattendance"
-- extendedWaitUntil: { visible: "Katılım geçmişi", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-attendance"
 
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fgroup-classes"
 - extendedWaitUntil: { visible: "Grup dersleri", timeout: 20000 }
@@ -35,22 +44,9 @@ name: Fizyoflow member marketing screenshots
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fmeasurements"
 - extendedWaitUntil: { visible: "Ölçümlerim", timeout: 20000 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-measurements"
-- tapOn: { id: "member-measurements-tab-HISTORY", optional: true }
-- waitForAnimationToEnd: { timeout: 1000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-measurement-history"
 
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fprogress"
 - extendedWaitUntil: { visible: "Gelişim", timeout: 20000 }
+- extendedWaitUntil: { visible: "18", timeout: 20000 }
+- waitForAnimationToEnd: { timeout: 1500 }
 - takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-progress"
-
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fqr%2Ffullscreen"
-- extendedWaitUntil: { visible: "QR kodum", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-qr"
-
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Freferrals"
-- extendedWaitUntil: { visible: "Referanslar", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-referrals"
-
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fprofile"
-- extendedWaitUntil: { visible: "Profil", timeout: 20000 }
-- takeScreenshot: "/Users/oguzhanuyar/Desktop/fitnes-saas/apps/web/public/product-screens/member-profile"

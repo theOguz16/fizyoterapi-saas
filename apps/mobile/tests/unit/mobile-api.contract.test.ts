@@ -12,6 +12,7 @@ import {
   getSalonDayOptionsApi,
   getAdminPackagesApi,
   getMemberMeasurementsApi,
+  getMemberAttendanceApi,
   getMemberPackagesApi,
   getMemberPaymentRequestsApi,
   getMemberReferralsApi,
@@ -32,17 +33,20 @@ import { getTrainerTodayApi as domainGetTrainerTodayApi } from "@/lib/api/traine
 import { getAdminPackagesApi as domainGetAdminPackagesApi } from "@/lib/api/admin";
 import { syncAdminClinicSubscriptionApi as domainSyncAdminClinicSubscriptionApi } from "@/lib/api/subscription";
 
-const { httpRequest } = vi.hoisted(() => ({
+const { httpRequest, httpRequestEnvelope } = vi.hoisted(() => ({
   httpRequest: vi.fn(),
+  httpRequestEnvelope: vi.fn(),
 }));
 
 vi.mock("@/lib/http-client", () => ({
   httpRequest,
+  httpRequestEnvelope,
 }));
 
 describe("mobile api contract helpers", () => {
   beforeEach(() => {
     httpRequest.mockReset();
+    httpRequestEnvelope.mockReset();
   });
 
   afterEach(() => {
@@ -83,6 +87,22 @@ describe("mobile api contract helpers", () => {
         muscle_kg: 31,
       },
     });
+  });
+
+  it("preserves the full member attendance response for summary screens", async () => {
+    const response = {
+      data: [{ id: "attendance-1" }],
+      summary: {
+        total_attendance_count: 2,
+        group_attendance_count: 1,
+        remaining_total_credits: 18,
+      },
+      package_balances: [{ user_package_id: "member-package-1", remaining_credits: 12 }],
+    };
+    httpRequestEnvelope.mockResolvedValueOnce(response);
+
+    await expect(getMemberAttendanceApi()).resolves.toEqual(response);
+    expect(httpRequestEnvelope).toHaveBeenCalledWith("/member/attendance/history");
   });
 
   it("keeps production login on auth endpoint and sends dev e2e login to internal helper", async () => {

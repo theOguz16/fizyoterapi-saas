@@ -362,23 +362,6 @@
   color: var(--product-green);
 }
 
-.product-proof {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.product-proof span {
-  border: 1px solid rgba(111, 146, 116, 0.17);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #496c4f;
-  padding: 8px 11px;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
 .operation-list {
   width: min(100%, 470px);
   display: grid;
@@ -1283,63 +1266,6 @@
 .screen-caption p { margin: 0; }
 .screen-caption h3 { font-size: 1rem; }
 .screen-caption p { margin-top: 5px; color: var(--product-muted); font-size: 0.82rem; line-height: 1.4; }
-
-.featured-screens {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin: 0 0 34px;
-}
-
-.featured-screen-card {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-  border: 1px solid rgba(111, 146, 116, 0.16);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(238, 246, 240, 0.58)),
-    #fff;
-  padding: 20px;
-  box-shadow: 0 28px 60px -54px rgba(49, 84, 61, 0.78);
-}
-
-.featured-screen-phone {
-  width: 92px;
-  aspect-ratio: 1206 / 2622;
-  justify-self: center;
-  border-width: 4px;
-  border-radius: 24px;
-  box-shadow: 0 22px 46px -32px rgba(31, 41, 55, 0.68);
-}
-
-.featured-screen-phone > img {
-  border-radius: 20px;
-}
-
-.featured-screen-card span {
-  color: var(--product-green);
-  font-size: 0.7rem;
-  font-weight: 950;
-  text-transform: uppercase;
-}
-
-.featured-screen-card h3 {
-  margin: 8px 0 0;
-  color: var(--product-green-deep);
-  font-size: 1rem;
-  line-height: 1.22;
-}
-
-.featured-screen-card p {
-  margin: 7px 0 0;
-  color: var(--product-muted);
-  font-size: 0.84rem;
-  font-weight: 650;
-  line-height: 1.45;
-}
 
 .operational-flow-section {
   background: #fff;
@@ -2877,7 +2803,6 @@
   .product-lead { margin-inline: auto; }
   .product-actions,
   .product-store-actions,
-  .product-proof,
   .product-module-strip { justify-content: center; }
   .operation-list { margin-inline: auto; text-align: left; }
   .product-signal { text-align: left; }
@@ -2892,9 +2817,6 @@
   }
   .comparison-grid {
     gap: 28px;
-  }
-  .featured-screens {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .operational-flow {
     grid-template-columns: 150px 150px 150px;
@@ -2983,17 +2905,6 @@
   }
   .product-module-strip::-webkit-scrollbar { display: none; }
   .product-module-strip span { flex: 0 0 auto; text-align: center; }
-  .product-proof {
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    margin: 14px -14px 0;
-    padding: 0 14px 4px;
-    scrollbar-width: none;
-  }
-  .product-proof::-webkit-scrollbar { display: none; }
-  .product-proof span { flex: 0 0 auto; }
   .operation-list { display: none; }
   .product-signal { display: none; }
   .iphone-note { min-width: 160px; }
@@ -3028,28 +2939,6 @@
     scroll-padding-inline: 16px;
   }
   .role-screen-row .screen-item { width: auto; }
-  .featured-screens {
-    display: flex;
-    overflow-x: auto;
-    gap: 14px;
-    margin-inline: -14px;
-    padding: 0 14px 8px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-  }
-  .featured-screens::-webkit-scrollbar { display: none; }
-  .featured-screen-card {
-    flex: 0 0 252px;
-    grid-template-columns: 74px minmax(0, 1fr);
-    scroll-snap-align: start;
-  }
-  .featured-screen-phone {
-    width: 74px;
-    border-radius: 20px;
-  }
-  .featured-screen-phone > img {
-    border-radius: 16px;
-  }
   .operational-flow {
     grid-template-columns: 1fr;
     gap: 18px;

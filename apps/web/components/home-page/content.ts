@@ -9,7 +9,11 @@ export const screenGroups = [
     summary: "Klinik sahibi seans, paket, ödeme ve uzman yoğunluğunu aynı merkezden takip eder.",
     screens: [
       { label: "Yönetim merkezi", detail: "Günün seans, danışan ve operasyon özeti", image: "/product-screens/admin-dashboard.png" },
+      { label: "Salon takvimi", detail: "Bireysel seanslar ve grup dersleri tek akışta", image: "/product-screens/admin-calendar.png" },
+      { label: "Kişi yönetimi", detail: "Danışan ve uzman kayıtlarını filtreleyerek takip", image: "/product-screens/admin-members.png" },
+      { label: "Danışan detayı", detail: "Paket, katılım ve ölçüm geçmişine toplu bakış", image: "/product-screens/admin-member-detail.png" },
       { label: "Paket yönetimi", detail: "Hizmet, fiyat, hak ve uzman eşleştirmesi", image: "/product-screens/admin-packages.png" },
+      { label: "Gelir detayı", detail: "Gerçekleşen gelir, dönem dağılımı ve ay sonu tahmini", image: "/product-screens/admin-revenue-detail.png" },
     ],
   },
   {
@@ -17,8 +21,12 @@ export const screenGroups = [
     fallbackImage: "/product-screens/trainer-home.png",
     summary: "Uzman günlük seanslarını, danışan bilgisini ve check-in işlemini cebinden yürütür.",
     screens: [
-      { label: "Günlük ana ekran", detail: "Bugünkü seanslar ve hızlı işlemler", image: "/product-screens/trainer-home.png" },
+      { label: "Bugünkü seanslar", detail: "Günün seansları, bekleyen işlemler ve hızlı aksiyonlar", image: "/product-screens/trainer-home.png" },
+      { label: "Uzman takvimi", detail: "Seans programı ve ders yoğunluğunun günlük görünümü", image: "/product-screens/trainer-calendar.png" },
+      { label: "Danışanlarım", detail: "Aktif danışanları arama, filtreleme ve hızlı erişim", image: "/product-screens/trainer-clients.png" },
       { label: "Check-in", detail: "QR veya kodla katılım ve hak düşümü", image: "/product-screens/trainer-checkin.png" },
+      { label: "Grup dersleri", detail: "Ders programı, kapasite ve katılımcı akışı", image: "/product-screens/trainer-group-classes.png" },
+      { label: "Danışan detayı", detail: "Aktif paket, kalan hak, katılım ve ölçüm bilgilerine toplu bakış", image: "/product-screens/trainer-client-detail.png" },
     ],
   },
   {
@@ -27,7 +35,11 @@ export const screenGroups = [
     summary: "Danışan yaklaşan seansını, kalan hakkını ve paket geçmişini uygulamada takip eder.",
     screens: [
       { label: "Danışan ana ekranı", detail: "Sonraki seans, kalan hak ve günlük özet", image: "/product-screens/member-home.png" },
+      { label: "Ders takvimi", detail: "Yaklaşan bireysel seans ve grup derslerini görüntüleme", image: "/product-screens/member-calendar.png" },
       { label: "Paket ve haklar", detail: "Kalan kullanım, geçmiş ve ödeme bilgisi", image: "/product-screens/member-package.png" },
+      { label: "Ölçümlerim", detail: "Vücut ölçümlerini ve kayıt geçmişini izleme", image: "/product-screens/member-measurements.png" },
+      { label: "Gelişim", detail: "Katılım, paket kullanımı ve ölçüm trendini birlikte takip", image: "/product-screens/member-progress.png" },
+      { label: "Grup dersleri", detail: "Uygun dersleri, kontenjanı ve katılım durumunu görme", image: "/product-screens/member-group-classes.png" },
     ],
   },
 ] as const;
@@ -51,12 +63,6 @@ export const comparisonItems = [
   { scattered: "Dekont ve manuel kontrol", flow: "Klinik onay akışı", result: "Ödeme ve paket talebi klinik sahibinin karar ekranına düşer." },
   { scattered: "Uzmana ayrı bilgi verme", flow: "Günlük uzman ekranı", result: "Uzman sıradaki seansı ve danışan bilgisini görür." },
   { scattered: "Danışanın tekrar tekrar yazması", flow: "Mobil danışan görünümü", result: "Yaklaşan seans, kalan hak ve ölçüm bilgisi uygulamadadır." },
-] as const;
-
-export const featuredScreens = [
-  { role: "Klinik", title: "Operasyon görünümü", text: "Günlük seans, uzman yoğunluğu ve paket durumu tek yönetim ekranında okunur.", image: "/product-screens/admin-dashboard.png", fallbackImage: "/product-screens/admin-dashboard.png" },
-  { role: "Uzman", title: "Sahada danışan dosyası", text: "Uzman aktif paket, katılım ve ölçüm bilgisini seans öncesinde görür.", image: "/product-screens/trainer-client-detail.png", fallbackImage: "/product-screens/trainer-home.png" },
-  { role: "Danışan", title: "Kalan hak ve ölçüm", text: "Danışan yaklaşan seansını, paket hakkını ve gelişim kayıtlarını mobilde takip eder.", image: "/product-screens/member-package.png", fallbackImage: "/product-screens/member-home.png" },
 ] as const;
 
 export const faqItems = [
