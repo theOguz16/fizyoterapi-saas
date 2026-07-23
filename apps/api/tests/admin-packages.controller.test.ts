@@ -145,6 +145,7 @@ describe("admin packages controller", () => {
       body: {
         title: "QA Smoke Paket",
         total_credits: 6,
+        weekly_class_hours: 3,
         duration_days: 21,
         service_key: "REFORMER",
         display_price: 4200,
@@ -166,6 +167,7 @@ describe("admin packages controller", () => {
         title: "QA Smoke Paket",
         total_credits: 6,
         duration_days: 21,
+        rules: expect.objectContaining({ weekly_class_hours: 3 }),
         capacity: 1,
         display_price: 4200,
         is_active: true,
@@ -185,6 +187,48 @@ describe("admin packages controller", () => {
         target_id: "pkg-2",
       })
     );
+  });
+
+  it("rejects weekly lesson rules outside 1-7 and above package credits", async () => {
+    const { derivePackageFromCatalog } = await import("../services/package.service");
+    vi.mocked(derivePackageFromCatalog).mockReturnValue({
+      catalogItem: { active: true, title: "Reformer", code: "REFORMER" },
+      packageType: "LESSON",
+      capacity: 1,
+      rules: {},
+      displayPrice: 1000,
+    } as any);
+    vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
+      const name = entity?.name || "";
+      if (name.includes("SalonProfile")) {
+        return { findOne: vi.fn().mockResolvedValue({ services: [{ active: true, code: "REFORMER" }] }) } as any;
+      }
+      return { save: vi.fn() } as any;
+    });
+
+    const baseRequest = {
+      tenantId: "tenant-1",
+      body: {
+        title: "Kural Testi",
+        total_credits: 4,
+        duration_days: 30,
+        service_key: "REFORMER",
+        display_price: 1000,
+      },
+    } as any;
+
+    await expect(
+      AdminPackagesController.create(
+        { ...baseRequest, body: { ...baseRequest.body, weekly_class_hours: 8 } },
+        createMockResponse() as any
+      )
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", statusCode: 400 });
+    await expect(
+      AdminPackagesController.create(
+        { ...baseRequest, body: { ...baseRequest.body, weekly_class_hours: 5 } },
+        createMockResponse() as any
+      )
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR", statusCode: 400 });
   });
 
   it("archives packages instead of hard deleting them", async () => {

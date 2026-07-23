@@ -168,7 +168,12 @@ export default function MemberPlanScreen() {
           {targetOptions.map((option) => {
             const active = weeklyTarget === option;
             return (
-              <Pressable key={option} onPress={() => targetMutation.mutate(option)} style={[styles.targetChip, active ? styles.targetChipActive : null]}>
+              <Pressable
+                key={option}
+                disabled={targetMutation.isPending}
+                onPress={() => targetMutation.mutate(option)}
+                style={[styles.targetChip, active ? styles.targetChipActive : null, targetMutation.isPending ? styles.targetChipDisabled : null]}
+              >
                 <Text style={[styles.targetLabel, active ? styles.targetLabelActive : null]}>{option} ders</Text>
               </Pressable>
             );
@@ -225,6 +230,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: tokens.spacing.sm,
+  },
+  targetChipDisabled: {
+    opacity: 0.6,
   },
   targetChip: {
     borderWidth: 1,

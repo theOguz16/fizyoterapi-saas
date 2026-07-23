@@ -109,7 +109,7 @@ export default function AdminEntryScanScreen() {
   }, [mode, cameraStatus]);
 
   return (
-    <AppShell title="Salon giriş tarama" subtitle="Resepsiyon noktasında üye girişini kaydet veya eğitmen kimliğini doğrula." icon="scan" showBackButton>
+    <AppShell testID="admin-entry-scan-screen" title="Salon giriş tarama" subtitle="Resepsiyon noktasında üye girişini kaydet veya eğitmen kimliğini doğrula." icon="scan" showBackButton>
       <View style={styles.metricsRow}>
         <MetricCard label="Mod" value={mode === "camera" ? "Kamera" : "Manuel"} hint="Anlık seçim" icon="scan" />
         <MetricCard label="Kural" value="Tek giriş" hint="Aynı üye için kayıt kontrolü" icon="shield" />
@@ -145,13 +145,13 @@ export default function AdminEntryScanScreen() {
       ) : (
         <SurfaceCard>
           <SectionTitle title="Manuel giriş" subtitle="QR metni, telefon, e-posta veya kullanıcı kimliği ile giriş/doğrulama yap." />
-          <FormField label="Kod" value={manualCode} onChangeText={setManualCode} placeholder="QR kodu, telefon veya e-posta" returnKeyType="done" onSubmitEditing={() => mutation.mutate({ manual_code: manualCode.trim() })} />
-          <ActionButton label="Salon girişini kaydet" icon="scan" onPress={() => mutation.mutate({ manual_code: manualCode.trim() })} loading={mutation.isPending} disabled={!manualCode.trim()} />
+          <FormField inputId="admin-entry-scan-manual-code-input" label="Kod" value={manualCode} onChangeText={setManualCode} placeholder="QR kodu, telefon veya e-posta" returnKeyType="done" onSubmitEditing={() => mutation.mutate({ manual_code: manualCode.trim() })} />
+          <ActionButton testID="admin-entry-scan-submit" label="Salon girişini kaydet" icon="scan" onPress={() => mutation.mutate({ manual_code: manualCode.trim() })} loading={mutation.isPending} disabled={!manualCode.trim()} />
         </SurfaceCard>
       )}
 
       {resultMessage ? (
-      <SurfaceCard tone={mutation.isError ? "warning" : "success"}>
+      <SurfaceCard testID="admin-entry-scan-result" tone={mutation.isError ? "warning" : "success"}>
         <Text style={styles.message}>{resultMessage}</Text>
       </SurfaceCard>
     ) : null}

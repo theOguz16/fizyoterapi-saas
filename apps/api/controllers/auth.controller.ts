@@ -87,6 +87,14 @@ export class AuthController {
     if (String(password).length < 8) {
       throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
     }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPhone = String(phone).replace(/\D+/g, "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir e-posta adresi girilmelidir");
+    }
+    if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir telefon numarası girilmelidir");
+    }
     if (account_type && account_type !== "CLINIC_ADMIN") {
       throw new AppError(
         "SELF_SIGNUP_ROLE_RESTRICTED",
@@ -97,7 +105,6 @@ export class AuthController {
     const legalConsents = AuthController.normalizeLegalConsents(legal_consent, "MOBILE_CLINIC_OWNER_REGISTER");
 
     const accountRepo = AppDataSource.getRepository(Account);
-    const normalizedEmail = email.trim().toLowerCase();
     const existing = await accountRepo.findOne({ where: { email: normalizedEmail } });
     if (existing) {
       throw new AppError("ACCOUNT_EXISTS", 409, "Bu e-posta ile kayıtlı bir hesap zaten var");
@@ -109,7 +116,7 @@ export class AuthController {
       password_hash,
       first_name: first_name.trim(),
       last_name: last_name.trim(),
-      phone: phone.replace(/\D+/g, ""),
+      phone: normalizedPhone,
       global_role_default: UserRole.ADMIN,
       onboarding_profile: AuthController.normalizeOnboardingProfile(onboarding_profile),
       legal_consents: legalConsents,
@@ -134,6 +141,7 @@ export class AuthController {
         sub: account.id,
         role,
         accountId: account.id,
+        authVersion: Number(account.auth_version || 1),
         loginScope: "ACCOUNT",
       }),
     };
@@ -179,6 +187,12 @@ export class AuthController {
     }
     if (String(password).length < 8) {
       throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir e-posta adresi girilmelidir");
+    }
+    if (normalizedPhone.length < 10 || normalizedPhone.length > 15) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir telefon numarası girilmelidir");
     }
     const legalConsents = AuthController.normalizeLegalConsents(legal_consent, "MOBILE_CLINIC_MEMBER_REGISTER");
 
@@ -229,6 +243,7 @@ export class AuthController {
         sub: account.id,
         role,
         accountId: account.id,
+        authVersion: Number(account.auth_version || 1),
         loginScope: "ACCOUNT",
       }),
     };
@@ -390,6 +405,7 @@ export class AuthController {
           tenantId: activeMembership?.tenant_id || null,
           role,
           accountId: account.id,
+          authVersion: Number(account.auth_version || 1),
           linkedUserId: activeMembership?.user_id || null,
           membershipId: activeMembership?.id || null,
           loginScope: "ACCOUNT",
@@ -652,6 +668,7 @@ export class AuthController {
         tenantId: membership?.tenant_id || null,
         role: requestedRole,
         accountId: account.id,
+        authVersion: Number(account.auth_version || 1),
         linkedUserId: membership?.user_id || null,
         membershipId: membership?.id || null,
         loginScope: "ACCOUNT",
@@ -905,6 +922,7 @@ export class AuthController {
         tenantId: tenant.id,
         role: user.role,
         accountId: account.id,
+        authVersion: Number(account.auth_version || 1),
         linkedUserId: user.id,
         membershipId: membership.id,
         loginScope: "ACCOUNT",

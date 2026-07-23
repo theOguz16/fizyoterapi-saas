@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addMobileBreadcrumb, captureMobileException } from "@/lib/sentry";
 import { shouldPersistQueryKey } from "@/lib/query-cache-policy";
 import { normalizeInvalidateTargets, type QueryInvalidateInput } from "@/lib/query-invalidation";
+import { showErrorAlert } from "@/lib/user-feedback";
 
 const QUERY_CACHE_KEY = "fizyoflow.query_cache.v1";
 const QUERY_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
@@ -34,12 +35,15 @@ export function MobileQueryProvider({ children }: { children: QueryClientProvide
           const scope = String(normalizeInvalidateTargets(invalidates)[0]?.queryKey?.[0] || "mutation");
           addMobileBreadcrumb({ category: "api", message: `mutation_failed:${scope}`, level: "error" });
           captureMobileException(error, { mutation_scope: scope });
+          if (typeof mutation.options.onError !== "function") {
+            showErrorAlert("İşlem tamamlanamadı", error, "İşlem tamamlanamadı. Lütfen tekrar deneyin.");
+          }
         },
-        onSuccess: async (_data, _variables, _context, mutation) => {
+        onSuccess: (_data, _variables, _context, mutation) => {
           const invalidates = normalizeInvalidateTargets(mutation.meta?.invalidates as QueryInvalidateInput | undefined);
 
           if (invalidates?.length) {
-            await Promise.all(
+            void Promise.all(
               invalidates.map((target) =>
                 queryClient.invalidateQueries({
                   queryKey: target.queryKey,
@@ -47,11 +51,17 @@ export function MobileQueryProvider({ children }: { children: QueryClientProvide
                   refetchType: "all",
                 })
               )
-            );
+            ).catch((error) => {
+              addMobileBreadcrumb({ category: "api", message: "mutation_invalidation_failed", level: "error" });
+              captureMobileException(error, { mutation_scope: "invalidation" });
+            });
             return;
           }
 
-          await queryClient.invalidateQueries();
+          void queryClient.invalidateQueries().catch((error) => {
+            addMobileBreadcrumb({ category: "api", message: "mutation_invalidation_failed", level: "error" });
+            captureMobileException(error, { mutation_scope: "invalidation" });
+          });
         },
       }),
 

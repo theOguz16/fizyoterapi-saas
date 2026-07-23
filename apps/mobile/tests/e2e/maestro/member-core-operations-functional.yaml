@@ -1,0 +1,250 @@
+appId: com.fizyoflow.mobile
+---
+# Gerçek danışan girişi.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member@gmail.com"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "member123"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- runFlow:
+    when:
+      visible:
+        id: "notification-permission-skip"
+    commands:
+      - tapOn:
+          id: "notification-permission-skip"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 30000
+
+# Paket ve toplam kalan hak gerçek API verisinden okunur.
+- scrollUntilVisible:
+    element:
+      id: "member-home-package"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-home-package"
+- extendedWaitUntil:
+    visible:
+      id: "member-package-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-package-total-remaining-18"
+- tapOn:
+    id: "member-tab-home"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 15000
+
+# Yaklaşan gerçek randevu detaydan iptal edilir ve API sonrası durum yenilenir.
+- scrollUntilVisible:
+    element:
+      id: "member-home-next-booking"
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-home-next-booking"
+- extendedWaitUntil:
+    visible:
+      id: "member-booking-detail-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-booking-status-pending"
+- scrollUntilVisible:
+    element:
+      id: "member-booking-cancel-button"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-booking-cancel-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-booking-status-canceled"
+    timeout: 20000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 15000
+
+# Aynı grup dersine gerçek katılım talebi gönderilir ve geri çekilir.
+- scrollUntilVisible:
+    element:
+      id: "member-home-group-classes-all"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-home-group-classes-all"
+- extendedWaitUntil:
+    visible:
+      id: "member-group-classes-screen"
+    timeout: 20000
+- assertVisible: "Katılım talebi gönder"
+- tapOn:
+    id: "member-group-class-action-0"
+- extendedWaitUntil:
+    visible: "Kaydı kaldır"
+    timeout: 20000
+- assertVisible: "Onay bekliyor"
+- tapOn:
+    id: "member-group-class-action-0"
+- extendedWaitUntil:
+    visible: "Katılım talebi gönder"
+    timeout: 20000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 15000
+
+# Kampanya ekranı profil içinden açılır ve gerçek salon verisi gösterilir.
+- scrollUntilVisible:
+    element:
+      id: "member-home-profile-button"
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-home-profile-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-profile-open-campaigns"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-profile-open-campaigns"
+- extendedWaitUntil:
+    visible:
+      id: "member-campaigns-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-campaigns-referral-1"
+- assertVisible:
+    id: "member-campaigns-loyalty-0"
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 15000
+
+# Bildirim tercihleri sunucuya yazılır.
+- scrollUntilVisible:
+    element:
+      id: "member-profile-open-notification-settings"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-profile-open-notification-settings"
+- extendedWaitUntil:
+    visible:
+      id: "notification-settings-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible:
+        id: "notification-edit-without-permission"
+    commands:
+      - tapOn:
+          id: "notification-edit-without-permission"
+- scrollUntilVisible:
+    element:
+      id: "notification-pref-campaign-alerts"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "notification-pref-campaign-alerts"
+- extendedWaitUntil:
+    visible:
+      id: "notification-pref-campaign-alerts"
+      checked: false
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "notification-pref-weekly-summary"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "notification-pref-weekly-summary"
+- extendedWaitUntil:
+    visible:
+      id: "notification-pref-weekly-summary"
+      checked: false
+    timeout: 15000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 15000
+
+# Vazgeç güvenliği ve ardından gerçek klinikten ayrılma API işlemi.
+- scrollUntilVisible:
+    element:
+      id: "member-profile-leave-salon"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-profile-leave-salon"
+- extendedWaitUntil:
+    visible:
+      id: "member-leave-salon-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-leave-salon-cancel"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-leave-salon-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-profile-leave-salon"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-profile-leave-salon"
+- tapOn:
+    id: "member-leave-salon-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "member-salons-screen"
+    timeout: 30000

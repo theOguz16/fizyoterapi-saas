@@ -240,7 +240,7 @@ export default function AdminRevenueDetailScreen() {
       }}
       showBackButton
     >
-      <ActionButton label="Filtreli rapor ve CSV" icon="earnings" variant="ghost" onPress={() => router.push("/(admin)/revenue-report" as never)} />
+      <ActionButton testID="admin-revenue-detail-open-report" label="Filtreli rapor ve CSV" icon="earnings" variant="ghost" onPress={() => router.push("/(admin)/revenue-report" as never)} />
       <SurfaceCard style={styles.heroCard} padding="hero">
         <View style={styles.heroRow}>
           <View style={styles.heroTextBlock}>

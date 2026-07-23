@@ -171,7 +171,7 @@ describe("Critical Scenario Set", () => {
     expect(result.memberPackageDiagnostics.m1.reason_codes).toContain("NO_SKILL_MATCH");
   });
 
-  it("accepts cookie token when bearer placeholder is sent", () => {
+  it("accepts cookie token when bearer placeholder is sent", async () => {
     const secret = "test-secret";
     process.env.JWT_SECRET = secret;
     const token = jwt.sign({ sub: "u1", tenantId: "t1", role: "ADMIN" }, secret);
@@ -186,12 +186,12 @@ describe("Critical Scenario Set", () => {
     };
     const next = vi.fn();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(req.auth?.sub).toBe("u1");
   });
 
-  it("falls back to cookie when bearer token is invalid", () => {
+  it("falls back to cookie when bearer token is invalid", async () => {
     const secret = "test-secret-2";
     process.env.JWT_SECRET = secret;
     const token = jwt.sign({ sub: "u2", tenantId: "t2", role: "TRAINER" }, secret);
@@ -206,7 +206,7 @@ describe("Critical Scenario Set", () => {
     };
     const next = vi.fn();
 
-    authMiddleware(req, res, next);
+    await authMiddleware(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(req.auth?.sub).toBe("u2");
   });

@@ -14,7 +14,11 @@ describe("incoming mobile links", () => {
 
   it("only exposes test routes when the E2E build flag is enabled", () => {
     expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-reset")).toBeNull();
+    expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-connectivity?status=offline")).toBeNull();
     expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-reset", { allowE2E: true })).toBe("/e2e-reset");
+    expect(resolveInternalHrefFromIncomingUrl("fizyoflow://e2e-connectivity?status=offline", { allowE2E: true })).toBe(
+      "/e2e-connectivity?status=offline"
+    );
   });
 
   it("classifies internal routes, salon links and invalid input for the root hook", () => {

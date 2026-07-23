@@ -16,6 +16,30 @@ describe("trainer calendar helpers", () => {
     expect(requests[0].assignable_slots).toHaveLength(2);
   });
 
+  it("keeps automatic scheduling preferences available as data without treating them as action requests", () => {
+    const rows = [
+      {
+        id: "automatic",
+        member_id: "member-1",
+        starts_at: "2026-07-20T09:00:00.000Z",
+        action_required: false,
+        availability_kind: "AUTOMATIC_SCHEDULING_PREFERENCE" as const,
+      },
+      {
+        id: "manual",
+        member_id: "member-2",
+        starts_at: "2026-07-21T09:00:00.000Z",
+        action_required: true,
+        availability_kind: "MANUAL_PLACEMENT_REQUEST" as const,
+      },
+    ];
+
+    expect(buildTrainerRequests(rows)).toHaveLength(2);
+    expect(buildTrainerRequests(rows.filter((row) => row.action_required !== false))).toMatchObject([
+      { member_id: "member-2" },
+    ]);
+  });
+
   it("excludes placement slots that conflict with an existing booking", () => {
     const request = buildTrainerRequests([
       { id: "1", member_id: "member-1", starts_at: "2026-07-20T09:00:00.000Z", ends_at: "2026-07-20T10:00:00.000Z" },

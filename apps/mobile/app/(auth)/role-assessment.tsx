@@ -38,12 +38,17 @@ export default function RoleAssessmentScreen() {
     if (!selectedPersoma) setSelectedPersoma("ADMIN");
   }, [selectedPersoma, setSelectedPersoma]);
 
-  async function finishAdminFlow(nextProfile = signupOnboarding) {
-    await setStoredSignupOnboardingProfile("ADMIN", nextProfile);
-    await setSignupOnboardingRole("ADMIN");
-    await setSignupOnboardingCompleted(true);
+  function finishAdminFlow(nextProfile = signupOnboarding) {
     advanceSignupFlow();
     router.replace("/(auth)/register" as never);
+
+    // Yerel tercih yazımı kayıt ekranına geçişi engellememeli. Özellikle iOS'ta
+    // keychain temizliğinden sonraki ilk SecureStore yazımı gecikebilir.
+    void Promise.allSettled([
+      setStoredSignupOnboardingProfile("ADMIN", nextProfile),
+      setSignupOnboardingRole("ADMIN"),
+      setSignupOnboardingCompleted(true),
+    ]);
   }
 
   function handleSelect(value: string) {
@@ -69,9 +74,8 @@ export default function RoleAssessmentScreen() {
 
     setSelectedPersoma(nextPersona);
     setSignupOnboarding(resetProfile);
-    void finishAdminFlow(resetProfile).finally(() => {
-      isAdvancing.current = false;
-    });
+    finishAdminFlow(resetProfile);
+    isAdvancing.current = false;
   }
 
   function handleBack() {

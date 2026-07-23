@@ -114,6 +114,7 @@ export default function TrainerEarningsScreen() {
 
   return (
     <AppShell
+      testID="trainer-earnings-screen"
       title="Kazançlarım"
       subtitle="Kısa dönem özetini üstte görün, uzun vadeli performansı son 12 ay ve son 5 yıl üzerinden takip edin."
       icon="earnings"

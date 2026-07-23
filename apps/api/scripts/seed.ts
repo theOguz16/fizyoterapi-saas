@@ -33,8 +33,17 @@ import { Account } from "../entities/account.entity";
 import { MembershipPaymentStatus, SalonMembership, SalonMembershipStatus } from "../entities/salon-membership.entity";
 import { SalonApplication } from "../entities/salon-application.entity";
 import { hashPassword } from "../services/password.service";
+import { PasswordResetToken } from "../entities/password-reset-token.entity";
+import crypto from "crypto";
 
 const DEMO_SLUG = "demo-salon";
+const E2E_CLINIC_OWNER_EMAIL = "clinic.owner.e2e@demo.local";
+const E2E_CLINIC_OWNER_PASSWORD = "clinic-owner123";
+const E2E_INTAKE_MEMBER_EMAIL = "member.intake.e2e@demo.local";
+const E2E_INTAKE_MEMBER_PASSWORD = "member-intake123";
+const E2E_PASSWORD_RESET_EMAIL = "password.reset.e2e@demo.local";
+const E2E_PASSWORD_RESET_PASSWORD = "password-old123";
+const E2E_PASSWORD_RESET_TOKEN = "fizyoflow-e2e-password-reset-token-2026";
 const EXTRA_SALONS = [
   {
     slug: "fizyoflow-kadikoy",
@@ -251,7 +260,7 @@ async function createSalonProfile(
             reward_type: "GROUP_CLASS_CREDIT",
             reward_value: 1,
             reward_label: "1 Grup Dersi Hediyesi",
-            is_active: false,
+            is_active: true,
           },
         ],
         loyalty_campaigns: [],
@@ -368,6 +377,62 @@ async function createAccountAndMembership(tenantId: string, user: User, role: Us
     is_active_context: true,
   });
   await membershipRepo.save(membership);
+}
+
+async function createClinicActivationE2eAccount() {
+  const repo = AppDataSource.getRepository(Account);
+  const passwordHash = await hashPassword(E2E_CLINIC_OWNER_PASSWORD);
+  let account = await repo.findOne({ where: { email: E2E_CLINIC_OWNER_EMAIL } });
+
+  if (!account) {
+    account = repo.create({ email: E2E_CLINIC_OWNER_EMAIL });
+  }
+
+  account.password_hash = passwordHash;
+  account.first_name = "Klinik";
+  account.last_name = "E2E";
+  account.phone = "5550099009";
+  account.global_role_default = UserRole.ADMIN;
+  account.is_active = true;
+  await repo.save(account);
+}
+
+async function createMemberIntakeE2eAccount() {
+  const repo = AppDataSource.getRepository(Account);
+  const passwordHash = await hashPassword(E2E_INTAKE_MEMBER_PASSWORD);
+  let account = await repo.findOne({ where: { email: E2E_INTAKE_MEMBER_EMAIL } });
+
+  if (!account) account = repo.create({ email: E2E_INTAKE_MEMBER_EMAIL });
+  account.password_hash = passwordHash;
+  account.first_name = "Danışan";
+  account.last_name = "E2E";
+  account.phone = "5550099010";
+  account.global_role_default = UserRole.MEMBER;
+  account.is_active = true;
+  await repo.save(account);
+}
+
+async function createPasswordResetE2eAccount() {
+  const accountRepo = AppDataSource.getRepository(Account);
+  const tokenRepo = AppDataSource.getRepository(PasswordResetToken);
+  let account = await accountRepo.findOne({ where: { email: E2E_PASSWORD_RESET_EMAIL } });
+  if (!account) account = accountRepo.create({ email: E2E_PASSWORD_RESET_EMAIL });
+  account.password_hash = await hashPassword(E2E_PASSWORD_RESET_PASSWORD);
+  account.first_name = "Şifre";
+  account.last_name = "E2E";
+  account.phone = "5550099011";
+  account.global_role_default = UserRole.ADMIN;
+  account.auth_version = 1;
+  account.is_active = true;
+  account = await accountRepo.save(account);
+
+  await tokenRepo.delete({ account_id: account.id });
+  await tokenRepo.save(tokenRepo.create({
+    account_id: account.id,
+    token_hash: crypto.createHash("sha256").update(E2E_PASSWORD_RESET_TOKEN).digest("hex"),
+    expires_at: plusDays(new Date(), 1),
+    used_at: null,
+  }));
 }
 
 async function createUser(tenantId: string, params: SeedUser) {
@@ -496,6 +561,13 @@ async function main() {
     createAccountAndMembership(tenant.id, member, UserRole.MEMBER),
     ...extraMembers.map((row) => createAccountAndMembership(tenant.id, row, UserRole.MEMBER)),
   ]);
+  // Bu hesap, tenant/membership olmadan bırakılır: kurulum akışını 1/4'ten
+  // gerçek form verisiyle başlatmak için kullanılan izole E2E kişisidir.
+  await createClinicActivationE2eAccount();
+  // Gerçek klinik keşfi ve başvuru akışları için üyeliği olmayan hesap.
+  await createMemberIntakeE2eAccount();
+  // Şifre sıfırlama UI'si tek kullanımlık kodu gerçek PostgreSQL kaydıyla tüketir.
+  await createPasswordResetE2eAccount();
 
   tenant.owner_account_id = (await AppDataSource.getRepository(Account).findOne({ where: { email: admin.email } }))?.id || null;
   tenant.review_status = TenantReviewStatus.PUBLISHED;
@@ -583,9 +655,22 @@ async function main() {
       is_public: true,
       rules: { lesson_category: LessonCategory.REFORMER, max_group_size: 2 },
     }),
+    packageRepo.create({
+      tenant_id: tenant.id,
+      title: "Duo Reformer Paketi",
+      type: PackageType.REFORMER,
+      total_credits: 8,
+      duration_days: 30,
+      capacity: 2,
+      display_price: "900.00",
+      is_active: true,
+      is_visible: true,
+      is_public: true,
+      rules: { lesson_category: LessonCategory.REFORMER, lesson_mode: "DUO", weekly_class_hours: 1, max_group_size: 2 },
+    }),
   ]);
 
-  const [group8, group4, ptPackage] = packages;
+  const [group8, group4, ptPackage, , , , duoPackage] = packages;
 
   await AppDataSource.getRepository(TrainerSkill).save([
     AppDataSource.getRepository(TrainerSkill).create({
@@ -598,6 +683,12 @@ async function main() {
       tenant_id: tenant.id,
       trainer_id: trainer.id,
       lesson_category: LessonCategory.PT,
+      is_active: true,
+    }),
+    AppDataSource.getRepository(TrainerSkill).create({
+      tenant_id: tenant.id,
+      trainer_id: trainer.id,
+      lesson_category: LessonCategory.REFORMER,
       is_active: true,
     }),
   ]);
@@ -619,6 +710,12 @@ async function main() {
       tenant_id: tenant.id,
       trainer_id: trainer.id,
       package_id: ptPackage.id,
+      is_active: true,
+    }),
+    AppDataSource.getRepository(PackageTrainerAssignment).create({
+      tenant_id: tenant.id,
+      trainer_id: trainer.id,
+      package_id: duoPackage.id,
       is_active: true,
     }),
   ]);
@@ -951,6 +1048,8 @@ async function main() {
   console.log("admin: oguzhanuyar531@gmail.com / admin123");
   console.log("trainer: elisauyar@gmail.com / trainer123");
   console.log("member: member@gmail.com / member123");
+  console.log(`clinic activation e2e: ${E2E_CLINIC_OWNER_EMAIL} / ${E2E_CLINIC_OWNER_PASSWORD}`);
+  console.log(`password reset e2e: ${E2E_PASSWORD_RESET_EMAIL} / ${E2E_PASSWORD_RESET_TOKEN}`);
   console.log("packages:");
   console.log("- Grup (4/8 kişi): 200 TL");
   console.log("- PT: 500 TL");

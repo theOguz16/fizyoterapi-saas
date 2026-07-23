@@ -16,6 +16,8 @@ export type AdminClinicSubscription = {
   has_trial_history: boolean;
   can_start_trial: boolean;
   can_purchase_in_app: boolean;
+  has_billing_issue?: boolean;
+  will_renew?: boolean;
   purchase_provider: "REVENUECAT";
   purchase_mode: "IN_APP_PURCHASE";
   recommended_action: SubscriptionRecommendedAction;

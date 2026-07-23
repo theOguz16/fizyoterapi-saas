@@ -121,8 +121,11 @@ export async function saveMemberAvailabilityApi(payload: {
   });
 }
 
-export async function cancelMemberBookingApi(id: string) {
-  return httpRequest<any>(`/member/bookings/${id}/cancel`, { method: "PATCH" });
+export async function cancelMemberBookingApi(id: string, confirmLateCancellation = false) {
+  return httpRequest<any>(`/member/bookings/${id}/cancel`, {
+    method: "PATCH",
+    body: { confirm_late_cancellation: confirmLateCancellation },
+  });
 }
 
 export async function getMemberReferralsApi() {

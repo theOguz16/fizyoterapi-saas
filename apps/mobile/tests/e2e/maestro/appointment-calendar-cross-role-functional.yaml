@@ -1,0 +1,264 @@
+appId: com.fizyoflow.mobile
+name: appointment-calendar-cross-role-functional
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+
+# Danışan mevcut PT paketini yenilerken paket, eğitmen ve altı uygun saat seçer.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
+- extendedWaitUntil:
+    visible:
+      id: "member-package-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-renew-package-pt-bireysel-ders"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "member-renew-package-pt-bireysel-ders"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "package-detail-continue"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "package-detail-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-trainer-selection-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "intake-trainer-select-0"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "intake-trainer-select-0"
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "time-day-filter-cuma"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "time-day-filter-cuma"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-1"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-1"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-2"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-2"
+- scrollUntilVisible:
+    element:
+      id: "time-day-filter-cumartesi"
+    direction: UP
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-day-filter-cumartesi"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-1"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-1"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-2"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-2"
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      text: "Onaya gönder"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+- tapOn: "Onaya gönder"
+- extendedWaitUntil:
+    visible:
+      id: "intake-approval-pending-screen"
+    timeout: 20000
+
+# Yönetici yalnız ödeme/üyelik onayını verir; ders saati seçmez.
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-open-payment"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "admin-approval-open-payment"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approval-detail-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-approve"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "admin-approval-approve"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000
+
+# Onaydan sonra otomatik oluşturulan ders eğitmen takviminde görünür.
+# Altı tercih iki farklı güne dağıtılır; otomatik dersler de farklı günlerde oluşur.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-calendar-screen"
+    timeout: 20000
+# Demo Member'ın otomatik planlama tercihleri talep sayılmaz; fixture'daki
+# diğer dört gerçek manuel talep görünmeye devam eder.
+- assertVisible: "Ders talepleri (4)"
+- tapOn:
+    id: "trainer-calendar-day-4"
+- swipe:
+    start: 50%, 70%
+    end: 50%, 22%
+    duration: 700
+- swipe:
+    start: 50%, 70%
+    end: 50%, 30%
+    duration: 500
+- tapOn:
+    id: "trainer-calendar-event-1"
+- scrollUntilVisible:
+    element:
+      id: "trainer-calendar-open-reschedule"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "trainer-calendar-open-reschedule"
+- extendedWaitUntil:
+    visible: "Alternatif saat otomatik seçilecek"
+    timeout: 10000
+- tapOn: "Öneriyi oluştur"
+- extendedWaitUntil:
+    visible: "Saat değişikliği gönderildi"
+    timeout: 15000
+- tapOn: "OK"
+
+# Danışan öneriyi kabul eder; eğitmen kaynaklı değişiklikte paket hakkı korunur.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "member-schedule-change-approve-0"
+    timeout: 20000
+- tapOn:
+    id: "member-schedule-change-approve-0"
+- extendedWaitUntil:
+    notVisible:
+      id: "member-schedule-change-request-0"
+    timeout: 15000
+
+# Güncellenen ders danışan takviminde açılır ve erken iptal açıklaması/onayı doğrulanır.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
+- extendedWaitUntil:
+    visible:
+      id: "member-calendar-screen"
+    timeout: 20000
+- tapOn:
+    id: "member-calendar-day-4"
+- scrollUntilVisible:
+    element:
+      id: "member-calendar-booking-1"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+- tapOn:
+    id: "member-calendar-booking-1"
+- scrollUntilVisible:
+    element:
+      text: "Ders detayına git"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+- tapOn: "Ders detayına git"
+- scrollUntilVisible:
+    element:
+      id: "member-booking-cancel-button"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+- assertVisible: "Şimdi iptal edersen ders hakkın korunur ve eğitmen ile klinik yöneticisine bildirim gönderilir."
+- tapOn:
+    id: "member-booking-cancel-button"
+- extendedWaitUntil:
+    visible: "Randevuyu iptal et"
+    timeout: 10000
+- assertVisible: "Ders hakkın korunacak. Eğitmen ve klinik yöneticisi iptal hakkında bilgilendirilecek."
+- tapOn: "İptal et"
+- extendedWaitUntil:
+    visible:
+      id: "member-booking-status-canceled"
+    timeout: 15000

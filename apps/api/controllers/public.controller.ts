@@ -22,6 +22,7 @@ import { isReservedPublicSlug } from "../constants/reserved-slugs";
 import { DemoLeadEmailService } from "../services/demo-lead-email.service";
 import { ProductDemoLead } from "../entities/product-demo-lead.entity";
 import { LoggerService } from "../services/logger.service";
+import { SlotValidationContractService } from "../services/slot-validation-contract.service";
 export class PublicController {
   private static readonly WEEKDAY_LABELS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"];
   private static readonly BLOCKING_BOOKING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED];
@@ -995,20 +996,35 @@ export class PublicController {
 
   private static buildDayOptions(businessHours?: Record<string, unknown>) {
     const now = new Date();
+    const timezone = String(businessHours?.timezone || "Europe/Istanbul");
     const workingDays = Array.isArray(businessHours?.working_days) ? (businessHours?.working_days as number[]) : [1, 2, 3, 4, 5, 6];
     const startMinutes = PublicController.toMinutes(String(businessHours?.start_time || "09:00"));
     const endMinutes = PublicController.toMinutes(String(businessHours?.end_time || "18:00"));
-    const startOfWeek = new Date(now);
-    const day = startOfWeek.getDay() || 7;
-    startOfWeek.setDate(startOfWeek.getDate() - day + 1);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const localDateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const readLocalDatePart = (type: string) =>
+      Number(localDateParts.find((part) => part.type === type)?.value || 0);
+    // This value is a timezone-independent calendar marker, not an instant.
+    // UTC getters/setters keep the clinic's calendar date stable even when the API host runs in UTC.
+    const localCalendarDate = new Date(Date.UTC(
+      readLocalDatePart("year"),
+      readLocalDatePart("month") - 1,
+      readLocalDatePart("day")
+    ));
+    const firstCalendarDay = new Date(localCalendarDate);
     const slotMinutes = Math.max(15, Math.min(180, Number(businessHours?.slot_minutes || 60)));
     const breakMinutes = Math.max(0, Math.min(60, Number(businessHours?.break_duration_minutes || 0)));
     const flowLabel = `${slotMinutes} dk ders`;
 
     const rows: Array<{ starts_at: string; ends_at: string; label: string; weekday: number; weekday_label: string; time_range_label: string }> = [];
-    for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-      const isoDay = dayIndex + 1;
+    for (let dayIndex = 0; dayIndex < 14; dayIndex += 1) {
+      const calendarDay = new Date(firstCalendarDay);
+      calendarDay.setUTCDate(firstCalendarDay.getUTCDate() + dayIndex);
+      const isoDay = calendarDay.getUTCDay() || 7;
       if (!workingDays.includes(isoDay)) continue;
       for (let minute = startMinutes; minute < endMinutes; minute += slotMinutes + breakMinutes) {
         const slotEndMinute = minute + slotMinutes;
@@ -1017,20 +1033,52 @@ export class PublicController {
         if (slotEndMinute > endMinutes) continue;
         if (minute < lunchEnd && slotEndMinute > lunchStart) continue;
 
-        const startsAt = new Date(startOfWeek);
-        startsAt.setDate(startOfWeek.getDate() + dayIndex);
-        startsAt.setHours(Math.floor(minute / 60), minute % 60, 0, 0);
-        const endsAt = new Date(startOfWeek);
-        endsAt.setDate(startOfWeek.getDate() + dayIndex);
-        endsAt.setHours(Math.floor(slotEndMinute / 60), slotEndMinute % 60, 0, 0);
-        const weekdayLabel = PublicController.WEEKDAY_LABELS[dayIndex] || `Gun ${isoDay}`;
+        const startsAt = SlotValidationContractService.zonedDateTimeToUtc(
+          {
+            year: calendarDay.getUTCFullYear(),
+            month: calendarDay.getUTCMonth() + 1,
+            day: calendarDay.getUTCDate(),
+            hour: Math.floor(minute / 60),
+            minute: minute % 60,
+          },
+          timezone
+        );
+        const endsAt = SlotValidationContractService.zonedDateTimeToUtc(
+          {
+            year: calendarDay.getFullYear(),
+            month: calendarDay.getMonth() + 1,
+            day: calendarDay.getDate(),
+            hour: Math.floor(slotEndMinute / 60),
+            minute: slotEndMinute % 60,
+          },
+          timezone
+        );
+        if (startsAt.getTime() <= now.getTime() + 3 * 60 * 60 * 1000) {
+          continue;
+        }
+        const weekdayLabel = PublicController.WEEKDAY_LABELS[isoDay - 1] || `Gun ${isoDay}`;
+        const calendarLabel = startsAt.toLocaleDateString("tr-TR", {
+          timeZone: timezone,
+          day: "2-digit",
+          month: "short",
+        });
+        const startsAtLabel = startsAt.toLocaleTimeString("tr-TR", {
+          timeZone: timezone,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const endsAtLabel = endsAt.toLocaleTimeString("tr-TR", {
+          timeZone: timezone,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
         rows.push({
           starts_at: startsAt.toISOString(),
           ends_at: endsAt.toISOString(),
-          label: `${weekdayLabel} • ${startsAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`,
+          label: `${weekdayLabel}, ${calendarLabel} • ${startsAtLabel}`,
           weekday: isoDay,
           weekday_label: weekdayLabel,
-          time_range_label: `${startsAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} - ${endsAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} • ${flowLabel}`,
+          time_range_label: `${calendarLabel} • ${startsAtLabel} - ${endsAtLabel} • ${flowLabel}`,
         });
       }
     }

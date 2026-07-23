@@ -37,7 +37,7 @@ export default function AdminRevenueReportScreen() {
   }
 
   return (
-    <AppShell title="Gelir raporu" subtitle="Tarih ve paket filtresiyle satışlarını karşılaştır, raporu CSV olarak paylaş." icon="earnings" showBackButton refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <AppShell testID="admin-revenue-report-screen" title="Gelir raporu" subtitle="Tarih ve paket filtresiyle satışlarını karşılaştır, raporu CSV olarak paylaş." icon="earnings" showBackButton refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       {query.isLoading && !query.data ? <QueryState mode="loading" title="Gelir raporu hazırlanıyor" /> : query.isError && !query.data ? <QueryState mode="error" onRetry={() => void query.refetch()} /> : null}
       <View style={styles.metrics}>
         <MetricCard label="Toplam gelir" value={formatCurrency(report?.total_revenue || 0)} hint={`${report?.sale_count || 0} satış`} icon="money" />
@@ -46,8 +46,8 @@ export default function AdminRevenueReportScreen() {
 
       <SurfaceCard>
         <Text style={styles.section}>Rapor aralığı</Text>
-        <FormField label="Başlangıç" value={from} onChangeText={setFrom} placeholder="2026-06-01" autoCapitalize="none" />
-        <FormField label="Bitiş" value={to} onChangeText={setTo} placeholder="2026-06-30" autoCapitalize="none" />
+        <FormField inputId="admin-revenue-report-from" label="Başlangıç" value={from} onChangeText={setFrom} placeholder="2026-06-01" autoCapitalize="none" />
+        <FormField inputId="admin-revenue-report-to" label="Bitiş" value={to} onChangeText={setTo} placeholder="2026-06-30" autoCapitalize="none" />
         <View style={styles.chips}>
           <SelectionChip label="Tüm paketler" active={!packageId} onPress={() => setPackageId("")} />
           {packages.map((row) => <SelectionChip key={row.package_id} label={row.package_title} active={packageId === row.package_id} onPress={() => setPackageId(row.package_id)} />)}
@@ -57,7 +57,7 @@ export default function AdminRevenueReportScreen() {
           <SelectionChip label="Tüm eğitmenler" active={!trainerId} onPress={() => setTrainerId("")} />
           {trainers.map((trainer: any) => <SelectionChip key={trainer.id} label={trainer.full_name || `${trainer.first_name || ""} ${trainer.last_name || ""}`.trim() || "Eğitmen"} active={trainerId === trainer.id} onPress={() => setTrainerId(String(trainer.id))} />)}
         </View>
-        <ActionButton label="CSV dışa aktar" icon="earnings" variant="ghost" onPress={() => void shareCsv()} />
+        <ActionButton testID="admin-revenue-report-export-csv" label="CSV dışa aktar" icon="earnings" variant="ghost" onPress={() => void shareCsv()} />
       </SurfaceCard>
 
       <SurfaceCard>

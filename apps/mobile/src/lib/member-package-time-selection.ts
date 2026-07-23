@@ -3,6 +3,31 @@ import type { MemberBookingDraft } from "@/providers/app-flow";
 type DraftPackageSelection = NonNullable<MemberBookingDraft["selectedPackages"]>[number];
 type PreferredSlot = MemberBookingDraft["preferredSlots"][number];
 
+export function weeklyPreferenceDayKey(value: string, timezone = "Europe/Istanbul") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(value));
+  const read = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${read("year")}-${read("month")}-${read("day")}`;
+}
+
+export function countWeeklyPreferenceDays(values: string[], timezone = "Europe/Istanbul") {
+  return new Set(values.map((value) => weeklyPreferenceDayKey(value, timezone))).size;
+}
+
+export function canAddWeeklyPreference(
+  selectedValues: string[],
+  candidate: string,
+  timezone = "Europe/Istanbul",
+  maximumPerDay = 3
+) {
+  const candidateDay = weeklyPreferenceDayKey(candidate, timezone);
+  return selectedValues.filter((value) => weeklyPreferenceDayKey(value, timezone) === candidateDay).length < maximumPerDay;
+}
+
 export function buildMemberBookingTimeSelectionResult(input: {
   selectedPackages: DraftPackageSelection[];
   selectedSlotIdsByPackage: Record<string, string[]>;

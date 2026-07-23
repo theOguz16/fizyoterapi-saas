@@ -1,0 +1,27 @@
+appId: com.fizyoflow.mobile
+name: Connectivity banner safe-area and recovery
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: welcome-login-button
+    timeout: 60000
+- openLink: "fizyoflow://e2e-connectivity?status=offline&returnTo=%2F%28auth%29%2Fwelcome"
+- extendedWaitUntil:
+    visible:
+      id: connectivity-banner
+    timeout: 8000
+- assertVisible: "Çevrimdışısın"
+- assertVisible:
+    id: connectivity-banner-retry
+- tapOn:
+    id: connectivity-banner-retry
+- openLink: "fizyoflow://e2e-connectivity?status=online&returnTo=%2F%28auth%29%2Fwelcome"
+- extendedWaitUntil:
+    notVisible:
+      id: connectivity-banner
+    timeout: 8000
+- assertVisible:
+    id: welcome-login-button

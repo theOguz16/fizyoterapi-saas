@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiClientError, resolveApiError } from "@/lib/api-error";
+import { ApiClientError, resolveApiError, resolveHttpStatusMessage } from "@/lib/api-error";
 
 describe("mobile api errors", () => {
   it("maps known codes to product copy", () => {
@@ -60,5 +60,17 @@ describe("mobile api errors", () => {
     expect(error.message).toBe("boom");
     expect(error.status).toBe(401);
     expect(error.code).toBe("INVALID_TOKEN");
+  });
+
+  it("maps HTTP status fallbacks without exposing technical responses", () => {
+    expect(resolveHttpStatusMessage(400, "fallback")).toContain("bilgiler geçerli değil");
+    expect(resolveHttpStatusMessage(401, "fallback")).toContain("Oturumun sona");
+    expect(resolveHttpStatusMessage(403, "fallback")).toBe("Bu işlem için yetkiniz yok.");
+    expect(resolveHttpStatusMessage(404, "fallback")).toContain("kayıt bulunamadı");
+    expect(resolveHttpStatusMessage(408, "fallback")).toContain("zaman aşımına");
+    expect(resolveHttpStatusMessage(409, "fallback")).toContain("zaten yapılmış");
+    expect(resolveHttpStatusMessage(422, "fallback")).toContain("doğrulanamadı");
+    expect(resolveHttpStatusMessage(429, "fallback")).toContain("Çok hızlı");
+    expect(resolveHttpStatusMessage(500, "fallback")).toContain("Sunucuda geçici");
   });
 });

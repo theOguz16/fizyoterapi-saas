@@ -8,9 +8,6 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Paket ve Geçmiş|Paketlerim|Diğer paketleri gör"
     timeout: 20000
-- tapOn:
-    text: "Diğer paketleri gör"
-    optional: true
 - extendedWaitUntil:
     visible: "Paket seç|Pakete ekle|Pakete Ekle|Paket ve Geçmiş"
     timeout: 20000

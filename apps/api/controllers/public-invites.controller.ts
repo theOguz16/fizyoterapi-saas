@@ -13,10 +13,26 @@ import { AppError } from "../errors/AppError";
 import { AuditLogService } from "../services/audit-log.service";
 import { hashPassword, verifyPassword } from "../services/password.service";
 import { MobileNotificationService } from "../services/mobile-notification.service";
+import { LEGAL_DOCUMENT_VERSION, type RegistrationLegalConsent, type StoredRegistrationLegalConsent } from "@fitnes-saas/contracts";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 
 export class PublicInvitesController {
+  private static normalizeLegalConsents(input: RegistrationLegalConsent | undefined): StoredRegistrationLegalConsent {
+    if (!input?.terms_accepted) throw new AppError("TERMS_REQUIRED", 422, "Kullanım Şartları kabul edilmelidir");
+    if (!input.privacy_notice_acknowledged) throw new AppError("PRIVACY_NOTICE_REQUIRED", 422, "KVKK Aydınlatma Metni okunarak bilgi edinilmelidir");
+    if (input.document_version !== LEGAL_DOCUMENT_VERSION) {
+      throw new AppError("LEGAL_DOCUMENT_VERSION_MISMATCH", 409, "Hukuki metinler güncellendi. Lütfen metinleri yeniden inceleyin");
+    }
+    const recordedAt = new Date().toISOString();
+    return {
+      terms: { accepted_at: recordedAt, version: LEGAL_DOCUMENT_VERSION },
+      privacy_notice: { acknowledged_at: recordedAt, version: LEGAL_DOCUMENT_VERSION },
+      marketing: { granted: input.marketing_consent === true, updated_at: recordedAt, version: LEGAL_DOCUMENT_VERSION },
+      source: "MOBILE_INVITE_ACCEPT",
+    };
+  }
+
   private static async safeQueuePush(input: Parameters<typeof MobileNotificationService.queuePush>[0]) {
     try {
       await MobileNotificationService.queuePush(input);
@@ -149,8 +165,12 @@ export class PublicInvitesController {
       const firstName = String(req.body?.first_name ?? "").trim();
       const lastName = String(req.body?.last_name ?? "").trim();
       const password = String(req.body?.password ?? "");
-      if (!firstName || !lastName || password.length < 6) {
-        throw new AppError("VALIDATION_ERROR", 400, "first_name, last_name ve min 6 karakter password zorunlu");
+      const legalConsents = PublicInvitesController.normalizeLegalConsents(req.body?.legal_consent);
+      if (!firstName || !lastName) {
+        throw new AppError("VALIDATION_ERROR", 422, "Ad ve soyad zorunludur");
+      }
+      if (password.length < 8) {
+        throw new AppError("WEAK_PASSWORD", 422, "Şifre en az 8 karakter olmalıdır");
       }
 
       const outcome = await PublicInvitesController.runWriteTransaction(async (manager) => {
@@ -169,8 +189,8 @@ export class PublicInvitesController {
         } else {
           phone = PublicInvitesController.normalizePhone(invitedIdentity);
           email = String(req.body?.email ?? "").trim().toLowerCase();
-          if (!email || !email.includes("@")) {
-            throw new AppError("VALIDATION_ERROR", 400, "Email zorunlu ve gecerli olmalidir");
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir e-posta adresi zorunludur");
           }
         }
 
@@ -189,9 +209,11 @@ export class PublicInvitesController {
             throw new AppError("INVALID_LOGIN", 401, "Mevcut hesap icin email/sifre hatali");
           }
           phone = phone || PublicInvitesController.normalizePhone(account.phone);
+          account.legal_consents = legalConsents;
+          await accountRepo.save(account);
         }
         if (PublicInvitesController.isEmail(invitedIdentity) && (!phone || phone.length < 7 || phone.length > 15)) {
-          throw new AppError("VALIDATION_ERROR", 400, "Telefon zorunlu ve gecerli olmalidir");
+          throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir telefon numarası zorunludur");
         }
 
         const passwordHash = account?.password_hash || (await hashPassword(password));
@@ -231,6 +253,7 @@ export class PublicInvitesController {
               last_name: lastName,
               phone,
               global_role_default: UserRole.MEMBER,
+              legal_consents: legalConsents,
               is_active: true,
             });
             await accountRepo.save(account);
@@ -345,6 +368,7 @@ export class PublicInvitesController {
           });
         }
 
+        invite.meta = { ...(invite.meta || {}), legal_consents: legalConsents };
         invite.status = InviteStatus.ACCEPTED;
         invite.accepted_user_id = user.id;
         invite.accepted_at = new Date();
@@ -374,6 +398,8 @@ export class PublicInvitesController {
           user_id: outcome.user.id,
           role: outcome.user.role,
           email: outcome.user.email,
+          legal_document_version: LEGAL_DOCUMENT_VERSION,
+          marketing_consent: legalConsents.marketing.granted,
         },
       });
 

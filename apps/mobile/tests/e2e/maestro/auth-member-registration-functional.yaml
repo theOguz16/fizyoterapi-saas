@@ -1,0 +1,88 @@
+appId: com.fizyoflow.mobile
+name: auth-member-registration-functional
+---
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://member-register?slug=demo-salon"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+- extendedWaitUntil:
+    visible:
+      id: "clinic-member-register-submit"
+    timeout: 20000
+- tapOn:
+    id: "clinic-member-register-submit"
+- scrollUntilVisible:
+    element:
+      id: "member-register-error"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "member-register-error"
+- scrollUntilVisible:
+    element:
+      id: "member-register-first-name"
+    direction: UP
+    timeout: 10000
+- tapOn:
+    id: "member-register-first-name"
+- inputText: "Danisan"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-last-name"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "member-register-last-name"
+- inputText: "Kayit"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-email"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "member-register-email"
+- inputText: "member.registration.e2e@demo.local"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-phone"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "member-register-phone"
+- inputText: "05550009988"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-password"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "member-register-password"
+- inputText: "member-register123"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "legal-terms-checkbox"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "legal-terms-checkbox"
+- tapOn:
+    id: "legal-notice-checkbox"
+- tapOn:
+    id: "clinic-member-register-submit"
+- extendedWaitUntil:
+    visible:
+      id: "salon-detail-screen"
+    timeout: 20000

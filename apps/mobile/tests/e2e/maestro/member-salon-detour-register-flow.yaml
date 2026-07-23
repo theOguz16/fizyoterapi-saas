@@ -29,7 +29,6 @@ name: member-salon-detour-register-flow
     speed: 40
     visibilityPercentage: 30
     centerElement: false
-    optional: true
 
 - assertVisible:
     text: "Paketleri Gör|Paketleri gör|Paketleri İncele|Paketleri incele|Demo-Salon|demo-salon|Salon|FizyoFlow"

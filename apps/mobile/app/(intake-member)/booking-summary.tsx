@@ -22,6 +22,7 @@ import { IntakeProgressCard } from "@/theme/components/intake-progress-card";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
 import { clearPendingSalonJoinSlug } from "@/lib/local-preferences";
+import { refreshSessionAfterCommittedAction } from "@/lib/user-feedback";
 
 export default function BookingSummaryScreen() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function BookingSummaryScreen() {
   onSuccess: async () => {
     if (!memberBookingDraft.e2eBypassSubmit) {
       await clearPendingSalonJoinSlug();
-      await refreshMe();
+      await refreshSessionAfterCommittedAction(refreshMe, "Başvuru gönderme");
     }
 
     handleSubmissionSuccess();
@@ -161,7 +162,7 @@ export default function BookingSummaryScreen() {
     <AppShell
       testID="intake-booking-summary-screen"
       title={isClinicContext ? "Klinik başvurunu gönder" : "Başvurunu gözden geçir"}
-      subtitle={isGroupFlow ? "Seçtiğin grup dersi, seans bilgileri ve ücret özeti salon onayına gönderilecek." : "Seçtiğin paket, eğitmen ve uygunluk bilgileri salon onayına gönderilecek."}
+      subtitle={isGroupFlow ? "Seçtiğin grup dersi, seans bilgileri ve ücret özeti klinik onayına gönderilecek." : "Paket ve ödeme onayından sonra uygun derslerin seçtiğin saatlerden otomatik planlanacak."}
       icon="approvals"
     >
       <AnimatedEntrance>
@@ -171,7 +172,7 @@ export default function BookingSummaryScreen() {
           icon="approvals"
           eyebrow="Son kontrol"
           title={isClinicContext ? "Klinik bağlantılı kısa akışın son adımı" : "Son kontrol adımındasın"}
-          description={isClinicContext ? "QR veya davetle seçtiğin klinik, paket ve uygun saat bilgilerini son kez kontrol et." : "Başvurun gönderildiğinde salon ekibi seçimlerini birlikte değerlendirip sana geri bildirim verecek."}
+          description={isClinicContext ? "QR veya davetle seçtiğin klinik, paket ve uygun saat bilgilerini son kez kontrol et." : "Başvurun gönderildiğinde klinik ödeme ve üyelik kararını verecek; saat yerleşimini sistem otomatik tamamlayacak."}
           badgeLabel="Onaya hazır"
           badgeTone="warning"
           summaryItems={[
@@ -185,7 +186,7 @@ export default function BookingSummaryScreen() {
             },
             { label: "Akış", value: requiresTrainer ? `${selectedTrainer?.full_name || memberBookingDraft.trainerName || "-"}${trainerWasAutoSelected ? " (öneri)" : ""}` : "Grup dersi katılımı" },
           ]}
-          footnote={isGroupFlow ? "Talep gönderildiğinde ilgili seans için katılım isteğin oluşturulur; onay ve ücret bilgisi salon tarafından netleştirilir." : isDuoFlow ? "Bu başvuru senin %50 ödeme payınla açılır; partner payı tamamlanmadan paket aktif ders akışına alınmaz." : "Göndermeden önce saat seçimlerini ve ihtiyaç özetini son kez kontrol et."}
+          footnote={isGroupFlow ? "Talep gönderildiğinde ilgili seans için katılım isteğin oluşturulur; onay ve ücret bilgisi klinik tarafından netleştirilir." : isDuoFlow ? "Bu başvuru senin %50 ödeme payınla açılır; partner payı tamamlanmadan paket aktif ders akışına alınmaz." : "Göndermeden önce saat seçimlerini kontrol et. Onaydan sonra eğitmenle çakışmayan kesin dersler otomatik oluşacak."}
         />
       </AnimatedEntrance>
 
@@ -289,17 +290,19 @@ export default function BookingSummaryScreen() {
         </SurfaceCard>
       </AnimatedEntrance>
 
-      <ActionButton label="Saatleri düzenle" icon="calendar" variant="ghost" onPress={() => safeBack(router, "/(intake-member)/time-selection")} />
+      <ActionButton testID="intake-booking-summary-edit-times" label="Saatleri düzenle" icon="calendar" variant="ghost" onPress={() => safeBack(router, "/(intake-member)/time-selection")} />
       {!user && !memberBookingDraft.e2eBypassSubmit ? (
         <SurfaceCard tone="primary">
           <Text style={styles.section}>Başvuruyu göndermek için hesabınla devam et</Text>
           <Text style={styles.copy}>Salon, paket, eğitmen ve saat seçimlerin korunacak.</Text>
           <ActionButton
+            testID="intake-booking-summary-login"
             label="Danışan hesabımla giriş yap"
             icon="member"
             onPress={() => router.push("/(auth)/login" as never)}
           />
           <ActionButton
+            testID="intake-booking-summary-register"
             label="Bu kliniğe danışan olarak katıl"
             icon="spark"
             variant="ghost"
@@ -308,6 +311,7 @@ export default function BookingSummaryScreen() {
         </SurfaceCard>
       ) : (
         <ActionButton
+          testID="intake-booking-summary-submit"
           label="Onaya gönder"
           icon="approvals"
           onPress={() => {

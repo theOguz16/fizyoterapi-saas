@@ -1,0 +1,85 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- tapOn:
+    id: "trainer-home-more-actions"
+- assertVisible:
+    id: "trainer-home-secondary-actions"
+- tapOn:
+    id: "trainer-home-packages"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-packages-screen"
+    timeout: 15000
+- assertVisible:
+    id: "trainer-package-0"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fearnings"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-earnings-screen"
+    timeout: 15000
+- assertVisible: "Bu ay net kazanç"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frisk"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-risk-screen"
+    timeout: 15000
+- assertVisible: "Riskli kişi"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-bulk-notification"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-profile-bulk-notification"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-bulk-notification-screen"
+    timeout: 15000
+- tapOn:
+    id: "trainer-bulk-notification-template-1"
+- tapOn:
+    id: "trainer-bulk-notification-member-0"
+- scrollUntilVisible:
+    element:
+      id: "trainer-bulk-notification-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-bulk-notification-submit"
+- extendedWaitUntil:
+    visible: "Bildirim gönderildi"
+    timeout: 20000
+- tapOn: "Tamam|OK"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-profile-logout"
+    timeout: 15000
+- tapOn:
+    id: "trainer-profile-logout"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000

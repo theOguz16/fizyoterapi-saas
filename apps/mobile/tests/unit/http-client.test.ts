@@ -142,6 +142,37 @@ describe("mobile http client", () => {
     );
   });
 
+  it("turns unstructured HTTP failures into actionable messages", async () => {
+    const { httpRequest } = await loadHttpClientModule();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: vi.fn().mockResolvedValue({ error: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(httpRequest("/member/home")).rejects.toMatchObject({
+      message: "Çok hızlı işlem yaptın. Kısa bir süre bekleyip tekrar dene.",
+      status: 429,
+    });
+  });
+
+  it("applies the same timeout and authorization contract to text exports", async () => {
+    const { httpRequestText, setAuthToken } = await loadHttpClientModule();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: vi.fn().mockResolvedValue("date,total\n2026-07-20,10"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    setAuthToken("csv-token");
+
+    await expect(httpRequestText("/admin/revenue/export.csv")).resolves.toContain("date,total");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.fizyoflow.com/api/admin/revenue/export.csv",
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer csv-token" }) })
+    );
+  });
+
   it("throws a user-facing network error when the API cannot be reached", async () => {
     const { httpRequest } = await loadHttpClientModule();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
@@ -184,6 +215,29 @@ describe("mobile http client", () => {
     expect(signal.aborted).toBe(true);
 
     clear();
+  });
+
+  it("aborts a request that exceeds its configured timeout", async () => {
+    vi.useFakeTimers();
+    const { httpRequest } = await loadHttpClientModule();
+    const fetchMock = vi.fn().mockImplementation((_url, options?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => {
+          const error = new Error("aborted");
+          error.name = "AbortError";
+          reject(error);
+        });
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const assertion = expect(httpRequest("/account/clinic-request", { timeoutMs: 50 })).rejects.toMatchObject({
+      message: "İstek zaman aşımına uğradı. Lütfen tekrar deneyin.",
+      status: 408,
+      code: "REQUEST_TIMEOUT",
+    });
+    await vi.advanceTimersByTimeAsync(50);
+    await assertion;
   });
 
   it("handles 500 concurrent requests with stable auth headers", async () => {

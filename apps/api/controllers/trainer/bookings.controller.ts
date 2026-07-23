@@ -5,7 +5,7 @@ import { AppDataSource } from "../../data-source";
 import { AppError } from "../../errors/AppError";
 import { AuthenticatedRequest } from "../../middlewares/auth.middleware";
 import { Availability } from "../../entities/availability.entity";
-import { Booking, BookingPaymentStatus, BookingStatus } from "../../entities/booking.entity";
+import { Booking, BookingCheckinStatus, BookingPaymentStatus, BookingStatus } from "../../entities/booking.entity";
 import { ClassSession, LessonCategory, SessionStatus } from "../../entities/class-session.entity";
 import { Package } from "../../entities/package.entity";
 import { PackageTrainerAssignment } from "../../entities/package-trainer-assignment.entity";
@@ -25,6 +25,7 @@ import { AuditLogService } from "../../services/audit-log.service";
 import { AvailabilityProjectionService } from "../../services/availability-projection.service";
 import { TrainerScopeService } from "../../services/trainer-scope.service";
 import { NotificationEvent, NotificationEventStatus } from "../../entities/notification-event.entity";
+import { BookingScheduleGuardService } from "../../services/booking-schedule-guard.service";
 import {
   ensureMinimumAdvanceHours,
   parseBookingDate,
@@ -50,6 +51,124 @@ type SlotParams = {
 type CalendarBusinessHours = SlotValidationContract;
 
 export class TrainerBookingsController {
+  static async markNoShow(req: AuthenticatedRequest, res: Response) {
+    const tenantId = req.tenantId;
+    const trainerId = req.auth?.sub;
+    const bookingId = String(req.params.id || "");
+    if (!tenantId || !trainerId || !bookingId) {
+      throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, eğitmen veya ders bilgisi bulunamadı");
+    }
+    if (req.body?.confirm_credit_charge !== true) {
+      throw new AppError(
+        "NO_SHOW_CONFIRMATION_REQUIRED",
+        409,
+        "Gelmedi olarak işaretlendiğinde danışanın bir ders hakkı kullanılır. Açık onay zorunludur."
+      );
+    }
+
+    const result = await AppDataSource.transaction(async (manager) => {
+      const booking = await manager.getRepository(Booking).findOne({
+        where: { tenant_id: tenantId, id: bookingId, trainer_id: trainerId },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadı");
+      const meta = booking.meta && typeof booking.meta === "object" ? booking.meta as Record<string, any> : {};
+      if (String(meta.attendance_outcome || "") === "NO_SHOW") {
+        return { booking, creditsDeducted: Number(booking.credits_charged || 0), idempotent: true };
+      }
+      if (booking.checkin_status === BookingCheckinStatus.COMPLETED) {
+        throw new AppError("BOOKING_ALREADY_COMPLETED", 409, "Tamamlanmış ders gelmedi olarak işaretlenemez");
+      }
+      if (booking.starts_at.getTime() > Date.now()) {
+        throw new AppError("NO_SHOW_TOO_EARLY", 409, "Ders başlamadan gelmedi işlemi yapılamaz");
+      }
+
+      let creditsDeducted = 0;
+      if (Number(booking.credits_charged || 0) === 0) {
+        const packageId = String(meta.package_id || "").trim();
+        const explicitUserPackageId = String(meta.user_package_id || booking.checked_in_user_package_id || "").trim();
+        const packageQuery = manager.getRepository(UserPackage)
+          .createQueryBuilder("userPackage")
+          .setLock("pessimistic_write")
+          .where("userPackage.tenant_id = :tenantId", { tenantId })
+          .andWhere("userPackage.user_id = :memberId", { memberId: booking.member_id })
+          .andWhere("userPackage.is_active = true")
+          .andWhere("userPackage.remaining_credits > 0");
+        if (explicitUserPackageId) {
+          packageQuery.andWhere("userPackage.id = :userPackageId", { userPackageId: explicitUserPackageId });
+        } else if (packageId) {
+          packageQuery.andWhere("userPackage.package_id = :packageId", { packageId });
+        }
+        const userPackage = await packageQuery
+          .orderBy("userPackage.expires_at", "ASC", "NULLS LAST")
+          .addOrderBy("userPackage.created_at", "ASC")
+          .getOne();
+        if (!userPackage) throw new AppError("PACKAGE_CREDIT_NOT_AVAILABLE", 409, "Kullanılabilir paket hakkı bulunamadı");
+        userPackage.remaining_credits -= 1;
+        await manager.getRepository(UserPackage).save(userPackage);
+        booking.checked_in_user_package_id = userPackage.id;
+        booking.credits_charged = 1;
+        creditsDeducted = 1;
+      }
+
+      booking.status = BookingStatus.CANCELED;
+      booking.checkin_status = BookingCheckinStatus.CANCELED;
+      booking.meta = {
+        ...meta,
+        attendance_outcome: "NO_SHOW",
+        no_show: {
+          marked_by_trainer_id: trainerId,
+          marked_at: new Date().toISOString(),
+          confirmed_credit_charge: true,
+          credits_deducted: creditsDeducted,
+        },
+      };
+      await manager.getRepository(Booking).save(booking);
+      return { booking, creditsDeducted, idempotent: false };
+    });
+
+    if (!result.idempotent) {
+      const admins = await AppDataSource.getRepository(User).find({
+        where: { tenant_id: tenantId, role: UserRole.ADMIN, is_active: true },
+        select: ["id"],
+      });
+      await Promise.allSettled([
+        MobileNotificationService.queuePush({
+          tenantId,
+          userId: result.booking.member_id,
+          roleScope: "MEMBER",
+          type: "BOOKING_NO_SHOW",
+          title: "Derse katılım kaydı",
+          body: "Derse gelmediğin eğitmen tarafından onaylandı ve bir paket hakkın kullanıldı.",
+          deepLink: "/(member)/attendance",
+          meta: { booking_id: result.booking.id, credits_deducted: result.creditsDeducted },
+        }),
+        ...admins.map((admin) =>
+          MobileNotificationService.queuePush({
+            tenantId,
+            userId: admin.id,
+            roleScope: "ADMIN" as const,
+            type: "BOOKING_NO_SHOW",
+            title: "Gelmedi kaydı",
+            body: "Eğitmen bir danışanı gelmedi olarak işaretledi; bir paket hakkı kullanıldı.",
+            deepLink: "/(admin)/calendar",
+            meta: { booking_id: result.booking.id, member_id: result.booking.member_id },
+          })
+        ),
+      ]);
+    }
+    await TrainerBookingsController.logBookingAudit(req, {
+      eventType: result.idempotent ? "BOOKING_NO_SHOW_SKIPPED" : "BOOKING_NO_SHOW_RECORDED",
+      booking: result.booking,
+      oldStatus: result.idempotent ? result.booking.status : BookingStatus.APPROVED,
+      newStatus: result.booking.status,
+    });
+    return res.json({
+      data: result.booking,
+      no_show: { credits_deducted: result.creditsDeducted, idempotent: result.idempotent },
+    });
+  }
+
   static async listScheduleChangeRequests(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.tenantId;
     const trainerId = req.auth?.sub;
@@ -71,38 +190,127 @@ export class TrainerBookingsController {
     const trainerId = req.auth?.sub;
     const bookingId = String(req.params.id || "");
     if (!tenantId || !trainerId || !bookingId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant, auth veya rezervasyon bilgisi bulunamadi");
-    const booking = await AppDataSource.getRepository(Booking).findOne({ where: { tenant_id: tenantId, id: bookingId, trainer_id: trainerId } });
-    if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
-    const startsAt = parseBookingDate(req.body?.starts_at, "starts_at");
-    const endsAt = parseBookingDate(req.body?.ends_at, "ends_at");
-    if (endsAt <= startsAt) throw new AppError("VALIDATION_ERROR", 400, "Ders bitis saati baslangictan sonra olmalidir");
+    const minimumAdvanceHours = await TrainerBookingsController.loadMinimumAdvanceHours(tenantId);
+    const { booking, payload, row } = await AppDataSource.transaction(async (manager) => {
+      const booking = await manager.getRepository(Booking).findOne({
+        where: { tenant_id: tenantId, id: bookingId, trainer_id: trainerId },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
+      if (booking.status === BookingStatus.CANCELED) {
+        throw new AppError("BOOKING_CANCELED", 409, "İptal edilmiş ders için saat değişikliği istenemez");
+      }
+      ensureMinimumAdvanceHours(
+        booking.starts_at,
+        minimumAdvanceHours,
+        "Ders",
+        "TRAINER_SCHEDULE_CHANGE_WINDOW_CLOSED"
+      );
 
-    const payload = {
-      trainer_id: trainerId,
-      member_id: booking.member_id,
-      booking_id: booking.id,
-      current_starts_at: booking.starts_at,
-      current_ends_at: booking.ends_at,
-      proposed_starts_at: startsAt,
-      proposed_ends_at: endsAt,
-      note: String(req.body?.note || "").trim() || null,
-      status: "PENDING",
-    };
-    const eventRepo = AppDataSource.getRepository(NotificationEvent);
-    const row = await eventRepo.save(eventRepo.create({
-      tenant_id: tenantId,
-      member_id: booking.member_id,
-      type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
-      payload,
-      status: NotificationEventStatus.QUEUED,
-    }));
+      const rangeStart = new Date(Date.now() + minimumAdvanceHours * 60 * 60 * 1000);
+      const rangeEnd = new Date(rangeStart);
+      rangeEnd.setDate(rangeEnd.getDate() + 21);
+      const availabilityRows = await manager.getRepository(Availability).find({
+        where: { tenant_id: tenantId, member_id: booking.member_id },
+        order: { starts_at: "ASC" },
+      });
+      const packageId = String((booking.meta as Record<string, unknown> | undefined)?.package_id || "");
+      const projected = AvailabilityProjectionService.projectWeeklyRange(availabilityRows, rangeStart, rangeEnd)
+        .filter((slot) => !packageId || !slot.package_id || String(slot.package_id) === packageId)
+        .filter(
+          (slot) =>
+            slot.starts_at.getTime() !== booking.starts_at.getTime() ||
+            slot.ends_at.getTime() !== booking.ends_at.getTime()
+        );
+      if (!projected.length) {
+        throw new AppError("SAFE_ALTERNATIVE_NOT_FOUND", 409, "Danışanın tercihlerinde güvenli alternatif saat bulunamadı");
+      }
+
+      const minStart = new Date(Math.min(...projected.map((slot) => slot.starts_at.getTime())));
+      const maxEnd = new Date(Math.max(...projected.map((slot) => slot.ends_at.getTime())));
+      const blockingBookings = await manager.getRepository(Booking)
+        .createQueryBuilder("candidateBooking")
+        .where("candidateBooking.tenant_id = :tenantId", { tenantId })
+        .andWhere("(candidateBooking.trainer_id = :trainerId OR candidateBooking.member_id = :memberId)", {
+          trainerId,
+          memberId: booking.member_id,
+        })
+        .andWhere("candidateBooking.id != :bookingId", { bookingId: booking.id })
+        .andWhere("candidateBooking.status IN (:...statuses)", { statuses: BLOCKING_BOOKING_STATUSES })
+        .andWhere("candidateBooking.starts_at < :maxEnd", { maxEnd })
+        .andWhere("candidateBooking.ends_at > :minStart", { minStart })
+        .getMany();
+      const alternative = projected.find(
+        (slot) =>
+          !blockingBookings.some(
+            (candidate) => candidate.starts_at < slot.ends_at && candidate.ends_at > slot.starts_at
+          )
+      );
+      if (!alternative) {
+        throw new AppError("SAFE_ALTERNATIVE_NOT_FOUND", 409, "Eğitmen ve danışan takviminde çakışmayan alternatif saat bulunamadı");
+      }
+      const startsAt = alternative.starts_at;
+      const endsAt = alternative.ends_at;
+      await BookingScheduleGuardService.ensureAvailable(manager, {
+        tenantId,
+        trainerId,
+        memberId: booking.member_id,
+        startsAt,
+        endsAt,
+        sessionId: booking.session_id ?? null,
+        excludeBookingId: booking.id,
+        status: BookingStatus.RESCHEDULED,
+      });
+
+      const eventRepo = manager.getRepository(NotificationEvent);
+      const pendingRows = await eventRepo.find({
+        where: {
+          tenant_id: tenantId,
+          member_id: booking.member_id,
+          type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
+          status: NotificationEventStatus.QUEUED,
+        } as any,
+        lock: { mode: "pessimistic_write" },
+      });
+      if (
+        pendingRows.some((event) => {
+          const existing = event.payload && typeof event.payload === "object" ? event.payload as Record<string, unknown> : {};
+          return String(existing.booking_id || "") === booking.id && String(existing.status || "PENDING") === "PENDING";
+        })
+      ) {
+        throw new AppError("SCHEDULE_CHANGE_REQUEST_EXISTS", 409, "Bu ders için bekleyen bir saat değişikliği zaten var");
+      }
+
+      const payload = {
+        trainer_id: trainerId,
+        member_id: booking.member_id,
+        booking_id: booking.id,
+        current_starts_at: booking.starts_at,
+        current_ends_at: booking.ends_at,
+        proposed_starts_at: startsAt,
+        proposed_ends_at: endsAt,
+        note: String(req.body?.note || "").trim() || null,
+        selection_strategy: "AUTOMATIC_MEMBER_PREFERENCE",
+        member_credit_preserved: true,
+        minimum_advance_hours: minimumAdvanceHours,
+        status: "PENDING",
+      };
+      const row = await eventRepo.save(eventRepo.create({
+        tenant_id: tenantId,
+        member_id: booking.member_id,
+        type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
+        payload,
+        status: NotificationEventStatus.QUEUED,
+      }));
+      return { booking, payload, row };
+    });
     await MobileNotificationService.queuePush({
       tenantId,
       userId: booking.member_id,
       roleScope: "MEMBER",
       type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
       title: "Ders değişikliği talebi",
-      body: `${startsAt.toLocaleString("tr-TR")} için yeni ders saati önerildi.`,
+      body: `${new Date(String(payload.proposed_starts_at)).toLocaleString("tr-TR")} için yeni ders saati önerildi.`,
       deepLink: "/(member)/calendar",
       meta: { request_id: row.id, booking_id: booking.id },
     });
@@ -277,6 +485,7 @@ export class TrainerBookingsController {
         return {
           ...row,
           note: parsed.displayNote,
+          preferred_trainer_id: parsed.preferredTrainerId,
         };
       });
   }
@@ -650,19 +859,27 @@ export class TrainerBookingsController {
       const filteredRows = TrainerBookingsController.filterAvailabilityRowsForTrainer(trainerId, scopedProjectedRows);
 
       return res.json({
-        data: filteredRows.map((row) => ({
-          ...row,
-          member_full_name: memberMap.get(row.member_id)?.full_name ?? null,
-          member_email: memberMap.get(row.member_id)?.email ?? null,
-          member_weekly_class_hours: memberMap.get(row.member_id)?.weekly_class_hours ?? 1,
-          package_title: row.package_id ? packageMap.get(String(row.package_id))?.title ?? null : null,
-          package_display_price: row.package_id ? packageMap.get(String(row.package_id))?.display_price ?? null : null,
-          package_lesson_category: row.package_id
-            ? TrainerBookingsController.normalizeLessonCategory(
-                (packageMap.get(String(row.package_id))?.rules as Record<string, unknown> | undefined)?.lesson_category
-              )
-            : null,
-        })),
+        data: filteredRows.map((row) => {
+          const isAutomaticSchedulingPreference = Boolean(row.preferred_trainer_id);
+          return {
+            ...row,
+            preferred_trainer_id: undefined,
+            member_full_name: memberMap.get(row.member_id)?.full_name ?? null,
+            member_email: memberMap.get(row.member_id)?.email ?? null,
+            member_weekly_class_hours: memberMap.get(row.member_id)?.weekly_class_hours ?? 1,
+            package_title: row.package_id ? packageMap.get(String(row.package_id))?.title ?? null : null,
+            package_display_price: row.package_id ? packageMap.get(String(row.package_id))?.display_price ?? null : null,
+            package_lesson_category: row.package_id
+              ? TrainerBookingsController.normalizeLessonCategory(
+                  (packageMap.get(String(row.package_id))?.rules as Record<string, unknown> | undefined)?.lesson_category
+                )
+              : null,
+            availability_kind: isAutomaticSchedulingPreference
+              ? "AUTOMATIC_SCHEDULING_PREFERENCE"
+              : "MANUAL_PLACEMENT_REQUEST",
+            action_required: !isAutomaticSchedulingPreference,
+          };
+        }),
       });
     } catch (error) {
       if (error instanceof AppError) throw error;

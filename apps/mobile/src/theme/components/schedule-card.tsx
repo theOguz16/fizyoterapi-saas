@@ -5,6 +5,7 @@ import { StatusBadge } from "./status-badge";
 import { tokens } from "../tokens";
 
 type Props = {
+  testID?: string;
   title: string;
   subtitle: string;
   timeLabel: string;
@@ -12,7 +13,7 @@ type Props = {
   onPress?: () => void;
 };
 
-export function ScheduleCard({ title, subtitle, timeLabel, badge, onPress }: Props) {
+export function ScheduleCard({ testID, title, subtitle, timeLabel, badge, onPress }: Props) {
   const content = (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -25,7 +26,7 @@ export function ScheduleCard({ title, subtitle, timeLabel, badge, onPress }: Pro
   );
 
   if (!onPress) return content;
-  return <Pressable onPress={onPress}>{content}</Pressable>;
+  return <Pressable testID={testID} onPress={onPress}>{content}</Pressable>;
 }
 
 const styles = StyleSheet.create({

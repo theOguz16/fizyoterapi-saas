@@ -92,6 +92,7 @@ export default function AdminPackagesScreen() {
   const [form, setForm] = useState({
     title: "",
     total_credits: "",
+    weekly_class_hours: "",
     duration_days: "",
     display_price: "",
     trainer_commission_rate: "",
@@ -124,7 +125,7 @@ export default function AdminPackagesScreen() {
     return trainers.find((trainer: AdminCompactMember) => String(trainer.id || trainer.user_id || "") === selectedTrainerId) || null;
   }, [selectedTrainerId, trainers]);
   const selectedServiceLabel = selectedTemplate ? templateDisplayName(selectedTemplate) : selectedVariant?.label || "Ders seç";
-  const weeklyRuleSummary = useMemo(() => deriveWeeklyRuleSummary(form.total_credits), [form.total_credits]);
+  const weeklyRuleSummary = useMemo(() => deriveWeeklyRuleSummary(form.weekly_class_hours), [form.weekly_class_hours]);
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
   const subscriptionBackTo = Array.isArray(params.subscriptionBackTo) ? params.subscriptionBackTo[0] : params.subscriptionBackTo;
   const activation = isClinicActivationFlow(params.activation);
@@ -162,6 +163,7 @@ export default function AdminPackagesScreen() {
       const next = {
         ...prev,
         total_credits: prev.total_credits || (lessonMode === "GROUP" ? "8" : "4"),
+        weekly_class_hours: prev.weekly_class_hours || (lessonMode === "GROUP" ? "2" : "1"),
         duration_days: prev.duration_days || "30",
         display_price: prev.display_price || sanitizeDecimalInput(String(selectedTemplate.starting_price || "0")),
         trainer_commission_rate:
@@ -176,12 +178,14 @@ export default function AdminPackagesScreen() {
 
   function resetForm() {
     setEditingPackageId(null);
+    setSelectedService("");
     setSelectedTrainerId("");
     setSelectedCategoryKey(effectiveCategories[0]?.key || LESSON_CATEGORIES[0]?.key || "PT");
     setSelectedVariantKey("");
     setForm({
       title: "",
       total_credits: "",
+      weekly_class_hours: "",
       duration_days: "",
       display_price: "",
       trainer_commission_rate: "",
@@ -204,6 +208,7 @@ export default function AdminPackagesScreen() {
       ...prev,
       title: templateDefaultTitle(template) || prev.title,
       total_credits: prev.total_credits || (lessonMode === "GROUP" ? "8" : "4"),
+      weekly_class_hours: prev.weekly_class_hours || (lessonMode === "GROUP" ? "2" : "1"),
       duration_days: prev.duration_days || "30",
       display_price: sanitizeDecimalInput(String(template.starting_price || "0")),
       trainer_commission_rate: sanitizeDecimalInput(String(template.trainer_commission_rate || "25")),
@@ -225,10 +230,12 @@ export default function AdminPackagesScreen() {
     if (variant) {
       setSelectedCategoryKey(variant.categoryKey);
     }
+    setSelectedService(variantKey);
     setSelectedVariantKey(variantKey);
     setForm((prev) => ({
       ...prev,
       total_credits: prev.total_credits || defaults.total_credits,
+      weekly_class_hours: prev.weekly_class_hours || defaults.weekly_class_hours,
       duration_days: prev.duration_days || defaults.duration_days,
       display_price: prev.display_price || defaults.display_price,
       trainer_commission_rate: prev.trainer_commission_rate || defaults.trainer_commission_rate,
@@ -244,6 +251,7 @@ export default function AdminPackagesScreen() {
     if (!selectedService) throw new Error("Önce ders türü seçmelisin.");
     if (!form.title.trim()) throw new Error("Paket adı zorunlu.");
     if (!form.total_credits.trim()) throw new Error("Ders hakkı zorunlu.");
+    if (!form.weekly_class_hours.trim()) throw new Error("Haftalık ders sayısı zorunlu.");
     if (!form.duration_days.trim()) throw new Error("Geçerlilik süresi zorunlu.");
     if (!form.display_price.trim()) throw new Error("Paket fiyatı zorunlu.");
     if (!form.trainer_commission_rate.trim()) throw new Error("Eğitmen komisyonu zorunlu.");
@@ -254,6 +262,7 @@ export default function AdminPackagesScreen() {
       return updateAdminPackageApi(editingPackageId, {
         title: form.title.trim(),
         total_credits: Number(form.total_credits) || 1,
+        weekly_class_hours: Number(form.weekly_class_hours) || 1,
         duration_days: Number(form.duration_days) || 0,
         service_key: selectedService,
         display_price: Number(form.display_price || 0),
@@ -272,6 +281,7 @@ export default function AdminPackagesScreen() {
     const created = await createAdminPackageApi({
       title: form.title.trim(),
       total_credits: Number(form.total_credits) || 1,
+      weekly_class_hours: Number(form.weekly_class_hours) || 1,
       duration_days: Number(form.duration_days) || 0,
       service_key: selectedService,
       display_price: Number(form.display_price || 0),
@@ -486,6 +496,7 @@ export default function AdminPackagesScreen() {
     setForm({
       title: String(pkg.title || ""),
       total_credits: String(pkg.total_credits || 1),
+      weekly_class_hours: String(pkg.weekly_class_hours || (pkg.rules as Record<string, unknown> | null)?.weekly_class_hours || 1),
       duration_days: String(pkg.duration_days || 0),
       display_price: String(pkg.display_price || 0),
       trainer_commission_rate: String(Number(pkg.trainer_commission_rate || 0)),
@@ -578,6 +589,7 @@ export default function AdminPackagesScreen() {
           <View style={styles.formCard}>
             <FormField inputId="admin-package-title-input" label="Paket adı" value={form.title} onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))} placeholder="Paket adını gir" />
             <FormField inputId="admin-package-credits-input" label="Ders hakkı" value={form.total_credits} onChangeText={(value) => setForm((prev) => ({ ...prev, total_credits: sanitizeIntegerInput(value) }))} placeholder="Ders hakkı" keyboardType="number-pad" />
+            <FormField inputId="admin-package-weekly-hours-input" label="Haftalık ders sayısı (1–7)" value={form.weekly_class_hours} onChangeText={(value) => setForm((prev) => ({ ...prev, weekly_class_hours: sanitizeIntegerInput(value) }))} placeholder="Haftalık ders sayısı" keyboardType="number-pad" />
             <FormField inputId="admin-package-duration-input" label="Geçerlilik süresi" value={form.duration_days} onChangeText={(value) => setForm((prev) => ({ ...prev, duration_days: sanitizeIntegerInput(value) }))} placeholder="Gün sayısı" keyboardType="number-pad" />
             <FormField inputId="admin-package-price-input" label="Paket fiyatı" value={form.display_price} onChangeText={(value) => setForm((prev) => ({ ...prev, display_price: sanitizeDecimalInput(value) }))} placeholder="Fiyat" keyboardType="decimal-pad" />
             <FormField inputId="admin-package-commission-input" label="Komisyon (%)" value={form.trainer_commission_rate} onChangeText={(value) => setForm((prev) => ({ ...prev, trainer_commission_rate: sanitizeDecimalInput(value) }))} placeholder="Komisyon oranı" keyboardType="decimal-pad" />

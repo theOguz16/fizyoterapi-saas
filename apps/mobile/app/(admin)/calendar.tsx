@@ -98,8 +98,9 @@ export default function AdminCalendarScreen() {
 
   const events = useMemo(
     () =>
-      rows.map((row) => ({
+      rows.map((row, index) => ({
         id: String(row.calendar_event_id),
+        testID: `admin-calendar-event-${index}`,
         title: row.presentation.title,
         subtitle: row.presentation.subtitle,
         startsAt: row.starts_at,
@@ -252,6 +253,7 @@ export default function AdminCalendarScreen() {
           </SurfaceCard>
         ) : null}
       </DetailSheet>
+
     </AppShell>
   );
 }

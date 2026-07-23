@@ -75,7 +75,7 @@ export default function MemberQrScreen() {
                 iconName="qr"
                 iconTone="warning"
               />
-              <ActionButton label="Tekrar dene" icon="qr" onPress={() => void query.refetch()} />
+              <ActionButton testID="member-qr-retry" label="Tekrar dene" icon="qr" onPress={() => void query.refetch()} />
             </View>
           ) : currentCode ? (
             <>

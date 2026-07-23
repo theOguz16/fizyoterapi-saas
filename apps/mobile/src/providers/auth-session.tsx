@@ -78,6 +78,7 @@ type InviteAcceptInput = {
   phone: string;
   email?: string;
   password: string;
+  legal_consent: RegistrationLegalConsent;
 };
 
 type SessionContextType = {

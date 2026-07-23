@@ -4,7 +4,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, syncAdminClinicSubscriptionApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, CLINIC_TRIAL_DAYS, formatSubscriptionStatus } from "@/lib/admin-subscription";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { refreshSessionAfterCommittedAction, showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
 import { configureRevenueCat, getRevenueCatPlanPackages, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
 import { SUBSCRIPTION_PRICING, SUBSCRIPTION_VALUE_PROOFS, type BillingCycle } from "@/lib/subscription-pricing";
 import { useSession } from "@/providers/auth-session";
@@ -96,7 +96,7 @@ export default function AdminSubscriptionScreen() {
     }
 
     const refreshStatus = () => {
-      void Promise.all([query.refetch(), refreshMe()]);
+      void Promise.all([query.refetch(), refreshMe()]).catch(() => null);
     };
     const interval = setInterval(refreshStatus, 2500);
     const timeout = setTimeout(() => setPurchaseSyncStartedAt(null), 30_000);
@@ -120,7 +120,7 @@ export default function AdminSubscriptionScreen() {
   },
 
   onSuccess: async () => {
-    await refreshMe();
+    await refreshSessionAfterCommittedAction(refreshMe, "Deneme başlatma");
 
     showInfoAlert(
       "Deneme başlatıldı",
@@ -178,7 +178,7 @@ export default function AdminSubscriptionScreen() {
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
     await syncAdminClinicSubscriptionApi().catch(() => null);
-    await Promise.all([refreshMe(), query.refetch()]);
+    await Promise.all([refreshSessionAfterCommittedAction(refreshMe, "Satın alma"), query.refetch()]);
 
     showInfoAlert(
       "Satın alma tamamlandı",
@@ -215,7 +215,7 @@ export default function AdminSubscriptionScreen() {
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
     await syncAdminClinicSubscriptionApi().catch(() => null);
-    await Promise.all([refreshMe(), query.refetch()]);
+    await Promise.all([refreshSessionAfterCommittedAction(refreshMe, "Geri yükleme"), query.refetch()]);
 
     showInfoAlert(
       "Satın almalar yenilendi",
@@ -291,6 +291,7 @@ export default function AdminSubscriptionScreen() {
               return (
                 <Pressable
                   key={cycle}
+                  testID={`admin-subscription-plan-${cycle}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   onPress={() => setBillingCycle(cycle)}
@@ -344,6 +345,15 @@ export default function AdminSubscriptionScreen() {
           <InfoRow label="Salon onayı" value={subscription?.review_status === "PUBLISHED" ? "Tamamlandı" : "Bekleniyor"} />
           <InfoRow label="Deneme başlangıcı" value={formatDate(subscription?.trial_starts_at)} />
           <InfoRow label="Deneme bitişi" value={formatDate(subscription?.trial_ends_at)} />
+          <InfoRow
+            label="Ödeme durumu"
+            value={subscription?.has_billing_issue ? "Ödeme yöntemi güncellenmeli" : "Sorun görünmüyor"}
+          />
+          <InfoRow
+            label="Otomatik yenileme"
+            value={subscription?.subscription_status === "ACTIVE" ? (subscription?.will_renew === false ? "Kapalı" : "Açık") : "Plan aktif değil"}
+          />
+          <InfoRow label="Mevcut dönem bitişi" value={formatDate(subscription?.subscription_current_period_ends_at)} />
           <InfoRow label="Satın alma" value={subscription?.purchase_mode === "IN_APP_PURCHASE" ? "Uygulama içi" : "Hazırlanıyor"} />
         </View>
       </SurfaceCard>
@@ -369,7 +379,7 @@ export default function AdminSubscriptionScreen() {
           variant="ghost"
           loading={query.isRefetching}
           disabled={isPurchaseSyncing}
-          onPress={() => void Promise.all([query.refetch(), refreshMe()])}
+          onPress={() => void Promise.all([query.refetch(), refreshMe()]).catch(() => null)}
         />
         <ActionButton
           testID="admin-subscription-restore"
@@ -421,6 +431,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function LegalLink({ label, url }: { label: string; url: string }) {
   return (
     <Pressable
+      testID={label === "Gizlilik Politikası" ? "admin-subscription-privacy-link" : "admin-subscription-terms-link"}
       accessibilityRole="link"
       accessibilityLabel={label}
       onPress={() => {

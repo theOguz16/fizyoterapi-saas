@@ -25,7 +25,7 @@ export default function PackageDetailScreen() {
   const canContinue = !isDuoFlow || (duoPartnerName.trim().length >= 2 && duoPartnerContact.trim().length >= 5);
 
   return (
-    <AppShell title={String(params.title || "Paket detayı")} subtitle="Paket kapsamını inceleyip senin için uygun akışla devam et." icon="package">
+    <AppShell testID="intake-package-detail-screen" title={String(params.title || "Paket detayı")} subtitle="Paket kapsamını inceleyip senin için uygun akışla devam et." icon="package">
       <IntakeProgressCard
         step={3}
         total={6}
@@ -82,6 +82,7 @@ export default function PackageDetailScreen() {
               placeholder="Örn. Ayşe Yılmaz"
               helper="Partner değişimi dersler başladıktan sonra salon onayıyla yapılır."
               testID="duo-partner-name-field"
+              inputId="duo-partner-name-input"
             />
             <FormField
               label="Partner telefon veya e-posta"
@@ -101,6 +102,7 @@ export default function PackageDetailScreen() {
               keyboardType="email-address"
               helper="Salon bu bilgiyle ikinci kişiye ödeme ve katılım daveti gönderir."
               testID="duo-partner-contact-field"
+              inputId="duo-partner-contact-input"
             />
           </View>
         ) : null}

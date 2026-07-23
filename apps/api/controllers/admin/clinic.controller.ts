@@ -137,6 +137,8 @@ export class AdminClinicController {
       can_purchase_in_app: [TenantSubscriptionStatus.TRIAL, TenantSubscriptionStatus.READ_ONLY].includes(
         tenant.subscription_status
       ),
+      has_billing_issue: tenant.revenuecat_last_event_type === "BILLING_ISSUE",
+      will_renew: tenant.revenuecat_last_event_type !== "CANCELLATION",
       purchase_provider: "REVENUECAT",
       purchase_mode: "IN_APP_PURCHASE",
       recommended_action: recommendedAction,
@@ -221,7 +223,9 @@ export class AdminClinicController {
       tenant.revenuecat_product_id = productId || tenant.revenuecat_product_id || null;
       tenant.revenuecat_entitlement_id = expectedEntitlement || tenant.revenuecat_entitlement_id || null;
       tenant.revenuecat_store = subscription?.store || tenant.revenuecat_store || null;
-      tenant.revenuecat_last_event_type = "SYNC";
+      if (!["BILLING_ISSUE", "CANCELLATION"].includes(String(tenant.revenuecat_last_event_type || ""))) {
+        tenant.revenuecat_last_event_type = "SYNC";
+      }
       return "SYNCED" as const;
     }
 
@@ -275,7 +279,10 @@ export class AdminClinicController {
           slug: tenant.slug,
           name: tenant.name,
           qr_code: tenant.qr_code,
-          qr_payload: detourUrl || joinUrl,
+          // QR her zaman markalı Universal Link'i taşır. Detour URL'si geriye
+          // dönük telemetri için döndürülebilir; tarama yoluna fazladan bir
+          // yönlendirme ve web ekranı eklememelidir.
+          qr_payload: joinUrl,
           join_url: joinUrl,
           detour_url: detourUrl,
         },

@@ -50,3 +50,12 @@ export function markNetworkSuccess() {
     message: null,
   });
 }
+
+/** Reset the in-memory signal between isolated Maestro flows. */
+export function resetConnectivityForE2E() {
+  emit({
+    status: "unknown",
+    lastChangedAt: Date.now(),
+    message: null,
+  });
+}

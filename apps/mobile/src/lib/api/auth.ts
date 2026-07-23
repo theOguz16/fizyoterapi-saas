@@ -91,6 +91,22 @@ export async function logoutApi() {
   return httpRequest<boolean>("/auth/logout", { method: "POST" });
 }
 
+export async function requestPasswordResetApi(email: string) {
+  return httpRequest<{ accepted: boolean }>("/auth/password-reset/request", {
+    method: "POST",
+    auth: false,
+    body: { email },
+  });
+}
+
+export async function confirmPasswordResetApi(input: { token: string; password: string }) {
+  return httpRequest<{ reset: boolean }>("/auth/password-reset/confirm", {
+    method: "POST",
+    auth: false,
+    body: input,
+  });
+}
+
 export async function deleteAccountApi() {
   return httpRequest<{ deleted: boolean }>("/auth/account", { method: "DELETE" });
 }

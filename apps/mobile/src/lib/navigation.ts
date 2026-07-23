@@ -370,7 +370,7 @@ export function resolveRootNavigation(input: RootNavigationInput): RootNavigatio
   const nextHome = pendingSalonHome || resolveRoleHome(role, input.onboardingState, input.user);
   const allowMemberConnectionAuthFlow =
     role === "MEMBER" &&
-    input.onboardingState === "NO_SALON" &&
+    (input.onboardingState === "NO_SALON" || Boolean(input.pendingSalonSlug)) &&
     inAuthGroup &&
     ["scan-salon-qr", "invite-accept", "login", "member-register"].includes(authLeaf || "");
   const allowMemberPurchaseFlow =

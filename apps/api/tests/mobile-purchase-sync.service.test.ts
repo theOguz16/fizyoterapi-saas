@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppDataSource } from "../data-source";
-import { BookingPaymentStatus, BookingStatus } from "../entities/booking.entity";
 import { MobilePurchaseSyncService } from "../services/mobile-purchase-sync.service";
+import { AutomaticBookingSchedulerService } from "../services/automatic-booking-scheduler.service";
 
 describe("mobile purchase sync service", () => {
   afterEach(() => {
@@ -78,6 +78,10 @@ describe("mobile purchase sync service", () => {
       if (name === "PackageTrainerAssignment") return assignmentRepo as any;
       throw new Error(`Unexpected repository: ${name}`);
     });
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) => callback({}));
+    const scheduleSpy = vi
+      .spyOn(AutomaticBookingSchedulerService, "schedule")
+      .mockResolvedValue([] as any);
 
     const result = await MobilePurchaseSyncService.applyApprovedPurchaseContext({
       tenantId: "tenant-1",
@@ -89,9 +93,19 @@ describe("mobile purchase sync service", () => {
         package_title: "Reformer",
         selected_days: [
           {
-            starts_at: "2025-02-10T09:00:00.000Z",
-            ends_at: "2025-02-10T10:00:00.000Z",
+            starts_at: "2030-02-11T09:00:00.000Z",
+            ends_at: "2030-02-11T10:00:00.000Z",
             label: "Pazartesi 09:00",
+          },
+          {
+            starts_at: "2030-02-12T09:00:00.000Z",
+            ends_at: "2030-02-12T10:00:00.000Z",
+            label: "Salı 09:00",
+          },
+          {
+            starts_at: "2030-02-13T09:00:00.000Z",
+            ends_at: "2030-02-13T10:00:00.000Z",
+            label: "Çarşamba 09:00",
           },
         ],
       },
@@ -104,21 +118,20 @@ describe("mobile purchase sync service", () => {
         is_active: true,
       },
     });
-    expect(bookingRepo.create).toHaveBeenCalledWith(
+    expect(scheduleSpy).toHaveBeenCalledWith(
+      {},
       expect.objectContaining({
-        trainer_id: "trainer-1",
-        status: BookingStatus.PENDING,
-        payment_status: BookingPaymentStatus.APPROVED,
-        meta: expect.objectContaining({
-          trainer_resolution: "PACKAGE_ASSIGNMENT_FALLBACK",
-        }),
+        tenantId: "tenant-1",
+        memberId: "member-1",
+        trainerId: "trainer-1",
+        requestId: "request-1",
       })
     );
     expect(result).toEqual(
       expect.objectContaining({
         trainer_id: "trainer-1",
         trainer_name: "Ece Yilmaz",
-        selected_slot_count: 1,
+        selected_slot_count: 3,
       })
     );
   });

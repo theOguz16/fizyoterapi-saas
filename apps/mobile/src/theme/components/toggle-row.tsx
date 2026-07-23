@@ -4,6 +4,7 @@ import { StyleSheet, Switch, Text, View } from "react-native";
 import { tokens } from "../tokens";
 
 type Props = {
+  testID?: string;
   label: string;
   description: string;
   value: boolean;
@@ -11,7 +12,7 @@ type Props = {
   disabled?: boolean;
 };
 
-export function ToggleRow({ label, description, value, onValueChange, disabled = false }: Props) {
+export function ToggleRow({ testID, label, description, value, onValueChange, disabled = false }: Props) {
   return (
     <View style={[styles.row, disabled ? styles.rowDisabled : null]}>
       <View style={styles.textWrap}>
@@ -19,6 +20,7 @@ export function ToggleRow({ label, description, value, onValueChange, disabled =
         <Text style={[styles.description, disabled ? styles.textDisabled : null]}>{description}</Text>
       </View>
       <Switch
+        testID={testID}
         accessibilityRole="switch"
         accessibilityLabel={label}
         accessibilityHint={description}

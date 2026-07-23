@@ -34,6 +34,12 @@ type PurchasesClient = {
   restorePurchases(): Promise<unknown>;
 };
 
+type RevenueCatCustomerInfo = {
+  entitlements?: {
+    active?: Record<string, unknown>;
+  };
+};
+
 const PURCHASES_UNAVAILABLE_MESSAGE =
   "Satın alma özelliği şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.";
 const PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE =
@@ -44,6 +50,16 @@ const PURCHASE_CANCELLED_MESSAGE =
   "Satın alma işlemi iptal edildi.";
 const RESTORE_FAILED_MESSAGE =
   "Satın alma kayıtları geri yüklenemedi. Lütfen tekrar deneyin.";
+const RESTORE_NOT_FOUND_MESSAGE =
+  "Bu mağaza hesabında geri yüklenecek aktif abonelik bulunamadı.";
+
+function hasActiveEntitlement(value: unknown) {
+  const customerInfo =
+    value && typeof value === "object" && "customerInfo" in value
+      ? (value as { customerInfo?: RevenueCatCustomerInfo }).customerInfo
+      : (value as RevenueCatCustomerInfo | null);
+  return Object.keys(customerInfo?.entitlements?.active || {}).length > 0;
+}
 
 function isUserCancelledPurchase(error: unknown) {
   if (!error || typeof error !== "object") return false;
@@ -175,8 +191,13 @@ export async function restoreRevenueCatPurchases(appUserId: string) {
   await configureRevenueCat(appUserId);
   const Purchases = await getPurchasesModule();
   try {
-    return await Purchases.restorePurchases();
-  } catch {
+    const customerInfo = await Purchases.restorePurchases();
+    if (!hasActiveEntitlement(customerInfo)) {
+      throw new Error(RESTORE_NOT_FOUND_MESSAGE);
+    }
+    return customerInfo;
+  } catch (error) {
+    if (error instanceof Error && error.message === RESTORE_NOT_FOUND_MESSAGE) throw error;
     throw new Error(RESTORE_FAILED_MESSAGE);
   }
 }

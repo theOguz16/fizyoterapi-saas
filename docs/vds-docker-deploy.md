@@ -30,6 +30,10 @@ openssl rand -base64 48
 
 Use different values for `JWT_SECRET` and `FIZYOFLOW_ADMIN_SECRET`.
 
+Set `REVENUECAT_REST_API_KEY` to the RevenueCat project secret API key. The API
+container uses it to verify purchases immediately when the mobile client calls
+the subscription sync endpoint; the webhook remains the asynchronous fallback.
+
 ## Build And Start
 
 ```bash

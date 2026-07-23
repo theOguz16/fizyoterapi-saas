@@ -15,12 +15,12 @@ export default function TrainerPackagesScreen() {
   const packages = query.data || [];
 
   return (
-    <AppShell title="Verdiğim paketler" subtitle="Bu alanda yalnızca sana atanmış paketleri ve verdiğin ders türlerini görürsün. Komisyon bilgisi burada gösterilmez." icon="package" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <AppShell testID="trainer-packages-screen" title="Verdiğim paketler" subtitle="Bu alanda yalnızca sana atanmış paketleri ve verdiğin ders türlerini görürsün. Komisyon bilgisi burada gösterilmez." icon="package" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       {packages.length === 0 ? (
         <EmptyState title="Atanmış paket görünmüyor" description="Salondaki admin henüz sana bir paket bağlamamış olabilir." icon="package" />
       ) : (
-        packages.map((pkg) => (
-          <SurfaceCard key={pkg.id} tone="primary">
+        packages.map((pkg, index) => (
+          <SurfaceCard key={pkg.id} testID={`trainer-package-${index}`} tone="primary">
             <Text style={styles.title}>{pkg.title}</Text>
             <Text style={styles.meta}>{pkg.service_name || pkg.lesson_category_label || "Ders türü tanımlanmadı"}</Text>
             <Text style={styles.copy}>Paket tipi: {pkg.package_type || "-"} • Paket adı: {pkg.package_name || pkg.title}</Text>

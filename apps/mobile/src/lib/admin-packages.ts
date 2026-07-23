@@ -41,7 +41,10 @@ export function sanitizeDecimalInput(value: string) {
 }
 
 export function toTestIdSegment(value: string) {
-  return String(value || "").toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+  return normalizePackageText(String(value || ""))
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
 }
 
 export function templateTypeLabel(template?: AdminPackageFormTemplate | null) {
@@ -101,10 +104,11 @@ export function findBestTemplateForVariant(variantKey: string, templates: AdminP
     pool.find((item) => label.includes(normalizePackageText(String(item.service_name || "")))) || pool[0] || null;
 }
 
-export function deriveWeeklyRuleSummary(totalCreditsRaw: string) {
-  const totalCredits = Number(totalCreditsRaw || 0);
-  if (!Number.isFinite(totalCredits) || totalCredits <= 0) return null;
-  const weeklyClassHours = Math.min(7, Math.max(1, Math.round(totalCredits / 4)));
+export function deriveWeeklyRuleSummary(weeklyClassHoursRaw: string) {
+  const weeklyClassHours = Number(weeklyClassHoursRaw || 0);
+  if (!Number.isFinite(weeklyClassHours) || !Number.isInteger(weeklyClassHours) || weeklyClassHours < 1 || weeklyClassHours > 7) {
+    return null;
+  }
   return { weeklyClassHours, requiredPreferenceSlots: weeklyClassHours * 3, requiredTrainerFreeSlots: weeklyClassHours * 2 };
 }
 
@@ -112,6 +116,7 @@ export function buildVariantDefaults(variant: LessonVariant | undefined, templat
   const isGroup = variant?.packageType === "GROUP";
   return {
     total_credits: isGroup ? "8" : "4",
+    weekly_class_hours: isGroup ? "2" : "1",
     duration_days: "30",
     display_price: sanitizeDecimalInput(String(template?.starting_price || (isGroup ? "200" : "0"))),
     trainer_commission_rate: sanitizeDecimalInput(String(template?.trainer_commission_rate || "25")),

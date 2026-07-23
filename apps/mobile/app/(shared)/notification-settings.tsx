@@ -77,6 +77,7 @@ export default function NotificationSettingsScreen() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [permissionLoading, setPermissionLoading] = useState(false);
   const [syncingPreferences, setSyncingPreferences] = useState(false);
+  const [allowPreferenceEditing, setAllowPreferenceEditing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -116,6 +117,7 @@ export default function NotificationSettingsScreen() {
   }, [refreshNotificationPermissionStatus]);
 
   const pushEnabled = notificationPermissionStatus === "granted";
+  const canEditPreferences = pushEnabled || allowPreferenceEditing;
 
   async function updatePreference<K extends keyof NotificationPreferences>(key: K, value: NotificationPreferences[K]) {
     const next = { ...preferences, [key]: value };
@@ -158,7 +160,7 @@ export default function NotificationSettingsScreen() {
   }, [requestNotificationPermission]);
 
   return (
-    <AppShell title="Bildirim tercihleri" subtitle="Randevu, kampanya, ölçüm ve paket bitiş bildirimlerini cihazında yönet." icon="notifications">
+    <AppShell testID="notification-settings-screen" title="Bildirim tercihleri" subtitle="Randevu, kampanya, ölçüm ve paket bitiş bildirimlerini cihazında yönet." icon="notifications" showBackButton>
       <View style={styles.metricsRow}>
         <MetricCard label="Sistem izni" value={pushEnabled ? "Açık" : notificationPermissionStatus === "denied" ? "Kapalı" : "Bekliyor"} hint="Cihaz düzeyi" icon="notifications" />
         <MetricCard label="Tercihler" value={Object.values(preferences).filter((item) => item === true).length + "/10"} hint={syncingPreferences ? "Eşitleniyor" : "Sunucu eşli"} icon="calendar" />
@@ -180,7 +182,16 @@ export default function NotificationSettingsScreen() {
             ) : (
               <ActionButton label="Cihaz ayarlarını aç" icon="settings" onPress={() => void Linking.openSettings()} />
             )}
-            <ActionButton label="Tercihleri yine de düzenle" icon="spark" variant="ghost" onPress={() => setError("")} />
+            <ActionButton
+              testID="notification-edit-without-permission"
+              label="Tercihleri yine de düzenle"
+              icon="spark"
+              variant="ghost"
+              onPress={() => {
+                setAllowPreferenceEditing(true);
+                setError("");
+              }}
+            />
           </View>
         ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -188,81 +199,92 @@ export default function NotificationSettingsScreen() {
 
       <SurfaceCard>
         <ToggleRow
+          testID="notification-pref-class-three-hours"
           label="3 saat önce"
           description="Randevu hatırlatması"
           value={preferences.classReminderThreeHours}
           onValueChange={(value) => void updatePreference("classReminderThreeHours", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-class-one-hour"
           label="1 saat önce"
           description="Yaklaşan ders uyarısı"
           value={preferences.classReminderOneHour}
           onValueChange={(value) => void updatePreference("classReminderOneHour", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-trial-forty-eight-hours"
           label="48 saat kala"
           description="Deneme veya abonelik bitiş uyarısı"
           value={preferences.subscriptionTrialFortyEightHours}
           onValueChange={(value) => void updatePreference("subscriptionTrialFortyEightHours", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-trial-twenty-four-hours"
           label="24 saat kala"
           description="Deneme veya abonelik bitiş uyarısı"
           value={preferences.subscriptionTrialTwentyFourHours}
           onValueChange={(value) => void updatePreference("subscriptionTrialTwentyFourHours", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-trial-twelve-hours"
           label="12 saat kala"
           description="Deneme veya abonelik bitiş uyarısı"
           value={preferences.subscriptionTrialTwelveHours}
           onValueChange={(value) => void updatePreference("subscriptionTrialTwelveHours", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-trial-four-hours"
           label="4 saat kala"
           description="Deneme veya abonelik bitiş uyarısı"
           value={preferences.subscriptionTrialFourHours}
           onValueChange={(value) => void updatePreference("subscriptionTrialFourHours", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-campaign-alerts"
           label="Kampanya"
           description="Referans ve indirim sinyalleri"
           value={preferences.campaignAlerts}
           onValueChange={(value) => void updatePreference("campaignAlerts", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-weekly-summary"
           label="Haftalık özet"
           description="Ders ve süreklilik özeti"
           value={preferences.weeklySummary}
           onValueChange={(value) => void updatePreference("weeklySummary", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-package-expiry"
           label="Paket bitiyor"
           description="Yenileme uyarıları"
           value={preferences.packageEndingAlerts}
           onValueChange={(value) => void updatePreference("packageEndingAlerts", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-measurement-reminders"
           label="Ölçüm hatırlatması"
           description="Ölçüm girme ve güncelleme sinyalleri"
           value={preferences.measurementReminders}
           onValueChange={(value) => void updatePreference("measurementReminders", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         <ToggleRow
+          testID="notification-pref-quiet-hours"
           label="Sessiz saatler"
           description={`${preferences.quietHoursStart} - ${preferences.quietHoursEnd} arasında bildirimleri sınırlamak için`}
           value={preferences.quietHoursEnabled}
           onValueChange={(value) => void updatePreference("quietHoursEnabled", value)}
-          disabled={!pushEnabled}
+          disabled={!canEditPreferences}
         />
         {preferences.quietHoursEnabled ? (
           <View style={styles.quietHoursFields}>

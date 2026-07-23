@@ -6,8 +6,10 @@ import { createClinıcRequestApi } from "@/lib/mobile-api";
 import { useSession } from "@/providers/auth-session";
 import { TURKEY_CITIES, TURKEY_DISTRICTS_BY_CITY } from "@/lib/turkey-locations";
 import { getClinicActivationNextRoute } from "@/lib/clinic-activation";
+import { getUserFacingMessage, refreshSessionAfterCommittedAction } from "@/lib/user-feedback";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { AppShell } from "@/theme/components/app-shell";
 import { FormField } from "@/theme/components/form-field";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -19,7 +21,7 @@ type PickerMode = "city" | "district" | null;
 
 export default function AdminSalonSetupScreen() {
   const router = useRouter();
-  const { refreshMe } = useSession();
+  const { switchRole } = useSession();
   const [pickerMode, setPickerMode] = useState<PickerMode>(null);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
@@ -63,8 +65,18 @@ export default function AdminSalonSetupScreen() {
   },
 
   onSuccess: async () => {
-    await refreshMe();
+    // Klinik oluşturulmadan önce verilen hesap tokenında tenantId yoktur.
+    // Yalnız /me yenilemek bu JWT claim'ini değiştirmez; ADMIN rolünü yeniden
+    // etkinleştirerek sonraki paket isteğine klinik bağlamı taşıyan tokenı alırız.
+    const sessionReady = await refreshSessionAfterCommittedAction(
+      () => switchRole("ADMIN"),
+      "Klinik oluşturma"
+    );
+    if (!sessionReady) return;
     router.replace(getClinicActivationNextRoute("clinic") as never);
+  },
+  onError: (nextError: unknown) => {
+    setError(getUserFacingMessage(nextError, "Klinik oluşturulamadı. Lütfen bilgileri kontrol edip tekrar deneyin."));
   },
 });
 
@@ -122,6 +134,7 @@ export default function AdminSalonSetupScreen() {
         <SurfaceCard>
           <Text style={styles.section}>Çalışma rolün</Text>
           <ToggleRow
+            testID="admin-clinic-owner-practitioner"
             label="Ben de bu klinikte hizmet veriyorum"
             description="Aynı hesapla hem klinik yönetimine hem fizyoterapist/eğitmen çalışma alanına erişirsin."
             value={form.owner_is_practitioner}
@@ -157,6 +170,7 @@ export default function AdminSalonSetupScreen() {
           />
           <FormField
             label="Kısa açıklama"
+            inputId="admin-clinic-about-input"
             value={form.about_text}
             onChangeText={(value) => setForm((prev) => ({ ...prev, about_text: value }))}
             placeholder="Salonun uzmanlık alanını ve öne çıkan yaklaşımını kısa bir cümleyle anlat."
@@ -210,6 +224,7 @@ export default function AdminSalonSetupScreen() {
             {visibleOptions.length === 0 ? <Text style={styles.emptyText}>Aramana uygun sonuç bulunamadı.</Text> : null}
           </ScrollView>
         </View>
+        <ConnectivityBanner />
       </Modal>
     </>
   );

@@ -18,6 +18,7 @@ export default function MemberCampaignsScreen() {
 
   return (
     <AppShell
+      testID="member-campaigns-screen"
       title="Kampanyalar"
       subtitle="Referans ve sadakat fırsatlarının güncel özeti."
       icon="campaigns"
@@ -28,8 +29,8 @@ export default function MemberCampaignsScreen() {
       showBackButton
     >
       <View style={styles.metricsRow}>
-        <MetricCard label="Aktif referans" value={summary.activeReferralCampaigns} hint="Davet akışı" icon="referral" />
-        <MetricCard label="Sadakat" value={summary.activeLoyaltyCampaigns} hint="Ödül kuralı" icon="campaigns" />
+        <MetricCard testID={`member-campaigns-referral-${summary.activeReferralCampaigns}`} label="Aktif referans" value={summary.activeReferralCampaigns} hint="Davet akışı" icon="referral" />
+        <MetricCard testID={`member-campaigns-loyalty-${summary.activeLoyaltyCampaigns}`} label="Sadakat" value={summary.activeLoyaltyCampaigns} hint="Ödül kuralı" icon="campaigns" />
       </View>
       <SurfaceCard>
         <Text style={styles.title}>Referans kampanyaları</Text>

@@ -281,8 +281,8 @@ export default function MemberHomeScreen() {
     >
       {pendingScheduleRequests.length > 0 ? (
         <ScrollPanel maxHeight={320}>
-          {pendingScheduleRequests.map((request) => (
-            <SurfaceCard key={request.id} tone="warning">
+          {pendingScheduleRequests.map((request, index) => (
+            <SurfaceCard key={request.id} tone="warning" testID={`member-schedule-change-request-${index}`}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Saat değişikliği onayı</Text>
                 <StatusBadge label="Yanıt bekleniyor" tone="warning" />
@@ -291,8 +291,8 @@ export default function MemberHomeScreen() {
               <Text style={styles.copy}>Mevcut: {formatDate(request.current_starts_at)}</Text>
               <Text style={styles.copy}>Önerilen: {formatDate(request.proposed_starts_at)}</Text>
               <View style={styles.actionRow}>
-                <ActionButton label="Onayla" icon="calendar" onPress={() => approveMutation.mutate(request.id)} loading={approveMutation.isPending} />
-                <ActionButton label="Reddet" icon="risk" variant="ghost" onPress={() => rejectMutation.mutate(request.id)} loading={rejectMutation.isPending} />
+                <ActionButton testID={`member-schedule-change-approve-${index}`} label="Onayla" icon="calendar" onPress={() => approveMutation.mutate(request.id)} loading={approveMutation.isPending} />
+                <ActionButton testID={`member-schedule-change-reject-${index}`} label="Reddet" icon="risk" variant="ghost" onPress={() => rejectMutation.mutate(request.id)} loading={rejectMutation.isPending} />
               </View>
             </SurfaceCard>
           ))}
@@ -329,6 +329,7 @@ export default function MemberHomeScreen() {
 
       {nextBooking ? (
         <ScheduleCard
+          testID="member-home-next-booking"
           title={nextBooking.session_title || nextBooking.lesson_category_label || "Yaklaşan ders"}
           subtitle={`${nextBooking.trainer_full_name || "Eğitmen belirlenecek"} • ${nextBooking.package_name || nextBooking.package_title || "Paket"}`}
           timeLabel={formatDate(nextBooking.starts_at)}
@@ -350,7 +351,7 @@ export default function MemberHomeScreen() {
             <Text style={styles.sectionTitle}>Grup dersleri</Text>
             <Text style={styles.copy}>Kaydırarak diğer grup derslerini gör, istediklerine katıl.</Text>
           </View>
-          <ActionButton label="Tümü" icon="calendar" variant="ghost" fullWidth={false} onPress={() => router.push({ pathname: "/(member)/group-classes", params: { backTo: "/(member)/home" } } as never)} />
+          <ActionButton testID="member-home-group-classes-all" label="Tümü" icon="calendar" variant="ghost" fullWidth={false} onPress={() => router.push({ pathname: "/(member)/group-classes", params: { backTo: "/(member)/home" } } as never)} />
         </View>
         {homeGroupClasses.length === 0 ? (
           <EmptyState title="Aktif grup dersi yok" description="Trainer yeni grup dersi açtığında burada slider olarak göreceksin." icon="calendar" />

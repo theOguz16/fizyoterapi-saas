@@ -170,6 +170,93 @@ describe("billing revenuecat webhook", () => {
     expect(tenant.revenuecat_last_event_type).toBe("EXPIRATION");
   });
 
+  it("extends the active period on renewal and clears a previous billing warning", async () => {
+    process.env.REVENUECAT_WEBHOOK_AUTH = "Bearer test-webhook";
+    process.env.REVENUECAT_ENTITLEMENT_ID = "clinic_pro";
+    const eventAt = Date.now();
+    const expiresAt = eventAt + 31 * 24 * 60 * 60 * 1000;
+    const tenant = {
+      id: "tenant-1",
+      subscription_status: "ACTIVE",
+      is_public: true,
+      revenuecat_last_event_type: "BILLING_ISSUE",
+      subscription_last_event_at: new Date(eventAt - 60_000),
+    };
+    const tenantRepo = {
+      findOne: vi.fn().mockResolvedValue(tenant),
+      save: vi.fn().mockImplementation(async (input) => input),
+    };
+    vi.spyOn(AppDataSource, "getRepository").mockReturnValue(tenantRepo as any);
+    vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined);
+
+    await BillingController.revenueCatWebhook(
+      {
+        method: "POST",
+        originalUrl: "/api/billing/revenuecat/webhook",
+        headers: { authorization: "Bearer test-webhook" },
+        body: {
+          event: {
+            type: "RENEWAL",
+            app_user_id: "tenant-1",
+            entitlement_ids: ["clinic_pro"],
+            event_timestamp_ms: eventAt,
+            expiration_at_ms: expiresAt,
+          },
+        },
+      } as any,
+      createMockResponse() as any
+    );
+
+    expect(tenant.subscription_status).toBe("ACTIVE");
+    expect(tenant.subscription_current_period_ends_at).toEqual(new Date(expiresAt));
+    expect(tenant.revenuecat_last_event_type).toBe("RENEWAL");
+  });
+
+  it.each(["BILLING_ISSUE", "CANCELLATION"])(
+    "records %s without revoking access before the paid period ends",
+    async (eventType) => {
+      process.env.REVENUECAT_WEBHOOK_AUTH = "Bearer test-webhook";
+      process.env.REVENUECAT_ENTITLEMENT_ID = "clinic_pro";
+      const eventAt = Date.now();
+      const expiresAt = eventAt + 10 * 24 * 60 * 60 * 1000;
+      const tenant = {
+        id: "tenant-1",
+        subscription_status: "ACTIVE",
+        is_public: true,
+        subscription_last_event_at: new Date(eventAt - 60_000),
+      };
+      const tenantRepo = {
+        findOne: vi.fn().mockResolvedValue(tenant),
+        save: vi.fn().mockImplementation(async (input) => input),
+      };
+      vi.spyOn(AppDataSource, "getRepository").mockReturnValue(tenantRepo as any);
+      vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined);
+
+      await BillingController.revenueCatWebhook(
+        {
+          method: "POST",
+          originalUrl: "/api/billing/revenuecat/webhook",
+          headers: { authorization: "Bearer test-webhook" },
+          body: {
+            event: {
+              type: eventType,
+              app_user_id: "tenant-1",
+              entitlement_ids: ["clinic_pro"],
+              event_timestamp_ms: eventAt,
+              expiration_at_ms: expiresAt,
+            },
+          },
+        } as any,
+        createMockResponse() as any
+      );
+
+      expect(tenant.subscription_status).toBe("ACTIVE");
+      expect(tenant.is_public).toBe(true);
+      expect(tenant.revenuecat_last_event_type).toBe(eventType);
+      expect(tenant.subscription_current_period_ends_at).toEqual(new Date(expiresAt));
+    }
+  );
+
   it("ignores stale expiration events after a newer active RevenueCat event", async () => {
     process.env.REVENUECAT_WEBHOOK_AUTH = "Bearer test-webhook";
     process.env.REVENUECAT_ENTITLEMENT_ID = "clinic_pro";

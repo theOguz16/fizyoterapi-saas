@@ -10,6 +10,8 @@ import { PackageTrainerAssignment } from "../entities/package-trainer-assignment
 import { SalonApplication } from "../entities/salon-application.entity";
 import { User, UserRole } from "../entities/user.entity";
 import { UserPackage } from "../entities/user-package.entity";
+import { AutomaticBookingSchedulerService } from "./automatic-booking-scheduler.service";
+import { MobileNotificationService } from "./mobile-notification.service";
 
 type PurchaseSlot = {
   starts_at: string;
@@ -39,6 +41,7 @@ type PurchaseContext = {
   trainer_name?: string | null;
   selected_sub_lesson?: string | null;
   lesson_mode?: string | null;
+  request_type?: string | null;
   duo_partner_name?: string | null;
   duo_partner_contact?: string | null;
   duo_invite_url?: string | null;
@@ -126,6 +129,7 @@ export class MobilePurchaseSyncService {
       trainer_name: typeof payload.trainer_name === "string" ? payload.trainer_name : null,
       selected_sub_lesson: typeof payload.selected_sub_lesson === "string" ? payload.selected_sub_lesson : null,
       lesson_mode: typeof payload.lesson_mode === "string" ? payload.lesson_mode : null,
+      request_type: typeof payload.request_type === "string" ? payload.request_type : null,
       duo_partner_name: typeof payload.duo_partner_name === "string" ? payload.duo_partner_name : null,
       duo_partner_contact: typeof payload.duo_partner_contact === "string" ? payload.duo_partner_contact : null,
       duo_invite_url: typeof payload.duo_invite_url === "string" ? payload.duo_invite_url : null,
@@ -300,6 +304,7 @@ export class MobilePurchaseSyncService {
     if (packages.length === 0) return null;
     const pkg = packages[0];
     const packageMap = new Map(packages.map((item) => [item.id, item]));
+    const userPackageIdByPackageId = new Map<string, string>();
     let resolvedTrainerId = context.trainer_id || null;
     if (!resolvedTrainerId && pkg?.id) {
       const fallbackAssignment = await assignmentRepo.findOne({
@@ -342,6 +347,7 @@ export class MobilePurchaseSyncService {
         });
 
         if (alreadyApplied) {
+          userPackageIdByPackageId.set(packageRow.id, alreadyApplied.id);
           continue;
         }
       }
@@ -391,7 +397,7 @@ export class MobilePurchaseSyncService {
         source_request_id: requestId || null,
       };
 
-      await userPackageRepo.save(
+      const savedUserPackage = await userPackageRepo.save(
         userPackageRepo.create({
           tenant_id: tenantId,
           user_id: memberUser.id,
@@ -406,6 +412,7 @@ export class MobilePurchaseSyncService {
           source_request_id: requestId || null,
         })
       );
+      userPackageIdByPackageId.set(packageRow.id, savedUserPackage.id);
     }
 
     const trainerRow =
@@ -554,53 +561,75 @@ export class MobilePurchaseSyncService {
         );
       }
 
-      if (resolvedTrainerId) {
-        for (const slot of nonGroupSlots) {
-          const existingBooking = await bookingRepo.findOne({
-            where: {
-              tenant_id: tenantId,
-              member_id: memberUser.id,
-              trainer_id: resolvedTrainerId,
-              starts_at: slot.starts_at,
-              ends_at: slot.ends_at,
-            },
-          });
-          if (existingBooking) continue;
-          await bookingRepo.save(
-            bookingRepo.create({
-              tenant_id: tenantId,
-              member_id: memberUser.id,
-              trainer_id: resolvedTrainerId,
-              starts_at: slot.starts_at,
-              ends_at: slot.ends_at,
-              status: BookingStatus.PENDING,
-              payment_status:
-                String(context.lesson_mode || "").toUpperCase() === "DUO"
-                  ? BookingPaymentStatus.REQUESTED
-                  : BookingPaymentStatus.APPROVED,
-              payment_approved_at:
-                String(context.lesson_mode || "").toUpperCase() === "DUO" ? undefined : new Date(),
-              meta: {
+      if (resolvedTrainerId && String(context.request_type || "").toUpperCase() !== "DUO_PARTNER_PAYMENT") {
+        const isDuoPurchase = String(context.lesson_mode || "").toUpperCase() === "DUO";
+        const plans = packages
+          .map((packageRow) => ({
+            package: packageRow,
+            userPackageId: userPackageIdByPackageId.get(packageRow.id) || null,
+            candidates: nonGroupSlots
+              .filter((slot) => slot.package_id === packageRow.id)
+              .map((slot) => ({
+                starts_at: slot.starts_at,
+                ends_at: slot.ends_at,
                 package_id: slot.package_id,
-                package_ids: packageIds,
                 package_title: slot.package_title,
-                selected_sub_lesson: context.selected_sub_lesson || null,
-                request_id: requestId || null,
-                source: "MOBILE_PURCHASE_APPROVAL",
-                trainer_resolution: context.trainer_id ? "EXPLICIT" : "PACKAGE_ASSIGNMENT_FALLBACK",
-                lesson_mode: context.lesson_mode || null,
-                is_duo: String(context.lesson_mode || "").toUpperCase() === "DUO",
-                duo:
-                  String(context.lesson_mode || "").toUpperCase() === "DUO"
-                    ? {
-                        status: "AWAITING_PARTNER_PAYMENT",
-                        partner_name: context.duo_partner_name || null,
-                        partner_contact: context.duo_partner_contact || null,
-                        payment: context.duo_payment || null,
-                      }
-                    : null,
+                lesson_name: context.selected_sub_lesson || null,
+              })),
+          }))
+          .filter((plan) => plan.candidates.length > 0);
+        const scheduledBookings = await AppDataSource.transaction((manager) =>
+          AutomaticBookingSchedulerService.schedule(manager, {
+            tenantId,
+            memberId: memberUser.id,
+            trainerId: resolvedTrainerId,
+            requestId,
+            plans,
+          })
+        );
+        if (isDuoPurchase) {
+          for (const booking of scheduledBookings) {
+            booking.status = BookingStatus.PENDING;
+            booking.payment_status = BookingPaymentStatus.REQUESTED;
+            booking.payment_approved_at = undefined;
+            booking.meta = {
+              ...(booking.meta || {}),
+              source: "MOBILE_DUO_PURCHASE_APPROVAL",
+              lesson_mode: "DUO",
+              is_duo: true,
+              duo: {
+                status: "AWAITING_PARTNER_PAYMENT",
+                partner_name: context.duo_partner_name || null,
+                partner_contact: context.duo_partner_contact || null,
+                payment: context.duo_payment || null,
               },
-            })
+            };
+            await bookingRepo.save(booking);
+          }
+        } else {
+          await Promise.allSettled(
+            scheduledBookings.flatMap((booking) => [
+              MobileNotificationService.queuePush({
+                tenantId,
+                userId: memberUser.id,
+                roleScope: "MEMBER",
+                type: "BOOKING_AUTOMATICALLY_SCHEDULED",
+                title: "Ders saatin oluşturuldu",
+                body: `${booking.starts_at.toLocaleString("tr-TR")} için dersin tercihlerin arasından otomatik planlandı.`,
+                deepLink: "/(member)/calendar",
+                meta: { booking_id: booking.id, request_id: requestId || null },
+              }),
+              MobileNotificationService.queuePush({
+                tenantId,
+                userId: resolvedTrainerId,
+                roleScope: "TRAINER",
+                type: "BOOKING_AUTOMATICALLY_SCHEDULED",
+                title: "Yeni ders planlandı",
+                body: `${booking.starts_at.toLocaleString("tr-TR")} için yeni ders takvimine eklendi.`,
+                deepLink: "/(trainer)/calendar",
+                meta: { booking_id: booking.id, member_id: memberUser.id, request_id: requestId || null },
+              }),
+            ])
           );
         }
       }

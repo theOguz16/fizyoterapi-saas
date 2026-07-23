@@ -17,6 +17,7 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { AppIcon } from "@/theme/components/app-icon";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { tokens } from "@/theme/tokens";
 import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
 
@@ -182,14 +183,14 @@ export default function AdminWorkingHoursScreen() {
       invalidates: businessHoursInvalidates,
     },
 
-    onSuccess: async () => {
-      await query.refetch();
-
+    onSuccess: () => {
       if (activation) {
         router.replace(getClinicActivationNextRoute("working_hours") as never);
+        void query.refetch();
         return;
       }
 
+      void query.refetch();
       showInfoAlert(
         "Çalışma saatleri güncellendi",
         "Salon takvimi ve bağlı kullanıcı ekranları yeni çalışma düzenine göre yenilendi."
@@ -319,12 +320,14 @@ export default function AdminWorkingHoursScreen() {
         <SurfaceCard>
           <Text style={styles.section}>Saat aralıkları</Text>
           <TimeField
+            testID="admin-working-hours-start-time"
             label="Açılış saati"
             value={form.start_time}
             placeholder="Açılış saatini seç"
             onPress={() => setActiveField("start_time")}
           />
           <TimeField
+            testID="admin-working-hours-end-time"
             label="Kapanış saati"
             value={form.end_time}
             placeholder="Kapanış saatini seç"
@@ -380,13 +383,14 @@ export default function AdminWorkingHoursScreen() {
           ) : null}
         </SurfaceCard>
 
-        <SurfaceCard>
+        <SurfaceCard testID="admin-working-hours-days-section">
           <Text style={styles.section}>Çalışma günleri</Text>
           <Text style={styles.copy}>Seçili günler: {summary || "Henüz seçilmedi"}</Text>
           <View style={styles.chipRow}>
             {DAY_OPTIONS.map((item) => (
               <SelectionChip
                 key={item.value}
+                testID={`admin-working-hours-day-${item.value}`}
                 label={item.label}
                 active={form.working_days.includes(item.value)}
                 onPress={() => toggleWorkingDay(item.value)}
@@ -464,17 +468,20 @@ export default function AdminWorkingHoursScreen() {
             ))}
           </ScrollView>
         </View>
+        <ConnectivityBanner />
       </Modal>
     </>
   );
 }
 
 function TimeField({
+  testID,
   label,
   value,
   placeholder,
   onPress,
 }: {
+  testID?: string;
   label: string;
   value: string;
   placeholder: string;
@@ -483,7 +490,7 @@ function TimeField({
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.fieldButton, pressed ? styles.fieldButtonPressed : null]}>
+      <Pressable testID={testID} onPress={onPress} style={({ pressed }) => [styles.fieldButton, pressed ? styles.fieldButtonPressed : null]}>
         <Text style={[styles.fieldValue, !value ? styles.fieldPlaceholder : null]}>{value || placeholder}</Text>
         <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
       </Pressable>

@@ -4,7 +4,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import { getSalonDayOptionsApi } from "@/lib/mobile-api";
 import { findCurrentPackage, updateSelectedPackage } from "@/lib/member-package-queue";
-import { buildMemberBookingTimeSelectionResult } from "@/lib/member-package-time-selection";
+import {
+  buildMemberBookingTimeSelectionResult,
+  canAddWeeklyPreference,
+  countWeeklyPreferenceDays,
+} from "@/lib/member-package-time-selection";
 import {
   filterGroupClassSlotsForSelection,
   formatGroupClassPrice,
@@ -51,6 +55,11 @@ function resolveRequiredPreferenceSlots(pkg?: DraftPackageSelection) {
 
 function resolveRequiredTrainerSlots(pkg?: DraftPackageSelection) {
   return pkg?.required_trainer_free_slots || 1;
+}
+
+function resolveWeeklyLessonCount(pkg?: DraftPackageSelection) {
+  const raw = Number(pkg?.weekly_class_hours || pkg?.weekly_frequency || 1);
+  return Math.min(7, Math.max(1, Number.isFinite(raw) ? Math.floor(raw) : 1));
 }
 
 function buildSlotLabel(slot: any, packageTitle?: string, includePackageTitle?: boolean) {
@@ -115,7 +124,10 @@ export default function TimeSelectionScreen() {
       selectedPackages.map((pkg) => {
         const requiredPreferenceSlots = resolveRequiredPreferenceSlots(pkg);
         const requiredTrainerFreeSlots = resolveRequiredTrainerSlots(pkg);
-        const selectedCount = (selectedSlotIdsByPackage[pkg.package_id] || []).length;
+        const selectedSlots = selectedSlotIdsByPackage[pkg.package_id] || [];
+        const selectedCount = selectedSlots.length;
+        const requiredDistinctDays = isGroupFlow ? 1 : resolveWeeklyLessonCount(pkg);
+        const selectedDistinctDays = countWeeklyPreferenceDays(selectedSlots);
         return {
           package_id: pkg.package_id,
           package_title: pkg.package_title || pkg.package_id,
@@ -123,19 +135,29 @@ export default function TimeSelectionScreen() {
           requiredPreferenceSlots,
           requiredTrainerFreeSlots,
           remaining: Math.max(0, requiredPreferenceSlots - selectedCount),
+          requiredDistinctDays,
+          selectedDistinctDays,
+          remainingDistinctDays: Math.max(0, requiredDistinctDays - selectedDistinctDays),
         };
       }),
-    [selectedPackages, selectedSlotIdsByPackage]
+    [isGroupFlow, selectedPackages, selectedSlotIdsByPackage]
   );
 
   const activeStatus = packageStatus.find((item) => item.package_id === activePackage?.package_id);
   const totalRemaining = packageStatus.reduce((sum, item) => sum + item.remaining, 0);
+  const totalRemainingDistinctDays = packageStatus.reduce((sum, item) => sum + item.remainingDistinctDays, 0);
   const totalRequiredSlots = packageStatus.reduce((sum, item) => sum + item.requiredPreferenceSlots, 0);
   const totalSelectedSlots = packageStatus.reduce((sum, item) => sum + item.selectedCount, 0);
   const currentSlotIds = activePackage ? selectedSlotIdsByPackage[activePackage.package_id] || [] : [];
   const hasSelectableSlots = scopedSlots.length > 0;
 
-  const continueLabel = !hasSelectableSlots ? "Uygun saat bekleniyor" : totalRemaining > 0 ? `${totalRemaining} saat daha seç` : "Özete geç";
+  const continueLabel = !hasSelectableSlots
+    ? "Uygun saat bekleniyor"
+    : totalRemaining > 0
+      ? `${totalRemaining} saat daha seç`
+      : totalRemainingDistinctDays > 0
+        ? `${totalRemainingDistinctDays} farklı gün daha seç`
+        : "Özete geç";
 
   const handleContinue = () => {
     const { nextSelectedPackages, flattenedSlots } = buildMemberBookingTimeSelectionResult({
@@ -174,6 +196,7 @@ export default function TimeSelectionScreen() {
 
   return (
     <AppShell
+      testID="intake-time-selection-screen"
       title="Uygun saatlerini seç"
       subtitle={
         isGroupFlow
@@ -187,7 +210,12 @@ export default function TimeSelectionScreen() {
           label={continueLabel}
           icon="calendar"
           onPress={handleContinue}
-          disabled={selectedPackages.length === 0 || !hasSelectableSlots || totalRemaining > 0}
+          disabled={
+            selectedPackages.length === 0 ||
+            !hasSelectableSlots ||
+            totalRemaining > 0 ||
+            totalRemainingDistinctDays > 0
+          }
         />
       }
     >
@@ -229,6 +257,11 @@ export default function TimeSelectionScreen() {
           <Text style={styles.progressSubtle}>
             Paket kuralı: haftada {activePackage?.weekly_class_hours || 0} ders • en az {activeStatus?.requiredTrainerFreeSlots || 0} eğitmen boşluğu
           </Text>
+          {!isGroupFlow ? (
+            <Text style={styles.progressSubtle}>
+              Gün dağılımı: {activeStatus?.selectedDistinctDays || 0} / {activeStatus?.requiredDistinctDays || 1} farklı gün • bir günde en fazla 3 tercih
+            </Text>
+          ) : null}
           {isGroupFlow ? (
             <Text style={styles.groupHint}>
               Eğitmen tek tarihli veya haftalık tekrar eden grup seansları açabilir. Talebin sonrası uygun üyeler bilgilendirilir ve ücret onayı salon tarafından değerlendirilir.
@@ -311,6 +344,17 @@ export default function TimeSelectionScreen() {
                         Alert.alert(
                           "Seçim tamamlandı",
                           `${activePackage.package_title || "Bu paket"} için en fazla ${currentPackageRequirement} saat seçebilirsin.`
+                        );
+                        return current;
+                      }
+                      if (
+                        !isGroupFlow &&
+                        !currentIds.includes(slot.starts_at) &&
+                        !canAddWeeklyPreference(currentIds, slot.starts_at)
+                      ) {
+                        Alert.alert(
+                          "Farklı bir gün seç",
+                          "Aynı gün için en fazla 3 saat tercihi seçebilirsin. Haftalık derslerin farklı günlere dağıtılmalıdır."
                         );
                         return current;
                       }

@@ -138,6 +138,7 @@ export default function TrainerNotesScreen() {
         </View>
 
         <FormField
+          inputId="trainer-note-title-input"
           label="Başlık"
           value={form.title}
           onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))}
@@ -145,6 +146,7 @@ export default function TrainerNotesScreen() {
           returnKeyType="next"
         />
         <FormField
+          inputId="trainer-note-body-input"
           label="Not içeriği"
           value={form.body}
           onChangeText={(value) => setForm((prev) => ({ ...prev, body: value }))}
@@ -153,7 +155,7 @@ export default function TrainerNotesScreen() {
           multiline
           numberOfLines={6}
         />
-        <ActionButton label="Notu kaydet" icon="notes" onPress={() => mutation.mutate()} loading={mutation.isPending} disabled={!form.body.trim()} />
+        <ActionButton testID="trainer-note-submit" label="Notu kaydet" icon="notes" onPress={() => mutation.mutate()} loading={mutation.isPending} disabled={!form.body.trim()} />
       </SurfaceCard>
 
       <View style={styles.historyHeader}>
@@ -169,7 +171,7 @@ export default function TrainerNotesScreen() {
         </SurfaceCard>
       ) : (
         <ScrollPanel maxHeight={440}>
-          {items.map((item: any) => {
+          {items.map((item: any, index: number) => {
             const category = String(item.category || "GENERAL");
             const tone = noteCategoryTone(category);
             const iconTone = category === "RISK" ? "danger" : category === "GOAL" ? "success" : category === "FOLLOW_UP" ? "warning" : "neutral";
@@ -190,6 +192,7 @@ export default function TrainerNotesScreen() {
                 <View style={styles.noteFooter}>
                   <Text style={styles.noteFooterCopy}>{noteCategoryDescription(category)}</Text>
                   <ActionButton
+                    testID={`trainer-note-edit-${index}`}
                     label="Düzenle"
                     icon="notes"
                     variant="ghost"

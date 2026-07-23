@@ -3,9 +3,30 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3FbackTo%3D%2F%28admin%29%2Fsalon"
 - waitForAnimationToEnd:
-    timeout: 5000
+    timeout: 2000
+- runFlow:
+    when:
+      visible: "Aç"
+    commands:
+      - tapOn: "Aç"
+- extendedWaitUntil:
+    visible:
+      id: "admin-subscription-value-proof"
+    timeout: 20000
 - assertVisible: "FizyoFlow"
 - assertVisible:
     id: "admin-subscription-value-proof"

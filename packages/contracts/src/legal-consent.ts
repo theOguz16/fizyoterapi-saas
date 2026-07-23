@@ -21,5 +21,5 @@ export type StoredRegistrationLegalConsent = {
     updated_at: string;
     version: string;
   };
-  source: "MOBILE_CLINIC_OWNER_REGISTER" | "MOBILE_CLINIC_MEMBER_REGISTER";
+  source: "MOBILE_CLINIC_OWNER_REGISTER" | "MOBILE_CLINIC_MEMBER_REGISTER" | "MOBILE_INVITE_ACCEPT";
 };

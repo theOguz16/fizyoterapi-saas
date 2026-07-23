@@ -1,0 +1,62 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsalon"
+- extendedWaitUntil:
+    visible:
+      id: "admin-salon-screen"
+    timeout: 20000
+- tapOn:
+    id: "admin-salon-edit-profile"
+- extendedWaitUntil:
+    visible:
+      id: "admin-salon-profile-title"
+    timeout: 15000
+- tapOn:
+    id: "admin-salon-profile-title"
+- eraseText
+- inputText: "FizyoFlow E2E Klinik Profili"
+- scrollUntilVisible:
+    element:
+      id: "admin-salon-profile-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "admin-salon-profile-save"
+- extendedWaitUntil:
+    visible: "Salon profili güncellendi"
+    timeout: 20000
+- tapOn: "Tamam|OK"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsalon"
+- extendedWaitUntil:
+    visible: "FizyoFlow E2E Klinik Profili"
+    timeout: 20000
+- tapOn:
+    id: "admin-salon-working-hours"
+- extendedWaitUntil:
+    visible:
+      id: "admin-working-hours-day-7"
+    timeout: 15000
+- tapOn:
+    id: "admin-working-hours-day-7"
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "admin-working-hours-save"
+- extendedWaitUntil:
+    visible: "Çalışma saatleri güncellendi|Çalışma saatleri kaydedildi"
+    timeout: 20000

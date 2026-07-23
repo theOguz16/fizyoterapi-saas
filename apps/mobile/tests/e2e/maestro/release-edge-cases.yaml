@@ -1,69 +1,225 @@
 appId: com.fizyoflow.mobile
 ---
+# Aktif üyenin aynı kliniğe gerçek ek paket başvurusu.
 - launchApp:
     clearState: true
     clearKeychain: true
-
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
-- tapOn:
-    text: "Aç"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
 - extendedWaitUntil:
-    visible: "Açılsın mı?"
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member@gmail.com"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "member123"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-profile-button"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-home-package"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-home-package"
+- extendedWaitUntil:
+    visible:
+      id: "member-package-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-buy-additional-package-0"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "member-buy-additional-package-0"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Duo partner bilgisi"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "duo-partner-name-input"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "duo-partner-name-input"
+      - inputText: "Aktif Uye Partner"
+      - pressKey: ENTER
+      - scrollUntilVisible:
+          element:
+            id: "duo-partner-contact-input"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "duo-partner-contact-input"
+      - inputText: "active.partner@example.com"
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "package-detail-continue"
+    direction: DOWN
     timeout: 10000
-    optional: true
-- waitForAnimationToEnd:
-    timeout: 5000
 - tapOn:
-    point: "64%,55%"
+    id: "package-detail-continue"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
-    text: "Aç"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
-
-- openLink: "fizyoflow:///e2e-login?skipAuth=1&redirect=%2F%28intake-member%29%2Fe2e-release-edge-cases"
-- tapOn:
-    text: "Aç"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
+    id: "time-slot-toggle-0-0"
 - extendedWaitUntil:
-    visible: "Açılsın mı?"
+    visible: "Özete geç"
     timeout: 10000
-    optional: true
-- waitForAnimationToEnd:
-    timeout: 5000
-- tapOn:
-    point: "64%,55%"
-- tapOn:
-    text: "Aç"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
-- waitForAnimationToEnd:
-    timeout: 5000
-- tapOn:
-    point: "64%,55%"
-- tapOn:
-    text: "Aç"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
-
+- tapOn: "Özete geç"
 - extendedWaitUntil:
-    visible: "Release edge-case senaryosu geçti"
-    timeout: 90000
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible: "Başvurun alındı|Başvurun incelemeye alındı|Başvurun inceleniyor|Onay bekleniyor|Başvuru gönderildi|Paketlerim"
+    timeout: 30000
 
-- assertVisible: "Aynı hesapta rol geçişi"
-- assertVisible: "Ödeme bekliyor ve admin reddi"
-- assertVisible: "Aktif üyeye ikinci paket ekleme"
-- assertVisible: "Özel, grup ve duo paket ayrımı"
-- assertVisible: "API hata mesajları"
+# Gerçek rol koruması: eğitmen üye ekranına geçirilemez.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "elisauyar@gmail.com"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "trainer123"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- openLink: "fizyoflow://(member)/package"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 15000
+
+# Gerçek admin kararı: oluşturulan ödeme/ek paket talebi reddedilir.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "oguzhanuyar531@gmail.com"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "admin123"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-dashboard-approvals"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-dashboard-approvals"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Detayı aç"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn: "Detayı aç"
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-reject"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-approval-reject"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000
+
+# Gerçek 401 yanıtının kullanıcı mesajına çevrilmesi.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
+- tapOn:
+    id: "welcome-login-button"
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member@gmail.com"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "yanlis-sifre"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible: "E-posta veya şifre hatalı."
+    timeout: 15000

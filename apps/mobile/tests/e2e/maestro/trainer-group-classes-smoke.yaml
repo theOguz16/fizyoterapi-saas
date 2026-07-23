@@ -4,6 +4,11 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+
 - openLink: "fizyoflow://e2e-reset"
 
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fgroup-classes"
@@ -60,14 +65,6 @@ appId: com.fizyoflow.mobile
     timeout: 6000
 
 - assertVisible: "Grup dersi onaya gönderildi"
-
-- tapOn:
-    text: "Tamam"
-    optional: true
-
-- tapOn:
-    text: "OK"
-    optional: true
 
 - scrollUntilVisible:
     element: "Aktif kayıtlar"

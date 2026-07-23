@@ -27,3 +27,17 @@ export function showInfoAlert(title: string, message: string) {
 export function showErrorAlert(title: string, error: unknown, fallback: string) {
   Alert.alert(title, getUserFacingMessage(error, fallback));
 }
+
+/** A committed server action must not look failed merely because session refresh is unavailable. */
+export async function refreshSessionAfterCommittedAction(refreshMe: () => Promise<unknown>, actionLabel = "İşlem") {
+  try {
+    await refreshMe();
+    return true;
+  } catch {
+    showInfoAlert(
+      `${actionLabel} tamamlandı`,
+      "İşlem sunucuda kaydedildi ancak oturum bilgisi şu anda yenilenemedi. Ekranı yenileyebilir veya tekrar giriş yapabilirsin."
+    );
+    return false;
+  }
+}

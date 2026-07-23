@@ -38,7 +38,7 @@ export function resolveInternalHrefFromIncomingUrl(
           : "";
 
     if (!routePath) return null;
-    if ((routePath === "/e2e-login" || routePath === "/e2e-reset") && !options.allowE2E) return null;
+    if ((routePath === "/e2e-login" || routePath === "/e2e-reset" || routePath === "/e2e-connectivity") && !options.allowE2E) return null;
 
     return `${routePath}${url.search}`;
   } catch {

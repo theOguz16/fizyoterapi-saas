@@ -8,10 +8,15 @@ Kritik akışların hızlı smoke doğrulaması için YAML akışları.
 2. `Detox`
 Native seviye cihaz otomasyonu istenirse ikinci aşamada genişletilecek.
 
+Kamera, galeri, native paylaşım, biyometri, bildirim ve mağaza sandbox
+işlemlerinin simülatör/fiziksel cihaz ayrımı ile kanıt adımları
+`native-device-matrix.md` dosyasındadır. Bu işlemler Maestro smoke sonucuna
+dahil edilmez.
+
 Release doğrulaması `release-role-matrix.txt` dosyasındaki rol ve yetenek
-envanterini kullanır. Matris 37 satırdır: 4 paylaşılan, 10 admin, 9 trainer ve
-14 member senaryosu. Aynı YAML hem paylaşılan rol yönlendirmesinde hem member
-login kapsamında yer aldığı için 36 benzersiz dosya çalıştırılır.
+envanterini kullanır. Bu matris geniş bir smoke/deep-link kapsamıdır; bütün
+dosyalarının gerçek iş sonucu ürettiği varsayılmaz. Dosya bazındaki gerçek
+kapsam sınıflandırması `docs/maestro-test-inventory.md` içindedir.
 
 Kapsanan ana alanlar:
 
@@ -77,6 +82,40 @@ eklenir.
   izole edilmesi gerekir.
 
 Deep link ve fiziksel QR farklı kanıtlardır. Deep link URL/scheme açılışını; QR ise cihaz kamerası ile gerçek kod taramasını ve hedef salon ekranını kaydetmelidir. RevenueCat kanıtı da her platform için store sandbox transaction ID, entitlement sonucu ve backend senkronizasyon logunu ayrı tutar. Tam alan matrisi `docs/release-gate.md` içindedir.
+
+## İzole fonksiyonel E2E ortamı
+
+Gerçek iş sonucu oluşturan akışlar, production'dan ayrı PostgreSQL veritabanı
+ve production Dockerfile ile derlenmiş API üzerinde çalıştırılır. Her akıştan
+önce veritabanı tamamen temizlenir ve demo fixture'ları yeniden oluşturulur;
+bu nedenle yönetici, eğitmen ve danışan test verileri akışlar arasında taşmaz.
+
+Önce Metro'yu E2E API adresiyle başlatın:
+
+```sh
+EXPO_PUBLIC_E2E_MODE=1 \
+EXPO_PUBLIC_API_BASE=http://127.0.0.1:4949/api \
+pnpm dev
+```
+
+Ardından ayrı bir terminalde izole fonksiyonel matrisi çalıştırın:
+
+```sh
+pnpm test:e2e:functional:isolated
+```
+
+Ortam yönetimi için:
+
+```sh
+sh ../../scripts/mobile-e2e-env.sh up
+sh ../../scripts/mobile-e2e-env.sh reset
+sh ../../scripts/mobile-e2e-env.sh status
+sh ../../scripts/mobile-e2e-env.sh down
+```
+
+Bu komutlar yalnızca `fizyoflow-e2e` Docker projesini, `fizyoflow_e2e`
+veritabanını, `55433` PostgreSQL portunu ve `4949` API portunu kullanır.
+Production compose, production volume ve production veritabanına erişmez.
 
 Not:
 - iOS tarafında oturum sızıntısını önlemek için flow'lar `launchApp.clearState: true` ve `clearKeychain: true` ile başlar.

@@ -224,6 +224,12 @@ function normalizeMatchText(value: unknown) {
     .replace(/ç/g, "c");
 }
 
+function packageTestId(value: unknown) {
+  return normalizeMatchText(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function publicPackageSearchText(pkg: PublicPackageRow) {
   const rules = pkg.rules && typeof pkg.rules === "object" ? pkg.rules : {};
   const subLessons = Array.isArray(pkg.sub_lessons) ? pkg.sub_lessons : Array.isArray(rules.sub_lessons) ? rules.sub_lessons : [];
@@ -544,6 +550,7 @@ export default function MemberPackageScreen() {
 
   return (
     <AppShell
+      testID="member-package-screen"
       title="Paket ve Geçmiş"
       subtitle="Paketlerini, kullanım durumunu ve ödeme geçmişini tek ekranda takip et."
       icon="package"
@@ -554,7 +561,7 @@ export default function MemberPackageScreen() {
     >
       <View style={styles.metricsRow}>
         <MetricCard label="Aktif Paket" value={activePackages.length} icon="package" />
-        <MetricCard label="Toplam Hak" value={totalRemaining} icon="ticket" />
+        <MetricCard testID={`member-package-total-remaining-${totalRemaining}`} label="Toplam Hak" value={totalRemaining} icon="ticket" />
       </View>
 
       {activeMembership?.tenant_slug ? (
@@ -603,7 +610,7 @@ export default function MemberPackageScreen() {
               />
             ) : (
               <ScrollPanel maxHeight={420}>
-                {allPurchasedPackages.map((pkg) => {
+                {allPurchasedPackages.map((pkg, packageIndex) => {
                   const meta = statusMeta(pkg);
                   const remaining = toNumber(pkg.remaining_credits);
                   const linkedGroupClasses = Array.isArray(pkg.linked_group_classes)
@@ -688,6 +695,7 @@ export default function MemberPackageScreen() {
 
                       {pkg.package_id ? (
                         <ActionButton
+                          testID={`member-renew-package-${packageTestId(pkg.package_title || packageIndex)}`}
                           label={`Bu paketi ${formatCurrency(
                             pkg.renewal_price ?? pkg.latest_catalog_price ?? pkg.package_price
                           )} ile yenile`}
@@ -718,7 +726,7 @@ export default function MemberPackageScreen() {
               />
             ) : (
               <View style={styles.invoiceList}>
-                {purchasablePackages.slice(0, 3).map((pkg) => {
+                {purchasablePackages.slice(0, 3).map((pkg, index) => {
                   const isRecommended = recommendedPurchasablePackageId === String(pkg.id || "");
                   return (
                   <View key={String(pkg.id)} style={[styles.listCard, isRecommended ? styles.recommendedPackageCard : null]}>
@@ -747,7 +755,7 @@ export default function MemberPackageScreen() {
                       </View>
                     </View>
 
-                    <ActionButton label="Bu paketi satın al" icon="package" onPress={() => handleBuyAnotherPackage(pkg)} />
+                    <ActionButton testID={`member-buy-additional-package-${index}`} label="Bu paketi satın al" icon="package" onPress={() => handleBuyAnotherPackage(pkg)} />
                   </View>
                 );
                 })}

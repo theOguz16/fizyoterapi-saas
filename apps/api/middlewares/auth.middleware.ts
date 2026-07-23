@@ -3,6 +3,8 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { attachAuditError } from "../services/audit-log.service";
+import { AppDataSource } from "../data-source";
+import { Account } from "../entities/account.entity";
 
 export type JwtPayload = {
   sub: string;
@@ -12,6 +14,7 @@ export type JwtPayload = {
   linkedUserId?: string | null;
   membershipId?: string | null;
   loginScope?: "ACCOUNT" | "LEGACY";
+  authVersion?: number;
 };
 
 export interface AuthenticatedRequest extends Request {
@@ -23,7 +26,20 @@ export interface AuthenticatedRequest extends Request {
 
 // Hem mobile Bearer token hem de web cookie oturumu ayni middleware'den geciyor.
 // Bu nedenle token'i birden fazla kaynaktan toplayip tek bir req.auth alanina indiriyoruz.
-export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+async function hasCurrentAuthVersion(payload: JwtPayload) {
+  if (!payload.accountId) return true;
+  const account = await AppDataSource.getRepository(Account).findOne({
+    where: { id: payload.accountId, is_active: true },
+    select: ["id", "auth_version", "is_active"],
+  });
+  // authVersion alanı eklenmeden önce üretilmiş ACCOUNT tokenları sürüm 1 sayılır.
+  // Böylece mevcut oturumlar deploy anında bozulmaz; parola değişince hesap sürümü
+  // 2'ye yükselir ve eski tokenlar da güvenli biçimde reddedilir.
+  const tokenVersion = payload.authVersion === undefined ? 1 : Number(payload.authVersion);
+  return Boolean(account && Number(account.auth_version || 1) === tokenVersion);
+}
+
+export async function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   const bearerToken = header?.startsWith("Bearer ") ? header.slice(7).trim() : undefined;
   const headerToken =
@@ -52,6 +68,11 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
       });
     }
     const payload = jwt.verify(token, jwtSecret) as JwtPayload;
+    if (!(await hasCurrentAuthVersion(payload))) {
+      return res.status(401).json({
+        error: { code: "SESSION_REVOKED", message: "Oturum güvenlik nedeniyle sonlandırıldı. Lütfen tekrar giriş yapın." },
+      });
+    }
     req.auth = payload;
     return next();
   } catch {
@@ -60,6 +81,11 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
     if (headerToken && cookieToken) {
       try {
         const fallbackPayload = jwt.verify(cookieToken, jwtSecret) as JwtPayload;
+        if (!(await hasCurrentAuthVersion(fallbackPayload))) {
+          return res.status(401).json({
+            error: { code: "SESSION_REVOKED", message: "Oturum güvenlik nedeniyle sonlandırıldı. Lütfen tekrar giriş yapın." },
+          });
+        }
         req.auth = fallbackPayload;
         return next();
       } catch {

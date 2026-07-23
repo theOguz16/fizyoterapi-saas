@@ -65,6 +65,7 @@ export async function createAdminPackageApi(payload: {
   title: string;
   total_credits: number;
   duration_days: number;
+  weekly_class_hours: number;
   is_active?: boolean;
   is_visible?: boolean;
   is_public?: boolean;
@@ -92,6 +93,7 @@ export async function updateAdminPackageApi(
     title?: string;
     total_credits?: number;
     duration_days?: number;
+    weekly_class_hours?: number;
     is_active?: boolean;
     is_visible?: boolean;
     is_public?: boolean;

@@ -50,4 +50,27 @@ describe("admin subscription helpers", () => {
     expect(new Set(SUBSCRIPTION_VALUE_PROOFS.map((item) => item.key)).size).toBe(SUBSCRIPTION_VALUE_PROOFS.length);
     expect(SUBSCRIPTION_VALUE_PROOFS.every((item) => item.title.length > 0 && item.description.length > 0)).toBe(true);
   });
+
+  it("explains billing failures and cancelled renewal without revoking the current period", () => {
+    expect(
+      buildSubscriptionHeadline({
+        review_status: "PUBLISHED",
+        subscription_status: "ACTIVE",
+        can_start_trial: false,
+        trial_days_remaining: 0,
+        has_billing_issue: true,
+        will_renew: true,
+      })
+    ).toContain("Ödeme yöntemin doğrulanamadı");
+    expect(
+      buildSubscriptionHeadline({
+        review_status: "PUBLISHED",
+        subscription_status: "ACTIVE",
+        can_start_trial: false,
+        trial_days_remaining: 0,
+        has_billing_issue: false,
+        will_renew: false,
+      })
+    ).toContain("Otomatik yenileme kapalı");
+  });
 });

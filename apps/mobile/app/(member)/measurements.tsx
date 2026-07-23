@@ -193,6 +193,12 @@ export default function MemberMeasurementsScreen() {
                         <Text style={styles.historyMetricValue}>{formatMetricValue(item.height_cm, "cm")}</Text>
                       </View>
                     </View>
+                    {String(item.extras?.note || "").trim() ? (
+                      <View testID={`member-measurement-note-${item.id}`} style={styles.historyNote}>
+                        <Text style={styles.historyMetricLabel}>Not</Text>
+                        <Text style={styles.historyNoteText}>{String(item.extras.note).trim()}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 ))}
               </ScrollPanel>
@@ -275,6 +281,18 @@ const styles = StyleSheet.create({
     color: tokens.colors.text,
     fontSize: tokens.font.lg,
     fontFamily: tokens.fontFamily.bold,
+  },
+  historyNote: {
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border,
+    paddingTop: tokens.spacing.sm,
+  },
+  historyNoteText: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    lineHeight: tokens.lineHeight.normal,
+    fontFamily: tokens.fontFamily.regular,
   },
 
   // Liste Kartı Stilleri

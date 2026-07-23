@@ -1,19 +1,11 @@
 appId: com.fizyoflow.mobile
 ---
-- launchApp:
-    clearState: true
-    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 
-- openLink: "fizyoflow://e2e-reset"
-- waitForAnimationToEnd:
-    timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
-
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsalon%2Fsetup"
+- openLink: "fizyoflow://e2e-login?email=clinic.owner.e2e%40demo.local&password=clinic-owner123&redirect=%2F%28admin%29%2Fsalon%2Fsetup"
 - waitForAnimationToEnd:
     timeout: 2000
 - runFlow:
@@ -27,15 +19,70 @@ appId: com.fizyoflow.mobile
       id: "admin-clinic-activation-step-1"
     timeout: 20000
 - assertVisible: "1 / 4"
+- waitForAnimationToEnd
 
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fpackages%3Factivation%3D1"
-- waitForAnimationToEnd:
-    timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-name-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-clinic-name-input"
+- inputText: "E2E Klinik Aktivasyon"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-name-input"
+    direction: DOWN
+    timeout: 10000
+- assertVisible: "E2E Klinik Aktivasyon"
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-city-picker"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-clinic-city-picker"
+- tapOn: "Şehir ara"
+- inputText: "İstanbul"
+- tapOn:
+    text: "İstanbul"
+    below: "Şehir ara"
+- tapOn:
+    id: "admin-clinic-district-picker"
+- tapOn: "İlçe ara"
+- inputText: "Kadıköy"
+- tapOn:
+    text: "Kadıköy"
+    below: "İlçe ara"
+- tapOn:
+    id: "admin-clinic-phone-input"
+- inputText: "05550009999"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-about-input"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "admin-clinic-about-input"
+- inputText: "Gercek API ile klinik aktivasyon testi"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-owner-practitioner"
+    direction: UP
+    timeout: 10000
+- tapOn:
+    id: "admin-clinic-owner-practitioner"
+- scrollUntilVisible:
+    element:
+      id: "admin-clinic-activation-next"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-clinic-activation-next"
 
 - extendedWaitUntil:
     visible:
@@ -45,13 +92,59 @@ appId: com.fizyoflow.mobile
 
 - scrollUntilVisible:
     element:
+      id: "admin-package-variant-picker"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-package-variant-picker"
+- extendedWaitUntil:
+    visible:
+      id: "admin-package-category-ozel-ders"
+    timeout: 10000
+- tapOn:
+    text: "Özel ders"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "admin-package-variant-ozel-ders"
+    timeout: 10000
+- tapOn:
+    id: "admin-package-variant-ozel-ders"
+- scrollUntilVisible:
+    element:
       id: "admin-package-title-input"
     direction: DOWN
     timeout: 10000
 - tapOn:
     id: "admin-package-title-input"
+- eraseText
 - inputText: "Aktivasyon E2E Paket"
-- hideKeyboard
+- pressKey: ENTER
+- tapOn:
+    id: "admin-package-credits-input"
+- eraseText
+- inputText: "8"
+- pressKey: ENTER
+- tapOn:
+    id: "admin-package-duration-input"
+- eraseText
+- inputText: "30"
+- pressKey: ENTER
+- tapOn:
+    id: "admin-package-price-input"
+- eraseText
+- inputText: "1500"
+- pressKey: ENTER
+- tapOn:
+    id: "admin-package-commission-input"
+- eraseText
+- inputText: "25"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-package-save-button"
+    direction: DOWN
+    timeout: 10000
 
 - runFlow:
     when:
@@ -67,6 +160,21 @@ appId: com.fizyoflow.mobile
     timeout: 20000
 - assertVisible: "3 / 4 · Takvim düzenini belirle"
 
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-day-6"
+    direction: DOWN
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-days-section"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- assertVisible:
+    id: "admin-working-hours-day-6"
+- tapOn:
+    id: "admin-working-hours-day-6"
 - assertVisible:
     id: "admin-working-hours-save"
 - tapOn:

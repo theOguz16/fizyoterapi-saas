@@ -3,6 +3,10 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
@@ -12,41 +16,6 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Grup dersleri"
     timeout: 20000
-
-# Cleanup previous E2E rows if they exist
-- swipe:
-    start: 50%, 82%
-    end: 50%, 18%
-- tapOn:
-    id: "trainer-group-classes-delete-e2e-aksam-pilates"
-    optional: true
-- tapOn:
-    text: "OK"
-    optional: true
-- tapOn:
-    id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
-    optional: true
-- tapOn:
-    text: "OK"
-    optional: true
-- tapOn:
-    id: "trainer-group-classes-delete-e2e-davetli-grup"
-    optional: true
-- tapOn:
-    text: "OK"
-    optional: true
-- tapOn:
-    id: "trainer-group-classes-delete-e2e-davetli-grup-guncel"
-    optional: true
-- tapOn:
-    text: "OK"
-    optional: true
-- swipe:
-    start: 50%, 24%
-    end: 50%, 82%
-- swipe:
-    start: 50%, 24%
-    end: 50%, 82%
 
 # Special + public create
 - swipe:
@@ -75,6 +44,41 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "trainer-group-classes-submit"
 - assertVisible: "Grup dersi onaya gönderildi"
+- tapOn: "Tamam|OK"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-edit-e2e-aksam-pilates"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
-    text: "OK"
-    optional: true
+    id: "trainer-group-classes-edit-e2e-aksam-pilates"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-name-input"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates Guncel"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-submit"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "trainer-group-classes-submit"
+- extendedWaitUntil:
+    visible: "Güncelleme onaya gönderildi"
+    timeout: 20000
+- tapOn: "Tamam|OK"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
+- extendedWaitUntil:
+    visible: "Silme talebi gönderildi"
+    timeout: 20000

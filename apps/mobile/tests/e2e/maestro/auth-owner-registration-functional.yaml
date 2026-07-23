@@ -1,0 +1,125 @@
+appId: com.fizyoflow.mobile
+name: auth-owner-registration-functional
+---
+- extendedWaitUntil:
+    visible:
+      id: "welcome-signup-button"
+    timeout: 60000
+- waitForAnimationToEnd
+- tapOn:
+    id: "welcome-signup-button"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "role-option-admin"
+    timeout: 10000
+- waitForAnimationToEnd
+- tapOn:
+    id: "role-option-admin"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Hesabını oluştur"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "register-submit-button"
+    direction: DOWN
+    timeout: 10000
+
+# Eksik form sessizce ilerlememeli.
+- tapOn:
+    id: "register-submit-button"
+- scrollUntilVisible:
+    element:
+      id: "register-error"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "register-error"
+
+- scrollUntilVisible:
+    element:
+      id: "register-first-name-input"
+    direction: UP
+    timeout: 10000
+- tapOn:
+    id: "register-first-name-input"
+- inputText: "Kayıt"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "register-last-name-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "register-last-name-input"
+- inputText: "E2E"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "register-email-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "register-email-input"
+- inputText: "owner.registration.e2e@demo.local"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "register-phone-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "register-phone-input"
+- inputText: "05550009012"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "register-password-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "register-password-input"
+- inputText: "owner-register123"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "register-repeat-input"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "register-repeat-input"
+- scrollUntilVisible:
+    element:
+      id: "legal-terms-checkbox"
+    direction: DOWN
+    timeout: 10000
+- tapOn: "Kimlik ve iletişim bilgilerin.*"
+- waitForAnimationToEnd
+
+# Zorunlu hukuki onaylar verilmeden hesap açılmamalı.
+- tapOn:
+    id: "register-submit-button"
+- scrollUntilVisible:
+    element:
+      id: "register-error"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "register-error"
+- tapOn:
+    id: "legal-terms-checkbox"
+- tapOn:
+    id: "legal-notice-checkbox"
+- scrollUntilVisible:
+    element:
+      id: "register-submit-button"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "register-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "admin-clinic-activation-step-1"
+    timeout: 20000
+- assertVisible: "1 / 4"

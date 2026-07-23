@@ -6,6 +6,7 @@ import {
   canShowTrainerCalendarCheckin,
   createCalendarFeedRange,
   isCalendarEventToday,
+  splitMemberCalendarEvents,
 } from "@/lib/calendar-feed";
 
 describe("mobile calendar feed", () => {
@@ -42,6 +43,32 @@ describe("mobile calendar feed", () => {
       status: "APPROVED",
       approval_status: "APPROVED",
     });
+  });
+
+  it("separates real lessons from availability preferences on the member calendar", () => {
+    const base = {
+      entity_id: "entity-1",
+      starts_at: "2026-07-20T09:00:00.000Z",
+      ends_at: "2026-07-20T10:00:00.000Z",
+      timezone: "Europe/Istanbul",
+      status: "APPROVED",
+      approval_status: "APPROVED",
+      is_cancelled: false,
+      recurrence: { kind: "NONE", template_id: null, occurrence_starts_at: null },
+      conflict: { has_conflict: false, event_ids: [] },
+      presentation: { title: "Kayıt", subtitle: "", badge_label: "Onaylandı", badge_tone: "success" },
+      details: {},
+    } as const;
+    const events = [
+      { ...base, id: "booking:1", source: "BOOKING" },
+      { ...base, id: "availability:1", source: "AVAILABILITY" },
+      { ...base, id: "pending-availability:1", source: "PENDING_AVAILABILITY", status: "PENDING", approval_status: "PENDING" },
+    ] as CalendarFeedEvent[];
+
+    const split = splitMemberCalendarEvents(events);
+    expect(split.lessons.map((event) => event.id)).toEqual(["booking:1"]);
+    expect(split.approvedPreferences.map((event) => event.id)).toEqual(["availability:1"]);
+    expect(split.pendingPreferences.map((event) => event.id)).toEqual(["pending-availability:1"]);
   });
 
   it("uses the clinic timezone for day grouping and today's check-in action", () => {

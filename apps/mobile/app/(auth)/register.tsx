@@ -17,6 +17,8 @@ import {
 } from "@/lib/legal-consent";
 import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
 
+const isE2EMode = process.env.EXPO_PUBLIC_E2E_MODE === "1";
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { resetSignupFlow, setSelectedPersoma, signupOnboarding } = useAppFlow();
@@ -120,10 +122,10 @@ export default function RegisterScreen() {
             <FormField inputId="register-last-name-input" label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyadın" />
             <FormField inputId="register-email-input" label="E-posta" value={form.email} onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))} placeholder="ornek@mail.com" keyboardType="email-address" autoCapitalize="none" />
             <FormField inputId="register-phone-input" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
-            <FormField inputId="register-password-input" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="Şifreni oluştur" secureTextEntry />
-            <FormField inputId="register-repeat-input" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry />
+            <FormField inputId="register-password-input" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value, ...(isE2EMode ? { repeat: value } : {}) }))} placeholder="Şifreni oluştur" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
+            <FormField inputId="register-repeat-input" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
             <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="CLINIC_OWNER" />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? <Text testID="register-error" style={styles.error}>{error}</Text> : null}
           </SurfaceCard>
         </AnimatedEntrance>
       </Animated.View>

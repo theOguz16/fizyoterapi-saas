@@ -3,14 +3,282 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
     timeout: 20000
-- openLink: "fizyoflow:///e2e-login?skipAuth=1&redirect=%2F%28intake-member%29%2Fe2e-multi-package%3Fslug%3Ddemo-salon"
+- openLink: "fizyoflow://(intake-member)"
 - extendedWaitUntil:
-    visible: "Başvurunu gözden geçir"
+    visible:
+      id: "member-connect-discovery"
     timeout: 20000
-- assertVisible:
-    text: "2 paket|Grup dersi katılımı"
+- tapOn:
+    id: "member-connect-discovery"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-goal-klinik-pilates-reformer"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-intake-goal-klinik-pilates-reformer"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-expectation-egitmen-kalitesi-onemli"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-intake-expectation-egitmen-kalitesi-onemli"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-weeklyDays-1-gun"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-intake-weeklyDays-1-gun"
+- scrollUntilVisible:
+    element:
+      id: "member-intake-timePreference-sabah"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-intake-timePreference-sabah"
+- extendedWaitUntil:
+    visible:
+      id: "member-location-skip"
+    timeout: 10000
+- tapOn:
+    id: "member-location-skip"
+- scrollUntilVisible:
+    element:
+      id: "member-salon-open-demo-salon"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-salon-open-demo-salon"
+- extendedWaitUntil:
+    visible:
+      id: "salon-detail-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "salon-view-packages-button"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "salon-view-packages-button"
+- extendedWaitUntil:
+    visible:
+      id: "intake-packages-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "intake-package-mode-filter-duo"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "intake-package-mode-filter-duo"
+- scrollUntilVisible:
+    element: "Duo Reformer Paketi"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn: "Duo Reformer Paketi"
+- extendedWaitUntil:
+    visible: "Seçildi"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "intake-package-mode-filter-group"
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-package-mode-filter-group"
+- scrollUntilVisible:
+    element: "Grup Dersi (8 Kişi)"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn: "Grup Dersi (8 Kişi)"
+- scrollUntilVisible:
+    element: "2 paketle devam et"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn: "2 paketle devam et"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 20000
+- assertVisible: "Grup Dersi (8 Kişi)"
+- scrollUntilVisible:
+    element:
+      id: "package-detail-continue"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "package-detail-continue"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Başvuruyu göndermek için hesabınla devam et"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-login"
+- extendedWaitUntil:
+    visible:
+      id: "login-identity-input"
+    timeout: 15000
+- tapOn:
+    id: "login-identity-input"
+- inputText: "member.intake.e2e@demo.local"
+- pressKey: ENTER
+- tapOn:
+    id: "login-password-input"
+- inputText: "member-intake123"
+- pressKey: ENTER
+- tapOn:
+    id: "login-submit-button"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 30000
+- assertVisible: "Duo Reformer Paketi"
+- scrollUntilVisible:
+    element:
+      id: "duo-partner-name-input"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- assertVisible: "Duo partner bilgisi"
+- tapOn:
+    id: "duo-partner-name-input"
+- inputText: "Coklu Partner E2E"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "duo-partner-contact-input"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "duo-partner-contact-input"
+- inputText: "multi.partner@example.com"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "package-detail-continue"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "package-detail-continue"
+- scrollUntilVisible:
+    element:
+      id: "intake-trainer-select-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-trainer-select-0"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-1"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-1"
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-2"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-2"
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element: ".*Coklu Partner E2E.*"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible: "Başvurun alındı|Başvurun incelemeye alındı|Başvurun inceleniyor|Onay bekleniyor|Başvuru gönderildi"
+    timeout: 30000

@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { buildMemberBookingTimeSelectionResult } from "@/lib/member-package-time-selection";
+import {
+  buildMemberBookingTimeSelectionResult,
+  canAddWeeklyPreference,
+  countWeeklyPreferenceDays,
+} from "@/lib/member-package-time-selection";
 
 describe("buildMemberBookingTimeSelectionResult", () => {
+  it("spreads weekly alternatives across days with at most three choices per day", () => {
+    const monday = [
+      "2026-07-20T07:00:00.000Z",
+      "2026-07-20T08:00:00.000Z",
+      "2026-07-20T10:00:00.000Z",
+    ];
+    const tuesday = "2026-07-21T07:00:00.000Z";
+
+    expect(countWeeklyPreferenceDays(monday)).toBe(1);
+    expect(canAddWeeklyPreference(monday, "2026-07-20T11:00:00.000Z")).toBe(false);
+    expect(canAddWeeklyPreference(monday, tuesday)).toBe(true);
+    expect(countWeeklyPreferenceDays([...monday, tuesday])).toBe(2);
+  });
+
   it("preserves slot selections per package and prefixes flattened labels for multi-package flow", () => {
     const result = buildMemberBookingTimeSelectionResult({
       selectedPackages: [

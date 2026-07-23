@@ -55,7 +55,7 @@ export default function TrainerClientsScreen() {
       </SurfaceCard>
 
       <SurfaceCard>
-        <FormField label="Danışan ara" value={query} onChangeText={setQuery} placeholder="Ad, telefon veya e-posta ile ara" />
+        <FormField inputId="trainer-client-search-input" label="Danışan ara" value={query} onChangeText={setQuery} placeholder="Ad, telefon veya e-posta ile ara" />
       </SurfaceCard>
 
       <View style={styles.filters}>
@@ -78,6 +78,7 @@ export default function TrainerClientsScreen() {
           keyExtractor={(item: TrainerMemberListItem) => String(item.id)}
           renderItem={(item: TrainerMemberListItem) => (
             <Pressable
+              testID={`trainer-client-open-${item.id}`}
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.full_name || "Danışan"} detayını aç`}

@@ -55,6 +55,7 @@ export default function MemberProfileScreen() {
 
   return (
     <AppShell 
+      testID="member-profile-screen"
       title="Profil" 
       subtitle="Hesap bilgilerin, üyelik işlemlerin ve bildirim tercihlerin burada yer alır." 
       icon="profile"
@@ -111,8 +112,10 @@ export default function MemberProfileScreen() {
         <Text style={styles.section}>Üyelik ve işlemler</Text>
           <AppIcon name="qr" size="sm" tone="primary" />
         </View>
-        <ActionButton label="QR Kodumu Göster" icon="qr" onPress={() => router.push({ pathname: "/(member)/qr/fullscreen", params: { backTo: "/(member)/profile" } } as never)} />
-        <ActionButton label="Arkadaşını Davet Et" icon="referral" variant="ghost" onPress={() => router.push({ pathname: "/(member)/referrals", params: { backTo: "/(member)/profile" } } as never)} />
+        <ActionButton testID="member-profile-open-qr" label="QR Kodumu Göster" icon="qr" onPress={() => router.push({ pathname: "/(member)/qr/fullscreen", params: { backTo: "/(member)/profile" } } as never)} />
+        <ActionButton testID="member-profile-open-referrals" label="Arkadaşını Davet Et" icon="referral" variant="ghost" onPress={() => router.push({ pathname: "/(member)/referrals", params: { backTo: "/(member)/profile" } } as never)} />
+        <ActionButton testID="member-profile-open-campaigns" label="Kampanyaları Gör" icon="campaigns" variant="ghost" onPress={() => router.push("/(member)/campaigns" as never)} />
+        <ActionButton testID="member-profile-open-notification-settings" label="Bildirim Ayarları" icon="notifications" variant="ghost" onPress={() => router.push("/(shared)/notification-settings" as never)} />
       </SurfaceCard>
 
       {/* 5. HIZLI BİLDİRİM TERCİHLERİ */}
@@ -131,13 +134,13 @@ export default function MemberProfileScreen() {
         <Text style={styles.sectionTitleDanger}>Salon üyeliği işlemleri</Text>
         <Text style={styles.copy}>Salondan ayrılman durumunda aktif paketlerin ve bağlı ders geçmişin salon tarafında pasife düşebilir.</Text>
         {/* Buton tam kırmızı (danger) ve geniş yapıldı */}
-        <ActionButton label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => router.push({ pathname: "/(shared)/leave-salon", params: { backTo: "/(member)/profile" } } as never)} />
+        <ActionButton testID="member-profile-leave-salon" label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => router.push({ pathname: "/(shared)/leave-salon", params: { backTo: "/(member)/profile" } } as never)} />
       </SurfaceCard>
 
       <SurfaceCard>
         <Text style={styles.section}>Hesap işlemleri</Text>
         <Text style={styles.copyTight}>Oturumu bu cihazdan güvenli şekilde kapatabilirsin.</Text>
-        <ActionButton label="Çıkış Yap" icon="logout" variant="danger" onPress={() => void logout()} />
+        <ActionButton testID="member-profile-logout" label="Çıkış Yap" icon="logout" variant="danger" onPress={() => void logout()} />
       </SurfaceCard>
     </AppShell>
   );

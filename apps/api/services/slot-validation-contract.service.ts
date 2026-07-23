@@ -23,6 +23,37 @@ const DEFAULT_CONTRACT: SlotValidationContract = {
 };
 
 export class SlotValidationContractService {
+  static zonedDateTimeToUtc(
+    input: { year: number; month: number; day: number; hour: number; minute: number },
+    timezone: string
+  ) {
+    const desiredAsUtc = Date.UTC(input.year, input.month - 1, input.day, input.hour, input.minute, 0, 0);
+    let result = new Date(desiredAsUtc);
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(result);
+      const read = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+      const representedAsUtc = Date.UTC(
+        read("year"),
+        read("month") - 1,
+        read("day"),
+        read("hour"),
+        read("minute"),
+        0,
+        0
+      );
+      result = new Date(result.getTime() + desiredAsUtc - representedAsUtc);
+    }
+    return result;
+  }
+
   static parseTimeToMinutes(input: unknown, fallback: number) {
     if (typeof input !== "string") return fallback;
     const raw = input.trim();

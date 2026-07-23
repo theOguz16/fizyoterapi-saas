@@ -35,6 +35,7 @@ import { AuditLog } from "./entities/audit-log.entity";
 import { BackgroundJob } from "./entities/background-job.entity";
 import { Campaign } from "./entities/campaign.entity";
 import { ProductDemoLead } from "./entities/product-demo-lead.entity";
+import { PasswordResetToken } from "./entities/password-reset-token.entity";
 
 // TypeORM icin merkezi veritabani baglanti tanimi.
 // Yeni entity eklendiginde hem runtime hem test senaryolari icin burada listelenmesi gerekir.
@@ -49,7 +50,7 @@ export const AppDataSource = new DataSource({
     Referral, ReferralReward, SalonProfile, SalonImage, Lead, NotificationTemplate, TrainerMemberNote, TrainerMemberNoteHistory,
     Invite, NotificationEvent, NotificationDelivery, DeviceToken, MemberCreditWallet, CreditLedger, TrainerSkill,
     PackageTrainerAssignment, Account, SalonMembership, SalonApplication, AuditLog, BackgroundJob, Campaign,
-    ProductDemoLead
+    ProductDemoLead, PasswordResetToken
   ],
   // migrations: ["src/migrations/*.ts"],
 });

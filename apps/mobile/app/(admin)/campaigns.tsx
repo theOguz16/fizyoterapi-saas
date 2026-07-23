@@ -58,10 +58,11 @@ export default function AdminCampaignsScreen() {
 
   return (
     <AppShell
+      testID="admin-campaigns-screen"
       title="Kampanyalar"
       subtitle="Referans ve katılım ödüllerini, hedef kitlesi ve teslimatıyla yönet."
       icon="campaigns"
-      rightAction={<ActionButton label="Yeni" icon="spark" fullWidth={false} onPress={() => router.push({ pathname: "/(admin)/campaign-create", params: { backTo: "/(admin)/campaigns" } } as never)} />}
+      rightAction={<ActionButton testID="admin-campaign-new" label="Yeni" icon="spark" fullWidth={false} onPress={() => router.push({ pathname: "/(admin)/campaign-create", params: { backTo: "/(admin)/campaigns" } } as never)} />}
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
     >
@@ -89,6 +90,7 @@ export default function AdminCampaignsScreen() {
               <Text style={styles.copy}>Teslim edilen: {item.fulfillment_count || 0} ödül / {item.fulfilled_credits || 0} kredi</Text>
               <View style={styles.actionsRow}>
                 <ActionButton
+                  testID={`admin-campaign-edit-${index}`}
                   label="Düzenle"
                   icon="notes"
                   variant="ghost"
@@ -101,6 +103,7 @@ export default function AdminCampaignsScreen() {
                   }
                 />
                 <ActionButton
+                  testID={`admin-campaign-toggle-${index}`}
                   label={item.is_active === false ? "Aktifleştir" : "Pasife al"}
                   icon="campaigns"
                   variant="ghost"

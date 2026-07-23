@@ -3,6 +3,7 @@ import { Redirect, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { setAuthToken } from "@/lib/http-client";
+import { resetConnectivityForE2E } from "@/lib/connectivity";
 import { isE2EModeEnabled } from "@/lib/e2e-mode";
 import { resetLocalPreferencesForE2E } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
@@ -18,6 +19,7 @@ export default function E2EResetScreen() {
 
     void (async () => {
       setAuthToken(null);
+      resetConnectivityForE2E();
       await Promise.all([SecureStore.deleteItemAsync(TOKEN_KEY), resetLocalPreferencesForE2E()]);
       router.replace("/" as never);
     })();

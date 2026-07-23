@@ -18,6 +18,7 @@ import {
   getTrainerMemberDetailApi,
   getTrainerMemberMeasurementsApi,
   getTrainerMemberNotesApi,
+  markTrainerBookingNoShowApi,
   patchTrainerBookingStatusApi,
 } from "@/lib/mobile-api";
 import { calendarFeedEventToDetailRow, canShowTrainerCalendarCheckin, createCalendarFeedRange, type CalendarDetailRow } from "@/lib/calendar-feed";
@@ -156,6 +157,10 @@ export default function TrainerCalendarScreen() {
   );
 
   const rawRequests = useMemo(() => buildTrainerRequests(liveAvailabilities), [liveAvailabilities]);
+  const actionableRequests = useMemo(
+    () => buildTrainerRequests(liveAvailabilities.filter((row) => row.action_required !== false)),
+    [liveAvailabilities]
+  );
 
   const plannedRequestKeys = useMemo(() => {
     return new Set(
@@ -166,8 +171,8 @@ export default function TrainerCalendarScreen() {
   }, [bookings]);
 
   const requests = useMemo(
-    () => rawRequests.filter((request) => !plannedRequestKeys.has(`${request.member_id}-${request.request_date_key}`)),
-    [plannedRequestKeys, rawRequests]
+    () => actionableRequests.filter((request) => !plannedRequestKeys.has(`${request.member_id}-${request.request_date_key}`)),
+    [actionableRequests, plannedRequestKeys]
   );
 
   const businessHours = useMemo(() => {
@@ -203,8 +208,9 @@ export default function TrainerCalendarScreen() {
 
   const events = useMemo(
     () =>
-      calendarRows.map((row) => ({
+      calendarRows.map((row, index) => ({
         id: String(row.calendar_event_id),
+        testID: `trainer-calendar-event-${index}`,
         title: row.presentation.title,
         subtitle: row.presentation.subtitle,
         startsAt: row.starts_at,
@@ -359,11 +365,38 @@ export default function TrainerCalendarScreen() {
     },
   });
 
+  const noShowMutation = useMutation({
+    mutationFn: (bookingId: string) => markTrainerBookingNoShowApi(bookingId),
+    meta: {
+      invalidates: [
+        ["trainer-bookings"],
+        ["trainer-today"],
+        ["trainer-today-calendar"],
+        ["member-bookings"],
+        ["member-bookings-calendar"],
+        ["member-home"],
+        ["member-home-v2"],
+        ["member-packages"],
+        ["admin-bookings"],
+        ["admin-bookings-calendar"],
+        ["admin-dashboard"],
+      ],
+    },
+    onSuccess: () => {
+      setSelectedBookingId(null);
+      void calendarQuery.refetch();
+      showInfoAlert("Gelmedi kaydedildi", "Danışanın bir ders hakkı kullanıldı ve klinik yöneticisi bilgilendirildi.");
+    },
+    onError: (error: unknown) => {
+      showErrorAlert("Gelmedi kaydedilemedi", error, "Katılım durumu güncellenemedi. Lütfen tekrar deneyin.");
+    },
+  });
+
   const scheduleChangeMutation = useMutation({
     mutationFn: (payload: {
       bookingId: string;
-      starts_at: string;
-      ends_at: string;
+      starts_at?: string;
+      ends_at?: string;
       member_id: string;
     }) => createTrainerScheduleChangeRequestApi(payload.bookingId, payload),
 
@@ -389,7 +422,7 @@ export default function TrainerCalendarScreen() {
       void calendarQuery.refetch();
       showInfoAlert(
         "Saat değişikliği gönderildi",
-        "Yeni saat önerisi üyeye iletildi. Onay sonrası takvim güncellenecek."
+        "Danışanın tercih havuzundan çakışmayan alternatif otomatik seçildi. Onay sonrası takvim güncellenecek ve paket hakkı etkilenmeyecek."
       );
     },
 
@@ -750,14 +783,28 @@ export default function TrainerCalendarScreen() {
         {!selectedBooking?.is_group_class ? (
           <ActionButton
             testID="trainer-calendar-open-reschedule"
-            label="Saat değişikliği öner"
+            label="Otomatik alternatif saat öner"
             icon="calendar"
             variant="ghost"
             onPress={() => {
-              if (!selectedBooking) return;
-              setRescheduleBookingId(String(selectedBooking.calendar_event_id));
-              setSelectedBookingId(null);
+              if (!selectedBooking?.id || !selectedBooking.member_id) return;
+              Alert.alert(
+                "Alternatif saat otomatik seçilecek",
+                "Sistem danışanın daha önce verdiği tercihlerden, hem danışan hem eğitmen için çakışmayan ilk güvenli saati seçecek. Danışanın paket hakkı etkilenmeyecek.",
+                [
+                  { text: "Vazgeç", style: "cancel" },
+                  {
+                    text: "Öneriyi oluştur",
+                    onPress: () =>
+                      scheduleChangeMutation.mutate({
+                        bookingId: String(selectedBooking.id),
+                        member_id: String(selectedBooking.member_id),
+                      }),
+                  },
+                ]
+              );
             }}
+            loading={scheduleChangeMutation.isPending}
           />
         ) : null}
 
@@ -785,6 +832,33 @@ export default function TrainerCalendarScreen() {
               );
             }}
             loading={cancelBookingMutation.isPending}
+          />
+        ) : null}
+
+        {!selectedBooking?.is_group_class &&
+        selectedBooking?.id &&
+        new Date(selectedBooking.starts_at).getTime() <= Date.now() &&
+        !["CANCELED", "COMPLETED"].includes(String(selectedBooking.status || "").toUpperCase()) ? (
+          <ActionButton
+            testID="trainer-calendar-mark-no-show"
+            label="Gelmedi olarak işaretle"
+            icon="risk"
+            variant="danger"
+            loading={noShowMutation.isPending}
+            onPress={() => {
+              Alert.alert(
+                "Bir ders hakkı kullanılacak",
+                `${selectedBooking.member_full_name || "Danışan"} gelmedi olarak işaretlenirse paketinden bir ders hakkı düşecek. Bu işlemi onaylıyor musun?`,
+                [
+                  { text: "Vazgeç", style: "cancel" },
+                  {
+                    text: "Onayla ve kaydet",
+                    style: "destructive",
+                    onPress: () => noShowMutation.mutate(String(selectedBooking.id)),
+                  },
+                ]
+              );
+            }}
           />
         ) : null}
 

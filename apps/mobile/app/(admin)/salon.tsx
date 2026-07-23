@@ -81,6 +81,7 @@ export default function AdminSalonScreen() {
 
   return (
     <AppShell
+      testID="admin-salon-screen"
       title="Salon ayarları"
       subtitle="Salon profili, çalışma saatleri, plan bilgisi ve yönetim alanlarını buradan düzenle."
       icon="clinic"
@@ -194,10 +195,10 @@ export default function AdminSalonScreen() {
 
       <SurfaceCard>
         <Text style={styles.section}>Yönetim alanları</Text>
-        <ActionButton label="Salon profilini düzenle" icon="clinic" onPress={() => router.push({ pathname: "/(admin)/salon-profile", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton label="Çalışma saatleri" icon="clock" onPress={() => router.push({ pathname: "/(admin)/working-hours", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton label="Paketler" icon="package" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/packages", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton label="Kampanyalar" icon="campaigns" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton testID="admin-salon-edit-profile" label="Salon profilini düzenle" icon="clinic" onPress={() => router.push({ pathname: "/(admin)/salon-profile", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton testID="admin-salon-working-hours" label="Çalışma saatleri" icon="clock" onPress={() => router.push({ pathname: "/(admin)/working-hours", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton testID="admin-salon-packages" label="Paketler" icon="package" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/packages", params: { backTo: "/(admin)/salon" } } as never)} />
+        <ActionButton testID="admin-salon-campaigns" label="Kampanyalar" icon="campaigns" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: "/(admin)/salon" } } as never)} />
         <ActionButton testID="admin-salon-subscription" label="Plan ve abonelik" icon="subscription" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/subscription", params: { backTo: "/(admin)/salon" } } as never)} />
       </SurfaceCard>
 

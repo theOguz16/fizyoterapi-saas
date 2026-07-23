@@ -7,6 +7,7 @@ import { Package } from "../entities/package.entity";
 import { PackageTrainerAssignment } from "../entities/package-trainer-assignment.entity";
 import { User, UserRole } from "../entities/user.entity";
 import { AuditLogService } from "../services/audit-log.service";
+import { BookingScheduleGuardService } from "../services/booking-schedule-guard.service";
 import { createMockResponse } from "./helpers/route-chain";
 
 describe("solo clinic owner practitioner flows", () => {
@@ -58,6 +59,7 @@ describe("solo clinic owner practitioner flows", () => {
 
   it("accepts the owner trainer identity for booking and calendar creation", async () => {
     const bookingRepo = {
+      create: vi.fn((input) => Object.assign(new Booking(), input)),
       save: vi.fn(async (booking: Booking) => {
         booking.id = "booking-1";
         return booking;
@@ -72,6 +74,15 @@ describe("solo clinic owner practitioner flows", () => {
       if (entity === Booking) return bookingRepo as any;
       throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
     });
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) =>
+      callback({
+        getRepository: (entity: any) => {
+          if (entity === Booking) return bookingRepo;
+          throw new Error(`Unexpected transaction repository: ${String(entity?.name || entity)}`);
+        },
+      })
+    );
+    vi.spyOn(BookingScheduleGuardService, "ensureAvailable").mockResolvedValue(undefined);
     vi.spyOn(AuditLogService, "log").mockResolvedValue(undefined as never);
 
     const res = createMockResponse();
@@ -100,5 +111,6 @@ describe("solo clinic owner practitioner flows", () => {
         trainer_id: "owner-trainer",
       })
     );
+    expect(BookingScheduleGuardService.ensureAvailable).toHaveBeenCalledOnce();
   });
 });

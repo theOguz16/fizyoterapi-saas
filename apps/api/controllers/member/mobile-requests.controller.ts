@@ -16,6 +16,9 @@ import { MemberRequestCleanupService } from "../../services/member-request-clean
 import { AuditLogService } from "../../services/audit-log.service";
 import { MobileNotificationService } from "../../services/mobile-notification.service";
 import { Booking, BookingStatus } from "../../entities/booking.entity";
+import { BookingScheduleGuardService } from "../../services/booking-schedule-guard.service";
+import { SalonProfile } from "../../entities/salon-profile.entity";
+import { SlotValidationContractService } from "../../services/slot-validation-contract.service";
 
 const MEMBER_PAYMENT_REQUEST = "MEMBER_PAYMENT_REQUEST";
 const MEMBER_CHANGE_REQUEST = "MEMBER_CHANGE_REQUEST";
@@ -34,6 +37,25 @@ function splitDuoAmount(amount: number) {
   return { primary: half, partner: half };
 }
 
+function resolveWeeklyLessonCount(pkg: Package) {
+  const rules = pkg.rules && typeof pkg.rules === "object" ? pkg.rules as Record<string, unknown> : {};
+  const explicit = Number(rules.weekly_class_hours ?? rules.weekly_sessions ?? rules.sessions_per_week ?? 0);
+  if (Number.isFinite(explicit) && explicit >= 1) {
+    return Math.min(7, Math.max(1, Math.floor(explicit)));
+  }
+  const durationWeeks = Math.max(1, Number(pkg.duration_days || 0) / 7);
+  return Math.min(7, Math.max(1, Math.round(Number(pkg.total_credits || 1) / durationWeeks)));
+}
+
+function clinicDateKey(date: Date, timezone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 function readEventPayload(event: NotificationEvent | null | undefined): Record<string, any> {
   try {
     const payload = event?.payload;
@@ -42,6 +64,64 @@ function readEventPayload(event: NotificationEvent | null | undefined): Record<s
   } catch {
     return {};
   }
+}
+
+function readJsonRecord(value: unknown): Record<string, any> {
+  try {
+    if (!value) return {};
+    if (typeof value === "string") {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    }
+    return typeof value === "object" && !Array.isArray(value) ? (value as Record<string, any>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function mergePendingApplicationPayload(existingValue: unknown, incomingValue: Record<string, any>) {
+  const existing = readJsonRecord(existingValue);
+  const packageMap = new Map<string, Record<string, any>>();
+  for (const item of [...(Array.isArray(existing.selected_packages) ? existing.selected_packages : []), ...(Array.isArray(incomingValue.selected_packages) ? incomingValue.selected_packages : [])]) {
+    const packageId = String(item?.package_id || "").trim();
+    if (packageId) packageMap.set(packageId, { ...packageMap.get(packageId), ...item, package_id: packageId });
+  }
+  const selectedPackages = Array.from(packageMap.values());
+  const packageIds = Array.from(new Set([
+    ...(Array.isArray(existing.package_ids) ? existing.package_ids : []),
+    existing.package_id,
+    ...(Array.isArray(incomingValue.package_ids) ? incomingValue.package_ids : []),
+    incomingValue.package_id,
+    ...selectedPackages.map((item) => item.package_id),
+  ].map((item) => String(item || "").trim()).filter(Boolean)));
+  const dayMap = new Map<string, Record<string, any>>();
+  for (const day of [...(Array.isArray(existing.selected_days) ? existing.selected_days : []), ...(Array.isArray(incomingValue.selected_days) ? incomingValue.selected_days : [])]) {
+    const key = `${String(day?.package_id || "")}:${String(day?.starts_at || "")}`;
+    if (key !== ":") dayMap.set(key, { ...day });
+  }
+  const totalPackageAmount = selectedPackages.reduce((sum, item) => sum + Number(item.package_price || 0), 0);
+  const duoPayment = incomingValue.duo_payment || existing.duo_payment || null;
+  const partnerAmount = Number(duoPayment?.partner_amount || 0);
+  const firstPackage = selectedPackages[0];
+
+  return {
+    ...existing,
+    ...incomingValue,
+    package_id: packageIds[0] || incomingValue.package_id || existing.package_id || null,
+    package_ids: packageIds,
+    package_title: firstPackage?.package_title || incomingValue.package_title || existing.package_title || null,
+    selected_packages: selectedPackages,
+    amount: Math.max(0, totalPackageAmount - partnerAmount),
+    total_package_amount: totalPackageAmount,
+    trainer_id: incomingValue.trainer_id || existing.trainer_id || null,
+    selected_sub_lesson: incomingValue.selected_sub_lesson || existing.selected_sub_lesson || null,
+    lesson_mode: duoPayment ? "DUO" : incomingValue.lesson_mode || existing.lesson_mode || null,
+    duo_partner_name: incomingValue.duo_partner_name || existing.duo_partner_name || null,
+    duo_partner_contact: incomingValue.duo_partner_contact || existing.duo_partner_contact || null,
+    duo_payment: duoPayment,
+    selected_days: Array.from(dayMap.values()),
+    note: incomingValue.note ?? existing.note ?? null,
+  };
 }
 
 export class MemberMobileRequestsController {
@@ -63,24 +143,124 @@ export class MemberMobileRequestsController {
     const decision = String(req.body?.decision || "").toUpperCase();
     if (!tenantId || !memberId) throw new AppError("NO_TENANT_OR_AUTH", 400, "Tenant veya auth bilgisi bulunamadi");
     if (decision !== "APPROVE" && decision !== "REJECT") throw new AppError("VALIDATION_ERROR", 400, "Karar APPROVE veya REJECT olmalidir");
-    const eventRepo = AppDataSource.getRepository(NotificationEvent);
-    const event = await eventRepo.findOne({ where: { tenant_id: tenantId, member_id: memberId, id: requestId, type: "TRAINER_SCHEDULE_CHANGE_REQUEST" } as any });
-    if (!event) throw new AppError("REQUEST_NOT_FOUND", 404, "Ders degisikligi talebi bulunamadi");
-    const payload = readEventPayload(event);
-    if (String(payload.status || "PENDING") !== "PENDING") throw new AppError("REQUEST_RESOLVED", 409, "Bu talep daha once sonuclandirildi");
-    if (decision === "APPROVE") {
-      const booking = await AppDataSource.getRepository(Booking).findOne({ where: { tenant_id: tenantId, id: String(payload.booking_id), member_id: memberId } });
-      if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
-      booking.starts_at = new Date(String(payload.proposed_starts_at));
-      booking.ends_at = new Date(String(payload.proposed_ends_at));
-      booking.status = BookingStatus.RESCHEDULED;
-      await AppDataSource.getRepository(Booking).save(booking);
-    }
-    event.payload = { ...payload, status: decision === "APPROVE" ? "APPROVED" : "REJECTED", resolved_at: new Date().toISOString() };
-    event.status = NotificationEventStatus.PROCESSED;
-    event.processed_at = new Date();
-    await eventRepo.save(event);
-    return res.json({ data: { id: event.id, ...event.payload } });
+    const result = await AppDataSource.transaction(async (manager) => {
+      const eventRepo = manager.getRepository(NotificationEvent);
+      const event = await eventRepo.findOne({
+        where: {
+          tenant_id: tenantId,
+          member_id: memberId,
+          id: requestId,
+          type: "TRAINER_SCHEDULE_CHANGE_REQUEST",
+        } as any,
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!event) throw new AppError("REQUEST_NOT_FOUND", 404, "Ders degisikligi talebi bulunamadi");
+      const payload = readEventPayload(event);
+      if (String(payload.status || "PENDING") !== "PENDING" || event.status !== NotificationEventStatus.QUEUED) {
+        throw new AppError("REQUEST_RESOLVED", 409, "Bu talep daha once sonuclandirildi");
+      }
+
+      if (decision === "APPROVE") {
+        const bookingRepo = manager.getRepository(Booking);
+        const booking = await bookingRepo.findOne({
+          where: { tenant_id: tenantId, id: String(payload.booking_id), member_id: memberId },
+          lock: { mode: "pessimistic_write" },
+        });
+        if (!booking) throw new AppError("BOOKING_NOT_FOUND", 404, "Ders bulunamadi");
+        if (booking.status === BookingStatus.CANCELED) {
+          throw new AppError("BOOKING_CANCELED", 409, "İptal edilmiş ders yeniden planlanamaz");
+        }
+        const startsAt = new Date(String(payload.proposed_starts_at));
+        const endsAt = new Date(String(payload.proposed_ends_at));
+        await BookingScheduleGuardService.ensureAvailable(manager, {
+          tenantId,
+          trainerId: booking.trainer_id,
+          memberId,
+          startsAt,
+          endsAt,
+          sessionId: booking.session_id ?? null,
+          excludeBookingId: booking.id,
+          status: BookingStatus.RESCHEDULED,
+        });
+        const previousStartsAt = booking.starts_at;
+        const previousEndsAt = booking.ends_at;
+        const meta = booking.meta && typeof booking.meta === "object" ? booking.meta : {};
+        const history = Array.isArray(meta.reschedule_history)
+          ? [...meta.reschedule_history]
+          : [];
+        history.push({
+          changed_by: "MEMBER_APPROVAL",
+          changed_at: new Date().toISOString(),
+          request_id: event.id,
+          from_starts_at: previousStartsAt.toISOString(),
+          from_ends_at: previousEndsAt.toISOString(),
+          to_starts_at: startsAt.toISOString(),
+          to_ends_at: endsAt.toISOString(),
+          member_credit_preserved: true,
+          selection_strategy: String(payload.selection_strategy || "AUTOMATIC_MEMBER_PREFERENCE"),
+        });
+        booking.starts_at = startsAt;
+        booking.ends_at = endsAt;
+        booking.status = BookingStatus.RESCHEDULED;
+        booking.meta = {
+          ...meta,
+          reschedule_history: history,
+          latest_reschedule: {
+            source: "TRAINER",
+            request_id: event.id,
+            member_credit_preserved: true,
+            selection_strategy: String(payload.selection_strategy || "AUTOMATIC_MEMBER_PREFERENCE"),
+          },
+        };
+        await bookingRepo.save(booking);
+      }
+
+      event.payload = {
+        ...payload,
+        status: decision === "APPROVE" ? "APPROVED" : "REJECTED",
+        resolved_at: new Date().toISOString(),
+      };
+      event.status = NotificationEventStatus.PROCESSED;
+      event.processed_at = new Date();
+      await eventRepo.save(event);
+      return { id: event.id, ...event.payload };
+    });
+    const resolvedResult = result as Record<string, any> & { id: string };
+    const trainerId = String(resolvedResult.trainer_id || "");
+    const admins = await AppDataSource.getRepository(User).find({
+      where: { tenant_id: tenantId, role: UserRole.ADMIN, is_active: true },
+      select: ["id"],
+    });
+    const decisionLabel = decision === "APPROVE" ? "kabul etti" : "reddetti";
+    await Promise.allSettled([
+      ...(trainerId
+        ? [
+            MobileNotificationService.queuePush({
+              tenantId,
+              userId: trainerId,
+              roleScope: "TRAINER" as const,
+              type: decision === "APPROVE" ? "SCHEDULE_CHANGE_APPROVED" : "SCHEDULE_CHANGE_REJECTED",
+              title: "Saat değişikliği yanıtlandı",
+              body: `Danışan otomatik saat önerisini ${decisionLabel}.`,
+              deepLink: "/(trainer)/calendar" as const,
+              meta: { request_id: resolvedResult.id, booking_id: resolvedResult.booking_id, member_credit_preserved: true },
+            }),
+          ]
+        : []),
+      ...admins.map((admin) =>
+        MobileNotificationService.queuePush({
+          tenantId,
+          userId: admin.id,
+          roleScope: "ADMIN" as const,
+          type: decision === "APPROVE" ? "SCHEDULE_CHANGE_APPROVED" : "SCHEDULE_CHANGE_REJECTED",
+          title: "Ders saati değişikliği",
+          body: `Danışan eğitmen kaynaklı otomatik saat önerisini ${decisionLabel}; paket hakkı etkilenmedi.`,
+          deepLink: "/(admin)/calendar",
+          meta: { request_id: resolvedResult.id, booking_id: resolvedResult.booking_id, member_credit_preserved: true },
+        })
+      ),
+    ]);
+    return res.json({ data: result });
   }
   private static async safeQueuePush(input: Parameters<typeof MobileNotificationService.queuePush>[0]) {
     try {
@@ -190,6 +370,120 @@ export class MemberMobileRequestsController {
       throw new AppError("PACKAGE_NOT_FOUND", 404, "Seçilen paketlerden biri bulunamadı");
     }
     const packageMap = new Map(packageRows.map((row) => [row.id, row]));
+    const privatePackages = packageRows.filter((row) => resolvePackageLessonMode(row) !== "GROUP");
+    if (privatePackages.length > 0 && !trainerId) {
+      throw new AppError("TRAINER_REQUIRED", 422, "Bireysel paketlerin otomatik planlanması için eğitmen seçimi zorunludur");
+    }
+    const normalizedSlots: Array<{ packageId: string; startsAt: Date; endsAt: Date }> = (selectedDays as unknown[])
+      .map((raw: unknown): { packageId: string; startsAt: Date; endsAt: Date } | null => {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+        const row = raw as Record<string, unknown>;
+        const startsAt = new Date(String(row.starts_at || ""));
+        const endsAt = new Date(String(row.ends_at || ""));
+        if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) return null;
+        return {
+          packageId: String(row.package_id || normalizedPackageIds[0]),
+          startsAt,
+          endsAt,
+        };
+      })
+      .filter((row): row is { packageId: string; startsAt: Date; endsAt: Date } => Boolean(row));
+    if (normalizedSlots.length !== selectedDays.length || normalizedSlots.some((slot) => slot.startsAt <= new Date())) {
+      throw new AppError("INVALID_BOOKING_PREFERENCES", 422, "Saat tercihlerinin tamamı geçerli ve gelecekte olmalıdır");
+    }
+    const profile = await AppDataSource.getRepository(SalonProfile).findOne({
+      where: { tenant_id: tenant.id },
+      order: { created_at: "DESC" },
+      select: ["id", "business_hours"],
+    });
+    const businessHours = SlotValidationContractService.normalizeBusinessHours(profile?.business_hours);
+    if (
+      normalizedSlots.some(
+        (slot) => !SlotValidationContractService.isWithinBusinessHours(slot.startsAt, slot.endsAt, businessHours).ok
+      )
+    ) {
+      throw new AppError("BOOKING_PREFERENCE_OUTSIDE_BUSINESS_HOURS", 422, "Saat tercihlerinden biri klinik çalışma düzeni dışında");
+    }
+    for (const packageRow of privatePackages) {
+      const weeklyLessonCount = resolveWeeklyLessonCount(packageRow);
+      const requiredPreferenceCount = weeklyLessonCount * 3;
+      const packageSlots = normalizedSlots.filter((slot) => slot.packageId === packageRow.id);
+      const uniqueSlotCount = new Set(
+        packageSlots.map((slot) => `${slot.startsAt.toISOString()}|${slot.endsAt.toISOString()}`)
+      ).size;
+      if (uniqueSlotCount < requiredPreferenceCount) {
+        throw new AppError(
+          "WEEKLY_SLOT_REQUIREMENT_NOT_MET",
+          422,
+          `${packageRow.title} için ${requiredPreferenceCount} farklı saat tercihi zorunludur`
+        );
+      }
+      const distinctDayCount = new Set(
+        packageSlots.map((slot) => clinicDateKey(slot.startsAt, businessHours.timezone))
+      ).size;
+      if (distinctDayCount < weeklyLessonCount) {
+        throw new AppError(
+          "DISTINCT_WEEKLY_DAYS_REQUIRED",
+          422,
+          `${packageRow.title} için ${weeklyLessonCount} farklı gün seçmelisiniz; aynı güne birden fazla otomatik ders atanmaz`
+        );
+      }
+    }
+    const totalWeeklyLessonCount = privatePackages.reduce(
+      (sum, packageRow) => sum + resolveWeeklyLessonCount(packageRow),
+      0
+    );
+    if (totalWeeklyLessonCount > 7) {
+      throw new AppError(
+        "WEEKLY_LESSON_DAY_LIMIT_EXCEEDED",
+        422,
+        "Özel ders paketlerinde toplam haftalık ders sayısı 7 günü aşamaz"
+      );
+    }
+    const combinedDistinctDayCount = new Set(
+      normalizedSlots
+        .filter((slot) => privatePackages.some((packageRow) => packageRow.id === slot.packageId))
+        .map((slot) => clinicDateKey(slot.startsAt, businessHours.timezone))
+    ).size;
+    if (combinedDistinctDayCount < totalWeeklyLessonCount) {
+      throw new AppError(
+        "DISTINCT_WEEKLY_DAYS_REQUIRED",
+        422,
+        `Seçtiğiniz paketler için toplam ${totalWeeklyLessonCount} farklı gün gereklidir`
+      );
+    }
+    if (trainerId && privatePackages.length > 0) {
+      const minStart = new Date(Math.min(...normalizedSlots.map((slot) => slot.startsAt.getTime())));
+      const maxEnd = new Date(Math.max(...normalizedSlots.map((slot) => slot.endsAt.getTime())));
+      const trainerBookings = await AppDataSource.getRepository(Booking)
+        .createQueryBuilder("booking")
+        .where("booking.tenant_id = :tenantId", { tenantId: tenant.id })
+        .andWhere("booking.trainer_id = :trainerId", { trainerId })
+        .andWhere("booking.status IN (:...statuses)", {
+          statuses: [BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.RESCHEDULED],
+        })
+        .andWhere("booking.starts_at < :maxEnd", { maxEnd })
+        .andWhere("booking.ends_at > :minStart", { minStart })
+        .getMany();
+      for (const packageRow of privatePackages) {
+        const requiredTrainerFreeCount = resolveWeeklyLessonCount(packageRow) * 2;
+        const freeCount = normalizedSlots
+          .filter((slot) => slot.packageId === packageRow.id)
+          .filter(
+            (slot) =>
+              !trainerBookings.some(
+                (booking) => booking.starts_at < slot.endsAt && booking.ends_at > slot.startsAt
+              )
+          ).length;
+        if (freeCount < requiredTrainerFreeCount) {
+          throw new AppError(
+            "TRAINER_CONFLICT_REQUIREMENT_NOT_MET",
+            409,
+            `${packageRow.title} için eğitmenle çakışmayan en az ${requiredTrainerFreeCount} tercih gereklidir`
+          );
+        }
+      }
+    }
     const selectedPackages = normalizedPackageIds.map((id) => {
       const row = packageMap.get(id)!;
       return {
@@ -265,6 +559,7 @@ export class MemberMobileRequestsController {
         });
       } else {
         application.payment_status = MembershipPaymentStatus.UNPAID;
+        application.note = JSON.stringify(mergePendingApplicationPayload(application.note, payload));
       }
       await AppDataSource.getRepository(SalonApplication).save(application);
     }

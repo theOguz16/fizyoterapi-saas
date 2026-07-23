@@ -27,7 +27,7 @@ export default function ApprovalPendingScreen() {
     selectedPackages.length > 1 ? `${submittedPackages.length} / ${selectedPackages.length} paket gönderildi` : "Paket onaya gönderildi";
 
   return (
-    <AppShell title="Başvurun alındı" subtitle="Salon ekibi seçimlerini inceliyor. Durum değiştiğinde sana haber vereceğiz." icon="approvals">
+    <AppShell testID="intake-approval-pending-screen" title="Başvurun alındı" subtitle="Ödeme ve üyelik onayı bekleniyor. Durum değiştiğinde sana haber vereceğiz." icon="approvals">
       <AnimatedEntrance>
         <IntakeProgressCard
           step={6}
@@ -35,7 +35,7 @@ export default function ApprovalPendingScreen() {
           icon="approvals"
           eyebrow="Onay süreci"
           title="Başvurun incelemeye alındı"
-          description="Salon ekibi paket, eğitmen ve saat uygunluğunu birlikte değerlendirerek başvurunu sonuçlandıracak."
+          description="Klinik ödeme ve üyelik onayını tamamladığında sistem, tercihlerinden eğitmenle çakışmayan ders saatlerini otomatik planlayacak."
           badgeLabel="İnceleniyor"
           badgeTone="warning"
           summaryItems={[
@@ -48,7 +48,7 @@ export default function ApprovalPendingScreen() {
               ? "Bazı paketler hâlâ sırada görünüyor. Onaya gönderilen seçimler kayıtlı kaldı; kalanlar için akışa dönebilirsin."
               : duoPackages.length > 0
                 ? "Duo paketlerde senin ödeme payın onaylanır; partner daveti ve ikinci ödeme tamamlanınca takvim aktifleşir."
-              : "Şimdilik ek bir işlem yapmana gerek yok. Onay veya ödeme adımı netleştiğinde seni yönlendireceğiz."
+              : "Şimdilik ek bir işlem yapmana gerek yok. Ödeme ve üyelik onayından sonra kesin derslerin otomatik olarak takvimine eklenecek."
           }
         />
       </AnimatedEntrance>
@@ -85,7 +85,7 @@ export default function ApprovalPendingScreen() {
           <StatusBadge label="İnceleniyor" tone="warning" />
           <View style={styles.infoRow}>
             <AppIcon name="calendar" size="sm" tone="warning" />
-            <Text style={styles.copy}>Başvurun sıraya alındı. Seçtiğin saatler inceleme sürecinde kayıtlı kalır.</Text>
+            <Text style={styles.copy}>Başvurun sıraya alındı. Seçtiğin saatler otomatik planlama için kayıtlı kalır.</Text>
           </View>
         </SurfaceCard>
       </AnimatedEntrance>

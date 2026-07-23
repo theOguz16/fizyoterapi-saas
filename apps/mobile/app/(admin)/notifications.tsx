@@ -54,6 +54,7 @@ export default function AdminNotificationsScreen() {
 
   return (
     <AppShell
+      testID="admin-notifications-screen"
       title="Bildirim merkezi"
       subtitle="Hazır bildirim şablonlarını seç, hedef kitleyi belirle ve anlık gönderim başlat."
       icon="notifications"
@@ -88,10 +89,10 @@ export default function AdminNotificationsScreen() {
       <SurfaceCard>
         <SectionTitle title="Şablon seç" subtitle="Aktif bildirim şablonlarından birini seçerek hızlı gönderim yapabilirsin." />
         <ScrollPanel maxHeight={360} contentContainerStyle={styles.templateList}>
-          {templates.map((template: any) => {
+          {templates.map((template: any, index: number) => {
             const selected = selectedTemplateId === template.id;
             return (
-              <Pressable key={template.id} onPress={() => setSelectedTemplateId(template.id)} style={[styles.templateCard, selected ? styles.templateCardActive : null]}>
+              <Pressable testID={`admin-notification-template-${index}`} key={template.id} onPress={() => setSelectedTemplateId(template.id)} style={[styles.templateCard, selected ? styles.templateCardActive : null]}>
                 <View style={styles.templateHeader}>
                   <Text style={styles.templateTitle}>{template.title}</Text>
                   <StatusBadge label={template.type || "TEMPLATE"} tone="info" />
@@ -105,6 +106,7 @@ export default function AdminNotificationsScreen() {
         </ScrollPanel>
         {message ? <Text style={styles.message}>{message}</Text> : null}
         <ActionButton
+          testID="admin-notification-send-button"
           label="Hemen gönder"
           icon="notifications"
           onPress={() => triggerMutation.mutate()}

@@ -1,0 +1,77 @@
+name: fizyoflow-e2e
+
+# Yerel mobil E2E için production imajıyla aynı derleme yolunu kullanır.
+# Bu compose dosyası production compose dosyalarından, portlardan ve volume'lerden
+# tamamen ayrıdır; yalnızca e2e PostgreSQL veritabanına bağlanır.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fizyoflow_e2e
+      POSTGRES_USER: fizyoflow_e2e
+      POSTGRES_PASSWORD: fizyoflow_e2e
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - fizyoflow_e2e_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fizyoflow_e2e -d fizyoflow_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PACKAGE: "@fitnes-saas/api"
+    environment:
+      NODE_ENV: test
+      PORT: 4949
+      DATABASE_URL: postgresql://fizyoflow_e2e:fizyoflow_e2e@postgres:5432/fizyoflow_e2e
+      JWT_SECRET: local-e2e-only-not-for-production
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:8081,http://127.0.0.1:8081
+      DB_SYNC: "true"
+      FIZYOFLOW_ADMIN_SECRET: local-e2e-admin-secret
+      REVENUECAT_WEBHOOK_AUTH: local-e2e-revenuecat-secret
+      REVENUECAT_ENTITLEMENT_ID: fizyoflow_plus
+      MOBILE_DEEP_LINK_BASE: fizyoflow://
+      PUBLIC_WEB_BASE_URL: http://localhost:3000
+      WEB_BASE_URL: http://localhost:3000
+      ADMIN_WEB_URL: http://localhost:3001
+      WEB_URL: http://localhost:3001
+      ENABLE_RISK_DAILY_BATCH: "false"
+      ENABLE_GROUP_CLASS_REMINDER_BATCH: "false"
+    ports:
+      - "127.0.0.1:4949:4949"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4949/ready >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  e2e-fixtures:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+      args:
+        PACKAGE: "@fitnes-saas/api"
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://fizyoflow_e2e:fizyoflow_e2e@postgres:5432/fizyoflow_e2e
+      DB_SYNC: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -lc 'pnpm --filter @fitnes-saas/api reset:demo &&
+      pnpm --filter @fitnes-saas/api seed'
+    profiles: ["fixtures"]
+
+volumes:
+  fizyoflow_e2e_postgres_data:

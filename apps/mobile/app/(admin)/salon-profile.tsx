@@ -10,6 +10,7 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppIcon } from "@/theme/components/app-icon";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { tokens } from "@/theme/tokens";
 
 type PickerMode = "city" | "district" | null;
@@ -117,6 +118,7 @@ export default function AdminSalonProfileScreen() {
   return (
     <>
       <AppShell
+        testID="admin-salon-profile-screen"
         title="Salon profilini düzenle"
         subtitle="Salon kartında görünen başlık, açıklama, konum ve iletişim bilgilerini güncelle."
         icon="clinic"
@@ -131,20 +133,20 @@ export default function AdminSalonProfileScreen() {
 
         <SurfaceCard>
           <Text style={styles.section}>Görünür içerik</Text>
-          <FormField label="Başlık" value={form.hero_title} onChangeText={(value) => setForm((prev) => ({ ...prev, hero_title: value }))} placeholder="Salon vitrininizde görünecek ana başlığı girin" />
-          <FormField label="Kısa alt başlık" value={form.hero_subtitle} onChangeText={(value) => setForm((prev) => ({ ...prev, hero_subtitle: value }))} placeholder="Salonunuzu kısa bir cümleyle özetleyin" />
-          <FormField label="Salon açıklaması" value={form.about_text} onChangeText={(value) => setForm((prev) => ({ ...prev, about_text: value }))} placeholder="Salonun yaklaşımını ve uzmanlığını anlaşılır bir dille anlat." multiline numberOfLines={5} />
+          <FormField inputId="admin-salon-profile-title" label="Başlık" value={form.hero_title} onChangeText={(value) => setForm((prev) => ({ ...prev, hero_title: value }))} placeholder="Salon vitrininizde görünecek ana başlığı girin" />
+          <FormField inputId="admin-salon-profile-subtitle" label="Kısa alt başlık" value={form.hero_subtitle} onChangeText={(value) => setForm((prev) => ({ ...prev, hero_subtitle: value }))} placeholder="Salonunuzu kısa bir cümleyle özetleyin" />
+          <FormField inputId="admin-salon-profile-about" label="Salon açıklaması" value={form.about_text} onChangeText={(value) => setForm((prev) => ({ ...prev, about_text: value }))} placeholder="Salonun yaklaşımını ve uzmanlığını anlaşılır bir dille anlat." multiline numberOfLines={5} />
         </SurfaceCard>
 
         <SurfaceCard>
           <Text style={styles.section}>İletişim ve konum</Text>
-          <PickerField label="Şehir" value={form.city} placeholder="Şehir seç" onPress={() => setPickerMode("city")} />
-          <PickerField label="İlçe" value={form.district} placeholder={form.city ? "İlçe seç" : "Önce şehir seç"} onPress={() => setPickerMode("district")} disabled={!form.city} />
-          <FormField label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
-          <FormField label="Adres" value={form.address} onChangeText={(value) => setForm((prev) => ({ ...prev, address: value }))} placeholder="Mahalle, cadde, bina ve kat bilgisi" multiline numberOfLines={3} />
+          <PickerField testID="admin-salon-profile-city" label="Şehir" value={form.city} placeholder="Şehir seç" onPress={() => setPickerMode("city")} />
+          <PickerField testID="admin-salon-profile-district" label="İlçe" value={form.district} placeholder={form.city ? "İlçe seç" : "Önce şehir seç"} onPress={() => setPickerMode("district")} disabled={!form.city} />
+          <FormField inputId="admin-salon-profile-phone" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
+          <FormField inputId="admin-salon-profile-address" label="Adres" value={form.address} onChangeText={(value) => setForm((prev) => ({ ...prev, address: value }))} placeholder="Mahalle, cadde, bina ve kat bilgisi" multiline numberOfLines={3} />
         </SurfaceCard>
 
-        <ActionButton label="Değişiklikleri kaydet" icon="clinic" onPress={() => mutation.mutate()} loading={mutation.isPending} />
+        <ActionButton testID="admin-salon-profile-save" label="Değişiklikleri kaydet" icon="clinic" onPress={() => mutation.mutate()} loading={mutation.isPending} />
       </AppShell>
 
       <Modal visible={pickerMode !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={closePicker}>
@@ -170,16 +172,17 @@ export default function AdminSalonProfileScreen() {
             ))}
           </ScrollView>
         </View>
+        <ConnectivityBanner />
       </Modal>
     </>
   );
 }
 
-function PickerField({ label, value, placeholder, onPress, disabled = false }: { label: string; value: string; placeholder: string; onPress: () => void; disabled?: boolean }) {
+function PickerField({ label, value, placeholder, onPress, disabled = false, testID }: { label: string; value: string; placeholder: string; onPress: () => void; disabled?: boolean; testID?: string }) {
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.fieldButton, disabled ? styles.fieldButtonDisabled : null, pressed ? styles.fieldButtonPressed : null]}>
+      <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.fieldButton, disabled ? styles.fieldButtonDisabled : null, pressed ? styles.fieldButtonPressed : null]}>
         <Text style={[styles.fieldValue, !value ? styles.fieldPlaceholder : null]}>{value || placeholder}</Text>
         <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
       </Pressable>

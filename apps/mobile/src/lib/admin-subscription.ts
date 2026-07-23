@@ -10,8 +10,17 @@ export function formatSubscriptionStatus(value?: string) {
   return value || "Plan bekleniyor";
 }
 
-export function buildSubscriptionHeadline(subscription?: Pick<AdminClinicSubscription, "review_status" | "subscription_status" | "can_start_trial" | "trial_days_remaining">) {
+export function buildSubscriptionHeadline(
+  subscription?: Pick<AdminClinicSubscription, "review_status" | "subscription_status" | "can_start_trial" | "trial_days_remaining"> &
+    Partial<Pick<AdminClinicSubscription, "has_billing_issue" | "will_renew">>
+) {
   if (!subscription) return "Salonunu profesyonel mobil yönetim akışına taşımak için planını buradan başlat.";
+  if (subscription.has_billing_issue) {
+    return "Ödeme yöntemin doğrulanamadı. Mevcut dönem sonuna kadar erişimin sürer; kesinti yaşamamak için mağaza ödeme bilgilerini güncelle.";
+  }
+  if (subscription.subscription_status === "ACTIVE" && subscription.will_renew === false) {
+    return "Planın mevcut dönem sonuna kadar aktif. Otomatik yenileme kapalı olduğu için dönem sonunda erişim kısıtlanır.";
+  }
   if (subscription.subscription_status === "TRIAL") {
     return `FizyoFlow Pro denemen aktif. Kalan süre: ${subscription.trial_days_remaining || 0} gün.`;
   }

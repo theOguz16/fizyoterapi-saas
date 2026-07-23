@@ -14,8 +14,11 @@ name: member-salon-qr-invalid-salon
 
 - extendedWaitUntil:
     visible:
-      text: "FizyoFlow|Salon|Giriş yap|Bulunamadı|Salon bulunamadı"
+      id: "salon-not-found-screen"
     timeout: 20000
 
+- assertVisible: "Salon bulunamadı"
 - assertVisible:
-    text: "FizyoFlow|Salon|Giriş yap|Bulunamadı"
+    id: "salon-not-found-retry-button"
+- assertVisible:
+    id: "salon-not-found-discovery"

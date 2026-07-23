@@ -63,7 +63,7 @@ export default function TrainerProfileScreen() {
   }
 
   return (
-    <AppShell title="Profil" subtitle="Uzmanlıkların, hesap bilgilerin ve eğitmen hesabına ait hızlı işlemler burada yer alır." icon="trainer">
+    <AppShell testID="trainer-profile-screen" title="Profil" subtitle="Uzmanlıkların, hesap bilgilerin ve eğitmen hesabına ait hızlı işlemler burada yer alır." icon="trainer">
       <SurfaceCard tone="primary">
         <Text style={styles.name}>{user?.fullName || "Eğitmen"}</Text>
         <Text style={styles.copy}>{user?.email || "E-posta eklenmemiş"}</Text>
@@ -134,8 +134,8 @@ export default function TrainerProfileScreen() {
 
       <SurfaceCard>
         <Text style={styles.section}>Operasyon araçları</Text>
-        <ActionButton label="Değişiklik ve iptal merkezi" icon="calendar" onPress={() => router.push("/(trainer)/request-center" as never)} />
-        <ActionButton label="Toplu bildirim gönder" icon="notifications" variant="ghost" onPress={() => router.push("/(trainer)/bulk-notification" as never)} />
+        <ActionButton testID="trainer-profile-request-center" label="Değişiklik ve iptal merkezi" icon="calendar" onPress={() => router.push("/(trainer)/request-center" as never)} />
+        <ActionButton testID="trainer-profile-bulk-notification" label="Toplu bildirim gönder" icon="notifications" variant="ghost" onPress={() => router.push("/(trainer)/bulk-notification" as never)} />
       </SurfaceCard>
 
       <RoleSwitchActions />
@@ -153,9 +153,9 @@ export default function TrainerProfileScreen() {
 
       <SurfaceCard>
         <Text style={styles.section}>Kısayollar</Text>
-        <ActionButton label="Eğitmen QR kodu" icon="qr" onPress={() => router.push({ pathname: "/(trainer)/qr", params: { backTo: "/(trainer)/profile" } } as never)} />
-        <ActionButton label="Danışanlarımı aç" icon="members" onPress={() => router.push("/(trainer)/clients" as never)} />
-        <ActionButton label="Bugünün akışı" icon="today" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/today", params: { backTo: "/(trainer)/profile" } } as never)} />
+        <ActionButton testID="trainer-profile-qr" label="Eğitmen QR kodu" icon="qr" onPress={() => router.push({ pathname: "/(trainer)/qr", params: { backTo: "/(trainer)/profile" } } as never)} />
+        <ActionButton testID="trainer-profile-clients" label="Danışanlarımı aç" icon="members" onPress={() => router.push("/(trainer)/clients" as never)} />
+        <ActionButton testID="trainer-profile-today" label="Bugünün akışı" icon="today" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/today", params: { backTo: "/(trainer)/profile" } } as never)} />
       </SurfaceCard>
 
       <ActionButton testID="trainer-profile-logout" label="Çıkış yap" icon="logout" variant="danger" onPress={() => void logout()} />

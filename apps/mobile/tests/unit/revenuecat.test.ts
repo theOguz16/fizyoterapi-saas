@@ -35,7 +35,9 @@ beforeEach(() => {
     },
   });
   purchases.purchasePackage.mockResolvedValue({ customerInfo: {} });
-  purchases.restorePurchases.mockResolvedValue({});
+  purchases.restorePurchases.mockResolvedValue({
+    entitlements: { active: { clinic_pro: { identifier: "clinic_pro" } } },
+  });
   vi.doMock("react-native", () => ({ Platform: platform }));
   vi.doMock("react-native-purchases", () => ({ default: purchases }));
 });
@@ -113,6 +115,15 @@ describe("RevenueCat user-facing errors", () => {
 
     await expect(restoreRevenueCatPurchases("clinic-1")).rejects.toThrow(
       "Satın alma kayıtları geri yüklenemedi. Lütfen tekrar deneyin."
+    );
+  });
+
+  it("does not report restore success when the store account has no active entitlement", async () => {
+    purchases.restorePurchases.mockResolvedValue({ entitlements: { active: {} } });
+    const { restoreRevenueCatPurchases } = await loadRevenueCat();
+
+    await expect(restoreRevenueCatPurchases("clinic-1")).rejects.toThrow(
+      "Bu mağaza hesabında geri yüklenecek aktif abonelik bulunamadı."
     );
   });
 

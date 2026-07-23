@@ -4,6 +4,11 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000
@@ -48,6 +53,47 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Koç notları"
     timeout: 15000
+- tapOn:
+    id: "trainer-note-title-input"
+- inputText: "E2E Seans Notu"
+- tapOn:
+    id: "trainer-note-body-input"
+- inputText: "Danisanin seans sonrasi takip notu."
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-note-submit"
+- extendedWaitUntil:
+    visible: "E2E Seans Notu"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-edit-0"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-note-edit-0"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-note-edit-body-input"
+    timeout: 15000
+- tapOn:
+    id: "trainer-note-edit-body-input"
+- eraseText
+- inputText: "Danisanin guncellenmis E2E takip notu."
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-edit-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-note-edit-submit"
+- extendedWaitUntil:
+    visible: "Danisanin guncellenmis E2E takip notu."
+    timeout: 15000
 
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
 - extendedWaitUntil:
@@ -75,3 +121,20 @@ appId: com.fizyoflow.mobile
       id: "trainer-calendar-cancel-booking"
     direction: DOWN
     timeout: 15000
+- tapOn:
+    id: "trainer-calendar-open-reschedule"
+- extendedWaitUntil:
+    visible: "Saat değişikliği öner"
+    timeout: 15000
+- tapOn: "Yeni saat .*"
+- tapOn: "Öneriyi gönder"
+- extendedWaitUntil:
+    visible: "Saat değişikliği gönderildi"
+    timeout: 20000
+- tapOn: "Tamam|OK"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frequest-center"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-request-center-screen"
+    timeout: 20000
+- assertVisible: "Bekliyor"

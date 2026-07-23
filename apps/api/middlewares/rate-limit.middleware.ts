@@ -18,6 +18,8 @@ export const authLoginRateLimit = createLimit(15 * 60_000, 10, "LOGIN_RATE_LIMIT
 
 export const authRegisterRateLimit = createLimit(60 * 60_000, 5, "REGISTER_RATE_LIMITED", "Çok fazla kayıt denemesi yapıldı.");
 
+export const passwordResetRateLimit = createLimit(15 * 60_000, 5, "PASSWORD_RESET_RATE_LIMITED", "Çok fazla şifre yenileme denemesi yapıldı.");
+
 export const inviteAcceptRateLimit = createLimit(15 * 60_000, 20, "INVITE_RATE_LIMITED", "Çok fazla davet denemesi yapıldı.");
 
 export const paymentRequestRateLimit = createLimit(10 * 60_000, 20, "PAYMENT_REQUEST_RATE_LIMITED", "Çok fazla ödeme talebi gönderildi.");

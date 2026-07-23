@@ -45,4 +45,7 @@ export class Account extends BaseEntityWithTimestamps {
 
   @Column({ type: "boolean", default: true })
   is_active!: boolean;
+
+  @Column({ type: "integer", default: 1 })
+  auth_version!: number;
 }

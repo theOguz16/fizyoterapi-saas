@@ -1,0 +1,98 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-screen"
+    timeout: 20000
+- swipe:
+    start: 50%, 82%
+    end: 50%, 25%
+- tapOn:
+    id: "admin-dashboard-campaigns"
+- extendedWaitUntil:
+    visible:
+      id: "admin-campaigns-screen"
+    timeout: 15000
+- tapOn:
+    id: "admin-campaign-new"
+- extendedWaitUntil:
+    visible:
+      id: "admin-campaign-name-input"
+    timeout: 15000
+- tapOn:
+    id: "admin-campaign-name-input"
+- inputText: "E2E Sadakat Kampanyasi"
+- tapOn:
+    id: "admin-campaign-audience-risk"
+- tapOn:
+    id: "admin-campaign-trigger-attendance"
+- tapOn:
+    id: "admin-campaign-trigger-count-input"
+- eraseText
+- inputText: "3"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-reward-value-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-campaign-reward-value-input"
+- eraseText
+- inputText: "1"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-status-active"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-campaign-status-active"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-campaign-submit"
+- extendedWaitUntil:
+    visible: "Kampanya oluşturuldu"
+    timeout: 20000
+- tapOn: "Tamam|OK"
+- extendedWaitUntil:
+    visible: "E2E Sadakat Kampanyasi"
+    timeout: 20000
+- tapOn:
+    id: "admin-campaign-toggle-0"
+- extendedWaitUntil:
+    visible: "Kampanya güncellendi"
+    timeout: 15000
+- tapOn: "Tamam|OK"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fnotifications"
+- extendedWaitUntil:
+    visible:
+      id: "admin-notifications-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-notification-template-0"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-notification-template-0"
+- tapOn:
+    id: "admin-notification-send-button"
+- extendedWaitUntil:
+    visible: "Bildirim tetiklendi."
+    timeout: 20000

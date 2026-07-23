@@ -1,0 +1,39 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-open-application"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 80
+- tapOn:
+    id: "admin-approval-open-application"
+- scrollUntilVisible:
+    element:
+      id: "admin-approval-approve"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 80
+- tapOn:
+    id: "admin-approval-approve"
+- extendedWaitUntil:
+    visible:
+      id: "admin-approvals-screen"
+    timeout: 20000

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemberMobileRequestsController } from "../controllers/member/mobile-requests.controller";
+import { MemberMobileRequestsController, mergePendingApplicationPayload } from "../controllers/member/mobile-requests.controller";
 import { AppDataSource } from "../data-source";
 import { MemberRequestCleanupService } from "../services/member-request-cleanup.service";
 import { createMockResponse } from "./helpers/route-chain";
@@ -7,6 +7,42 @@ import { createMockResponse } from "./helpers/route-chain";
 describe("member mobile requests controller", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("merges a second package into the pending salon application payload", () => {
+    const merged = mergePendingApplicationPayload(
+      JSON.stringify({
+        package_id: "pkg-group",
+        package_ids: ["pkg-group"],
+        selected_packages: [{ package_id: "pkg-group", package_title: "Grup", package_price: 200 }],
+        selected_days: [{ package_id: "pkg-group", starts_at: "2026-07-21T07:00:00.000Z" }],
+        amount: 200,
+        total_package_amount: 200,
+      }),
+      {
+        package_id: "pkg-duo",
+        package_ids: ["pkg-duo"],
+        selected_packages: [{ package_id: "pkg-duo", package_title: "Duo", package_price: 900 }],
+        selected_days: [{ package_id: "pkg-duo", starts_at: "2026-07-22T08:00:00.000Z" }],
+        trainer_id: "trainer-1",
+        duo_partner_name: "Partner",
+        duo_partner_contact: "partner@example.com",
+        duo_payment: { primary_amount: 450, partner_amount: 450, currency: "TRY" },
+        amount: 450,
+        total_package_amount: 900,
+      }
+    );
+
+    expect(merged.package_ids).toEqual(["pkg-group", "pkg-duo"]);
+    expect(merged.selected_packages).toEqual([
+      expect.objectContaining({ package_id: "pkg-group", package_price: 200 }),
+      expect.objectContaining({ package_id: "pkg-duo", package_price: 900 }),
+    ]);
+    expect(merged.selected_days).toHaveLength(2);
+    expect(merged.total_package_amount).toBe(1100);
+    expect(merged.amount).toBe(650);
+    expect(merged.lesson_mode).toBe("DUO");
+    expect(merged.duo_partner_contact).toBe("partner@example.com");
   });
 
   it("rejects payment request creation when salon, day or package selection is missing", async () => {

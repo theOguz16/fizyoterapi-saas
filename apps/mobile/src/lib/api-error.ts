@@ -22,12 +22,21 @@ const UI_ERROR_MAP: Record<string, string> = {
   NO_TOKEN: "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
   INVALID_TOKEN: "Oturum doğrulanamadı. Lütfen tekrar giriş yapın.",
   INVALID_LOGIN: "E-posta veya şifre hatalı.",
+  RESET_TOKEN_REQUIRED: "E-postana gönderilen doğrulama kodunu gir.",
+  RESET_TOKEN_INVALID: "Doğrulama kodu geçersiz, kullanılmış veya süresi dolmuş.",
+  WEAK_PASSWORD: "Yeni şifren en az 8 karakter olmalıdır.",
+  PASSWORD_RESET_RATE_LIMITED: "Çok fazla şifre sıfırlama isteği yapıldı. Lütfen kısa bir süre sonra tekrar dene.",
+  SESSION_REVOKED: "Şifren değiştiği için oturumun kapatıldı. Yeni şifrenle tekrar giriş yap.",
   INVALID_TENANT: "Klinik bulunamadı.",
   SALON_NOT_FOUND: "Salon bulunamadı",
   NO_TENANT: "Klinik bilgisine ulaşılamadı. Lütfen tekrar deneyin.",
   NO_TENANT_OR_AUTH: "Klinik veya oturum bilgisine ulaşılamadı. Lütfen tekrar giriş yapın.",
   FORBIDDEN: "Bu işlem için yetkiniz yok.",
   VALIDATION_ERROR: "Gönderilen bilgiler doğrulanamadı.",
+  CLINIC_ALREADY_ACTIVE: "Aktif bir klinik bağlamın olduğu için yeni klinik oluşturamazsın.",
+  PENDING_APPLICATION_EXISTS: "Mevcut klinik başvurunu tamamlamadan yeni klinik oluşturamazsın.",
+  CLINIC_ALREADY_PUBLISHED: "Bu hesap için zaten yayınlanmış bir klinik bulunuyor.",
+  RESERVED_SLUG: "Bu klinik adı sistem URL'si için kullanılamaz. Farklı bir ad deneyin.",
   MEMBER_AVAILABILITY_OUT_OF_RANGE: "Seçilen saat, danışanın uygunluk aralığı dışında.",
   BOOKING_CANCEL_WINDOW_CLOSED: "Bu randevu için iptal süresi doldu.",
   MEMBER_AVAILABILITY_CREATE_ERROR: "Danışan müsaitlik planı kaydedilemedi.",
@@ -48,7 +57,21 @@ const UI_ERROR_MAP: Record<string, string> = {
 export function resolveApiError(payload: ApiErrorPayload | null | undefined, fallback: string) {
   const code = payload?.error?.code || "";
   if (code && UI_ERROR_MAP[code]) return UI_ERROR_MAP[code];
+  if (code === "REQUEST_TIMEOUT") return "İstek zaman aşımına uğradı. Lütfen tekrar deneyin.";
   if (code) return fallback;
   if (payload?.error?.message) return payload.error.message;
+  return fallback;
+}
+
+export function resolveHttpStatusMessage(status: number, fallback: string) {
+  if (status === 400) return "Gönderilen bilgiler geçerli değil. Alanları kontrol edip tekrar deneyin.";
+  if (status === 401) return "Oturumun sona ermiş olabilir. Lütfen tekrar giriş yapın.";
+  if (status === 403) return "Bu işlem için yetkiniz yok.";
+  if (status === 404) return "İşlem yapılacak kayıt bulunamadı veya artık erişilebilir değil.";
+  if (status === 408 || status === 504) return "İstek zaman aşımına uğradı. Lütfen tekrar deneyin.";
+  if (status === 409) return "Bu işlem zaten yapılmış veya mevcut durumla çakışıyor. Ekranı yenileyip tekrar deneyin.";
+  if (status === 422) return "Gönderilen bilgiler doğrulanamadı. Alanları kontrol edip tekrar deneyin.";
+  if (status === 429) return "Çok hızlı işlem yaptın. Kısa bir süre bekleyip tekrar dene.";
+  if (status >= 500) return "Sunucuda geçici bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.";
   return fallback;
 }

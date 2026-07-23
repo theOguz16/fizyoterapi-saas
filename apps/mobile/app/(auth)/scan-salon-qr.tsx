@@ -128,6 +128,7 @@ export default function ScanSalonQrScreen() {
 
   return (
     <AppShell
+      testID="salon-qr-screen"
       title="Salon QR okut"
       subtitle="Salonun onboarding QR kodunu okuttuğunda doğru kayıt ve paket akışına yönlendirilirsin."
       icon="scan"
@@ -145,6 +146,7 @@ export default function ScanSalonQrScreen() {
         </View>
 
         <SegmentedSwitch
+          testID="salon-qr-mode"
           value={mode}
           onChange={handleModeChange}
           options={[
@@ -221,6 +223,7 @@ export default function ScanSalonQrScreen() {
           />
 
           <ActionButton
+            testID="salon-qr-manual-submit"
             label={isProcessing ? "İşleniyor..." : "Salona devam et"}
             icon="scan"
             onPress={() => void handlePayload(manualValue)}

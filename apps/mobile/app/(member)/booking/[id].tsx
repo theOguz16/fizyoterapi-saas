@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { cancelMemberBookingApi, getMemberBookingByIdApi } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -20,7 +20,8 @@ export default function MemberBookingDetailScreen() {
     queryFn: () => getMemberBookingByIdApi(String(params.id)),
   });
   const mutation = useMutation({
-  mutationFn: () => cancelMemberBookingApi(String(params.id)),
+  mutationFn: (confirmLateCancellation: boolean) =>
+    cancelMemberBookingApi(String(params.id), confirmLateCancellation),
 
   meta: {
     invalidates: [
@@ -46,16 +47,18 @@ export default function MemberBookingDetailScreen() {
     booking?.cancellation_policy?.min_hours_before_start || booking?.cancel_before_hours || booking?.tenant_cancellation_hours || 3;
   const startsAtTime = booking?.starts_at ? new Date(booking.starts_at).getTime() : null;
   const hoursUntilStart = startsAtTime ? (startsAtTime - Date.now()) / (1000 * 60 * 60) : null;
-  const canCancel = typeof hoursUntilStart === "number" ? hoursUntilStart >= cancellationHours : false;
+  const canCancel = typeof hoursUntilStart === "number" ? hoursUntilStart > 0 : false;
+  const isLateCancellation =
+    typeof hoursUntilStart === "number" && hoursUntilStart > 0 && hoursUntilStart < cancellationHours;
   const sessionTitle = booking?.session_title || booking?.lesson_category_label || "Ders detayı";
   const venueLabel = booking?.tenant_name || booking?.salon_name || "-";
   const packageLabel = booking?.package_name || booking?.package_title || "-";
   const categoryLabel = booking?.lesson_category_label || booking?.lesson_category || "-";
 
   return (
-    <AppShell title={sessionTitle} subtitle="Ders saati, iptal kuralı ve giriş durumu tek ekranda." icon="calendar" showBackButton>
+    <AppShell testID="member-booking-detail-screen" title={sessionTitle} subtitle="Ders saati, iptal kuralı ve giriş durumu tek ekranda." icon="calendar" showBackButton>
       <View style={styles.metricsRow}>
-        <MetricCard label="Durum" value={booking?.pending_schedule_change ? "Onay bekliyor" : bookingStatusLabel(booking?.status)|| "-"} hint="Plan kaydı" icon="calendar" />
+        <MetricCard testID={`member-booking-status-${String(booking?.status || "loading").toLowerCase()}`} label="Durum" value={booking?.pending_schedule_change ? "Onay bekliyor" : bookingStatusLabel(booking?.status)|| "-"} hint="Plan kaydı" icon="calendar" />
         <MetricCard label="Check-in" value={booking?.checkin_status || "Bekliyor"} hint="Ders girişi" icon="checkin" />
       </View>
       <SurfaceCard tone="primary">
@@ -63,7 +66,9 @@ export default function MemberBookingDetailScreen() {
         <Text style={styles.copy}>Tarih / saat: {booking?.starts_at ? new Date(booking.starts_at).toLocaleString("tr-TR") : "-"}</Text>
         <Text style={styles.copy}>Eğitmen: {booking?.trainer_full_name || "-"}</Text>
         <Text style={styles.copy}>Salon: {venueLabel}</Text>
-        <Text style={styles.copy}>İptal sınırı: Derse {cancellationHours} saatten az kaldıysa iptal edilemez.</Text>
+        <Text style={styles.copy}>
+          İptal kuralı: {cancellationHours} saatten önce iptal edersen ders hakkın korunur. Daha geç iptal edersen onayın alınır ve bir ders hakkın kullanılır.
+        </Text>
         {booking?.pending_schedule_change ? (
           <Text style={styles.copy}>
             Eğitmen yeni saat önerdi: {new Date(booking.pending_schedule_change.proposed_starts_at).toLocaleString("tr-TR")}
@@ -79,14 +84,34 @@ export default function MemberBookingDetailScreen() {
       </SurfaceCard>
       <SurfaceCard>
         <Text style={styles.section}>Aksiyon</Text>
-        <Text style={styles.copy}>İptal süresi geçerse hak yanabilir. Saat değişikliği varsa önce önerilen saati kontrol et.</Text>
+        <Text style={styles.copy}>
+          {isLateCancellation
+            ? "Geç iptal dönemindesin. Devam etmeden önce bir ders hakkının kullanılacağını açıkça onaylaman gerekir."
+            : "Şimdi iptal edersen ders hakkın korunur ve eğitmen ile klinik yöneticisine bildirim gönderilir."}
+        </Text>
       </SurfaceCard>
       <ActionButton
         testID="member-booking-cancel-button"
-        label={canCancel ? "Dersi İptal Et" : "İptal Süresi Doldu"}
+        label={canCancel ? (isLateCancellation ? "Geç İptali İncele" : "Dersi İptal Et") : "Ders Başladı"}
         icon="risk"
         variant="danger"
-        onPress={() => mutation.mutate()}
+        onPress={() => {
+          if (!canCancel) return;
+          Alert.alert(
+            isLateCancellation ? "Bir ders hakkın kullanılacak" : "Randevuyu iptal et",
+            isLateCancellation
+              ? `Derse ${cancellationHours} saatten az kaldı. İptal edersen bir ders hakkın paketten düşecek. Devam etmek istiyor musun?`
+              : "Ders hakkın korunacak. Eğitmen ve klinik yöneticisi iptal hakkında bilgilendirilecek.",
+            [
+              { text: "Vazgeç", style: "cancel" },
+              {
+                text: isLateCancellation ? "Hakkı kullan ve iptal et" : "İptal et",
+                style: "destructive",
+                onPress: () => mutation.mutate(isLateCancellation),
+              },
+            ]
+          );
+        }}
         loading={mutation.isPending}
         disabled={!canCancel}
       />

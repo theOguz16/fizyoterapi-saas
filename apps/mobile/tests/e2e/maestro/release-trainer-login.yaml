@@ -3,6 +3,10 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000

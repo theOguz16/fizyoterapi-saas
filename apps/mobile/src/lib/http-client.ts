@@ -1,7 +1,7 @@
 // Bu helper modulu mobil tarafta http client ile ilgili veri donusumu, is kurali veya API erisimini toplar.
 // Ekranlar ham ayrintilar yerine bu dosyadaki yardimcilari kullanarak daha yalniz kalir.
 import Constants from "expo-constants";
-import { ApiClientError, resolveApiError } from "./api-error";
+import { ApiClientError, resolveApiError, resolveHttpStatusMessage, type ApiErrorPayload } from "./api-error";
 import { markNetworkFailure, markNetworkSuccess } from "./connectivity";
 
 let authToken: string | null = null;
@@ -107,7 +107,10 @@ type RequestOptions = {
   headers?: Record<string, string>;
   auth?: boolean;
   signal?: AbortSignal;
+  timeoutMs?: number;
 };
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
 function isSuccessEnvelope(payload: unknown): payload is ApiSuccessEnvelope<unknown> {
   return Boolean(
@@ -122,7 +125,7 @@ async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record
   path: string,
   options: RequestOptions = {}
 ): Promise<ApiSuccessEnvelope<T, TMeta>> {
-  const { method = "GET", body, headers = {}, auth = true, signal } = options;
+  const { method = "GET", body, headers = {}, auth = true, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = options;
 
   const requestHeaders: Record<string, string> = {
     "Content-Type": "application/json",
@@ -136,6 +139,18 @@ async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record
   }
 
   let response: Response;
+  const timeoutController = new AbortController();
+  const abortFromCaller = () => timeoutController.abort();
+  const timeout = timeoutMs > 0 ? setTimeout(() => timeoutController.abort(), timeoutMs) : null;
+
+  if (signal) {
+    if (signal.aborted) {
+      timeoutController.abort();
+    } else {
+      signal.addEventListener("abort", abortFromCaller, { once: true });
+    }
+  }
+
   try {
     // Tum mobil istekler tek bir HTTP gecidinden geciyor.
     // Ortak hata donusleri ve auth header davranisi burada toplaniyor.
@@ -143,15 +158,18 @@ async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record
       method,
       headers: requestHeaders,
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal,
+      signal: timeoutController.signal,
     });
   } catch (error) {
-    const message =
-      error instanceof Error && error.name === "AbortError"
-        ? "İstek zaman aşımına uğradı. Lütfen tekrar deneyin."
-        : "Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.";
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiClientError("İstek zaman aşımına uğradı. Lütfen tekrar deneyin.", 408, "REQUEST_TIMEOUT");
+    }
+    const message = "Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.";
     markNetworkFailure(message);
     throw new ApiClientError(message, 0, "NETWORK_REQUEST_FAILED");
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    signal?.removeEventListener("abort", abortFromCaller);
   }
 
   markNetworkSuccess();
@@ -164,7 +182,7 @@ async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record
   }
 
   if (!response.ok) {
-    const message = resolveApiError(payload, "İşlem tamamlanamadı. Lütfen tekrar deneyin.");
+    const message = resolveApiError(payload, resolveHttpStatusMessage(response.status, "İşlem tamamlanamadı. Lütfen tekrar deneyin."));
     const code = payload?.error?.code;
     throw new ApiClientError(message, response.status, code);
   }
@@ -186,6 +204,55 @@ export function httpRequestEnvelope<T, TMeta extends Record<string, unknown> = R
   options: RequestOptions = {}
 ) {
   return requestEnvelope<T, TMeta>(path, options);
+}
+
+/** Use for non-JSON endpoints such as CSV exports while preserving app-wide error and timeout behavior. */
+export async function httpRequestText(path: string, options: RequestOptions = {}) {
+  const { method = "GET", body, headers = {}, auth = true, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = options;
+  const requestHeaders: Record<string, string> = { ...productAnalyticsHeaders, ...headers };
+  if (body !== undefined) requestHeaders["Content-Type"] = "application/json";
+  if (auth && authToken) requestHeaders.Authorization = `Bearer ${authToken}`;
+
+  const timeoutController = new AbortController();
+  const abortFromCaller = () => timeoutController.abort();
+  const timeout = timeoutMs > 0 ? setTimeout(() => timeoutController.abort(), timeoutMs) : null;
+  if (signal) {
+    if (signal.aborted) timeoutController.abort();
+    else signal.addEventListener("abort", abortFromCaller, { once: true });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: timeoutController.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiClientError("İstek zaman aşımına uğradı. Lütfen tekrar deneyin.", 408, "REQUEST_TIMEOUT");
+    }
+    const message = "Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.";
+    markNetworkFailure(message);
+    throw new ApiClientError(message, 0, "NETWORK_REQUEST_FAILED");
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    signal?.removeEventListener("abort", abortFromCaller);
+  }
+
+  markNetworkSuccess();
+  if (!response.ok) {
+    let payload: ApiErrorPayload | null = null;
+    try {
+      payload = (await response.json()) as ApiErrorPayload;
+    } catch {
+      payload = null;
+    }
+    const fallback = resolveHttpStatusMessage(response.status, "İşlem tamamlanamadı. Lütfen tekrar deneyin.");
+    throw new ApiClientError(resolveApiError(payload, fallback), response.status, payload?.error?.code);
+  }
+  return response.text();
 }
 
 export function createTimeoutSignal(ms: number) {

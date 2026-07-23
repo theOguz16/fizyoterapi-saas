@@ -17,7 +17,7 @@ export default function AdminRiskMembersScreen() {
   const items = Array.isArray(query.data) ? query.data : [];
 
   return (
-    <AppShell title="Riskli üyeler" subtitle="Backend risk havuzundaki aktif üyeleri, ana nedenleri ve önerilen aksiyonu tek listede incele." icon="risk" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+    <AppShell testID="admin-risk-members-screen" title="Riskli üyeler" subtitle="Backend risk havuzundaki aktif üyeleri, ana nedenleri ve önerilen aksiyonu tek listede incele." icon="risk" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.metricsRow}>
         <MetricCard label="Risk havuzu" value={items.length} hint="Takip edilecek üye" icon="risk" />
         <MetricCard
@@ -32,7 +32,7 @@ export default function AdminRiskMembersScreen() {
       ) : (
         <ScrollPanel maxHeight={500}>
           {items.map((item: AdminRiskMemberItem, index: number) => (
-            <SurfaceCard key={`${item.member_id || index}`}>
+            <SurfaceCard key={`${item.member_id || index}`} testID={`admin-risk-member-${index}`}>
               <View style={styles.headerRow}>
                 <View style={styles.identityRow}>
                   <AppIcon name="risk" size="sm" tone="danger" />

@@ -21,6 +21,8 @@ describe("product demo lead schema maintenance", () => {
     const scrub = statements.find((sql) => sql.includes("UPDATE audit_logs audit") && sql.includes("product_demo_leads lead"));
     const submitNormalization = statements.find((sql) => sql.includes("PII_SCRUBBED_NOT_MIGRATED"));
     const emailScrub = statements.find((sql) => sql.includes("PRODUCT_SITE_DEMO_LEAD_EMAIL"));
+    const passwordResetTable = statements.find((sql) => sql.includes("CREATE TABLE IF NOT EXISTS password_reset_tokens"));
+    const accountAuthVersion = statements.find((sql) => sql.includes("ADD COLUMN IF NOT EXISTS auth_version"));
 
     expect(createTable).toContain("source_audit_log_id uuid");
     expect(createTable).not.toContain("tenant_id");
@@ -42,5 +44,8 @@ describe("product demo lead schema maintenance", () => {
     expect(emailScrub).toContain("jsonb_array_length(metadata -> 'errors')");
     expect(emailScrub).toContain("jsonb_typeof(metadata -> 'errors_count') = 'number'");
     expect(emailScrub).toContain("(metadata ->> 'errors_count')::integer");
+    expect(accountAuthVersion).toContain("DEFAULT 1");
+    expect(passwordResetTable).toContain("account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE");
+    expect(passwordResetTable).toContain("token_hash varchar(64) NOT NULL");
   });
 });

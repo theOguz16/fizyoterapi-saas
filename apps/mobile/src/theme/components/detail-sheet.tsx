@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { tokens } from "../tokens";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
 
 type Props = {
   visible: boolean;
@@ -43,6 +44,7 @@ export function DetailSheet({ visible, onClose, title, subtitle, children, scrol
           )}
         </View>
       </View>
+      <ConnectivityBanner />
     </Modal>
   );
 }

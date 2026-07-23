@@ -9,6 +9,7 @@ import { ClassSession, LessonCategory } from "../../entities/class-session.entit
 import { Package } from "../../entities/package.entity";
 import { User, UserRole } from "../../entities/user.entity";
 import { AuditLogService } from "../../services/audit-log.service";
+import { BookingScheduleGuardService } from "../../services/booking-schedule-guard.service";
 
 
 export class AdminBookingsController {
@@ -290,30 +291,41 @@ export class AdminBookingsController {
         session_id ? String(session_id) : null
       );
 
-      const bookingRepostiry = AppDataSource.getRepository(Booking);
-      const booking = new Booking();
+      const startsAt = AdminBookingsController.parseDate(starts_at, "starts_at");
+      const endsAt = AdminBookingsController.parseDate(ends_at, "ends_at");
+      const bookingStatus = status ?? BookingStatus.PENDING;
+      AdminBookingsController.validateStatus(bookingStatus);
 
-      booking.tenant_id = tenantId;
-      booking.member_id = member_id;
-      booking.session_id = session_id;
-      booking.trainer_id = trainer_id;
-      booking.starts_at = AdminBookingsController.parseDate(starts_at, "starts_at");
-      booking.ends_at = AdminBookingsController.parseDate(ends_at, "ends_at");
-      if (status !== undefined) {
-        AdminBookingsController.validateStatus(status);
-        booking.status = status;
-      } else {
-        booking.status = BookingStatus.PENDING;
-      }
-      booking.payment_status = BookingPaymentStatus.REQUESTED;
-      booking.payment_requested_at = new Date();
-      booking.meta = meta ?? {};
-
-      if (booking.ends_at <= booking.starts_at) {
-        throw new AppError("VALIDATION_ERROR", 400, "ends_at, starts_at'dan sonra olmalıdır");
-      }
-      
-      await bookingRepostiry.save(booking);
+      const booking = await AppDataSource.transaction(async (manager) => {
+        await BookingScheduleGuardService.ensureAvailable(manager, {
+          tenantId,
+          memberId: String(member_id),
+          trainerId: String(trainer_id),
+          sessionId: session_id ? String(session_id) : null,
+          startsAt,
+          endsAt,
+          status: bookingStatus,
+        });
+        const row = manager.getRepository(Booking).create({
+          tenant_id: tenantId,
+          member_id: String(member_id),
+          session_id: session_id ? String(session_id) : undefined,
+          trainer_id: String(trainer_id),
+          starts_at: startsAt,
+          ends_at: endsAt,
+          status: bookingStatus,
+          payment_status:
+            bookingStatus === BookingStatus.APPROVED
+              ? BookingPaymentStatus.APPROVED
+              : BookingPaymentStatus.REQUESTED,
+          payment_requested_at: new Date(),
+          payment_approved_at: bookingStatus === BookingStatus.APPROVED ? new Date() : undefined,
+          payment_approved_by_admin_id:
+            bookingStatus === BookingStatus.APPROVED ? req.auth?.linkedUserId || req.auth?.sub : undefined,
+          meta: meta && typeof meta === "object" && !Array.isArray(meta) ? meta : {},
+        });
+        return manager.getRepository(Booking).save(row);
+      });
       await AdminBookingsController.logBookingAudit(req, {
         eventType: "ADMIN_BOOKING_CREATED",
         booking,

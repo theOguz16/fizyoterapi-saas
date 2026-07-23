@@ -38,6 +38,9 @@ export type AdminPackage = {
   service_key?: string | null;
   service_name?: string | null;
   lesson_category?: string | null;
+  weekly_class_hours?: number | null;
+  required_preference_slots?: number | null;
+  required_trainer_free_slots?: number | null;
   capacity_label?: string | null;
   trainer_commission_rate?: number | null;
   commission_label?: string | null;

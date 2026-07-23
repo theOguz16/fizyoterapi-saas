@@ -1,0 +1,121 @@
+appId: com.fizyoflow.mobile
+name: auth-trainer-invite-functional
+---
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- tapOn:
+    id: "welcome-signup-button"
+- extendedWaitUntil:
+    visible:
+      id: "role-option-trainer"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "role-option-trainer"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "role-option-trainer"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-invite-guide-continue"
+    timeout: 10000
+- tapOn:
+    id: "trainer-invite-guide-continue"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accept-token"
+    timeout: 10000
+- tapOn:
+    id: "invite-accept-token"
+- inputText: "${INVITE_TOKEN}"
+- pressKey: ENTER
+- extendedWaitUntil:
+    visible: "Salon daveti bulundu."
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-first-name"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "invite-accept-first-name"
+- inputText: "Egitmen"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-last-name"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "invite-accept-last-name"
+- inputText: "Davet"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-phone"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "invite-accept-phone"
+- inputText: "05550009977"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-password"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "invite-accept-password"
+- inputText: "trainer-invite123"
+- pressKey: ENTER
+- tapOn:
+    id: "invite-accept-submit"
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-error"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "invite-accept-error"
+- scrollUntilVisible:
+    element:
+      id: "legal-terms-checkbox"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "legal-terms-checkbox"
+- tapOn:
+    id: "legal-notice-checkbox"
+- tapOn:
+    id: "invite-accept-submit"
+- extendedWaitUntil:
+    visible:
+      id: "login-identity-input"
+    timeout: 20000
+- tapOn:
+    id: "login-identity-input"
+- inputText: "trainer.registration.e2e@demo.local"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "login-password-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "login-password-input"
+- inputText: "trainer-invite123"
+- tapOn:
+    id: "login-submit-button"
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000

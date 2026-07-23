@@ -57,7 +57,7 @@ export default function TrainerSelectionScreen() {
   const bestTrainerId = sortedTrainers[0]?.id;
 
   return (
-    <AppShell title="Eğitmen seç" subtitle="Paketine uygun eğitmenlerden birini seç. Sonraki adımda yalnız kendi saatlerini işaretleyeceksin." icon="trainer">
+    <AppShell testID="intake-trainer-selection-screen" title="Eğitmen seç" subtitle="Paketine uygun eğitmenlerden birini seç. Sonraki adımda yalnız kendi saatlerini işaretleyeceksin." icon="trainer">
       <AnimatedEntrance>
         <IntakeProgressCard
           step={4}
@@ -127,6 +127,7 @@ export default function TrainerSelectionScreen() {
                 </View>
               </View>
               <ActionButton
+                testID={`intake-trainer-select-${index}`}
                 label="Bu eğitmeni seç"
                 icon="trainer"
                 onPress={() => {

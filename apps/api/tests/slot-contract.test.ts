@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { SlotValidationContractService } from "../services/slot-validation-contract.service";
 
 describe("SlotValidationContractService", () => {
+  it("converts clinic wall-clock time to the correct UTC instant independently of host timezone", () => {
+    expect(
+      SlotValidationContractService.zonedDateTimeToUtc(
+        { year: 2026, month: 7, day: 24, hour: 9, minute: 30 },
+        "Europe/Istanbul"
+      ).toISOString()
+    ).toBe("2026-07-24T06:30:00.000Z");
+  });
+
   it("normalizes working days legacy Sunday(0) into ISO Sunday(7)", () => {
     const days = SlotValidationContractService.normalizeWorkingDays([1, 2, 0, 7, 2]);
     expect(days).toEqual([1, 2, 7]);

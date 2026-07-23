@@ -23,6 +23,7 @@ type BadgeTone = NonNullable<CalendarAgendaItem["badgeTone"]>;
 
 export type WeeklySchedulerEvent = {
   id: string;
+  testID?: string;
   title: string;
   subtitle: string;
   startsAt: string;
@@ -468,7 +469,7 @@ export function WeeklyScheduler({
             <Text style={styles.weekTitle}>Haftalık Takvim</Text>
             <Text style={styles.weekSubtitle}>{formatWeekRange(weekStart)}</Text>
           </View>
-          <Pressable style={styles.arrowButton} onPress={() => shiftWeek(1)}>
+          <Pressable testID={`${mode}-calendar-next-week`} style={styles.arrowButton} onPress={() => shiftWeek(1)}>
             <AppIcon name="arrow-right" tone="neutral" variant="plain" />
           </Pressable>
         </View>
@@ -483,6 +484,7 @@ export function WeeklyScheduler({
             return (
               <Pressable
                 key={day.key}
+                testID={`${mode}-calendar-day-${day.index}`}
                 onPress={() => setSelectedDateKey(day.key)}
                 style={[styles.dayPill, !isWorkingDay ? styles.dayPillDisabled : null, selected ? styles.dayPillActive : null]}
               >
@@ -694,6 +696,7 @@ function AgendaEventRow({
 }) {
   return (
     <Pressable
+      testID={event.testID}
       accessibilityRole="button"
       accessibilityLabel={`${event.title}, ${formatTimeRange(event.startsAt, event.endsAt, timezone)}`}
       onPress={onPress}

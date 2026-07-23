@@ -21,7 +21,7 @@ export default function AdminProfileScreen() {
   }).join(" • ") || "Yönetici";
 
   return (
-    <AppShell title="Profil" subtitle="Salon sahibi hesabın, iletişim bilgilerin ve yönetim kısayolların burada yer alır." icon="profile">
+    <AppShell testID="admin-profile-screen" title="Profil" subtitle="Salon sahibi hesabın, iletişim bilgilerin ve yönetim kısayolların burada yer alır." icon="profile">
       <SurfaceCard tone="primary">
         <Text style={styles.title}>{user?.fullName || "Salon sahibi"}</Text>
         <Text style={styles.copy}>{user?.email || "-"}</Text>
@@ -78,7 +78,7 @@ export default function AdminProfileScreen() {
 
       <AccountSecurityCard backTo="/(admin)/profile" />
 
-      <ActionButton label="Çıkış yap" icon="logout" variant="danger" onPress={() => void logout()} />
+      <ActionButton testID="admin-profile-logout" label="Çıkış yap" icon="logout" variant="danger" onPress={() => void logout()} />
     </AppShell>
   );
 }

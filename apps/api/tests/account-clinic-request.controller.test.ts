@@ -285,4 +285,104 @@ describe("account clinic request controller", () => {
       })
     );
   });
+
+  it("keeps an active subscription active when an existing owner saves clinic details again", async () => {
+    const account = {
+      id: "account-1",
+      email: "owner@example.com",
+      password_hash: "hash",
+      first_name: "Owner",
+      last_name: "User",
+      phone: "05550000000",
+      global_role_default: "ADMIN",
+    };
+    const tenant = {
+      id: "tenant-1",
+      owner_account_id: account.id,
+      slug: "owner-fizyo",
+      name: "Owner Fizyo",
+      review_status: "PUBLISHED",
+      subscription_status: "ACTIVE",
+      is_public: true,
+      trial_starts_at: new Date("2026-01-01T00:00:00.000Z"),
+      trial_ends_at: new Date("2026-01-22T00:00:00.000Z"),
+      subscription_started_at: new Date("2026-01-01T00:00:00.000Z"),
+      subscription_current_period_ends_at: new Date("2026-08-01T00:00:00.000Z"),
+    };
+    const adminUser = { id: "user-admin", tenant_id: tenant.id, email: account.email, role: "ADMIN", is_active: true };
+    const adminMembership = {
+      id: "membership-admin",
+      account_id: account.id,
+      tenant_id: tenant.id,
+      user_id: adminUser.id,
+      role: "ADMIN",
+      status: "ACTIVE",
+      payment_status: "VERIFIED",
+      is_active_context: true,
+    };
+    const profile = {
+      id: "profile-1",
+      tenant_id: tenant.id,
+      slug: tenant.slug,
+      location: { city: "Bursa", district: "Nilüfer" },
+      service_area: ["Bursa", "Nilüfer"],
+      is_published: true,
+    };
+    const accountRepo = { findOne: vi.fn().mockResolvedValue(account), save: vi.fn(async (value) => value) };
+    const tenantRepo = {
+      findOne: vi.fn().mockResolvedValueOnce(tenant).mockResolvedValueOnce(tenant),
+      save: vi.fn(async (value) => value),
+    };
+    const profileRepo = { findOne: vi.fn().mockResolvedValue(profile), save: vi.fn(async (value) => value) };
+    const membershipRepo = {
+      findOne: vi.fn().mockResolvedValueOnce(adminMembership).mockResolvedValueOnce(adminMembership),
+      createQueryBuilder: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue({ affected: 0 }),
+      }),
+      save: vi.fn(async (value) => value),
+    };
+    const applicationRepo = {
+      createQueryBuilder: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getOne: vi.fn().mockResolvedValue(null),
+      }),
+    };
+    const userRepo = { findOne: vi.fn().mockResolvedValue(adminUser), save: vi.fn(async (value) => value) };
+    const getRepository = (entity: any) => {
+      if (entity === Account) return accountRepo as any;
+      if (entity === Tenant) return tenantRepo as any;
+      if (entity === SalonProfile) return profileRepo as any;
+      if (entity === SalonMembership) return membershipRepo as any;
+      if (entity === SalonApplication) return applicationRepo as any;
+      if (entity === User) return userRepo as any;
+      throw new Error(`Unexpected repository: ${String(entity?.name || entity)}`);
+    };
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) => callback({ getRepository }));
+    vi.spyOn(TenantLifecycleService, "syncTenantState").mockImplementation(async (value) => value as any);
+    const productEvent = vi.spyOn(AuditLogService, "logProductEvent").mockResolvedValue(true);
+    const res = createMockResponse();
+
+    await AccountClinicRequestController.createOrUpdate({
+      auth: { accountId: account.id },
+      body: {
+        clinic_name: "Owner Fizyo Güncel",
+        city: "Bursa",
+        district: "Nilüfer",
+        phone: "05550000000",
+        about_text: "Güncel klinik açıklaması",
+        owner_is_practitioner: false,
+      },
+    } as any, res as any);
+
+    expect(tenant.subscription_status).toBe("ACTIVE");
+    expect(tenant.subscription_current_period_ends_at).toEqual(new Date("2026-08-01T00:00:00.000Z"));
+    expect(tenantRepo.save).toHaveBeenCalledWith(expect.objectContaining({ subscription_status: "ACTIVE" }));
+    expect(productEvent).not.toHaveBeenCalledWith(expect.objectContaining({ event_name: "trial_started" }), expect.anything());
+    expect(res.statusCode).toBe(201);
+  });
 });

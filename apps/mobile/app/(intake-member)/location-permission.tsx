@@ -68,8 +68,8 @@ export default function LocationPermissionScreen() {
       icon="location"
       footer={
         <View style={styles.footer}>
-          <ActionButton label="Konuma izin ver" icon="location" onPress={() => void handleAllowLocation()} loading={loading} />
-          <ActionButton label="Şimdilik atla" icon="spark" variant="ghost" onPress={() => goNext(false)} />
+          <ActionButton testID="member-location-allow" label="Konuma izin ver" icon="location" onPress={() => void handleAllowLocation()} loading={loading} />
+          <ActionButton testID="member-location-skip" label="Şimdilik atla" icon="spark" variant="ghost" onPress={() => goNext(false)} />
         </View>
       }
     >

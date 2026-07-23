@@ -86,7 +86,7 @@ export async function getTrainerAvailabilitiesApi() {
 
 export async function createTrainerScheduleChangeRequestApi(
   id: string,
-  payload: { starts_at: string; ends_at: string; member_id: string; note?: string | null }
+  payload: { starts_at?: string; ends_at?: string; member_id: string; note?: string | null }
 ) {
   return httpRequest<TrainerScheduleChangeRequest>(`/trainer/bookings/${encodeURIComponent(id)}/schedule-change-request`, {
     method: "POST",
@@ -128,6 +128,13 @@ export async function patchTrainerBookingStatusApi(
   return httpRequest<any>(`/trainer/bookings/${encodeURIComponent(id)}/status`, {
     method: "PATCH",
     body: payload,
+  });
+}
+
+export async function markTrainerBookingNoShowApi(id: string) {
+  return httpRequest<any>(`/trainer/bookings/${encodeURIComponent(id)}/no-show`, {
+    method: "PATCH",
+    body: { confirm_credit_charge: true },
   });
 }
 

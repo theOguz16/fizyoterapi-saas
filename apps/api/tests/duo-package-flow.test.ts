@@ -10,8 +10,17 @@ import { AuditLogService } from "../services/audit-log.service";
 import { MemberRequestCleanupService } from "../services/member-request-cleanup.service";
 import { MobileNotificationService } from "../services/mobile-notification.service";
 import { TenantLifecycleService } from "../services/tenant-lifecycle.service";
+import { AutomaticBookingSchedulerService } from "../services/automatic-booking-scheduler.service";
 import { createMockResponse } from "./helpers/route-chain";
 import crypto from "crypto";
+import { LEGAL_DOCUMENT_VERSION } from "@fitnes-saas/contracts";
+
+const legalConsent = {
+  terms_accepted: true,
+  privacy_notice_acknowledged: true,
+  marketing_consent: false,
+  document_version: LEGAL_DOCUMENT_VERSION,
+};
 
 function repoName(entity: any) {
   return typeof entity === "function" ? entity.name : String(entity);
@@ -181,6 +190,17 @@ describe("duo package flow", () => {
       UserPackage: createRepo(userPackageRows),
       Booking: createRepo(bookingRows),
       ClassSession: createRepo([]),
+      SalonProfile: createRepo([
+        {
+          id: "profile-1",
+          tenant_id: "tenant-1",
+          business_hours: {
+            monday: { enabled: true, open: "08:00", close: "20:00" },
+            tuesday: { enabled: true, open: "08:00", close: "20:00" },
+            wednesday: { enabled: true, open: "08:00", close: "20:00" },
+          },
+        },
+      ]),
       PackageTrainerAssignment: createRepo([{ id: "assign-1", tenant_id: "tenant-1", package_id: "pkg-duo", trainer_id: "trainer-1", is_active: true }]),
       Availability: {
         ...createRepo([]),
@@ -213,6 +233,14 @@ describe("duo package flow", () => {
     repos.UserPackage.create = vi.fn((value: any) => ({ ...value, id: value.id || `up-${userPackageRows.length + 1}` }));
     repos.UserPackage.createQueryBuilder = vi.fn(() => createUserPackageQueryBuilder(userPackageRows));
     repos.Booking.create = vi.fn((value: any) => ({ ...value, id: value.id || `booking-${bookingRows.length + 1}` }));
+    repos.Booking.createQueryBuilder = vi.fn(() => {
+      const builder = {
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      return builder;
+    });
 
     vi.spyOn(AppDataSource, "getRepository").mockImplementation((entity: any) => {
       const name = repoName(entity);
@@ -220,6 +248,24 @@ describe("duo package flow", () => {
       if (!repo) throw new Error(`Unexpected repository ${name}`);
       return repo;
     });
+    vi.spyOn(AutomaticBookingSchedulerService, "schedule").mockImplementation(async (_manager, params: any) => [
+      {
+        id: "booking-primary",
+        tenant_id: params.tenantId,
+        member_id: params.memberId,
+        trainer_id: params.trainerId,
+        starts_at: new Date("2030-02-11T06:00:00.000Z"),
+        ends_at: new Date("2030-02-11T07:00:00.000Z"),
+        status: BookingStatus.APPROVED,
+        payment_status: BookingPaymentStatus.APPROVED,
+        meta: {
+          request_id: params.requestId,
+          package_id: "pkg-duo",
+          source: "AUTOMATIC_PURCHASE_SCHEDULER",
+        },
+      } as any,
+    ]);
+    vi.spyOn(AppDataSource, "transaction").mockImplementation(async (callback: any) => callback({}));
 
     const purchaseRes = createMockResponse();
     await MemberMobileRequestsController.createPaymentRequest(
@@ -233,9 +279,19 @@ describe("duo package flow", () => {
           duo_partner_contact: "partner@example.com",
           selected_days: [
             {
-              starts_at: "2026-05-11T09:00:00.000Z",
-              ends_at: "2026-05-11T10:00:00.000Z",
+              starts_at: "2030-02-11T06:00:00.000Z",
+              ends_at: "2030-02-11T07:00:00.000Z",
               label: "Pazartesi 09:00",
+            },
+            {
+              starts_at: "2030-02-12T06:00:00.000Z",
+              ends_at: "2030-02-12T07:00:00.000Z",
+              label: "Salı 09:00",
+            },
+            {
+              starts_at: "2030-02-13T06:00:00.000Z",
+              ends_at: "2030-02-13T07:00:00.000Z",
+              label: "Çarşamba 09:00",
             },
           ],
         },
@@ -331,6 +387,7 @@ describe("duo package flow", () => {
           phone: "05551234567",
           email: "partner@example.com",
           password: "partner123",
+          legal_consent: legalConsent,
         },
         method: "POST",
         originalUrl: "/api/public/invites/accept",
@@ -540,6 +597,7 @@ describe("duo package flow", () => {
           first_name: "Existing",
           last_name: "Partner",
           password: "partner123",
+          legal_consent: legalConsent,
         },
         method: "POST",
         originalUrl: "/api/public/invites/accept",

@@ -3,6 +3,10 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000
@@ -39,9 +43,20 @@ appId: com.fizyoflow.mobile
       id: "admin-package-title-input"
     direction: DOWN
     timeout: 10000
+    centerElement: true
 - tapOn:
     id: "admin-package-title-input"
-- inputText: "QA Smoke Paket"
+- eraseText
+- inputText: "E2E CRUD Paket"
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: "admin-package-weekly-hours-input"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- assertVisible:
+    id: "admin-package-weekly-hours-input"
 - scrollUntilVisible:
     element:
       id: "admin-package-save-button"
@@ -49,12 +64,40 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - tapOn:
     id: "admin-package-save-button"
-- assertVisible:
-    id: "admin-package-save-button"
+- assertVisible: "Paket oluşturuldu"
+- tapOn: "OK"
 - waitForAnimationToEnd:
     timeout: 3000
 - scrollUntilVisible:
     element:
-      id: "admin-package-edit-qa-smoke-paket"
+      id: "admin-package-edit-e2e-crud-paket"
     direction: DOWN
     timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "admin-package-edit-e2e-crud-paket"
+- scrollUntilVisible:
+    element: "Değişiklikleri kaydet"
+    direction: UP
+    timeout: 20000
+    visibilityPercentage: 80
+    centerElement: true
+- tapOn: "Değişiklikleri kaydet"
+- extendedWaitUntil:
+    visible: "Paket güncellendi"
+    timeout: 15000
+- tapOn: "OK"
+- scrollUntilVisible:
+    element:
+      id: "admin-package-toggle-status-e2e-crud-paket"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "admin-package-toggle-status-e2e-crud-paket"
+- assertVisible: "Paket pasife alındı"
+- tapOn: "OK"
+- tapOn: "Pasif"
+- extendedWaitUntil:
+    visible:
+      id: "admin-package-edit-e2e-crud-paket"
+    timeout: 20000

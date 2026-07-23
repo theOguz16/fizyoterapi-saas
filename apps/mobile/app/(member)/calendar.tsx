@@ -6,7 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getCalendarFeedApi } from "@/lib/mobile-api";
-import { calendarFeedEventToDetailRow, createCalendarFeedRange, type CalendarDetailRow } from "@/lib/calendar-feed";
+import {
+  calendarFeedEventToDetailRow,
+  createCalendarFeedRange,
+  splitMemberCalendarEvents,
+  type CalendarDetailRow,
+} from "@/lib/calendar-feed";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { DetailSheet } from "@/theme/components/detail-sheet";
@@ -17,7 +22,8 @@ import { tokens } from "@/theme/tokens";
 
 type MemberCalendarEvent = {
   id: string;
-  source: "booking" | "approved-availability" | "pending-availability";
+  testID?: string;
+  source: "booking";
   title: string;
   subtitle: string;
   startsAt: string;
@@ -90,17 +96,14 @@ export default function MemberCalendarScreen() {
   });
 
   const schedulerEvents = useMemo<MemberCalendarEvent[]>(() => {
-    const events = calendarQuery.data?.events || [];
+    const events = splitMemberCalendarEvents(calendarQuery.data?.events || []).lessons;
+    let bookingIndex = 0;
     return events.map((event) => {
       const raw = calendarFeedEventToDetailRow(event);
-      const source = event.source === "BOOKING"
-        ? "booking"
-        : event.source === "AVAILABILITY"
-          ? "approved-availability"
-          : "pending-availability";
       return {
         id: event.id,
-        source,
+        testID: `member-calendar-booking-${bookingIndex++}`,
+        source: "booking",
         bookingId: event.details.booking_id || undefined,
         raw,
         title: event.presentation.title,
@@ -112,6 +115,16 @@ export default function MemberCalendarScreen() {
         onPress: () => setSelectedEventId(event.id),
       };
     });
+  }, [calendarQuery.data?.events]);
+
+  const preferenceSummary = useMemo(() => {
+    const events = splitMemberCalendarEvents(calendarQuery.data?.events || []);
+    return {
+      approved: new Set(
+        events.approvedPreferences.map((event) => event.recurrence.template_id || event.entity_id)
+      ).size,
+      pending: new Set(events.pendingPreferences.map((event) => event.entity_id)).size,
+    };
   }, [calendarQuery.data?.events]);
 
   const selectedEvent = useMemo(
@@ -151,21 +164,34 @@ export default function MemberCalendarScreen() {
         viewMode="agenda"
       />
 
+      {preferenceSummary.approved > 0 || preferenceSummary.pending > 0 ? (
+        <SurfaceCard>
+          <Text style={styles.detailTitle}>Saat tercihlerin</Text>
+          <Text style={styles.detailText}>
+            {preferenceSummary.approved} kayıtlı tercih
+            {preferenceSummary.pending > 0 ? `, ${preferenceSummary.pending} onay bekleyen tercih` : ""}.
+            Bunlar uygunluk seçimlerindir; kesinleşen dersler yalnızca yukarıdaki takvimde görünür.
+          </Text>
+          <ActionButton
+            testID="member-calendar-edit-preferences"
+            label="Saat tercihlerini düzenle"
+            icon="calendar"
+            onPress={() => router.push("/(member)/plan" as never)}
+          />
+        </SurfaceCard>
+      ) : null}
+
       <DetailSheet
         visible={Boolean(selectedEvent)}
         onClose={() => setSelectedEventId(null)}
         title={selectedEvent?.title || "Takvim detayı"}
         subtitle={selectedEvent?.badgeLabel || "Ders ve saat bilgisi"}
       >
-        <SurfaceCard tone={selectedEvent?.source === "pending-availability" ? "warning" : "primary"}>
+        <SurfaceCard tone="primary">
           <View style={styles.detailHeaderRow}>
             <View style={styles.detailHeaderText}>
               <Text style={styles.detailTitle}>
-                {selectedEvent?.source === "booking"
-                  ? "Ders özeti"
-                  : selectedEvent?.source === "approved-availability"
-                    ? "Onaylı saat tercihi"
-                    : "Onay bekleyen saat tercihi"}
+                Ders özeti
               </Text>
               <Text style={styles.detailText}>{formatDateTimeRange(selectedEvent?.startsAt, selectedEvent?.endsAt, calendarQuery.data?.timezone)}</Text>
             </View>
@@ -180,8 +206,7 @@ export default function MemberCalendarScreen() {
           </View>
         </SurfaceCard>
 
-        {selectedEvent?.source === "booking" ? (
-          <>
+        <>
             <SurfaceCard>
               <Text style={styles.detailTitle}>Ders bilgileri</Text>
 
@@ -231,28 +256,7 @@ export default function MemberCalendarScreen() {
                 } as never);
               }}
             />
-          </>
-        ) : (
-          <SurfaceCard>
-            <Text style={styles.detailTitle}>Saat tercihi bilgisi</Text>
-
-            <View style={styles.detailGrid}>
-              <DetailRow label="Paket" value={selectedEvent?.raw?.package_title || selectedEvent?.raw?.package_name || selectedEvent?.title} />
-              <DetailRow
-                label="Onay durumu"
-                value={selectedEvent?.source === "approved-availability" ? "Salon tarafından onaylandı" : "Salon onayı bekleniyor"}
-              />
-              <DetailRow
-                label="Not"
-                value={
-                  selectedEvent?.source === "approved-availability"
-                    ? "Bu saat tercihin salon tarafından kaydedildi. Ders planlaması yapılınca takvimde ders olarak görünecek."
-                    : "Bu saat tercihin henüz salon tarafından onaylanmadı."
-                }
-              />
-            </View>
-          </SurfaceCard>
-        )}
+        </>
       </DetailSheet>
     </AppShell>
   );

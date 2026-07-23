@@ -11,6 +11,7 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { useSession } from "@/providers/auth-session";
 import { tokens } from "@/theme/tokens";
+import { refreshSessionAfterCommittedAction } from "@/lib/user-feedback";
 
 export default function LeaveSalonScreen() {
   const router = useRouter();
@@ -45,13 +46,13 @@ export default function LeaveSalonScreen() {
   },
 
   onSuccess: async () => {
-    await refreshMe();
+    await refreshSessionAfterCommittedAction(refreshMe, "Salondan ayrılma");
     router.replace("/(intake-member)/salons" as never);
   },
 });
 
   return (
-    <AppShell title="Salondan ayrıl" subtitle="Aktif paketlerin etkilenebilir ve planlanmış derslerin iptal olabilir." icon="risk">
+    <AppShell testID="member-leave-salon-screen" title="Salondan ayrıl" subtitle="Aktif paketlerin etkilenebilir ve planlanmış derslerin iptal olabilir." icon="risk">
       <View style={styles.metricsRow}>
         <MetricCard label="Sonuç" value="Üyelik kapanır" hint="Salon bağlantısı biter" icon="risk" />
         <MetricCard label="Sonraki adım" value="Yeni öneriler" hint="Tekrar seçim akışı" icon="salon" />
@@ -62,8 +63,8 @@ export default function LeaveSalonScreen() {
       <SurfaceCard>
         <Text style={styles.copy}>Eğer aktif paketin veya planlanmış derslerin varsa, bunlar salon kurallarına göre iptal, iade veya yeniden planlama sürecine girebilir.</Text>
       </SurfaceCard>
-      <ActionButton label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => mutation.mutate()} loading={mutation.isPending} />
-      <ActionButton label="Vazgeç" icon="spark" variant="ghost" onPress={() => safeBack(router, "/(member)/profile")} />
+      <ActionButton testID="member-leave-salon-confirm" label="Salondan Ayrıl" icon="risk" variant="danger" onPress={() => mutation.mutate()} loading={mutation.isPending} />
+      <ActionButton testID="member-leave-salon-cancel" label="Vazgeç" icon="spark" variant="ghost" onPress={() => safeBack(router, "/(member)/profile")} />
     </AppShell>
   );
 }

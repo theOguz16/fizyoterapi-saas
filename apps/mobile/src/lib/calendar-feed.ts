@@ -52,6 +52,14 @@ export function calendarFeedEventToDetailRow(event: CalendarFeedEvent): Calendar
   };
 }
 
+export function splitMemberCalendarEvents(events: CalendarFeedEvent[]) {
+  return {
+    lessons: events.filter((event) => event.source === "BOOKING"),
+    approvedPreferences: events.filter((event) => event.source === "AVAILABILITY"),
+    pendingPreferences: events.filter((event) => event.source === "PENDING_AVAILABILITY"),
+  };
+}
+
 export function calendarDateKey(value: Date | string, timezone = "Europe/Istanbul") {
   const date = value instanceof Date ? value : new Date(value);
   const parts = new Intl.DateTimeFormat("en-CA", {

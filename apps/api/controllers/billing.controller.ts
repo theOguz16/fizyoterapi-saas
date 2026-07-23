@@ -9,6 +9,7 @@ import { AuditLogService } from "../services/audit-log.service";
 
 const REVENUECAT_ACTIVE_EVENTS = new Set(["INITIAL_PURCHASE", "RENEWAL", "UNCANCELLATION", "PRODUCT_CHANGE"]);
 const REVENUECAT_EXPIRATION_EVENTS = new Set(["EXPIRATION"]);
+const REVENUECAT_NON_REVOKING_EVENTS = new Set(["BILLING_ISSUE", "CANCELLATION"]);
 
 function dateFromRevenueCatMs(value: unknown) {
   const numeric = Number(value);
@@ -163,6 +164,25 @@ export class BillingController {
       tenant.revenuecat_store = event.store || tenant.revenuecat_store || null;
       tenant.revenuecat_last_event_type = eventType;
       if (!activeUntil || activeUntil.getTime() <= Date.now()) {
+        tenant.subscription_status = TenantSubscriptionStatus.READ_ONLY;
+        tenant.is_public = false;
+      }
+      await repo.save(tenant);
+    }
+
+    if (!isStaleEvent && REVENUECAT_NON_REVOKING_EVENTS.has(eventType)) {
+      tenant.subscription_current_period_ends_at =
+        expirationAt || keepFutureDate(tenant.subscription_current_period_ends_at);
+      tenant.subscription_last_event_at = eventAt;
+      tenant.revenuecat_original_app_user_id = event.original_app_user_id || tenant.revenuecat_original_app_user_id || null;
+      tenant.revenuecat_product_id = event.product_id || tenant.revenuecat_product_id || null;
+      tenant.revenuecat_entitlement_id = primaryEntitlement;
+      tenant.revenuecat_store = event.store || tenant.revenuecat_store || null;
+      tenant.revenuecat_last_event_type = eventType;
+      if (
+        tenant.subscription_current_period_ends_at &&
+        new Date(tenant.subscription_current_period_ends_at).getTime() <= Date.now()
+      ) {
         tenant.subscription_status = TenantSubscriptionStatus.READ_ONLY;
         tenant.is_public = false;
       }

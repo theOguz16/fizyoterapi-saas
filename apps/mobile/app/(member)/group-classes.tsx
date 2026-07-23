@@ -130,6 +130,7 @@ export default function MemberGroupClassesScreen() {
 
   return (
     <AppShell
+      testID="member-group-classes-screen"
       title="Grup dersleri"
       subtitle="Salonundaki aktif grup derslerini incele, uygun olanlara katıl veya talebini geri çek."
       icon="calendar"
@@ -150,7 +151,7 @@ export default function MemberGroupClassesScreen() {
             const joinedCount = Number(row.joined_member_count || 0);
             const full = capacity > 0 && joinedCount >= capacity;
             return (
-              <SurfaceCard key={row.id || index} tone="primary">
+              <SurfaceCard testID={`member-group-class-card-${index}`} key={row.id || index} tone="primary">
                 <View style={styles.header}>
                   <View style={styles.grow}>
                     <Text style={styles.title}>{getGroupClassDisplayName(row) || row.title || "Grup dersi"}</Text>

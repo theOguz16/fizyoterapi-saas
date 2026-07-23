@@ -1,0 +1,6 @@
+appId: com.fizyoflow.mobile
+name: ios-dev-client-clean-start-helper
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true

@@ -22,6 +22,7 @@ import { SectionTitle } from "@/theme/components/section-title";
 import { FormField } from "@/theme/components/form-field";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { AppIcon } from "@/theme/components/app-icon";
+import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { tokens } from "@/theme/tokens";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { bookingStatusLabel } from "@/lib/labels";
@@ -1084,6 +1085,7 @@ function SelectionSheet({
           ))}
         </ScrollView>
       </View>
+      <ConnectivityBanner />
     </Modal>
   );
 }

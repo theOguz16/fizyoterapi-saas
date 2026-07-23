@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getConnectivitySnapshot, subscribeConnectivity } from "@/lib/connectivity";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
 
 export function ConnectivityBanner() {
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState(getConnectivitySnapshot);
   const wasOfflineRef = useRef(false);
 
@@ -20,7 +22,7 @@ export function ConnectivityBanner() {
 
     if (snapshot.status === "online" && wasOfflineRef.current) {
       wasOfflineRef.current = false;
-      void queryClient.invalidateQueries();
+      void queryClient.refetchQueries({ type: "active" });
     }
   }, [queryClient, snapshot.status, snapshot.lastChangedAt]);
 
@@ -29,7 +31,11 @@ export function ConnectivityBanner() {
   }
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View
+      testID="connectivity-banner"
+      style={[styles.wrap, { top: Math.max(insets.top + tokens.spacing.sm, tokens.spacing.lg) }]}
+      pointerEvents="box-none"
+    >
       <View style={styles.banner}>
         <View style={styles.iconWrap}>
           <AppIcon name="risk" size="sm" tone="danger" />
@@ -39,9 +45,10 @@ export function ConnectivityBanner() {
           <Text style={styles.message}>{snapshot.message || "Son başarılı veriler gösteriliyor. Bağlantı gelince ekranlar otomatik yenilenecek."}</Text>
         </View>
         <Pressable
+          testID="connectivity-banner-retry"
           accessibilityRole="button"
           accessibilityLabel="Tekrar dene"
-          onPress={() => void queryClient.invalidateQueries()}
+          onPress={() => void queryClient.refetchQueries({ type: "active" })}
           style={({ pressed }) => [styles.retry, pressed && styles.retryPressed]}
         >
           <Text style={styles.retryText}>Tekrar dene</Text>
@@ -56,12 +63,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: tokens.spacing.md,
     right: tokens.spacing.md,
-    top: tokens.spacing.lg,
-    zIndex: 100,
+    alignSelf: "center",
+    maxWidth: 640,
+    zIndex: 1000,
+    elevation: 1000,
   },
   banner: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: tokens.spacing.sm,
     borderRadius: tokens.radius.lg,
     borderWidth: 1,
@@ -85,6 +94,7 @@ const styles = StyleSheet.create({
   },
   copyWrap: {
     flex: 1,
+    flexShrink: 1,
     gap: 2,
   },
   title: {
@@ -99,6 +109,7 @@ const styles = StyleSheet.create({
     fontFamily: tokens.fontFamily.regular,
   },
   retry: {
+    flexShrink: 0,
     minHeight: 34,
     justifyContent: "center",
     borderRadius: tokens.radius.md,

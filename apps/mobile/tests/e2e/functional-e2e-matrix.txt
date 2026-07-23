@@ -1,0 +1,33 @@
+# capability|flow (apps/mobile dizinine gore)
+# Her flow, izole PostgreSQL reset+seed sonrasinda tek basina calisir.
+clinic owner registration and mandatory legal consent|tests/e2e/maestro/auth-owner-registration-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh owner-registration
+clinic member registration and mandatory legal consent|tests/e2e/maestro/auth-member-registration-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh member-registration
+trainer invite acceptance and mandatory legal consent|tests/e2e/maestro/auth-trainer-invite-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh trainer-invite|INVITE_TOKEN|apps/mobile/scripts/create-trainer-invite-e2e.sh
+admin-to-trainer role switch and logout|tests/e2e/maestro/auth-role-switch-logout-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh role-switch-logout||apps/mobile/scripts/prepare-role-switch-e2e.sh
+password reset request and enumeration-safe response|tests/e2e/maestro/auth-password-reset-request-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh password-reset-request
+password reset token consumption and new login|tests/e2e/maestro/auth-password-reset-confirm-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh password-reset-confirm
+clinic activation|tests/e2e/maestro/clinic-owner-activation-flow.yaml|apps/mobile/scripts/verify-clinic-activation-api.sh
+admin-trainer-member appointment calendar chain|tests/e2e/maestro/appointment-calendar-cross-role-functional.yaml|apps/mobile/scripts/verify-appointment-calendar-chain-e2e.sh||apps/mobile/scripts/prepare-appointment-calendar-e2e.sh
+admin package create-edit-disable-delete|tests/e2e/maestro/admin-package-create-smoke.yaml
+admin campaign create-disable and notification send|tests/e2e/maestro/admin-campaign-notification-functional.yaml
+admin manual salon entry|tests/e2e/maestro/admin-entry-scan-functional.yaml
+admin salon profile and working-hours update|tests/e2e/maestro/admin-salon-settings-functional.yaml
+admin approval accept|tests/e2e/maestro/admin-approval-functional.yaml
+admin group-class request approval|tests/e2e/maestro/admin-group-class-approval-functional.yaml
+member authentication routing|tests/e2e/maestro/login-role-routing.yaml
+member measurement creation|tests/e2e/maestro/member-measurement-smoke.yaml
+member package rights, booking cancel, group join-leave, campaigns, notifications and leave-clinic|tests/e2e/maestro/member-core-operations-functional.yaml
+member referral creation|tests/e2e/maestro/member-referral-functional.yaml
+admin authentication routing|tests/e2e/maestro/release-admin-login.yaml
+trainer authentication routing|tests/e2e/maestro/release-trainer-login.yaml
+trainer note create-edit and schedule-change request|tests/e2e/maestro/trainer-daily-operations.yaml
+trainer group-class create-edit-delete request|tests/e2e/maestro/trainer-group-classes-full-smoke.yaml
+trainer group-class request|tests/e2e/maestro/trainer-group-classes-smoke.yaml
+trainer manual check-in|tests/e2e/maestro/trainer-manual-checkin-smoke.yaml
+trainer bulk notification and logout|tests/e2e/maestro/trainer-operations-functional.yaml
+member clinic discovery-to-duo application|tests/e2e/maestro/duo-package-flow.yaml
+member manual clinic code, invalid payload, choose-another and cancel-link|tests/e2e/maestro/member-clinic-connection-functional.yaml
+member unknown clinic recovery|tests/e2e/maestro/member-salon-qr-invalid-salon.yaml
+active member blocks another clinic context|tests/e2e/maestro/member-salon-qr-block-active-member.yaml
+member real multi-package application|tests/e2e/maestro/member-multi-package-time-selection-authenticated.yaml
+active-member add-on, role guard, admin rejection and 401|tests/e2e/maestro/release-edge-cases.yaml

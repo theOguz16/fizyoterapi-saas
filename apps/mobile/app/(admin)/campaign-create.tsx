@@ -155,6 +155,7 @@ export default function AdminCampaignCreateScreen() {
 
   return (
     <AppShell
+      testID="admin-campaign-editor-screen"
       title={isEditing ? "Kampanyayı düzenle" : "Yeni kampanya"}
       subtitle="Hedef kitle, koşul ve ödül kurallarını belirle."
       icon="campaigns"
@@ -163,6 +164,7 @@ export default function AdminCampaignCreateScreen() {
     >
       <SurfaceCard tone="primary">
         <FormField 
+          inputId="admin-campaign-name-input"
           label="Kampanya adı" 
           value={name} 
           onChangeText={setName} 
@@ -173,6 +175,7 @@ export default function AdminCampaignCreateScreen() {
           {AUDIENCES.map((option) => (
             <SelectionChip 
               key={option.value} 
+              testID={`admin-campaign-audience-${option.value.toLowerCase()}`}
               label={option.label} 
               active={audience === option.value} 
               onPress={() => { if (!ruleLocked) setAudience(option.value); }}
@@ -187,6 +190,7 @@ export default function AdminCampaignCreateScreen() {
           {TRIGGER_TYPES.map((option) => (
             <SelectionChip 
               key={option.value} 
+              testID={`admin-campaign-trigger-${option.value.toLowerCase()}`}
               label={option.label} 
               active={triggerType === option.value} 
               onPress={() => { if (!ruleLocked) setTriggerType(option.value); }}
@@ -196,6 +200,7 @@ export default function AdminCampaignCreateScreen() {
 
         {triggerType === "REFERRAL" && (
           <FormField 
+            inputId="admin-campaign-trigger-count-input"
             label="Gereken kayıt sayısı" 
             value={triggerCount} 
             onChangeText={setTriggerCount} 
@@ -207,6 +212,7 @@ export default function AdminCampaignCreateScreen() {
 
         {triggerType === "ATTENDANCE" && (
           <FormField 
+            inputId="admin-campaign-trigger-count-input"
             label="Gereken ders sayısı" 
             value={triggerCount} 
             onChangeText={setTriggerCount} 
@@ -232,6 +238,7 @@ export default function AdminCampaignCreateScreen() {
 
         {rewardType === "GROUP_CLASS_CREDIT" && (
           <FormField 
+            inputId="admin-campaign-reward-value-input"
             label="Grup dersi adedi" 
             value={rewardValue} 
             onChangeText={setRewardValue} 
@@ -248,6 +255,7 @@ export default function AdminCampaignCreateScreen() {
               {REWARD_TARGETS.map((option) => (
                 <SelectionChip 
                   key={option.value} 
+                  testID={`admin-campaign-reward-target-${option.value.toLowerCase()}`}
                   label={option.label} 
                   active={rewardTarget === option.value} 
                   onPress={() => { if (!ruleLocked) setRewardTarget(option.value); }}
@@ -268,8 +276,8 @@ export default function AdminCampaignCreateScreen() {
       <SurfaceCard>
         <Text style={styles.sectionTitle}>Yayın durumu</Text>
         <View style={styles.chips}>
-          <SelectionChip label="Taslak" active={!isActive} onPress={() => setIsActive(false)} />
-          <SelectionChip label="Aktif" active={isActive} onPress={() => setIsActive(true)} />
+          <SelectionChip testID="admin-campaign-status-draft" label="Taslak" active={!isActive} onPress={() => setIsActive(false)} />
+          <SelectionChip testID="admin-campaign-status-active" label="Aktif" active={isActive} onPress={() => setIsActive(true)} />
         </View>
         <Text style={styles.helperText}>
           {isActive ? "Koşulu sağlayan uygun üyelere ödül otomatik verilir." : "Kampanya kaydedilir ancak siz aktifleştirene kadar ödül üretmez."}
@@ -277,6 +285,7 @@ export default function AdminCampaignCreateScreen() {
       </SurfaceCard>
 
       <ActionButton
+        testID="admin-campaign-submit"
         label={isEditing ? "Kampanyayı güncelle" : "Kampanyayı oluştur"}
         icon="campaigns"
         onPress={() => mutation.mutate()}

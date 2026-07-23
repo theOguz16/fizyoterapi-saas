@@ -41,7 +41,7 @@ describe("admin clinic controller", () => {
     });
   });
 
-  it("prefers detour url for qr payload when detour domain is configured", async () => {
+  it("keeps the branded universal link as qr payload when detour is configured", async () => {
     process.env.PUBLIC_WEB_BASE_URL = "https://join.example.com/";
     process.env.DETOUR_LINK_BASE_URL = "https://fizyoflow.godetour.link/2IbxPluNu4";
     const tenant = {
@@ -64,8 +64,9 @@ describe("admin clinic controller", () => {
 
     expect(res.body).toEqual({
       data: expect.objectContaining({
-        qr_payload: expect.stringContaining("https://fizyoflow.godetour.link/2IbxPluNu4?"),
+        qr_payload: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
         join_url: "https://join.example.com/join/demo-salon?code=FYF-DEMO-001",
+        detour_url: expect.stringContaining("https://fizyoflow.godetour.link/2IbxPluNu4?"),
       }),
     });
   });

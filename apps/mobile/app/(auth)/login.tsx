@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAppFlow } from "@/providers/app-flow";
@@ -12,6 +12,7 @@ import { getSignupOnboardingRole, hasCompletedSignupOnboarding } from "@/lib/loc
 import { getPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
 import { getUserFacingMessage } from "@/lib/user-feedback";
+import { shouldAttemptBiometricLogin } from "@/lib/biometric-login-policy";
 
 const TRUST_SIGNALS = [
   "Üyelik ve rezervasyon bilgileri tek hesapta toplanır",
@@ -31,6 +32,7 @@ export default function LoginScreen() {
   const [pendingSalonSlug, setPendingSalonSlug] = useState<string | null>(null);
   const introOpacity = useState(() => new Animated.Value(0))[0];
   const introTranslate = useState(() => new Animated.Value(20))[0];
+  const biometricAttemptedRef = useRef(false);
 
   useEffect(() => {
     hasCompletedSignupOnboarding().then(setSignupOnboardingSeen).catch(() => setSignupOnboardingSeen(false));
@@ -75,17 +77,29 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleBiometricLogin() {
+  const handleBiometricLogin = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       await loginWithBiometrics();
     } catch (err) {
-      setError(getUserFacingMessage(err, "Hızlı giriş tamamlanamadı. E-posta ve şifrenle giriş yapabilirsin."));
+      setError(getUserFacingMessage(err, `${biometricLabel} tamamlanamadı. E-posta ve şifrenle devam edebilirsin.`));
     } finally {
       setLoading(false);
     }
-  }
+  }, [biometricLabel, loginWithBiometrics]);
+
+  useEffect(() => {
+    if (!shouldAttemptBiometricLogin({
+      available: biometricAvailable,
+      enabled: biometricEnabled,
+      alreadyAttempted: biometricAttemptedRef.current,
+      loading,
+    })) return;
+
+    biometricAttemptedRef.current = true;
+    void handleBiometricLogin();
+  }, [biometricAvailable, biometricEnabled, handleBiometricLogin, loading]);
 
   async function handleSignup() {
     if (signupOnboardingSeen) {
@@ -134,19 +148,9 @@ export default function LoginScreen() {
             autoComplete="password"
             textContentType="password"
           />
-          {biometricAvailable && biometricEnabled ? (
-            <ActionButton
-              testID="login-biometric-button"
-              label={`${biometricLabel} ile giriş yap`}
-              icon="shield"
-              variant="ghost"
-              onPress={handleBiometricLogin}
-              loading={loading}
-            />
-          ) : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.linksColumn}>
-            <Pressable onPress={() => router.push("/(auth)/reset-password" as never)} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
+            <Pressable testID="login-forgot-password" onPress={() => router.push("/(auth)/reset-password" as never)} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
               <View style={styles.linkIconWrap}>
                 <AppIcon name="shield" size="sm" tone="primary" />
               </View>
@@ -156,7 +160,7 @@ export default function LoginScreen() {
               </View>
               <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
             </Pressable>
-            <Pressable onPress={handleSignup} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
+            <Pressable testID="login-register" onPress={handleSignup} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
               <View style={styles.linkIconWrap}>
                 <AppIcon name="spark" size="sm" tone="primary" />
               </View>
@@ -166,7 +170,7 @@ export default function LoginScreen() {
               </View>
               <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
             </Pressable>
-            <Pressable onPress={() => router.push("/(auth)/scan-salon-qr" as never)} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
+            <Pressable testID="login-scan-salon-qr" onPress={() => router.push("/(auth)/scan-salon-qr" as never)} style={({ pressed }) => [styles.linkCard, pressed ? styles.linkCardPressed : null]}>
               <View style={styles.linkIconWrap}>
                 <AppIcon name="scan" size="sm" tone="primary" />
               </View>

@@ -27,15 +27,15 @@ export default function TrainerRiskScreen() {
   const highRiskCount = rows.filter((row) => String(row.level).toUpperCase().includes("HIGH")).length;
 
   return (
-    <AppShell title="Riskli danışanlar" subtitle="Mobil hızlı takip için risk özet listesini tek ekranda topla." icon="risk" refreshing={isRefetching} onRefresh={() => { void refetch(); }} showBackButton>
+    <AppShell testID="trainer-risk-screen" title="Riskli danışanlar" subtitle="Mobil hızlı takip için risk özet listesini tek ekranda topla." icon="risk" refreshing={isRefetching} onRefresh={() => { void refetch(); }} showBackButton>
       <View style={styles.metricsRow}>
         <MetricCard label="Riskli kişi" value={rows.length} hint="Takip listesi" icon="risk" />
         <MetricCard label="Yüksek risk" value={highRiskCount} hint="Öncelikli aksiyon" icon="shield" />
       </View>
       {rows.length === 0 ? <EmptyPanel title="Risk görünmüyor" description="Şu an kritik danışan listesi boş." iconName="shield" iconTone="neutral" /> : (
         <ScrollPanel maxHeight={500}>
-          {rows.map((row) => (
-            <SurfaceCard key={row.key}>
+          {rows.map((row, index) => (
+            <SurfaceCard key={row.key} testID={`trainer-risk-item-${index}`}>
               <View style={styles.headerRow}>
                 <Text style={styles.title}>{row.name}</Text>
                 <View style={styles.badge}>

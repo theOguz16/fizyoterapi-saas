@@ -1,5 +1,7 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
+import { resolveBiometricLabel } from "@/lib/biometric-login-policy";
 
 const BIOMETRIC_ENABLED_KEY = "fizyoflow.biometric_login_enabled.v1";
 
@@ -8,12 +10,6 @@ export type BiometricState = {
   enabled: boolean;
   label: string;
 };
-
-function resolveBiometricLabel(types: LocalAuthentication.AuthenticationType[]) {
-  if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) return "Face ID";
-  if (types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) return "Touch ID";
-  return "Biyometrik giriş";
-}
 
 export async function getBiometricState(): Promise<BiometricState> {
   try {
@@ -27,7 +23,11 @@ export async function getBiometricState(): Promise<BiometricState> {
     return {
       available: hasHardware && isEnrolled,
       enabled: enabled === "true",
-      label: resolveBiometricLabel(types),
+      label: resolveBiometricLabel({
+        hasFacialRecognition: types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION),
+        hasFingerprint: types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT),
+        platform: Platform.OS,
+      }),
     };
   } catch {
     return { available: false, enabled: false, label: "Biyometrik giriş" };

@@ -46,6 +46,15 @@ export class AccountClinicRequestController {
     if (!clinic_name || !city || !district || !phone) {
       throw new AppError("VALIDATION_ERROR", 422, "Klinik adı, şehir, ilçe ve telefon zorunludur");
     }
+    if (clinic_name.length < 2 || clinic_name.length > 160) {
+      throw new AppError("VALIDATION_ERROR", 422, "Klinik adı 2 ile 160 karakter arasında olmalıdır");
+    }
+    if (phone.length < 10 || phone.length > 15) {
+      throw new AppError("VALIDATION_ERROR", 422, "Geçerli bir telefon numarası girilmelidir");
+    }
+    if (city.length > 80 || district.length > 100 || about_text.length > 2000) {
+      throw new AppError("VALIDATION_ERROR", 422, "Klinik bilgileri izin verilen uzunluğu aşıyor");
+    }
 
     return AppDataSource.transaction(async (manager) => {
       const accountRepo = manager.getRepository(Account);
@@ -55,24 +64,29 @@ export class AccountClinicRequestController {
       const userRepo = manager.getRepository(User);
 
       const applicationRepo = manager.getRepository(SalonApplication);
-      const [account, activeMembership, existingOwnedTenant, unresolvedApplication] = await Promise.all([
-        accountRepo.findOne({ where: { id: accountId } }),
-        membershipRepo.findOne({ where: { account_id: accountId, status: SalonMembershipStatus.ACTIVE, is_active_context: true } }),
-        tenantRepo.findOne({ where: { owner_account_id: accountId }, order: { created_at: "DESC" } }),
-        applicationRepo
-          .createQueryBuilder("application")
-          .where("application.account_id = :accountId", { accountId })
-          .andWhere(
-            "(application.status = :pendingStatus OR (application.status = :approvedStatus AND application.payment_status != :verifiedStatus))",
-            {
-              pendingStatus: SalonApplicationStatus.PENDING,
-              approvedStatus: SalonApplicationStatus.APPROVED,
-              verifiedStatus: MembershipPaymentStatus.VERIFIED,
-            }
-          )
-          .orderBy("application.created_at", "DESC")
-          .getOne(),
-      ]);
+      // TypeORM transactions share a PostgreSQL connection. Do not send concurrent
+      // queries through it: pg can otherwise wait indefinitely during activation.
+      const account = await accountRepo.findOne({ where: { id: accountId } });
+      const activeMembership = await membershipRepo.findOne({
+        where: { account_id: accountId, status: SalonMembershipStatus.ACTIVE, is_active_context: true },
+      });
+      const existingOwnedTenant = await tenantRepo.findOne({
+        where: { owner_account_id: accountId },
+        order: { created_at: "DESC" },
+      });
+      const unresolvedApplication = await applicationRepo
+        .createQueryBuilder("application")
+        .where("application.account_id = :accountId", { accountId })
+        .andWhere(
+          "(application.status = :pendingStatus OR (application.status = :approvedStatus AND application.payment_status != :verifiedStatus))",
+          {
+            pendingStatus: SalonApplicationStatus.PENDING,
+            approvedStatus: SalonApplicationStatus.APPROVED,
+            verifiedStatus: MembershipPaymentStatus.VERIFIED,
+          }
+        )
+        .orderBy("application.created_at", "DESC")
+        .getOne();
 
       if (!account) throw new AppError("ACCOUNT_NOT_FOUND", 404, "Hesap bulunamadı");
       const hasExistingOwnerContext = Boolean(
@@ -139,16 +153,20 @@ export class AccountClinicRequestController {
       } else {
         tenant.slug = slug;
         tenant.name = clinic_name;
-        tenant.review_status = TenantReviewStatus.PUBLISHED;
-        tenant.subscription_status = TenantSubscriptionStatus.TRIAL;
-        tenant.review_note = "Klinik sahibi mobil akıştan otomatik yayınlandı.";
-        tenant.reviewed_at = new Date();
-        tenant.reviewed_by_account_id = null;
-        tenant.is_public = true;
-        tenant.trial_starts_at = tenant.trial_starts_at || new Date();
-        tenant.trial_ends_at = tenant.trial_ends_at || plusDays(CLINIC_TRIAL_DAYS);
-        tenant.subscription_started_at = tenant.subscription_started_at || tenant.trial_starts_at;
-        tenant.subscription_current_period_ends_at = tenant.subscription_current_period_ends_at || tenant.trial_ends_at;
+        // Kurulumu tamamlanmış klinik bu endpointten profilini tekrar kaydedebilir.
+        // Bu işlem ACTIVE/READ_ONLY aboneliği yeniden TRIAL'a çevirmemelidir.
+        if (isClinicActivation) {
+          tenant.review_status = TenantReviewStatus.PUBLISHED;
+          tenant.subscription_status = TenantSubscriptionStatus.TRIAL;
+          tenant.review_note = "Klinik sahibi mobil akıştan otomatik yayınlandı.";
+          tenant.reviewed_at = new Date();
+          tenant.reviewed_by_account_id = null;
+          tenant.is_public = true;
+          tenant.trial_starts_at = tenant.trial_starts_at || new Date();
+          tenant.trial_ends_at = tenant.trial_ends_at || plusDays(CLINIC_TRIAL_DAYS);
+          tenant.subscription_started_at = tenant.subscription_started_at || tenant.trial_starts_at;
+          tenant.subscription_current_period_ends_at = tenant.subscription_current_period_ends_at || tenant.trial_ends_at;
+        }
       }
       tenant = await tenantRepo.save(tenant);
 

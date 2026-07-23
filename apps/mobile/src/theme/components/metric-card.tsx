@@ -5,15 +5,16 @@ import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
 
 type Props = {
+  testID?: string;
   label: string;
   value: string | number;
   hint?: string;
   icon: AppIconName;
 };
 
-export function MetricCard({ label, value, hint, icon }: Props) {
+export function MetricCard({ testID, label, value, hint, icon }: Props) {
   return (
-    <View style={styles.card}>
+    <View testID={testID} style={styles.card}>
       <View style={styles.header}>
         <AppIcon name={icon} size="sm" tone="primary" />
         <Text style={styles.label}>{label}</Text>

@@ -1,5 +1,5 @@
 // Mobile API subscription domain endpointleri.
-import { httpRequest } from "../http-client";
+import { httpRequest, httpRequestText } from "../http-client";
 import type { AdminClinicSubscription, AdminRevenueReport, AdminSubscriptionHistoryItem } from "./types";
 
 export async function createSubscriptionIntentApi(payload: {
@@ -55,10 +55,5 @@ export async function getAdminRevenueCsvApi(query?: { from?: string; to?: string
   if (query?.to) search.set("to", query.to);
   if (query?.package_id) search.set("package_id", query.package_id);
   if (query?.trainer_id) search.set("trainer_id", query.trainer_id);
-  const { getApiBase, getAuthToken } = await import("../http-client");
-  const response = await fetch(`${getApiBase()}/admin/revenue/export.csv?${search.toString()}`, {
-    headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {},
-  });
-  if (!response.ok) throw new Error("Gelir raporu dışa aktarılamadı.");
-  return response.text();
+  return httpRequestText(`/admin/revenue/export.csv?${search.toString()}`);
 }

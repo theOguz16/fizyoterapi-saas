@@ -11,13 +11,14 @@ const LEGAL_URLS = {
 type Props = {
   value: LegalConsentSelection;
   onChange: (next: LegalConsentSelection) => void;
-  context: "CLINIC_OWNER" | "CLINIC_MEMBER";
+  context: "CLINIC_OWNER" | "CLINIC_MEMBER" | "INVITE_ACCEPT";
 };
 
 export function LegalConsentGroup({ value, onChange, context }: Props) {
-  const purpose =
-    context === "CLINIC_OWNER"
-      ? "Kimlik ve iletişim bilgilerin hesabını açmak, kliniğini kurmak, güvenliği sağlamak ve yasal yükümlülükleri yerine getirmek için işlenir."
+  const purpose = context === "CLINIC_OWNER"
+    ? "Kimlik ve iletişim bilgilerin hesabını açmak, kliniğini kurmak, güvenliği sağlamak ve yasal yükümlülükleri yerine getirmek için işlenir."
+    : context === "INVITE_ACCEPT"
+      ? "Kimlik ve iletişim bilgilerin davetini doğrulamak, hesabını oluşturmak ve ilgili klinik rolünü etkinleştirmek için işlenir."
       : "Kimlik ve iletişim bilgilerin hesabını açmak ve seçtiğin kliniğe başvuru akışını yürütmek için işlenir. Sağlık bilgisi bu kayıt ekranında istenmez.";
 
   return (
@@ -72,7 +73,7 @@ function ConsentRow({ testID, checked, label, onPress }: { testID: string; check
 
 function LegalLink({ label, url }: { label: string; url: string }) {
   return (
-    <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(url)}>
+    <Pressable testID={`legal-link-${url.split("/").at(-1)}`} accessibilityRole="link" onPress={() => void Linking.openURL(url)}>
       <Text style={styles.link}>{label}</Text>
     </Pressable>
   );

@@ -1,0 +1,89 @@
+appId: com.fizyoflow.mobile
+name: auth-role-switch-logout-functional
+---
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- tapOn:
+    id: "welcome-login-button"
+- extendedWaitUntil:
+    visible:
+      id: "login-identity-input"
+    timeout: 10000
+- tapOn:
+    id: "login-identity-input"
+- inputText: "clinic.owner.e2e@demo.local"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "login-password-input"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "login-password-input"
+- inputText: "clinic-owner123"
+- tapOn:
+    id: "login-submit-button"
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-screen"
+    timeout: 20000
+- tapOn: "Profil, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: "admin-profile-screen"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "role-switch-trainer"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "role-switch-trainer"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- tapOn: "Profil, tab.*"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-profile-screen"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Hesap özeti"
+    direction: DOWN
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-request-center"
+    direction: DOWN
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Bildirim tercihleri"
+    direction: DOWN
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-qr"
+    direction: DOWN
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-logout"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "trainer-profile-logout"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000

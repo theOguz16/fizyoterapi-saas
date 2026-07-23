@@ -133,6 +133,7 @@ export default function TrainerNoteEditScreen() {
         </View>
 
         <FormField
+          inputId="trainer-note-edit-title-input"
           label="Başlık"
           value={form.title}
           onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))}
@@ -140,6 +141,7 @@ export default function TrainerNoteEditScreen() {
           returnKeyType="next"
         />
         <FormField
+          inputId="trainer-note-edit-body-input"
           label="Not içeriği"
           value={form.body}
           onChangeText={(value) => setForm((prev) => ({ ...prev, body: value }))}
@@ -155,7 +157,7 @@ export default function TrainerNoteEditScreen() {
         <Text style={styles.infoCopy}>Başlıkta kısa bağlam verin, içerikte ise koç kararı, risk sinyali veya takip adımını açık yazın.</Text>
       </SurfaceCard>
 
-      <ActionButton label="Değişiklikleri kaydet" icon="notes" onPress={() => mutation.mutate()} loading={mutation.isPending} disabled={!form.body.trim()} />
+      <ActionButton testID="trainer-note-edit-submit" label="Değişiklikleri kaydet" icon="notes" onPress={() => mutation.mutate()} loading={mutation.isPending} disabled={!form.body.trim()} />
     </AppShell>
   );
 }

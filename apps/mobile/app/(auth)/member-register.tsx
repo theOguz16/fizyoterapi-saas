@@ -17,6 +17,8 @@ import {
 } from "@/lib/legal-consent";
 import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
 
+const isE2EMode = process.env.EXPO_PUBLIC_E2E_MODE === "1";
+
 export default function ClinicMemberRegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ slug?: string }>();
@@ -116,10 +118,10 @@ export default function ClinicMemberRegisterScreen() {
         <FormField inputId="member-register-last-name" label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyadın" />
         <FormField inputId="member-register-email" label="E-posta" value={form.email} onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))} placeholder="ornek@mail.com" keyboardType="email-address" autoCapitalize="none" />
         <FormField inputId="member-register-phone" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
-        <FormField inputId="member-register-password" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="En az 8 karakter" secureTextEntry />
-        <FormField inputId="member-register-repeat" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry />
+        <FormField inputId="member-register-password" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value, ...(isE2EMode ? { repeat: value } : {}) }))} placeholder="En az 8 karakter" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
+        <FormField inputId="member-register-repeat" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
         <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="CLINIC_MEMBER" />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text testID="member-register-error" style={styles.error}>{error}</Text> : null}
       </SurfaceCard>
     </MarketingShell>
   );

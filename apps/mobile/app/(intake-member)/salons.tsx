@@ -102,6 +102,7 @@ export default function IntakeSalonsScreen() {
 
   return (
     <AppShell
+      testID="member-salons-screen"
       title="Kliniğini bul"
       subtitle={
         requestedCity

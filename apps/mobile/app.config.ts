@@ -20,6 +20,13 @@ const config: ExpoConfig = {
   slug: "fizyoflow-mobile",
   scheme: "fizyoflow",
   version: "1.0.4",
+  ios: {
+    bundleIdentifier: "com.fizyoflow.mobile",
+    associatedDomains: ["applinks:fizyoflow.com", "applinks:www.fizyoflow.com"],
+  },
+  android: {
+    package: "com.fizyoflow.mobile",
+  },
   experiments: {
     typedRoutes: false,
   },

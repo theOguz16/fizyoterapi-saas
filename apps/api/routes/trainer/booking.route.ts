@@ -16,6 +16,7 @@ trainerBookingsRoutes.get("/schedule-change-requests", TrainerBookingsController
 trainerBookingsRoutes.post("/bulk-notifications", TrainerBookingsController.sendBulkNotification);
 trainerBookingsRoutes.get("/", TrainerBookingsController.list);
 trainerBookingsRoutes.post("/:id/schedule-change-request", TrainerBookingsController.createScheduleChangeRequest);
+trainerBookingsRoutes.patch("/:id/no-show", TrainerBookingsController.markNoShow);
 trainerBookingsRoutes.get("/:id", TrainerBookingsController.getById);
 trainerBookingsRoutes.patch("/:id/reschedule", TrainerBookingsController.reschedule);
 trainerBookingsRoutes.patch("/:id/status", TrainerBookingsController.setStatus);

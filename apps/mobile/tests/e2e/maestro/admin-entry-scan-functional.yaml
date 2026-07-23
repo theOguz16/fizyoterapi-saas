@@ -1,0 +1,36 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-entry-scan"
+    timeout: 20000
+- tapOn:
+    id: "admin-dashboard-entry-scan"
+- extendedWaitUntil:
+    visible:
+      id: "admin-entry-scan-screen"
+    timeout: 15000
+- tapOn: "Manuel"
+- tapOn:
+    id: "admin-entry-scan-manual-code-input"
+- inputText: "MEM-DEMO001"
+- tapOn:
+    id: "admin-entry-scan-submit"
+- extendedWaitUntil:
+    visible:
+      id: "admin-entry-scan-result"
+    timeout: 20000
+- assertVisible: "Salon girişi kaydedildi"

@@ -59,7 +59,33 @@ export class SchemaMaintenanceService {
     await dataSource.query(`
       ALTER TABLE IF EXISTS accounts
       ADD COLUMN IF NOT EXISTS notification_preferences jsonb,
-      ADD COLUMN IF NOT EXISTS legal_consents jsonb
+      ADD COLUMN IF NOT EXISTS legal_consents jsonb,
+      ADD COLUMN IF NOT EXISTS auth_version integer NOT NULL DEFAULT 1
+    `);
+
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        deleted_at timestamptz,
+        account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        token_hash varchar(64) NOT NULL,
+        expires_at timestamptz NOT NULL,
+        used_at timestamptz
+      )
+    `);
+    await dataSource.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "IDX_password_reset_token_hash"
+      ON password_reset_tokens (token_hash)
+    `);
+    await dataSource.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_password_reset_account"
+      ON password_reset_tokens (account_id)
+    `);
+    await dataSource.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_password_reset_expiry"
+      ON password_reset_tokens (expires_at)
     `);
 
     await dataSource.query(`

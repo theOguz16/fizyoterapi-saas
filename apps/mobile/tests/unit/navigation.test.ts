@@ -223,6 +223,16 @@ describe("mobile navigation rules", () => {
     expect(
       resolveRootNavigation({
         ...common,
+        pendingSalonSlug: "demo-salon",
+        user: { role: "MEMBER" },
+        onboardingState: "DAY_SELECTION_REQUIRED",
+        segments: ["(auth)", "login"],
+      })
+    ).toEqual({ type: "none", reason: "CURRENT_ROUTE_ALLOWED" });
+
+    expect(
+      resolveRootNavigation({
+        ...common,
         user: { role: "MEMBER" },
         onboardingState: "ACTIVE_SALON",
         segments: ["(intake-member)", "packages"],

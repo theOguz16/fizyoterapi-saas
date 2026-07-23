@@ -232,6 +232,8 @@ export type TrainerAvailabilityEntry = {
   package_title?: string | null;
   note?: string | null;
   assignable_slots?: AssignableBookingSlot[] | null;
+  availability_kind?: "AUTOMATIC_SCHEDULING_PREFERENCE" | "MANUAL_PLACEMENT_REQUEST";
+  action_required?: boolean;
 };
 
 export type TrainerEarningsSummary = {

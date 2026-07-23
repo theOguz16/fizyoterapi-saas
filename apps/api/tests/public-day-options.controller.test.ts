@@ -12,7 +12,32 @@ import { createMockResponse } from "./helpers/route-chain";
 
 describe("public day options controller", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("offers the next clinic working days even when the current week has ended", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-25T16:00:00.000Z")); // Cumartesi 19:00, Europe/Istanbul
+
+    const rows = (PublicController as any).buildDayOptions({
+      timezone: "Europe/Istanbul",
+      working_days: [1, 2, 3, 4, 5, 6],
+      start_time: "09:00",
+      end_time: "11:00",
+      slot_minutes: 60,
+      lunch_break_start: "12:00",
+      lunch_break_end: "13:00",
+    });
+
+    expect(rows.length).toBeGreaterThanOrEqual(10);
+    expect(rows[0]).toMatchObject({
+      starts_at: "2026-07-27T06:00:00.000Z",
+      weekday: 1,
+      weekday_label: "Pazartesi",
+    });
+    expect(rows[0].label).toContain("27 Tem");
+    expect(rows.some((row: any) => row.starts_at === "2026-08-03T06:00:00.000Z")).toBe(true);
   });
 
   it("returns scheduled group class slots for group package selections", async () => {

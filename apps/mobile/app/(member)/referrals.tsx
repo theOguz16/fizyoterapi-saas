@@ -90,18 +90,21 @@ export default function MemberReferralsScreen() {
           Arkadaşın salonumuza kayıt olup ilk paketini aldığında, ikiniz de özel kullanım hakları kazanırsınız.
         </Text>
         <FormField
+          inputId="member-referral-name-input"
           label="Arkadaşının adı"
           value={inviteeName}
           onChangeText={setInviteeName}
           placeholder="Ad Soyad"
         />
         <FormField 
+          inputId="member-referral-contact-input"
           label="E-posta veya Telefon" 
           value={inviteeContact} 
           onChangeText={setInviteeContact} 
           placeholder="Arkadaşının iletişim bilgisi" 
         />
         <ActionButton 
+          testID="member-referral-submit"
           label="Davet Gönder" 
           icon="referral" 
           onPress={() => mutation.mutate()} 

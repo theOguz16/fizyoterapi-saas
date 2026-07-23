@@ -70,6 +70,39 @@ export class AdminPackagesController {
     return parsed;
   }
 
+  private static parsePositiveInt(value: unknown, field: string, fallback?: number) {
+    const parsed = AdminPackagesController.parseNonNegativeInt(value, field, fallback);
+    if (parsed < 1) {
+      throw new AppError("VALIDATION_ERROR", 400, `${field} en az 1 olmalıdır`);
+    }
+    return parsed;
+  }
+
+  private static parseDecimalInRange(value: unknown, field: string, min: number, max?: number) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < min || (max !== undefined && parsed > max)) {
+      const range = max === undefined ? `${min} veya daha büyük` : `${min} ile ${max} arasında`;
+      throw new AppError("VALIDATION_ERROR", 400, `${field} ${range} olmalıdır`);
+    }
+    return parsed;
+  }
+
+  private static resolveWeeklyClassHours(value: unknown, totalCredits: number, fallback?: number) {
+    const legacyDefault = Math.min(7, Math.max(1, Math.round(totalCredits / 4)));
+    const weeklyClassHours = AdminPackagesController.parsePositiveInt(
+      value,
+      "weekly_class_hours",
+      fallback ?? legacyDefault
+    );
+    if (weeklyClassHours > 7) {
+      throw new AppError("VALIDATION_ERROR", 400, "weekly_class_hours 1 ile 7 arasında olmalıdır");
+    }
+    if (weeklyClassHours > totalCredits) {
+      throw new AppError("VALIDATION_ERROR", 400, "Haftalık ders sayısı toplam ders hakkını aşamaz");
+    }
+    return weeklyClassHours;
+  }
+
   private static validatePackageType(type: unknown): asserts type is PackageType {
     if (typeof type !== "string" || !Object.values(PackageType).includes(type as PackageType)) {
       throw new AppError("VALIDATION_ERROR", 400, "Geçersiz package type");
@@ -231,6 +264,7 @@ export class AdminPackagesController {
         title,
         total_credits,
         duration_days,
+        weekly_class_hours,
         is_active,
         is_visible,
         is_public,
@@ -288,9 +322,19 @@ export class AdminPackagesController {
         throw new AppError("VALIDATION_ERROR", 400, "title alanı geçersiz");
       }
 
-      const totalCredits = AdminPackagesController.parseNonNegativeInt(total_credits, "total_credits");
+      const totalCredits = AdminPackagesController.parsePositiveInt(total_credits, "total_credits");
       const durationDays = AdminPackagesController.parseNonNegativeInt(duration_days, "duration_days", 0);
+      const weeklyClassHours = AdminPackagesController.resolveWeeklyClassHours(weekly_class_hours, totalCredits);
+      if (display_price !== undefined) {
+        AdminPackagesController.parseDecimalInRange(display_price, "display_price", 0);
+      }
+      if (trainer_commission_rate !== undefined) {
+        AdminPackagesController.parseDecimalInRange(trainer_commission_rate, "trainer_commission_rate", 0, 100);
+      }
       const capacityValue = deriveResult.capacity;
+      if (!Number.isInteger(capacityValue) || capacityValue < 1) {
+        throw new AppError("VALIDATION_ERROR", 400, "capacity en az 1 olmalıdır");
+      }
 
       const newPackage = new Package();
       newPackage.tenant_id = tenantId;
@@ -299,7 +343,10 @@ export class AdminPackagesController {
       newPackage.total_credits = totalCredits;
       newPackage.duration_days = durationDays;
       newPackage.capacity = capacityValue;
-      newPackage.rules = deriveResult.rules;
+      newPackage.rules = {
+        ...deriveResult.rules,
+        weekly_class_hours: weeklyClassHours,
+      };
       newPackage.display_price = deriveResult.displayPrice;
       newPackage.is_active = is_active !== undefined ? Boolean(is_active) : true;
       newPackage.is_visible = is_visible !== undefined ? Boolean(is_visible) : true;
@@ -392,6 +439,7 @@ export class AdminPackagesController {
         type,
         total_credits,
         duration_days,
+        weekly_class_hours,
         capacity,
         rules,
         display_price,
@@ -417,7 +465,7 @@ export class AdminPackagesController {
         pkg.title = title.trim();
       }
       if (total_credits !== undefined) {
-        pkg.total_credits = AdminPackagesController.parseNonNegativeInt(total_credits, "total_credits");
+        pkg.total_credits = AdminPackagesController.parsePositiveInt(total_credits, "total_credits");
       }
       if (duration_days !== undefined) {
         pkg.duration_days = AdminPackagesController.parseNonNegativeInt(duration_days, "duration_days");
@@ -431,10 +479,11 @@ export class AdminPackagesController {
         pkg.type = type;
       }
       if (display_price !== undefined) {
+        AdminPackagesController.parseDecimalInRange(display_price, "display_price", 0);
         pkg.display_price = String(display_price);
       }
       if (capacity !== undefined) {
-        pkg.capacity = AdminPackagesController.parseNonNegativeInt(capacity, "capacity", 0);
+        pkg.capacity = AdminPackagesController.parsePositiveInt(capacity, "capacity");
       }
       if (rules !== undefined) {
         pkg.rules = rules ?? {};
@@ -445,6 +494,22 @@ export class AdminPackagesController {
           ...(ruleObj as Record<string, unknown>),
           summary: String(summary).trim(),
         };
+      }
+      if (trainer_commission_rate !== undefined) {
+        AdminPackagesController.parseDecimalInRange(trainer_commission_rate, "trainer_commission_rate", 0, 100);
+      }
+
+      const existingRules = typeof pkg.rules === "object" && pkg.rules ? (pkg.rules as Record<string, unknown>) : {};
+      const resolvedWeeklyClassHours =
+        weekly_class_hours !== undefined || total_credits !== undefined
+          ? AdminPackagesController.resolveWeeklyClassHours(
+              weekly_class_hours,
+              pkg.total_credits,
+              Number(existingRules.weekly_class_hours || undefined)
+            )
+          : null;
+      if (resolvedWeeklyClassHours !== null) {
+        pkg.rules = { ...existingRules, weekly_class_hours: resolvedWeeklyClassHours };
       }
 
       const hasCatalogBindingUpdate = service_key !== undefined || lesson_category !== undefined;
@@ -463,6 +528,7 @@ export class AdminPackagesController {
           breakDurationMinutes: break_duration_minutes,
           existingRules: {
             ...(typeof pkg.rules === "object" && pkg.rules ? (pkg.rules as Record<string, unknown>) : {}),
+            ...(resolvedWeeklyClassHours !== null ? { weekly_class_hours: resolvedWeeklyClassHours } : {}),
             ...(Array.isArray(linked_group_class_ids) ? { linked_group_class_ids } : {}),
             ...(Array.isArray(linked_group_class_titles) ? { linked_group_class_titles } : {}),
           },
@@ -508,6 +574,19 @@ export class AdminPackagesController {
             : {}),
         };
       }
+
+      const finalRules = typeof pkg.rules === "object" && pkg.rules ? (pkg.rules as Record<string, unknown>) : {};
+      const finalWeeklyClassHours = AdminPackagesController.resolveWeeklyClassHours(
+        finalRules.weekly_class_hours,
+        pkg.total_credits
+      );
+      const finalCommission = finalRules.trainer_commission_rate;
+      if (finalCommission !== undefined) {
+        AdminPackagesController.parseDecimalInRange(finalCommission, "trainer_commission_rate", 0, 100);
+      }
+      AdminPackagesController.parseDecimalInRange(pkg.display_price ?? 0, "display_price", 0);
+      AdminPackagesController.parsePositiveInt(pkg.capacity, "capacity");
+      pkg.rules = { ...finalRules, weekly_class_hours: finalWeeklyClassHours };
 
       const updatedPackage = await packageRepo.save(pkg);
       await AdminPackagesController.logPackageAudit(req, {

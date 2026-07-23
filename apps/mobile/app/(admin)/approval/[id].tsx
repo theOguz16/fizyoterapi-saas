@@ -110,7 +110,7 @@ export default function AdminApprovalDetailScreen() {
   const isMembershipAddOn = isActiveMembershipPackagePurchase({ type: params.type, requestScope: params.requestScope });
 
   return (
-    <AppShell title={String(params.title || "Onay detayı")} subtitle="Kararı vermeden önce kayıt özeti, operasyon etkisi ve üye notunu kontrol edin." icon="approvals" showBackButton>
+    <AppShell testID="admin-approval-detail-screen" title={String(params.title || "Onay detayı")} subtitle="Kararı vermeden önce kayıt özeti, operasyon etkisi ve üye notunu kontrol edin." icon="approvals" showBackButton>
       <SurfaceCard tone="primary">
         <StatusBadge label={String(params.status || "PENDING")} tone={getStatusTone(String(params.status || ""))} />
         {isMembershipAddOn ? <StatusBadge label="Mevcut üyeye ek paket" tone="warning" /> : null}
@@ -164,8 +164,8 @@ export default function AdminApprovalDetailScreen() {
       <SurfaceCard>
         <Text style={styles.section}>Aksiyonlar</Text>
         <View style={styles.actions}>
-          <ActionButton label="Onayla" icon="approvals" onPress={() => approveMutation.mutate("APPROVE")} loading={approveMutation.isPending} />
-          <ActionButton label="Reddet" icon="risk" variant="danger" onPress={() => approveMutation.mutate("REJECT")} loading={approveMutation.isPending} />
+          <ActionButton testID="admin-approval-approve" label="Onayla" icon="approvals" onPress={() => approveMutation.mutate("APPROVE")} loading={approveMutation.isPending} />
+          <ActionButton testID="admin-approval-reject" label="Reddet" icon="risk" variant="danger" onPress={() => approveMutation.mutate("REJECT")} loading={approveMutation.isPending} />
         </View>
         <ActionButton label="Listeye dön" icon="notes" variant="ghost" onPress={() => safeBack(router, "/(admin)/approvals")} />
         <ActionButton label="Üyeleri aç" icon="members" variant="ghost" onPress={() => router.push("/(admin)/members" as never)} />

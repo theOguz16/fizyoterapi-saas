@@ -14,6 +14,14 @@ import { useSession } from "@/providers/auth-session";
 import { tokens } from "@/theme/tokens";
 import { getUserFacingMessage } from "@/lib/user-feedback";
 import { invitePreviewApi } from "@/lib/mobile-api";
+import {
+  createRegistrationLegalConsent,
+  EMPTY_LEGAL_CONSENT_SELECTION,
+  getLegalConsentValidationMessage,
+} from "@/lib/legal-consent";
+import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
+
+const isE2EMode = process.env.EXPO_PUBLIC_E2E_MODE === "1";
 
 export default function InviteAcceptScreen() {
   const router = useRouter();
@@ -30,6 +38,7 @@ export default function InviteAcceptScreen() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [legalConsent, setLegalConsent] = useState(EMPTY_LEGAL_CONSENT_SELECTION);
   const previewQuery = useQuery({
     queryKey: ["invite-preview", form.token],
     queryFn: () => invitePreviewApi(form.token.trim()),
@@ -41,10 +50,16 @@ export default function InviteAcceptScreen() {
   const isDuoPartnerInvite = String(preview?.kind || "").toUpperCase() === "DUO_PARTNER";
 
   async function handleAccept() {
+    const legalError = getLegalConsentValidationMessage(legalConsent);
+    if (legalError) {
+      setError(legalError);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
-      await acceptInvite(form);
+      await acceptInvite({ ...form, legal_consent: createRegistrationLegalConsent(legalConsent) });
       resetSignupFlow();
       router.replace("/(auth)/login" as never);
     } catch (err) {
@@ -59,7 +74,7 @@ export default function InviteAcceptScreen() {
       title={isDuoPartnerInvite ? "Duo davetini tamamla" : "Salon davetini tamamla"}
       subtitle={isDuoPartnerInvite ? "Partner olarak ikili derse katılmak için mevcut hesabınla kabul et ya da hesabını oluştur." : "Eğitmen hesabını aktif etmek için sana iletilen davet kodunu gir ve kişisel bilgilerini tamamla."}
       icon={isDuoPartnerInvite ? "members" : "trainer"}
-      footer={<ActionButton label="Daveti tamamla" icon="trainer" onPress={handleAccept} loading={loading} />}
+      footer={<ActionButton testID="invite-accept-submit" label="Daveti tamamla" icon="trainer" onPress={handleAccept} loading={loading} />}
     >
       <View style={styles.metricsRow}>
         <MetricCard label="Bağlantı" value={isDuoPartnerInvite ? "Duo partner" : "Salon daveti"} hint="Kod veya QR" icon={isDuoPartnerInvite ? "members" : "trainer"} />
@@ -75,16 +90,17 @@ export default function InviteAcceptScreen() {
         </SurfaceCard>
       ) : null}
       <SurfaceCard>
-        <FormField label="Davet kodu" value={form.token} onChangeText={(value) => setForm((prev) => ({ ...prev, token: value }))} placeholder="Davet kodunu gir" autoCapitalize="none" />
-        <FormField label="Ad" value={form.first_name} onChangeText={(value) => setForm((prev) => ({ ...prev, first_name: value }))} placeholder="Ad" />
-        <FormField label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyad" />
+        <FormField inputId="invite-accept-token" label="Davet kodu" value={form.token} onChangeText={(value) => setForm((prev) => ({ ...prev, token: value }))} placeholder="Davet kodunu gir" autoCapitalize="none" />
+        <FormField inputId="invite-accept-first-name" label="Ad" value={form.first_name} onChangeText={(value) => setForm((prev) => ({ ...prev, first_name: value }))} placeholder="Ad" />
+        <FormField inputId="invite-accept-last-name" label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyad" />
         {inviteUsesEmail ? (
-          <FormField label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" />
+          <FormField inputId="invite-accept-phone" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" />
         ) : (
-          <FormField label="E-posta" value={form.email} onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))} placeholder="ornek@mail.com" autoCapitalize="none" keyboardType="email-address" />
+          <FormField inputId="invite-accept-email" label="E-posta" value={form.email} onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))} placeholder="ornek@mail.com" autoCapitalize="none" keyboardType="email-address" />
         )}
-        <FormField label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="Şifre oluştur" secureTextEntry />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <FormField inputId="invite-accept-password" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value }))} placeholder="Şifre oluştur" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
+        <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="INVITE_ACCEPT" />
+        {error ? <Text testID="invite-accept-error" style={styles.error}>{error}</Text> : null}
       </SurfaceCard>
       <SurfaceCard>
         <Text style={styles.helper}>{isDuoPartnerInvite ? "Davet tamamlandığında ikinci ödeme onayı salon kuyruğuna düşer. Onaydan sonra ikili ders takvimin aktifleşir." : "Davet tamamlandıktan sonra giriş yapabilir, bağlı olduğun salonun takvimine ve danışan akışına erişebilirsin."}</Text>
