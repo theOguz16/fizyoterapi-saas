@@ -1,13 +1,14 @@
 // Bu component mobil uygulamada tekrar kullanilan screen shell arayuz parcasi icin ortak kabuk saglar.
 // Sayfalar ayni davranisi tekrar yazmamak icin bu bileseni kullanir.
 import { ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, ChevronLeft } from "lucide-react-native";
 import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 type Props = {
   title: string;
@@ -24,6 +25,8 @@ type Props = {
 
 export function ScreenShell({ title, subtitle, children, refreshing = false, onRefresh, eyebrow = "FIZYOFLOW", rightAction, icon = "spark", backLabel = "Geri", footer }: Props) {
   const router = useRouter();
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   const canGoBack = typeof router.canGoBack === "function" ? router.canGoBack() : false;
   const BackIcon = Platform.OS === "ios" ? ChevronLeft : ArrowLeft;
 
@@ -31,13 +34,16 @@ export function ScreenShell({ title, subtitle, children, refreshing = false, onR
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0} style={styles.flex}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingHorizontal: responsive.horizontalPadding }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentInsetAdjustmentBehavior="automatic"
+          nestedScrollEnabled
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.colors.primary} /> : undefined}
         >
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, responsive.stackColumns ? styles.headerRowStacked : null]}>
             {canGoBack ? (
               <Pressable
                 accessibilityRole="button"
@@ -59,12 +65,12 @@ export function ScreenShell({ title, subtitle, children, refreshing = false, onR
               <AppIcon name={icon} size="lg" active />
               <Text style={styles.eyebrow}>{eyebrow}</Text>
             </View>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+            <Text maxFontSizeMultiplier={1.4} style={styles.title}>{title}</Text>
+            {subtitle ? <Text maxFontSizeMultiplier={2} style={styles.subtitle}>{subtitle}</Text> : null}
           </SurfaceCard>
           {children}
         </ScrollView>
-        {footer ? <View style={styles.footer}>{footer}</View> : null}
+        {footer ? <View style={[styles.footer, { paddingHorizontal: responsive.horizontalPadding }]}>{footer}</View> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -88,6 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  headerRowStacked: { flexWrap: "wrap", gap: tokens.spacing.sm },
   navChip: {
     width: tokens.touch.min,
     height: tokens.touch.min,
@@ -135,7 +142,7 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.sm,
   },
   eyebrow: {
-    color: tokens.colors.primary,
+    color: tokens.colors.primaryStrong,
     fontSize: tokens.font.xs,
     fontWeight: "800",
     letterSpacing: 1.2,

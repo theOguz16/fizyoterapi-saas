@@ -302,7 +302,14 @@ export function TrainerMemberMeasurementChart({ points }: { points: TrainerMeasu
         </View>
       ) : null}
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
+      <ScrollView
+        horizontal
+        nestedScrollEnabled
+        directionalLockEnabled
+        alwaysBounceVertical={false}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chartScrollContent}
+      >
         <Svg width={chart.width} viewBox={`0 0 ${chart.width} ${chart.height}`} style={styles.chart}>
           {chart.gridLines.map((y) => (
             <Line key={y} x1="14" x2={chart.width - 14} y1={y} y2={y} stroke="#E5EDF5" strokeDasharray="4 4" />

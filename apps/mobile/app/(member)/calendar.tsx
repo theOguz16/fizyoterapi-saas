@@ -244,6 +244,7 @@ export default function MemberCalendarScreen() {
             ) : null}
 
             <ActionButton
+              testID="member-calendar-open-booking-detail"
               label="Ders detayına git"
               icon="calendar"
               onPress={() => {

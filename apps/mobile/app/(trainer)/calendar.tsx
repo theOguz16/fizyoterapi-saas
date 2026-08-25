@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showInfoAlert, showSuccessNotice } from "@/lib/user-feedback";
 import {
   createTrainerBookingApi,
   createTrainerScheduleChangeRequestApi,
@@ -44,10 +44,13 @@ import { DetailSheet } from "@/theme/components/detail-sheet";
 import { EmptyState } from "@/theme/components/empty-state";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
 import { StatusBadge } from "@/theme/components/status-badge";
+import { StickyActionBar } from "@/theme/components/sticky-action-bar";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
 import { tokens } from "@/theme/tokens";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
 
 function formatEmpty(value: unknown) {
   if (value === null || value === undefined || value === "") return "-";
@@ -120,6 +123,7 @@ export default function TrainerCalendarScreen() {
   const [placementRequestId, setPlacementRequestId] = useState<string | null>(null);
   const [selectedRescheduleDayKey, setSelectedRescheduleDayKey] = useState<string | null>(null);
   const [requestsVisible, setRequestsVisible] = useState(false);
+  const [showAllRequests, setShowAllRequests] = useState(false);
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null);
 
   const calendarQuery = useQuery({
@@ -187,8 +191,10 @@ export default function TrainerCalendarScreen() {
   );
 
   const selectedDayRequests = useMemo(
-    () => requests.filter((request) => !selectedDateKey || request.request_date_key === selectedDateKey),
-    [requests, selectedDateKey]
+    () => showAllRequests
+      ? requests
+      : requests.filter((request) => !selectedDateKey || request.request_date_key === selectedDateKey),
+    [requests, selectedDateKey, showAllRequests]
   );
 
   const selectedRequest = useMemo(
@@ -208,32 +214,38 @@ export default function TrainerCalendarScreen() {
 
   const events = useMemo(
     () =>
-      calendarRows.map((row, index) => ({
-        id: String(row.calendar_event_id),
-        testID: `trainer-calendar-event-${index}`,
-        title: row.presentation.title,
-        subtitle: row.presentation.subtitle,
-        startsAt: row.starts_at,
-        endsAt: row.ends_at,
-        badgeLabel: row.presentation.badge_label,
-        badgeTone: row.presentation.badge_tone,
-        draggable: false,
-        onPress: () => setSelectedBookingId(String(row.calendar_event_id)),
-        ...(canShowTrainerCalendarCheckin(row, calendarTimezone)
-          ? {
-              actionLabel: "Check-in",
-              actionIcon: "checkin" as const,
-              actionTestID: `trainer-calendar-checkin-${row.calendar_event_id}`,
-              onAction: () =>
-                router.push({
-                  pathname: "/(trainer)/checkin",
-                  params: row.session_id
-                    ? { sessionId: String(row.session_id), backTo: "/(trainer)/calendar" }
-                    : { backTo: "/(trainer)/calendar" },
-                } as never),
-            }
-          : {}),
-      })),
+      calendarRows.map((row, index) => {
+        const sourceIndex = calendarRows
+          .slice(0, index)
+          .filter((candidate) => candidate.source === row.source).length;
+        return {
+          id: String(row.calendar_event_id),
+          testID: `trainer-calendar-${row.source.toLowerCase().replace(/_/g, "-")}-event-${sourceIndex}`,
+          testCategory: row.source === "BOOKING" && !row.is_group_class ? "booking" : undefined,
+          title: row.presentation.title,
+          subtitle: row.presentation.subtitle,
+          startsAt: row.starts_at,
+          endsAt: row.ends_at,
+          badgeLabel: row.presentation.badge_label,
+          badgeTone: row.presentation.badge_tone,
+          draggable: false,
+          onPress: () => setSelectedBookingId(String(row.calendar_event_id)),
+          ...(canShowTrainerCalendarCheckin(row, calendarTimezone)
+            ? {
+                actionLabel: "Check-in",
+                actionIcon: "checkin" as const,
+                actionTestID: `trainer-calendar-checkin-${row.calendar_event_id}`,
+                onAction: () =>
+                  router.push({
+                    pathname: "/(trainer)/checkin",
+                    params: row.session_id
+                      ? { sessionId: String(row.session_id), backTo: "/(trainer)/calendar" }
+                      : { backTo: "/(trainer)/calendar" },
+                  } as never),
+              }
+            : {}),
+        };
+      }),
     [calendarRows, calendarTimezone, router]
   );
 
@@ -385,7 +397,7 @@ export default function TrainerCalendarScreen() {
     onSuccess: () => {
       setSelectedBookingId(null);
       void calendarQuery.refetch();
-      showInfoAlert("Gelmedi kaydedildi", "Danışanın bir ders hakkı kullanıldı ve klinik yöneticisi bilgilendirildi.");
+      showSuccessNotice("Gelmedi kaydedildi", "Danışanın bir ders hakkı kullanıldı ve klinik yöneticisi bilgilendirildi.");
     },
     onError: (error: unknown) => {
       showErrorAlert("Gelmedi kaydedilemedi", error, "Katılım durumu güncellenemedi. Lütfen tekrar deneyin.");
@@ -420,7 +432,7 @@ export default function TrainerCalendarScreen() {
     onSuccess: () => {
       setRescheduleBookingId(null);
       void calendarQuery.refetch();
-      showInfoAlert(
+      showSuccessNotice(
         "Saat değişikliği gönderildi",
         "Danışanın tercih havuzundan çakışmayan alternatif otomatik seçildi. Onay sonrası takvim güncellenecek ve paket hakkı etkilenmeyecek."
       );
@@ -491,6 +503,14 @@ export default function TrainerCalendarScreen() {
     setPlacementRequestId(request.id);
   }
 
+  if (calendarQuery.isLoading && !calendarQuery.data) {
+    return <AppShell testID="trainer-calendar-screen" title="Takvimim" subtitle="Günün seanslarını takip et ve check-in işlemini doğru dersten başlat." icon="calendar"><QueryState mode="loading" title="Takvim hazırlanıyor" /></AppShell>;
+  }
+
+  if (calendarQuery.isError && !calendarQuery.data) {
+    return <AppShell testID="trainer-calendar-screen" title="Takvimim" subtitle="Günün seanslarını takip et ve check-in işlemini doğru dersten başlat." icon="calendar"><QueryState mode="error" error={calendarQuery.error} onRetry={() => void calendarQuery.refetch()} /></AppShell>;
+  }
+
   return (
     <AppShell
       testID="trainer-calendar-screen"
@@ -504,6 +524,8 @@ export default function TrainerCalendarScreen() {
         void todayQuery.refetch();
       }}
     >
+      {calendarQuery.isError ? <InlineErrorState error={calendarQuery.error} onRetry={() => void calendarQuery.refetch()} /> : null}
+      {availabilityQuery.isError ? <InlineErrorState error={availabilityQuery.error} onRetry={() => void availabilityQuery.refetch()} /> : null}
       <SurfaceCard tone="primary">
         <View style={styles.flowHeader}>
           <View style={styles.flowHeaderText}>
@@ -524,7 +546,12 @@ export default function TrainerCalendarScreen() {
             label={`Ders talepleri (${requests.length})`}
             icon="request"
             variant="ghost"
-            onPress={() => setRequestsVisible(true)}
+            onPress={() => {
+              // Üst rozet toplam talep sayısını gösterir; bu düğme de seçili
+              // takvim gününden bağımsız olarak tüm bekleyen talepleri açar.
+              setShowAllRequests(true);
+              setRequestsVisible(true);
+            }}
           />
         </View>
       </SurfaceCard>
@@ -546,9 +573,12 @@ export default function TrainerCalendarScreen() {
 
       <DetailSheet
         visible={requestsVisible}
-        onClose={() => setRequestsVisible(false)}
+        onClose={() => {
+          setRequestsVisible(false);
+          setShowAllRequests(false);
+        }}
         title="Ders talepleri"
-        subtitle="Takvimde seçtiğin güne ait planlanmamış talepler"
+        subtitle="Takvime eklenmeyi bekleyen tüm planlanmamış talepler"
         scrollEnabled={false}
       >
         {selectedDayRequests.length === 0 ? (
@@ -620,9 +650,10 @@ export default function TrainerCalendarScreen() {
         </SurfaceCard>
 
         <ScrollPanel maxHeight={220} contentContainerStyle={styles.slotList}>
-          {placementSlots.map((slot) => (
+          {placementSlots.map((slot, index) => (
             <Pressable
               key={slot.key}
+              testID={`trainer-calendar-placement-slot-${index}`}
               style={styles.slotOption}
               onPress={() => {
                 if (!placementRequest) return;
@@ -640,6 +671,61 @@ export default function TrainerCalendarScreen() {
         onClose={() => setSelectedBookingId(null)}
         title={selectedBooking?.is_group_class ? selectedBooking?.lesson_name || "Grup dersi" : selectedBooking?.is_duo ? `Duo: ${selectedBooking?.member_full_name || "Ders detayı"}` : selectedBooking?.member_full_name || "Ders detayı"}
         subtitle={selectedBooking?.presentation?.badge_label || "Ders detayı"}
+        contentTestID="trainer-calendar-detail-scroll"
+        footer={
+          selectedBooking && !selectedBooking.is_group_class ? (
+            <StickyActionBar testID="trainer-calendar-detail-actions">
+              <ActionButton
+                testID="trainer-calendar-open-reschedule"
+                label="Saat değiştir"
+                icon="calendar"
+                variant="ghost"
+                onPress={() => {
+                  if (!selectedBooking.id || !selectedBooking.member_id) return;
+                  Alert.alert(
+                    "Alternatif saat otomatik seçilecek",
+                    "Sistem danışanın daha önce verdiği tercihlerden, hem danışan hem eğitmen için çakışmayan ilk güvenli saati seçecek. Danışanın paket hakkı etkilenmeyecek.",
+                    [
+                      { text: "Vazgeç", style: "cancel" },
+                      {
+                        text: "Öneriyi oluştur",
+                        onPress: () =>
+                          scheduleChangeMutation.mutate({
+                            bookingId: String(selectedBooking.id),
+                            member_id: String(selectedBooking.member_id),
+                          }),
+                      },
+                    ]
+                  );
+                }}
+                loading={scheduleChangeMutation.isPending}
+              />
+              <ActionButton
+                testID="trainer-calendar-cancel-booking"
+                label="Takvimden kaldır"
+                variant="danger"
+                onPress={() => {
+                  if (!selectedBooking.id) return;
+                  Alert.alert(
+                    "Dersi takvimden kaldır",
+                    `${selectedBooking.member_full_name || "Bu danışan"} için ${formatTrainerDateTimeRange(selectedBooking.starts_at, selectedBooking.ends_at, calendarTimezone)} seansını kaldırmak istiyor musun?`,
+                    [
+                      { text: "Vazgeç", style: "cancel" },
+                      {
+                        text: "Kaldır",
+                        style: "destructive",
+                        onPress: () => {
+                          cancelBookingMutation.mutate(String(selectedBooking.id));
+                        },
+                      },
+                    ]
+                  );
+                }}
+                loading={cancelBookingMutation.isPending}
+              />
+            </StickyActionBar>
+          ) : undefined
+        }
       >
         <SurfaceCard tone="primary">
           <View style={styles.detailHeaderRow}>
@@ -779,61 +865,6 @@ export default function TrainerCalendarScreen() {
             </ScrollPanel>
           )}
         </SurfaceCard>
-
-        {!selectedBooking?.is_group_class ? (
-          <ActionButton
-            testID="trainer-calendar-open-reschedule"
-            label="Otomatik alternatif saat öner"
-            icon="calendar"
-            variant="ghost"
-            onPress={() => {
-              if (!selectedBooking?.id || !selectedBooking.member_id) return;
-              Alert.alert(
-                "Alternatif saat otomatik seçilecek",
-                "Sistem danışanın daha önce verdiği tercihlerden, hem danışan hem eğitmen için çakışmayan ilk güvenli saati seçecek. Danışanın paket hakkı etkilenmeyecek.",
-                [
-                  { text: "Vazgeç", style: "cancel" },
-                  {
-                    text: "Öneriyi oluştur",
-                    onPress: () =>
-                      scheduleChangeMutation.mutate({
-                        bookingId: String(selectedBooking.id),
-                        member_id: String(selectedBooking.member_id),
-                      }),
-                  },
-                ]
-              );
-            }}
-            loading={scheduleChangeMutation.isPending}
-          />
-        ) : null}
-
-        {!selectedBooking?.is_group_class ? (
-          <ActionButton
-            testID="trainer-calendar-cancel-booking"
-            label="Takvimden kaldır"
-            variant="danger"
-            onPress={() => {
-              if (!selectedBooking?.id) return;
-
-              Alert.alert(
-                "Dersi takvimden kaldır",
-                `${selectedBooking.member_full_name || "Bu danışan"} için ${formatTrainerDateTimeRange(selectedBooking.starts_at, selectedBooking.ends_at, calendarTimezone)} seansını kaldırmak istiyor musun?`,
-                [
-                { text: "Vazgeç", style: "cancel" },
-                {
-                  text: "Kaldır",
-                  style: "destructive",
-                  onPress: () => {
-                    cancelBookingMutation.mutate(String(selectedBooking.id));
-                  },
-                },
-                ]
-              );
-            }}
-            loading={cancelBookingMutation.isPending}
-          />
-        ) : null}
 
         {!selectedBooking?.is_group_class &&
         selectedBooking?.id &&

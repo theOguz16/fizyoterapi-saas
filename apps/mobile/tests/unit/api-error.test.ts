@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiClientError, resolveApiError, resolveHttpStatusMessage } from "@/lib/api-error";
+import { ApiClientError, normalizeApiError, queryRetryDelay, resolveApiError, resolveHttpStatusMessage, shouldRetryQuery } from "@/lib/api-error";
 
 describe("mobile api errors", () => {
   it("maps known codes to product copy", () => {
@@ -72,5 +72,31 @@ describe("mobile api errors", () => {
     expect(resolveHttpStatusMessage(422, "fallback")).toContain("doğrulanamadı");
     expect(resolveHttpStatusMessage(429, "fallback")).toContain("Çok hızlı");
     expect(resolveHttpStatusMessage(500, "fallback")).toContain("Sunucuda geçici");
+  });
+
+  it("normalizes transport and HTTP failures into stable UI categories", () => {
+    expect(normalizeApiError(new ApiClientError("fetch failed", 0, "NETWORK_REQUEST_FAILED"))).toMatchObject({ kind: "offline", retryable: true });
+    expect(normalizeApiError(new ApiClientError("timeout", 408, "REQUEST_TIMEOUT"))).toMatchObject({ kind: "timeout", retryable: true });
+    expect(normalizeApiError(new ApiClientError("secret", 401, "INVALID_TOKEN"))).toMatchObject({ kind: "unauthorized", retryable: false });
+    expect(normalizeApiError(new ApiClientError("db detail", 503))).toMatchObject({ kind: "server", retryable: true });
+  });
+
+  it("keeps validation field metadata without exposing a raw response", () => {
+    const error = new ApiClientError("invalid", 422, "VALIDATION_ERROR", {
+      error: { code: "VALIDATION_ERROR", fields: { email: "Geçerli bir e-posta gir." } },
+    });
+    expect(normalizeApiError(error)).toMatchObject({
+      kind: "validation",
+      fieldErrors: { email: "Geçerli bir e-posta gir." },
+    });
+  });
+
+  it("retries only transient failures with a bounded backoff", () => {
+    expect(shouldRetryQuery(0, new ApiClientError("offline", 0, "NETWORK_REQUEST_FAILED"))).toBe(false);
+    expect(shouldRetryQuery(0, new ApiClientError("server", 503))).toBe(true);
+    expect(shouldRetryQuery(2, new ApiClientError("server", 503))).toBe(false);
+    expect(shouldRetryQuery(0, new ApiClientError("forbidden", 403))).toBe(false);
+    expect(queryRetryDelay(0)).toBe(750);
+    expect(queryRetryDelay(99)).toBe(8000);
   });
 });

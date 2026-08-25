@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { getSalonDayOptionsApi } from "@/lib/mobile-api";
 import { findCurrentPackage, updateSelectedPackage } from "@/lib/member-package-queue";
 import {
@@ -28,6 +28,7 @@ import { AnimatedEntrance } from "@/theme/components/animated-entrance";
 import { EmptyState } from "@/theme/components/empty-state";
 import { IntakeProgressCard } from "@/theme/components/intake-progress-card";
 import { tokens } from "@/theme/tokens";
+import { showInfoNotice } from "@/lib/user-feedback";
 
 type DraftPackageSelection = NonNullable<ReturnType<typeof useAppFlow>["memberBookingDraft"]["selectedPackages"]>[number];
 
@@ -341,7 +342,7 @@ export default function TimeSelectionScreen() {
                       const currentIds = current[activePackage.package_id] || [];
                       const currentPackageRequirement = resolveRequiredPreferenceSlots(activePackage);
                       if (!currentIds.includes(slot.starts_at) && currentIds.length >= currentPackageRequirement) {
-                        Alert.alert(
+                        showInfoNotice(
                           "Seçim tamamlandı",
                           `${activePackage.package_title || "Bu paket"} için en fazla ${currentPackageRequirement} saat seçebilirsin.`
                         );
@@ -352,7 +353,7 @@ export default function TimeSelectionScreen() {
                         !currentIds.includes(slot.starts_at) &&
                         !canAddWeeklyPreference(currentIds, slot.starts_at)
                       ) {
-                        Alert.alert(
+                        showInfoNotice(
                           "Farklı bir gün seç",
                           "Aynı gün için en fazla 3 saat tercihi seçebilirsin. Haftalık derslerin farklı günlere dağıtılmalıdır."
                         );

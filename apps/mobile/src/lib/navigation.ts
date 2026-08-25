@@ -379,7 +379,15 @@ export function resolveRootNavigation(input: RootNavigationInput): RootNavigatio
     input.onboardingState === "ACTIVE_SALON" &&
     !pendingSalonHome;
   const allowSharedUtilityFlow =
-    inSharedGroup && ["notification-settings", "leave-salon", "invite-join"].includes(sharedLeaf || "");
+    inSharedGroup &&
+    [
+      "account-settings",
+      "notification-settings",
+      "security-settings",
+      "account-actions",
+      "leave-salon",
+      "invite-join",
+    ].includes(sharedLeaf || "");
 
   if (
     inAuthGroup &&
@@ -478,8 +486,11 @@ export function resolveContextualBackHref(segments: string[]) {
 
   const sharedRouteMap: Record<string, string> = {
     "(shared)/clinics": "/(shared)/invite-join",
+    "(shared)/account-settings": "/(member)/profile",
+    "(shared)/security-settings": "/(shared)/account-settings",
+    "(shared)/account-actions": "/(shared)/account-settings",
     "(shared)/leave-salon": "/(member)/profile",
-    "(shared)/notification-settings": "/(member)/profile",
+    "(shared)/notification-settings": "/(shared)/account-settings",
   };
 
   return sharedRouteMap[segments.join("/")] ?? null;

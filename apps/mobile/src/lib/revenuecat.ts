@@ -92,7 +92,38 @@ async function getPurchasesModule() {
 
 let configuredAppUserId: string | null = null;
 
-export async function configureRevenueCat(appUserId: string) {
+function isExplicitE2EMode() {
+  return process.env.EXPO_PUBLIC_E2E_MODE === "1";
+}
+
+async function emitE2ESubscriptionEvent(
+  appUserId: string,
+  action: "PURCHASE" | "CANCEL" | "RESTORE",
+  billingCycle?: BillingCycle
+) {
+  const { runE2ESubscriptionEventApi } = await import("./api/subscription");
+  return runE2ESubscriptionEventApi(appUserId, action, billingCycle);
+}
+
+function buildE2EOfferings(): RevenueCatOfferings {
+  const monthly: RevenueCatPackage = {
+    identifier: "$rc_monthly",
+    packageType: "MONTHLY",
+    product: { identifier: "fizyoflow_plus_monthly", title: "FizyoFlow Aylık", priceString: "₺1.499,99" },
+  };
+  const annual: RevenueCatPackage = {
+    identifier: "$rc_annual",
+    packageType: "ANNUAL",
+    product: { identifier: "fizyoflow_plus_yearly", title: "FizyoFlow Yıllık", priceString: "₺14.999,99" },
+  };
+  return { current: { identifier: "e2e", monthly, annual, availablePackages: [monthly, annual] } };
+}
+
+export async function configureRevenueCat(appUserId: string, useE2EAdapter = false) {
+  if (useE2EAdapter || isExplicitE2EMode()) {
+    configuredAppUserId = appUserId;
+    return;
+  }
   const apiKey = getRevenueCatApiKey();
   if (!apiKey) {
     throw new Error(PURCHASES_UNAVAILABLE_MESSAGE);
@@ -113,7 +144,8 @@ export async function configureRevenueCat(appUserId: string) {
   configuredAppUserId = appUserId;
 }
 
-export async function getRevenueCatOfferings(appUserId: string) {
+export async function getRevenueCatOfferings(appUserId: string, useE2EAdapter = false) {
+  if (useE2EAdapter || isExplicitE2EMode()) return buildE2EOfferings();
   await configureRevenueCat(appUserId);
   const Purchases = await getPurchasesModule();
   try {
@@ -133,8 +165,8 @@ export async function getRevenueCatCurrentPackage(appUserId: string) {
   return current.monthly || current.annual || current.availablePackages?.[0] || null;
 }
 
-export async function getRevenueCatPlanPackages(appUserId: string) {
-  const offerings = await getRevenueCatOfferings(appUserId);
+export async function getRevenueCatPlanPackages(appUserId: string, useE2EAdapter = false) {
+  const offerings = await getRevenueCatOfferings(appUserId, useE2EAdapter);
   const current = offerings.current;
   if (!current) {
     throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
@@ -152,8 +184,8 @@ export async function getRevenueCatPlanPackages(appUserId: string) {
   return { monthly, yearly };
 }
 
-export async function getRevenueCatPackageForPlan(appUserId: string, billingCycle: BillingCycle) {
-  const offerings = await getRevenueCatOfferings(appUserId);
+export async function getRevenueCatPackageForPlan(appUserId: string, billingCycle: BillingCycle, useE2EAdapter = false) {
+  const offerings = await getRevenueCatOfferings(appUserId, useE2EAdapter);
   const current = offerings.current;
   if (!current) {
     throw new Error(PURCHASE_OPTIONS_UNAVAILABLE_MESSAGE);
@@ -166,9 +198,13 @@ export async function getRevenueCatPackageForPlan(appUserId: string, billingCycl
   return current.monthly || current.availablePackages?.find((pkg) => pkg.packageType === "MONTHLY" || pkg.identifier === "monthly") || null;
 }
 
-export async function purchaseRevenueCatPackage(appUserId: string, billingCycle: BillingCycle) {
+export async function purchaseRevenueCatPackage(appUserId: string, billingCycle: BillingCycle, useE2EAdapter = false) {
+  if (useE2EAdapter || isExplicitE2EMode()) {
+    await emitE2ESubscriptionEvent(appUserId, "PURCHASE", billingCycle);
+    return { customerInfo: { entitlements: { active: { fizyoflow_plus: {} } } } };
+  }
   const Purchases = await getPurchasesModule();
-  const pkg = await getRevenueCatPackageForPlan(appUserId, billingCycle);
+  const pkg = await getRevenueCatPackageForPlan(appUserId, billingCycle, useE2EAdapter);
   if (!pkg) {
     throw new Error("Satın alınabilir abonelik paketi bulunamadı. Lütfen daha sonra tekrar deneyin.");
   }
@@ -187,7 +223,11 @@ export async function purchaseRevenueCatCurrentPackage(appUserId: string) {
   return purchaseRevenueCatPackage(appUserId, "monthly");
 }
 
-export async function restoreRevenueCatPurchases(appUserId: string) {
+export async function restoreRevenueCatPurchases(appUserId: string, useE2EAdapter = false) {
+  if (useE2EAdapter || isExplicitE2EMode()) {
+    await emitE2ESubscriptionEvent(appUserId, "RESTORE");
+    return { entitlements: { active: { fizyoflow_plus: {} } } };
+  }
   await configureRevenueCat(appUserId);
   const Purchases = await getPurchasesModule();
   try {
@@ -200,4 +240,19 @@ export async function restoreRevenueCatPurchases(appUserId: string) {
     if (error instanceof Error && error.message === RESTORE_NOT_FOUND_MESSAGE) throw error;
     throw new Error(RESTORE_FAILED_MESSAGE);
   }
+}
+
+export async function manageRevenueCatSubscription(appUserId: string, useE2EAdapter = false) {
+  if (useE2EAdapter || isExplicitE2EMode()) {
+    await emitE2ESubscriptionEvent(appUserId, "CANCEL");
+    return { openedStore: false, cancellationRecorded: true };
+  }
+
+  const url =
+    Platform.OS === "ios"
+      ? "https://apps.apple.com/account/subscriptions"
+      : "https://play.google.com/store/account/subscriptions";
+  const { Linking } = await import("react-native");
+  await Linking.openURL(url);
+  return { openedStore: true, cancellationRecorded: false };
 }

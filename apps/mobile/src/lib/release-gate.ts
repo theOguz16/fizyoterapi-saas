@@ -11,10 +11,10 @@ export const PUSH_RELEASE_SCENARIOS = (["ADMIN", "TRAINER", "MEMBER"] as const).
 
 export const RELEASE_CRITICAL_MOBILE_FLOWS = [
   { id: "admin-login", role: "ADMIN", kind: "login", mode: "automated", flow: "release-admin-login.yaml" },
-  { id: "admin-package", role: "ADMIN", kind: "package", mode: "automated", flow: "admin-package-create-smoke.yaml" },
+  { id: "admin-package", role: "ADMIN", kind: "package", mode: "automated", flow: "admin-package-crud-functional.yaml" },
   { id: "admin-calendar", role: "ADMIN", kind: "booking", mode: "automated", flow: "admin-calendar-smoke.yaml" },
   { id: "trainer-login", role: "TRAINER", kind: "login", mode: "automated", flow: "release-trainer-login.yaml" },
-  { id: "trainer-checkin", role: "TRAINER", kind: "checkin", mode: "automated", flow: "trainer-manual-checkin-smoke.yaml" },
+  { id: "trainer-checkin", role: "TRAINER", kind: "checkin", mode: "automated", flow: "trainer-manual-checkin-functional.yaml" },
   { id: "trainer-calendar", role: "TRAINER", kind: "booking", mode: "automated", flow: "trainer-calendar-smoke.yaml" },
   { id: "member-login", role: "MEMBER", kind: "login", mode: "automated", flow: "login-role-routing.yaml" },
   { id: "member-join", role: "MEMBER", kind: "join", mode: "automated", flow: "member-salon-qr-deeplink-smoke.yaml" },

@@ -14,14 +14,14 @@ görünürlük ve pazarlama ekran görüntüsü dosyaları bu tabloya dahil değ
 | `auth-role-switch-logout-functional.yaml` | Rol değiştirme ve çıkış | Yönetici login, eğitmene geçiş, profil çıkışı | Aktif trainer context ve `AUTH_LOGOUT` audit DB'de doğrulanır |
 | `clinic-owner-activation-flow.yaml` | Klinik aktivasyonu 1/4–4/4 | Klinik bilgisi, gerçek paket kataloğu ve çalışma günleri kaydedilir | Klinik/paket/saat/QR/subscription API+DB ile ve plan ekranında doğrulanır |
 | `appointment-calendar-cross-role-functional.yaml` | Üç rollü randevu ve takvim zinciri | Yönetici randevu oluşturur; eğitmen görür ve iki saat önerisi yollar; danışan birini reddedip diğerini onaylar | Üç rol takvimi, Booking/NotificationEvent kayıtları, geçmiş saat, çakışma, kapasite, çift gönderim ve idempotent iptal gerçek API/PostgreSQL ile doğrulanır |
-| `admin-package-create-smoke.yaml` | Yönetici paket yönetimi | Paket başlığı girilir ve kaydedilir | Oluşturulan paket satırı görünür |
+| `admin-package-crud-functional.yaml` | Yönetici paket yönetimi | Paket oluşturulur, güncellenir, pasifleştirilir ve arşivlenir | UI sonucu ve API/DB verifier |
 | `login-role-routing.yaml` | Giriş ve rol yönlendirmesi | Danışan giriş formu gönderilir | Danışan ana ekranına geçilir |
-| `member-measurement-smoke.yaml` | Danışan ölçüm kaydı | Ölçüm alanları doldurulup kaydedilir | Geçmişte yeni ölçüm görünür |
+| `member-measurement-functional.yaml` | Danışan ölçüm kaydı | Ölçüm alanları doldurulup kaydedilir | Geçmiş ve DB kaydı |
 | `release-admin-login.yaml` | Yönetici girişi | Giriş formu gönderilir | Yönetici dashboard'u görünür |
 | `release-trainer-login.yaml` | Eğitmen girişi | Giriş formu gönderilir | Eğitmen ana ekranı görünür |
-| `trainer-group-classes-full-smoke.yaml` | Eğitmen grup dersi | Ders bilgileri girilip onaya gönderilir | Başarı bildirimi görünür |
-| `trainer-group-classes-smoke.yaml` | Eğitmen grup dersi listesi | Ders oluşturulup gönderilir | Onay bekleyen ders listede görünür |
-| `trainer-manual-checkin-smoke.yaml` | Eğitmen manuel check-in | MEM kodu girilip onaylanır | Check-in sonuç alanı görünür |
+| `trainer-group-classes-functional.yaml` | Eğitmen grup dersi | Oluşturma, güncelleme ve silme talebi gönderilir | Üç event DB’de doğrulanır |
+| `trainer-group-class-create-functional.yaml` | Eğitmen grup dersi listesi | Ders oluşturulup gönderilir | Pending session ve onay eventi |
+| `trainer-manual-checkin-functional.yaml` | Eğitmen manuel check-in | MEM kodu girilip onaylanır | Başarı sonucu ve attendance kaydı |
 
 ## Çalıştırma kuralı
 

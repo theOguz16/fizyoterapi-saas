@@ -44,26 +44,46 @@ name: appointment-calendar-cross-role-functional
     visible:
       id: "intake-trainer-selection-screen"
     timeout: 15000
-- scrollUntilVisible:
-    element:
-      id: "intake-trainer-select-0"
-    direction: DOWN
-    timeout: 15000
-    centerElement: true
-- tapOn:
-    id: "intake-trainer-select-0"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "intake-trainer-select-0"
+          direction: DOWN
+          timeout: 15000
+          centerElement: true
+      - tapOn:
+          id: "intake-trainer-select-0"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scrollUntilVisible:
+          element: "Bu eğitmeni seç"
+          direction: DOWN
+          timeout: 15000
+          centerElement: true
+      - tapOn: "Bu eğitmeni seç"
 - extendedWaitUntil:
     visible:
       id: "intake-time-selection-screen"
     timeout: 20000
+# Gün adı tarihe göre değişebildiği için sabit Cuma/Cumartesi seçicisine
+# bağlanma. Tüm günler listesindeki ilk üç slot ve sonraki günün ilk üç
+# slotu, haftalık kuralı gerçek kullanıcı gibi farklı günlere dağıtır.
 - scrollUntilVisible:
     element:
-      id: "time-day-filter-cuma"
+      id: "time-day-filter-all"
     direction: DOWN
     timeout: 15000
     centerElement: true
 - tapOn:
-    id: "time-day-filter-cuma"
+    id: "time-day-filter-all"
+- extendedWaitUntil:
+    visible: "Tüm günler"
+    timeout: 10000
 - scrollUntilVisible:
     element:
       id: "time-slot-toggle-0-0"
@@ -72,6 +92,7 @@ name: appointment-calendar-cross-role-functional
     centerElement: true
 - tapOn:
     id: "time-slot-toggle-0-0"
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       id: "time-slot-toggle-0-1"
@@ -80,6 +101,7 @@ name: appointment-calendar-cross-role-functional
     centerElement: true
 - tapOn:
     id: "time-slot-toggle-0-1"
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       id: "time-slot-toggle-0-2"
@@ -88,38 +110,38 @@ name: appointment-calendar-cross-role-functional
     centerElement: true
 - tapOn:
     id: "time-slot-toggle-0-2"
-- scrollUntilVisible:
-    element:
-      id: "time-day-filter-cumartesi"
-    direction: UP
+- extendedWaitUntil:
+    visible: "3 saat daha seç"
     timeout: 10000
-    centerElement: true
-- tapOn:
-    id: "time-day-filter-cumartesi"
 - scrollUntilVisible:
     element:
-      id: "time-slot-toggle-0-0"
+      id: "time-slot-toggle-0-7"
     direction: DOWN
     timeout: 10000
     centerElement: true
 - tapOn:
-    id: "time-slot-toggle-0-0"
+    id: "time-slot-toggle-0-7"
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
-      id: "time-slot-toggle-0-1"
+      id: "time-slot-toggle-0-8"
     direction: DOWN
     timeout: 10000
     centerElement: true
 - tapOn:
-    id: "time-slot-toggle-0-1"
+    id: "time-slot-toggle-0-8"
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
-      id: "time-slot-toggle-0-2"
+      id: "time-slot-toggle-0-9"
     direction: DOWN
     timeout: 10000
     centerElement: true
 - tapOn:
-    id: "time-slot-toggle-0-2"
+    id: "time-slot-toggle-0-9"
+- extendedWaitUntil:
+    visible: "Özete geç"
+    timeout: 10000
 - tapOn:
     id: "time-selection-continue"
 - extendedWaitUntil:
@@ -171,26 +193,23 @@ name: appointment-calendar-cross-role-functional
 
 # Onaydan sonra otomatik oluşturulan ders eğitmen takviminde görünür.
 # Altı tercih iki farklı güne dağıtılır; otomatik dersler de farklı günlerde oluşur.
+# Bu tercihler manuel "Takvime ekle" talebi değildir. Otomatik planlamanın iki
+# booking ürettiği API/DB doğrulayıcıda kanıtlanır.
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
 - extendedWaitUntil:
     visible:
       id: "trainer-calendar-screen"
     timeout: 20000
-# Demo Member'ın otomatik planlama tercihleri talep sayılmaz; fixture'daki
-# diğer dört gerçek manuel talep görünmeye devam eder.
-- assertVisible: "Ders talepleri (4)"
 - tapOn:
-    id: "trainer-calendar-day-4"
-- swipe:
-    start: 50%, 70%
-    end: 50%, 22%
-    duration: 700
-- swipe:
-    start: 50%, 70%
-    end: 50%, 30%
-    duration: 500
+    id: "trainer-calendar-day-with-booking-0"
+- scrollUntilVisible:
+    element:
+      id: "trainer-calendar-selected-booking-event-0"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
 - tapOn:
-    id: "trainer-calendar-event-1"
+    id: "trainer-calendar-selected-booking-event-0"
 - scrollUntilVisible:
     element:
       id: "trainer-calendar-open-reschedule"
@@ -204,12 +223,18 @@ name: appointment-calendar-cross-role-functional
     timeout: 10000
 - tapOn: "Öneriyi oluştur"
 - extendedWaitUntil:
-    visible: "Saat değişikliği gönderildi"
+    visible: "Saat Onayı Bekliyor"
     timeout: 15000
-- tapOn: "OK"
 
 # Danışan öneriyi kabul eder; eğitmen kaynaklı değişiklikte paket hakkı korunur.
 - openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- scrollUntilVisible:
+    element:
+      id: "member-schedule-change-approve-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 80
+    centerElement: true
 - extendedWaitUntil:
     visible:
       id: "member-schedule-change-approve-0"
@@ -221,44 +246,54 @@ name: appointment-calendar-cross-role-functional
       id: "member-schedule-change-request-0"
     timeout: 15000
 
-# Güncellenen ders danışan takviminde açılır ve erken iptal açıklaması/onayı doğrulanır.
-- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
+# Aynı gerçek randevu için ikinci öneri oluşturulur ve bu kez danışan reddeder.
+# Böylece iki karar yolu da yalnız API çağrısıyla değil üç rolün gerçek ekranlarıyla
+# doğrulanır.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
 - extendedWaitUntil:
     visible:
-      id: "member-calendar-screen"
+      id: "trainer-calendar-screen"
     timeout: 20000
 - tapOn:
-    id: "member-calendar-day-4"
+    id: "trainer-calendar-day-with-booking-0"
 - scrollUntilVisible:
     element:
-      id: "member-calendar-booking-1"
+      id: "trainer-calendar-selected-booking-event-0"
     direction: DOWN
     timeout: 15000
-    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
-    id: "member-calendar-booking-1"
+    id: "trainer-calendar-selected-booking-event-0"
 - scrollUntilVisible:
     element:
-      text: "Ders detayına git"
+      id: "trainer-calendar-open-reschedule"
     direction: DOWN
     timeout: 10000
-    visibilityPercentage: 50
-- tapOn: "Ders detayına git"
-- scrollUntilVisible:
-    element:
-      id: "member-booking-cancel-button"
-    direction: DOWN
-    timeout: 15000
-    visibilityPercentage: 50
-- assertVisible: "Şimdi iptal edersen ders hakkın korunur ve eğitmen ile klinik yöneticisine bildirim gönderilir."
+    centerElement: true
 - tapOn:
-    id: "member-booking-cancel-button"
+    id: "trainer-calendar-open-reschedule"
 - extendedWaitUntil:
-    visible: "Randevuyu iptal et"
+    visible: "Alternatif saat otomatik seçilecek"
     timeout: 10000
-- assertVisible: "Ders hakkın korunacak. Eğitmen ve klinik yöneticisi iptal hakkında bilgilendirilecek."
-- tapOn: "İptal et"
+- tapOn: "Öneriyi oluştur"
+- extendedWaitUntil:
+    visible: "Saat Onayı Bekliyor"
+    timeout: 15000
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- scrollUntilVisible:
+    element:
+      id: "member-schedule-change-reject-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 80
+    centerElement: true
 - extendedWaitUntil:
     visible:
-      id: "member-booking-status-canceled"
+      id: "member-schedule-change-reject-0"
+    timeout: 20000
+- tapOn:
+    id: "member-schedule-change-reject-0"
+- extendedWaitUntil:
+    notVisible:
+      id: "member-schedule-change-request-0"
     timeout: 15000

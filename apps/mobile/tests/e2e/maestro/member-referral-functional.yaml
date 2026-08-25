@@ -34,4 +34,9 @@ appId: com.fizyoflow.mobile
     direction: DOWN
     timeout: 15000
 - assertVisible: "E2E Davetli"
+- scrollUntilVisible:
+    element: "e2e.referral@demo.local"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
 - assertVisible: "e2e.referral@demo.local"

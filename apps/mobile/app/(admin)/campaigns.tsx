@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { getAdminCampaignsApi, type AdminCampaign, updateAdminCampaignApi } from "@/lib/mobile-api";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
@@ -34,7 +34,7 @@ export default function AdminCampaignsScreen() {
       queryKey: ["admin-campaign", variables.id],
     });
 
-    showInfoAlert(
+    showSuccessNotice(
       "Kampanya güncellendi",
       variables.is_active
         ? "Kampanya tekrar aktif edildi."

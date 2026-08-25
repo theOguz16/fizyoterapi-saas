@@ -1,6 +1,7 @@
 // Mobile API public domain endpointleri.
 import { httpRequest } from "../http-client";
 import type { ClinicIntake, ClinicIntakeResult, ClinicRecommendation, DiscoveryProfile, DiscoveryProfileResult, PackageOption, PlanRecommendation, PurchaseDaySelection, SalonDiscoverySummary, TrainerOption } from "./types";
+import type { RegistrationLegalConsent } from "@fitnes-saas/contracts";
 
 export async function createDiscoveryProfileApi(payload: DiscoveryProfile) {
   return httpRequest<DiscoveryProfileResult>("/public/discovery-profile", {
@@ -45,6 +46,7 @@ export async function inviteAcceptApi(payload: {
   phone: string;
   email?: string;
   password: string;
+  legal_consent: RegistrationLegalConsent;
 }) {
   return httpRequest<any>("/public/invites/accept", {
     method: "POST",

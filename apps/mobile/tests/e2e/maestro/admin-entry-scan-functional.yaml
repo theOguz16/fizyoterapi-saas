@@ -13,10 +13,13 @@ appId: com.fizyoflow.mobile
       id: "welcome-login-button"
     timeout: 20000
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "admin-dashboard-entry-scan"
-    timeout: 20000
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "admin-dashboard-entry-scan"
 - extendedWaitUntil:
@@ -26,11 +29,28 @@ appId: com.fizyoflow.mobile
 - tapOn: "Manuel"
 - tapOn:
     id: "admin-entry-scan-manual-code-input"
-- inputText: "MEM-DEMO001"
-- tapOn:
-    id: "admin-entry-scan-submit"
-- extendedWaitUntil:
-    visible:
+- inputText: "member@gmail.com"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+      - scrollUntilVisible:
+          element:
+            id: "admin-entry-scan-submit"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "admin-entry-scan-submit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
       id: "admin-entry-scan-result"
+    direction: DOWN
     timeout: 20000
-- assertVisible: "Salon girişi kaydedildi"
+    visibilityPercentage: 50
+- assertVisible: "Demo Member için salon girişi kaydedildi."

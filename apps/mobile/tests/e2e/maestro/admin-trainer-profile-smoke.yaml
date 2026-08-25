@@ -3,6 +3,10 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fmembers"
 - waitForAnimationToEnd:
     timeout: 5000
@@ -12,17 +16,21 @@ appId: com.fizyoflow.mobile
 - waitForAnimationToEnd:
     timeout: 2000
 - scrollUntilVisible:
-    element: "Detayı gör"
+    element:
+      id: "admin-person-detail-trainer-0"
     direction: DOWN
-    timeout: 10000
-    centerElement: true
-- assertVisible: "Detayı gör"
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: false
+- assertVisible:
+    id: "admin-person-detail-trainer-0"
 - tapOn:
-    text: "Detayı gör"
+    id: "admin-person-detail-trainer-0"
     retryTapIfNoChange: true
 - runFlow:
     when:
-      visible: "Detayı gör"
+      visible:
+        id: "admin-person-detail-trainer-0"
     commands:
       - tapOn:
           point: "50%,82%"

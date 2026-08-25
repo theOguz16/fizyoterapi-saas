@@ -13,7 +13,7 @@ export default function AdminSubscriptionHistoryScreen() {
   const rows = Array.isArray(query.data) ? query.data : [];
   return (
     <AppShell title="Abonelik geçmişi" subtitle="Deneme, satın alma, yenileme ve mağaza olaylarını zaman sırasıyla takip et." icon="subscription" showBackButton refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
-      {query.isLoading && !query.data ? <QueryState mode="loading" title="Abonelik geçmişi hazırlanıyor" /> : query.isError && !query.data ? <QueryState mode="error" onRetry={() => void query.refetch()} /> : !rows.length ? <EmptyState title="Abonelik olayı yok" description="Deneme veya satın alma işlemleri burada zaman çizelgesi olarak görünür." icon="subscription" /> : rows.map((row, index) => (
+      {query.isLoading && !query.data ? <QueryState mode="loading" title="Abonelik geçmişi hazırlanıyor" /> : query.isError && !query.data ? <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} /> : !rows.length ? <EmptyState title="Abonelik olayı yok" description="Deneme veya satın alma işlemleri burada zaman çizelgesi olarak görünür." icon="subscription" /> : rows.map((row, index) => (
         <SurfaceCard key={`${row.type}-${row.occurred_at}-${index}`}>
           <View style={styles.header}><View style={styles.dot} /><View style={styles.grow}><Text style={styles.title}>{row.title}</Text><Text style={styles.date}>{new Date(row.occurred_at).toLocaleString("tr-TR")}</Text></View><StatusBadge label={row.type.replaceAll("_", " ")} tone={index === 0 ? "success" : "info"} /></View>
           <Text style={styles.copy}>{row.description}</Text>

@@ -1,0 +1,67 @@
+appId: com.fizyoflow.mobile
+name: trainer-surface-functional
+---
+# Trainer screens are opened from a clean session and each API-backed surface is asserted.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 30000
+
+# Assigned packages and earnings are loaded from the trainer APIs.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fpackages"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-packages-screen"
+    timeout: 20000
+- assertVisible:
+    id: "trainer-package-0"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fearnings"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-earnings-screen"
+    timeout: 20000
+- assertVisible: "Bu ay net kazanç"
+
+# Risk, request center and QR are separate API-backed surfaces.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frisk"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-risk-screen"
+    timeout: 20000
+- assertVisible:
+    id: "trainer-risk-count-metric"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frequest-center"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-request-center-screen"
+    timeout: 20000
+- assertVisible: "Bekleyen"
+- tapOn: "Onaylanan"
+- assertVisible: "Onaylanan talep yok|Onaylandı"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fqr"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-qr-screen"
+    timeout: 20000
+- assertVisible: "Eğitmen kimlik QR’ı"
+
+# Client list and detail are opened through the real list route when seeded data exists.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fclients"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-clients-screen"
+    timeout: 20000
+- assertVisible: "Danışanlarım"

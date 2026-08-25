@@ -1,0 +1,12 @@
+appId: com.fizyoflow.mobile
+name: dismiss-android-stylus-prompt-helper
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - runFlow:
+          when:
+            visible: "Try out your stylus"
+          commands:
+            - tapOn: "Cancel"

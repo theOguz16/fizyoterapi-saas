@@ -35,14 +35,31 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "admin-campaign-name-input"
 - inputText: "E2E Sadakat Kampanyasi"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-audience-risk"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "admin-campaign-audience-risk"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-trigger-attendance"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "admin-campaign-trigger-attendance"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-trigger-count-input"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "admin-campaign-trigger-count-input"
 - eraseText
 - inputText: "3"
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
       id: "admin-campaign-reward-value-input"
@@ -52,6 +69,13 @@ appId: com.fizyoflow.mobile
     id: "admin-campaign-reward-value-input"
 - eraseText
 - inputText: "1"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      text: "3 derse katılım sağlandığında, 1 ücretsiz grup dersi kredisi cüzdana otomatik tanımlanacak."
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
 - scrollUntilVisible:
     element:
       id: "admin-campaign-status-active"
@@ -69,7 +93,6 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Kampanya oluşturuldu"
     timeout: 20000
-- tapOn: "Tamam|OK"
 - extendedWaitUntil:
     visible: "E2E Sadakat Kampanyasi"
     timeout: 20000
@@ -78,7 +101,6 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Kampanya güncellendi"
     timeout: 15000
-- tapOn: "Tamam|OK"
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fnotifications"
 - extendedWaitUntil:
     visible:
@@ -91,8 +113,17 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - tapOn:
     id: "admin-notification-template-0"
+- scrollUntilVisible:
+    element:
+      id: "admin-notification-send-button"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
 - tapOn:
     id: "admin-notification-send-button"
+- extendedWaitUntil:
+    visible: "Bildirim tetiklendi."
+    timeout: 20000
 - extendedWaitUntil:
     visible: "Bildirim tetiklendi."
     timeout: 20000

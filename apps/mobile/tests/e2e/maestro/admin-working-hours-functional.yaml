@@ -1,0 +1,80 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fworking-hours"
+- extendedWaitUntil:
+    visible:
+      id: "admin-working-hours-list-view"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-edit-7"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 30
+- tapOn:
+    id: "admin-working-hours-edit-7"
+- assertVisible:
+    id: "admin-working-hours-edit-view"
+- assertVisible:
+    id: "admin-working-hours-form-title"
+- tapOn:
+    id: "admin-working-hours-day-7"
+- tapOn:
+    id: "admin-working-hours-back"
+- assertVisible: "Değişiklikler kaydedilmedi"
+- tapOn: "Düzenlemeye devam et"
+- assertVisible:
+    id: "admin-working-hours-edit-view"
+- tapOn:
+    id: "admin-working-hours-back"
+- assertVisible: "Değişiklikler kaydedilmedi"
+- tapOn: "Değişiklikleri bırak"
+- assertVisible:
+    id: "admin-working-hours-list-view"
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-edit-7"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 30
+- tapOn:
+    id: "admin-working-hours-edit-7"
+- runFlow:
+    when:
+      visible: "Bu gün kapalı"
+    commands:
+      - tapOn:
+          id: "admin-working-hours-day-7"
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-save"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "admin-working-hours-save"
+- extendedWaitUntil:
+    visible: "Çalışma saatleri güncellendi"
+    timeout: 20000
+- assertVisible:
+    id: "admin-working-hours-list-view"
+- scrollUntilVisible:
+    element:
+      id: "admin-working-hours-edit-7"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 30
+- tapOn:
+    id: "admin-working-hours-edit-7"
+- assertVisible: "Bu gün çalışıyor"

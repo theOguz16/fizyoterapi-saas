@@ -109,6 +109,13 @@ android {
         debug {
             signingConfig signingConfigs.debug
         }
+        e2e {
+            // Bundle JavaScript like a release build so Android deep links are
+            // handled by the app instead of Expo's development launcher.
+            initWith release
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.

@@ -72,6 +72,9 @@ describe("mobile navigation rules", () => {
     expect(resolveContextualBackHref(["(member)", "qr", "fullscreen"])).toBe("/(member)/profile");
     expect(resolveContextualBackHref(["(admin)", "revenue-report"])).toBeNull();
     expect(resolveContextualBackHref(["(shared)", "leave-salon"])).toBe("/(member)/profile");
+    expect(resolveContextualBackHref(["(shared)", "account-settings"])).toBe("/(member)/profile");
+    expect(resolveContextualBackHref(["(shared)", "security-settings"])).toBe("/(shared)/account-settings");
+    expect(resolveContextualBackHref(["(shared)", "account-actions"])).toBe("/(shared)/account-settings");
   });
 
   it("routes admins to onboarding or dashboard depending on lifecycle state", () => {
@@ -245,6 +248,24 @@ describe("mobile navigation rules", () => {
         user: { role: "TRAINER" },
         onboardingState: "ACTIVE_SALON",
         segments: ["(shared)", "notification-settings"],
+      })
+    ).toEqual({ type: "none", reason: "CURRENT_ROUTE_ALLOWED" });
+
+    expect(
+      resolveRootNavigation({
+        ...common,
+        user: { role: "ADMIN" },
+        onboardingState: "ACTIVE_SALON",
+        segments: ["(shared)", "account-settings"],
+      })
+    ).toEqual({ type: "none", reason: "CURRENT_ROUTE_ALLOWED" });
+
+    expect(
+      resolveRootNavigation({
+        ...common,
+        user: { role: "MEMBER" },
+        onboardingState: "ACTIVE_SALON",
+        segments: ["(shared)", "account-actions"],
       })
     ).toEqual({ type: "none", reason: "CURRENT_ROUTE_ALLOWED" });
   });

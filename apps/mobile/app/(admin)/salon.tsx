@@ -7,8 +7,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { resolveBusinessHours } from "@/lib/scheduling/business-hours.normalize";
 import { getAdminSettingsApi } from "@/lib/mobile-api";
-import { useSession } from "@/providers/auth-session";
-import { showInfoAlert } from "@/lib/user-feedback";
+import { showSuccessNotice } from "@/lib/user-feedback";
+import { buildRoleActionHref, getRoleAction } from "@/lib/role-actions";
 import { ActionButton } from "@/theme/components/action-button";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -56,7 +56,6 @@ function publicVitrineUrl(slug?: string | null) {
 export default function AdminSalonScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ backTo?: string | string[] }>();
-  const { logout } = useSession();
   const query = useQuery({
     queryKey: ["admin-settings"],
     queryFn: getAdminSettingsApi,
@@ -78,12 +77,20 @@ export default function AdminSalonScreen() {
   }
 );
   const hasBusinessHours = businessHours.is_configured;
+  const salonProfileAction = getRoleAction("ADMIN_SALON_PROFILE");
+  const workingHoursAction = getRoleAction("ADMIN_WORKING_HOURS");
+  const packagesAction = getRoleAction("ADMIN_PACKAGES");
+  const subscriptionAction = getRoleAction("ADMIN_SUBSCRIPTION");
+  const subscriptionHistoryAction = getRoleAction("ADMIN_SUBSCRIPTION_HISTORY");
+  const revenueAction = getRoleAction("ADMIN_REVENUE_REPORT");
+  const campaignsAction = getRoleAction("ADMIN_CAMPAIGNS");
+  const notificationsAction = getRoleAction("ADMIN_NOTIFICATIONS");
 
   return (
     <AppShell
       testID="admin-salon-screen"
       title="Salon ayarları"
-      subtitle="Salon profili, çalışma saatleri, plan bilgisi ve yönetim alanlarını buradan düzenle."
+      subtitle="Salon bilgileri, ticari ayarlar ve iletişim araçlarını tek merkezden yönet."
       icon="clinic"
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
@@ -187,30 +194,33 @@ export default function AdminSalonScreen() {
             onPress={async () => {
               if (!publicUrl) return;
               await Clipboard.setStringAsync(publicUrl);
-              showInfoAlert("Link kopyalandı", "Klinik vitrini bağlantısı panoya kopyalandı.");
+              showSuccessNotice("Link kopyalandı", "Klinik vitrini bağlantısı panoya kopyalandı.");
             }}
           />
         </View>
       </SurfaceCard>
 
       <SurfaceCard>
-        <Text style={styles.section}>Yönetim alanları</Text>
-        <ActionButton testID="admin-salon-edit-profile" label="Salon profilini düzenle" icon="clinic" onPress={() => router.push({ pathname: "/(admin)/salon-profile", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton testID="admin-salon-working-hours" label="Çalışma saatleri" icon="clock" onPress={() => router.push({ pathname: "/(admin)/working-hours", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton testID="admin-salon-packages" label="Paketler" icon="package" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/packages", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton testID="admin-salon-campaigns" label="Kampanyalar" icon="campaigns" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/campaigns", params: { backTo: "/(admin)/salon" } } as never)} />
-        <ActionButton testID="admin-salon-subscription" label="Plan ve abonelik" icon="subscription" variant="ghost" onPress={() => router.push({ pathname: "/(admin)/subscription", params: { backTo: "/(admin)/salon" } } as never)} />
+        <Text style={styles.section}>Salon bilgileri</Text>
+        <Text style={styles.copy}>Müşterilerin gördüğü bilgileri ve salonun çalışma düzenini yönet.</Text>
+        <ActionButton testID="admin-salon-edit-profile" label={salonProfileAction.label} icon={salonProfileAction.icon} onPress={() => router.push(buildRoleActionHref("ADMIN_SALON_PROFILE", "/(admin)/salon") as never)} />
+        <ActionButton testID="admin-salon-working-hours" label={workingHoursAction.label} icon={workingHoursAction.icon} variant="ghost" onPress={() => router.push(buildRoleActionHref("ADMIN_WORKING_HOURS", "/(admin)/salon") as never)} />
       </SurfaceCard>
 
       <SurfaceCard>
-        <Text style={styles.section}>Salon işlemleri</Text>
-        <ActionButton
-          label="Salonu kapat"
-          icon="risk"
-          variant="danger"
-          onPress={() => showInfoAlert("Salon kapatma", "Bu işlem şu an mobilde kapalı. Devam etmek için web paneli kullanın.")}
-        />
-        <ActionButton label="Çıkış yap" icon="logout" variant="ghost" onPress={() => void logout()} />
+        <Text style={styles.section}>Ticari ayarlar</Text>
+        <Text style={styles.copy}>Paketleri, Fizyoflow planını ve finansal geçmişi yönet.</Text>
+        <ActionButton testID="admin-salon-packages" label={packagesAction.label} icon={packagesAction.icon} onPress={() => router.push(buildRoleActionHref("ADMIN_PACKAGES", "/(admin)/salon") as never)} />
+        <ActionButton testID="admin-salon-subscription" label={subscriptionAction.label} icon={subscriptionAction.icon} variant="ghost" onPress={() => router.push(buildRoleActionHref("ADMIN_SUBSCRIPTION", "/(admin)/salon") as never)} />
+        <ActionButton testID="admin-salon-subscription-history" label={subscriptionHistoryAction.label} icon={subscriptionHistoryAction.icon} variant="ghost" onPress={() => router.push(buildRoleActionHref("ADMIN_SUBSCRIPTION_HISTORY", "/(admin)/salon") as never)} />
+        <ActionButton testID="admin-salon-revenue-report" label={revenueAction.label} icon={revenueAction.icon} variant="ghost" onPress={() => router.push(buildRoleActionHref("ADMIN_REVENUE_REPORT", "/(admin)/salon") as never)} />
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <Text style={styles.section}>İletişim</Text>
+        <Text style={styles.copy}>Üyelere kampanya ve operasyon bildirimleri gönder.</Text>
+        <ActionButton testID="admin-salon-campaigns" label={campaignsAction.label} icon={campaignsAction.icon} onPress={() => router.push(buildRoleActionHref("ADMIN_CAMPAIGNS", "/(admin)/salon") as never)} />
+        <ActionButton testID="admin-salon-notifications" label={notificationsAction.label} icon={notificationsAction.icon} variant="ghost" onPress={() => router.push(buildRoleActionHref("ADMIN_NOTIFICATIONS", "/(admin)/salon") as never)} />
       </SurfaceCard>
     </AppShell>
   );

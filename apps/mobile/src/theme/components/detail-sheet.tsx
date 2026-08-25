@@ -1,7 +1,7 @@
 // Bu paylasilan UI component'i mobil tasarim sistemindeki detail sheet parcasi icin standart gorunum saglar.
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
 import { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { tokens } from "../tokens";
 import { ConnectivityBanner } from "@/components/connectivity-banner";
 
@@ -11,15 +11,26 @@ type Props = {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  footer?: ReactNode;
+  contentTestID?: string;
   scrollEnabled?: boolean;
 };
 
-export function DetailSheet({ visible, onClose, title, subtitle, children, scrollEnabled = true }: Props) {
+export function DetailSheet({
+  visible,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  contentTestID,
+  scrollEnabled = true,
+}: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, footer ? styles.sheetWithFooter : null]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.headerRow}>
@@ -32,16 +43,25 @@ export function DetailSheet({ visible, onClose, title, subtitle, children, scrol
           </View>
           {scrollEnabled ? (
             <ScrollView
+              testID={contentTestID}
               style={styles.content}
-              contentContainerStyle={styles.contentInner}
+              contentContainerStyle={[styles.contentInner, footer ? styles.contentInnerWithFooter : null]}
               showsVerticalScrollIndicator={false}
               bounces={false}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+              contentInsetAdjustmentBehavior="automatic"
             >
               {children}
             </ScrollView>
           ) : (
-            <View style={[styles.content, styles.contentInner]}>{children}</View>
+            <View testID={contentTestID} style={[styles.content, styles.contentInner, footer ? styles.contentInnerWithFooter : null]}>
+              {children}
+            </View>
           )}
+          {footer}
         </View>
       </View>
       <ConnectivityBanner />
@@ -64,6 +84,9 @@ const styles = StyleSheet.create({
     paddingTop: tokens.spacing.sm,
     paddingBottom: tokens.spacing.xl,
     gap: tokens.spacing.md,
+  },
+  sheetWithFooter: {
+    paddingBottom: 0,
   },
   handle: {
     alignSelf: "center",
@@ -117,5 +140,8 @@ const styles = StyleSheet.create({
   contentInner: {
     gap: tokens.spacing.sm,
     paddingBottom: tokens.spacing.xs,
+  },
+  contentInnerWithFooter: {
+    paddingBottom: tokens.spacing.sm,
   },
 });

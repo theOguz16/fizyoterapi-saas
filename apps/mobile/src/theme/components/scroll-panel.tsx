@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ScrollView, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { tokens } from "../tokens";
 
 type Props = {
@@ -8,9 +8,18 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   testID?: string;
+  bounded?: boolean;
 };
 
-export function ScrollPanel({ children, maxHeight = 320, style, contentContainerStyle, testID }: Props) {
+export function ScrollPanel({ children, maxHeight = 320, style, contentContainerStyle, testID, bounded = false }: Props) {
+  if (!bounded) {
+    return (
+      <View testID={testID} style={[styles.panel, styles.content, style, contentContainerStyle]}>
+        {children}
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       testID={testID}
@@ -19,6 +28,8 @@ export function ScrollPanel({ children, maxHeight = 320, style, contentContainer
       style={[styles.panel, { maxHeight }, style]}
       contentContainerStyle={[styles.content, contentContainerStyle]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      scrollEventThrottle={16}
     >
       {children}
     </ScrollView>

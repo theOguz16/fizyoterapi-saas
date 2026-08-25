@@ -136,3 +136,17 @@ export function filterAdminPackages(packages: AdminPackage[], search: string, st
     return searchOk && statusOk;
   });
 }
+
+export type AdminPackageFormField = "title" | "total_credits" | "weekly_class_hours" | "duration_days" | "display_price" | "trainer_commission_rate" | "capacity";
+
+export function validateAdminPackageForm(form: Record<AdminPackageFormField, string>) {
+  const errors: Partial<Record<AdminPackageFormField, string>> = {};
+  if (!form.title.trim()) errors.title = "Paket adı zorunludur.";
+  if (!Number.isFinite(Number(form.total_credits)) || Number(form.total_credits) <= 0) errors.total_credits = "Ders hakkı 1 veya daha büyük olmalıdır.";
+  if (!Number.isInteger(Number(form.weekly_class_hours)) || Number(form.weekly_class_hours) < 1 || Number(form.weekly_class_hours) > 7) errors.weekly_class_hours = "Haftalık ders sayısı 1–7 arasında olmalıdır.";
+  if (!Number.isFinite(Number(form.duration_days)) || Number(form.duration_days) <= 0) errors.duration_days = "Geçerlilik süresi 1 veya daha büyük olmalıdır.";
+  if (!Number.isFinite(Number(form.display_price)) || Number(form.display_price) < 0) errors.display_price = "Paket fiyatı 0 veya daha büyük olmalıdır.";
+  if (!Number.isFinite(Number(form.trainer_commission_rate)) || Number(form.trainer_commission_rate) < 0 || Number(form.trainer_commission_rate) > 100) errors.trainer_commission_rate = "Komisyon 0–100 arasında olmalıdır.";
+  if (!Number.isFinite(Number(form.capacity)) || Number(form.capacity) <= 0) errors.capacity = "Kapasite 1 veya daha büyük olmalıdır.";
+  return errors;
+}

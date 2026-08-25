@@ -1,0 +1,71 @@
+appId: com.fizyoflow.mobile
+name: member-surface-functional
+---
+# Member calendar, booking, group, campaign and notification surfaces use one isolated account.
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcalendar"
+- extendedWaitUntil:
+    visible:
+      id: "member-calendar-screen"
+    timeout: 30000
+- assertVisible: "Haftalık Takvim"
+- tapOn:
+    id: "member-calendar-next-week"
+- assertVisible: "Takvim"
+
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fbookings"
+- extendedWaitUntil:
+    visible:
+      id: "member-bookings-screen"
+    timeout: 20000
+- tapOn:
+    id: "member-bookings-segment-history"
+- tapOn:
+    id: "member-bookings-segment-upcoming"
+- assertVisible: "Yaklaşan"
+
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fgroup-classes"
+- extendedWaitUntil:
+    visible:
+      id: "member-group-classes-screen"
+    timeout: 20000
+- assertVisible: "Grup dersleri"
+- assertVisible: "Katılım talebi gönder|Kaydı kaldır|Uygun grup dersi yok"
+
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fcampaigns"
+- extendedWaitUntil:
+    visible:
+      id: "member-campaigns-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-campaigns-referral-1"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28shared%29%2Fnotification-settings"
+- extendedWaitUntil:
+    visible:
+      id: "notification-settings-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "notification-pref-campaign-alerts"
+    direction: DOWN
+    timeout: 10000
+    centerElement: true
+- assertVisible:
+    id: "notification-pref-campaign-alerts"
+- tapOn:
+    id: "notification-pref-campaign-alerts"
+- extendedWaitUntil:
+    visible:
+      id: "notification-pref-campaign-alerts"
+    timeout: 10000

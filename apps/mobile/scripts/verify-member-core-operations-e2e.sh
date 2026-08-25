@@ -40,7 +40,7 @@ BEGIN
    WHERE member_id = member_user_id
      AND type = 'MEMBER_PAYMENT_REQUEST'
      AND payload->>'request_type' = 'GROUP_CLASS_JOIN'
-     AND payload->>'decision' = 'CANCELED';
+     AND payload->>'decision' = 'CANCELLED';
 
   IF remaining_total <> 18 THEN
     RAISE EXCEPTION 'Beklenen toplam hak 18, bulunan %', remaining_total;

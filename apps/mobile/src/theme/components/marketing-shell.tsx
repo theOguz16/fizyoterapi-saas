@@ -3,10 +3,11 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { ArrowLeft, ChevronLeft } from "lucide-react-native";
-import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 type Props = {
   title: string;
@@ -32,6 +33,8 @@ export function MarketingShell({
   animateContent = true,
 }: Props) {
   const router = useRouter();
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   const canGoBack = typeof router.canGoBack === "function" ? router.canGoBack() : false;
   const BackIcon = Platform.OS === "ios" ? ChevronLeft : ArrowLeft;
   const heroOpacity = useRef(new Animated.Value(animateContent ? 0 : 1)).current;
@@ -83,7 +86,7 @@ export function MarketingShell({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}>
         {shouldShowBackButton ? (
           <View style={styles.topNavigation}>
             <Pressable
@@ -106,14 +109,22 @@ export function MarketingShell({
             </Pressable>
           </View>
         ) : null}
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingHorizontal: responsive.horizontalPadding }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentInsetAdjustmentBehavior="automatic"
+          nestedScrollEnabled={false}
+          showsVerticalScrollIndicator={false}
+        >
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }}>
             <View style={styles.hero}>
               <View style={styles.heroGlowTop} />
               <View style={styles.heroGlowBottom} />
               <AppIcon name={icon} active size="lg" />
-              <Text style={styles.title}>{title}</Text>
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              <Text maxFontSizeMultiplier={1.4} style={styles.title}>{title}</Text>
+              {subtitle ? <Text maxFontSizeMultiplier={2} style={styles.subtitle}>{subtitle}</Text> : null}
             </View>
           </Animated.View>
           <Animated.View style={[styles.bodyContent, { opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}>
@@ -121,7 +132,7 @@ export function MarketingShell({
           </Animated.View>
         </ScrollView>
         {footer ? (
-          <Animated.View style={[styles.footer, { opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}>
+          <Animated.View style={[styles.footer, { paddingHorizontal: responsive.horizontalPadding, opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}>
             {footer}
           </Animated.View>
         ) : null}

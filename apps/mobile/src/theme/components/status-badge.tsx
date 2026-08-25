@@ -20,9 +20,10 @@ const palette = {
 } as const;
 
 export function StatusBadge({ label, tone = "neutral" }: Props) {
+  const resolvedLabel = statusLabel(label);
   return (
-    <View style={[styles.badge, { backgroundColor: palette[tone].bg }]}>
-      <Text style={[styles.label, { color: palette[tone].fg }]}>{statusLabel(label)}</Text>
+    <View accessible accessibilityRole="text" accessibilityLabel={`Durum: ${resolvedLabel}`} style={[styles.badge, { backgroundColor: palette[tone].bg }]}>
+      <Text maxFontSizeMultiplier={1.8} style={[styles.label, { color: palette[tone].fg }]}>{resolvedLabel}</Text>
     </View>
   );
 }

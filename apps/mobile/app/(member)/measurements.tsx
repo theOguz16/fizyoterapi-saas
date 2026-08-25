@@ -14,6 +14,8 @@ import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { TrainerMemberMeasurementChart } from "@/theme/components/trainer-member-measurement-chart";
 import { tokens } from "@/theme/tokens";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
 
 // Yardımcı Format Fonksiyonları
 function formatDateTime(value?: string | null) {
@@ -105,8 +107,13 @@ export default function MemberMeasurementsScreen() {
         />
       }
     >
-      {latest ? (
+      {query.isLoading && !query.data ? (
+        <QueryState mode="loading" title="Ölçümler hazırlanıyor" />
+      ) : query.isError && !query.data ? (
+        <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} />
+      ) : latest ? (
         <>
+          {query.isError ? <InlineErrorState error={query.error} onRetry={() => void query.refetch()} /> : null}
           <View style={styles.metricsRow}>
             <MetricCard label="Kayıt Sayısı" value={items.length} hint="Toplam ölçüm" icon="measurements" />
             <MetricCard label="Kilo Trendi" value={weightTrend} hint="Son iki kayıt" icon="progress" />

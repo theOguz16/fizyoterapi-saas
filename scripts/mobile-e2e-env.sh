@@ -39,7 +39,11 @@ case "${1:-}" in
     fi
     $COMPOSE_CMD up -d postgres
     $COMPOSE_CMD run --rm e2e-fixtures
-    $COMPOSE_CMD up -d api
+    # Veriyi temizlemek tek başına yeterli değildir: express-rate-limit sayaçları
+    # API prosesinin belleğinde tutulur. Her akışta API'yi yeniden oluşturarak
+    # önceki testin login/reset isteklerinin sonraki akışı 429 ile etkilemesini
+    # engelleriz. Image yeniden build edilmez.
+    $COMPOSE_CMD up -d --force-recreate api
     wait_for_api
     echo "E2E verisi temizlendi ve deterministik fixture yeniden olusturuldu."
     ;;

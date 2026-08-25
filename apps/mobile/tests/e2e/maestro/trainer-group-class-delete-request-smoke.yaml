@@ -1,31 +1,35 @@
 appId: com.fizyoflow.mobile
 ---
-- runFlow: trainer-group-classes-full-smoke.yaml
+- runFlow: trainer-group-classes-functional.yaml
 
 - launchApp:
     clearState: true
     clearKeychain: true
 
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
 - openLink: "fizyoflow://e2e-reset"
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fgroup-classes"
 
 - extendedWaitUntil:
-    visible: "Grup dersleri|E2E Aksam Pilates|Dersler"
+    visible: "Grup dersleri|E2E Aksam Pilates Guncel|Dersler"
     timeout: 20000
 
 - scrollUntilVisible:
-    element: "E2E Aksam Pilates"
+    element: "E2E Aksam Pilates Guncel"
     direction: DOWN
     timeout: 20000
     speed: 40
     visibilityPercentage: 30
     waitToSettleTimeoutMs: 500
 
-- assertVisible: "E2E Aksam Pilates"
+- assertVisible: "E2E Aksam Pilates Guncel"
 
 - scrollUntilVisible:
     element:
-      id: "trainer-group-classes-delete-e2e-aksam-pilates"
+      id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
     direction: DOWN
     timeout: 12000
     speed: 40
@@ -33,4 +37,4 @@ appId: com.fizyoflow.mobile
     waitToSettleTimeoutMs: 500
 
 - assertVisible:
-    id: "trainer-group-classes-delete-e2e-aksam-pilates"
+    id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"

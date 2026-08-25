@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useAppFlow } from "@/providers/app-flow";
 import { MarketingShell } from "@/theme/components/marketing-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -13,12 +13,15 @@ import { getPendingSalonJoinSlug } from "@/lib/local-preferences";
 import { tokens } from "@/theme/tokens";
 import { getUserFacingMessage } from "@/lib/user-feedback";
 import { shouldAttemptBiometricLogin } from "@/lib/biometric-login-policy";
+import { SecurePasswordField } from "@/theme/components/secure-password-field";
+import { getApiFieldErrors, validateEmail, validateRequired, type FieldErrors } from "@/lib/form-validation";
 
 const TRUST_SIGNALS = [
   "Üyelik ve rezervasyon bilgileri tek hesapta toplanır",
   "Salon, eğitmen ve üye süreçleri rolüne göre düzenlenir",
   "Bildirimler, programlar ve günlük takip tek akışta ilerler",
 ];
+type LoginField = "email" | "password";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,6 +36,9 @@ export default function LoginScreen() {
   const introOpacity = useState(() => new Animated.Value(0))[0];
   const introTranslate = useState(() => new Animated.Value(20))[0];
   const biometricAttemptedRef = useRef(false);
+  const submittingRef = useRef(false);
+  const emailRef = useRef<TextInput>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<LoginField>>({});
 
   useEffect(() => {
     hasCompletedSignupOnboarding().then(setSignupOnboardingSeen).catch(() => setSignupOnboardingSeen(false));
@@ -58,7 +64,19 @@ export default function LoginScreen() {
   }, [introOpacity, introTranslate]);
 
   async function handleLogin() {
+    if (submittingRef.current) return;
+    const validationErrors: FieldErrors<LoginField> = {
+      email: validateEmail(email) || undefined,
+      password: validateRequired(password, "Şifre") || undefined,
+    };
+    if (validationErrors.email || validationErrors.password) {
+      setFieldErrors(validationErrors);
+      setError("İşaretli alanları kontrol et.");
+      if (validationErrors.email) emailRef.current?.focus();
+      return;
+    }
     try {
+      submittingRef.current = true;
       setLoading(true);
       setError("");
       await login({ email: email.trim().toLowerCase(), password, tenantSlug: pendingSalonSlug || undefined });
@@ -71,20 +89,25 @@ export default function LoginScreen() {
         } as never);
       }
     } catch (err) {
+      setFieldErrors(getApiFieldErrors<LoginField>(err));
       setError(getUserFacingMessage(err, "Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene."));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   }
 
   const handleBiometricLogin = useCallback(async () => {
+    if (submittingRef.current) return;
     try {
+      submittingRef.current = true;
       setLoading(true);
       setError("");
       await loginWithBiometrics();
     } catch (err) {
       setError(getUserFacingMessage(err, `${biometricLabel} tamamlanamadı. E-posta ve şifrenle devam edebilirsin.`));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   }, [biometricLabel, loginWithBiometrics]);
@@ -128,25 +151,33 @@ export default function LoginScreen() {
         ) : null}
         <SurfaceCard padding="hero">
           <FormField
+            ref={emailRef}
             label="E-posta"
             inputId="login-identity-input"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => { setEmail(value); setFieldErrors((current) => ({ ...current, email: undefined })); setError(""); }}
             placeholder="ornek@mail.com"
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
             textContentType="username"
+            required
+            error={fieldErrors.email}
+            errorTestID="login-email-error"
           />
-          <FormField
+          <SecurePasswordField
             label="Şifre"
             inputId="login-password-input"
+            toggleTestID="login-password-toggle"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => { setPassword(value); setFieldErrors((current) => ({ ...current, password: undefined })); setError(""); }}
             placeholder="Şifreni gir"
-            secureTextEntry
-            autoComplete="password"
-            textContentType="password"
+            intent="current"
+            returnKeyType="done"
+            onSubmitEditing={() => Keyboard.dismiss()}
+            required
+            error={fieldErrors.password}
+            errorTestID="login-password-error"
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.linksColumn}>

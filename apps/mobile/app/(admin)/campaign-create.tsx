@@ -7,9 +7,12 @@ import { FormField } from "@/theme/components/form-field";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { ActionButton } from "@/theme/components/action-button";
 import { createAdminCampaignApi, getAdminCampaignApi, updateAdminCampaignApi } from "@/lib/mobile-api";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
 import { StyleSheet, Text, View } from "react-native";
 import { tokens } from "@/theme/tokens";
+import { getApiFieldErrors, validatePositiveNumber, validateRequired, type FieldErrors } from "@/lib/form-validation";
+
+type CampaignField = "name" | "trigger_count" | "reward_value";
 
 const AUDIENCES = [
   { label: "Tüm üyeler", value: "ALL" },
@@ -34,7 +37,7 @@ const REWARD_TARGETS = [
 
 export default function AdminCampaignCreateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; audience?: string; source?: string }>();
   const campaignId = typeof params.id === "string" && params.id.trim() ? params.id.trim() : null;
   const [name, setName] = useState("");
   const [audience, setAudience] = useState("ALL");
@@ -46,6 +49,8 @@ export default function AdminCampaignCreateScreen() {
   const [rewardValue, setRewardValue] = useState("");
   const [rewardTarget, setRewardTarget] = useState("REFERRER");
   const [isActive, setIsActive] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<CampaignField>>({});
+  const [formError, setFormError] = useState("");
 
   const detailQuery = useQuery({
     queryKey: ["admin-campaign", campaignId],
@@ -66,6 +71,11 @@ export default function AdminCampaignCreateScreen() {
     setRewardTarget(String(campaign.reward_target || "REFERRER"));
     setIsActive(campaign.is_active === true);
   }, [detailQuery.data]);
+
+  useEffect(() => {
+    if (campaignId) return;
+    if (String(params.audience || "").toUpperCase() === "RISK") setAudience("RISK");
+  }, [campaignId, params.audience]);
 
   const isEditing = useMemo(() => Boolean(campaignId), [campaignId]);
   const ruleLocked = Number(detailQuery.data?.campaign?.fulfillment_count || 0) > 0;
@@ -116,7 +126,7 @@ export default function AdminCampaignCreateScreen() {
   },
 
   onSuccess: () => {
-    showInfoAlert(
+    showSuccessNotice(
       isEditing ? "Kampanya güncellendi" : "Kampanya oluşturuldu",
       isEditing
         ? "Kampanya bilgileri kaydedildi."
@@ -127,6 +137,8 @@ export default function AdminCampaignCreateScreen() {
   },
 
   onError: (error) => {
+    setFieldErrors(getApiFieldErrors<CampaignField>(error));
+    setFormError("Kampanya kaydedilemedi. İşaretli alanları kontrol et.");
     showErrorAlert(
       isEditing ? "Kampanya güncellenemedi" : "Kampanya oluşturulamadı",
       error,
@@ -134,6 +146,31 @@ export default function AdminCampaignCreateScreen() {
     );
   },
 });
+
+  function updateField(field: CampaignField, value: string) {
+    if (field === "name") setName(value);
+    if (field === "trigger_count") setTriggerCount(value.replace(/\D/g, ""));
+    if (field === "reward_value") setRewardValue(value.replace(/\D/g, ""));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setFormError("");
+  }
+
+  function submitCampaign() {
+    if (mutation.isPending) return;
+    const errors: FieldErrors<CampaignField> = {
+      name: validateRequired(name, "Kampanya adı") || undefined,
+      trigger_count: ruleLocked ? undefined : validatePositiveNumber(triggerCount, "Gereken sayı") || undefined,
+      reward_value: ruleLocked ? undefined : validatePositiveNumber(rewardValue, "Ödül adedi") || undefined,
+    };
+    if (errors.name || errors.trigger_count || errors.reward_value) {
+      setFieldErrors(errors);
+      setFormError("İşaretli alanları kontrol et.");
+      return;
+    }
+    setFieldErrors({});
+    setFormError("");
+    mutation.mutate();
+  }
 
   const generateSummary = () => {
     let conditionText = "";
@@ -156,6 +193,7 @@ export default function AdminCampaignCreateScreen() {
   return (
     <AppShell
       testID="admin-campaign-editor-screen"
+      formMode
       title={isEditing ? "Kampanyayı düzenle" : "Yeni kampanya"}
       subtitle="Hedef kitle, koşul ve ödül kurallarını belirle."
       icon="campaigns"
@@ -167,8 +205,11 @@ export default function AdminCampaignCreateScreen() {
           inputId="admin-campaign-name-input"
           label="Kampanya adı" 
           value={name} 
-          onChangeText={setName} 
+          onChangeText={(value) => updateField("name", value)}
           placeholder="Kampanya adını girin" 
+          required
+          error={fieldErrors.name}
+          errorTestID="admin-campaign-name-error"
         />
         <Text style={[styles.sectionTitle, { marginTop: tokens.spacing.sm }]}>Hedef kitle</Text>
         <View style={styles.chips}>
@@ -203,10 +244,13 @@ export default function AdminCampaignCreateScreen() {
             inputId="admin-campaign-trigger-count-input"
             label="Gereken kayıt sayısı" 
             value={triggerCount} 
-            onChangeText={setTriggerCount} 
+            onChangeText={(value) => updateField("trigger_count", value)}
             placeholder="Gerekli kayıt sayısını girin" 
             keyboardType="numeric" 
             editable={!ruleLocked}
+            required
+            error={fieldErrors.trigger_count}
+            errorTestID="admin-campaign-trigger-count-error"
           />
         )}
 
@@ -215,10 +259,13 @@ export default function AdminCampaignCreateScreen() {
             inputId="admin-campaign-trigger-count-input"
             label="Gereken ders sayısı" 
             value={triggerCount} 
-            onChangeText={setTriggerCount} 
+            onChangeText={(value) => updateField("trigger_count", value)}
             placeholder="Gerekli ders sayısını girin" 
             keyboardType="numeric" 
             editable={!ruleLocked}
+            required
+            error={fieldErrors.trigger_count}
+            errorTestID="admin-campaign-trigger-count-error"
           />
         )}
       </SurfaceCard>
@@ -241,10 +288,13 @@ export default function AdminCampaignCreateScreen() {
             inputId="admin-campaign-reward-value-input"
             label="Grup dersi adedi" 
             value={rewardValue} 
-            onChangeText={setRewardValue} 
+            onChangeText={(value) => updateField("reward_value", value)}
             placeholder="Hediye ders adedini girin" 
             keyboardType="numeric" 
             editable={!ruleLocked}
+            required
+            error={fieldErrors.reward_value}
+            errorTestID="admin-campaign-reward-value-error"
           />
         )}
 
@@ -284,11 +334,12 @@ export default function AdminCampaignCreateScreen() {
         </Text>
       </SurfaceCard>
 
+      {formError ? <Text testID="admin-campaign-form-error" accessibilityRole="alert" style={styles.formError}>{formError}</Text> : null}
       <ActionButton
         testID="admin-campaign-submit"
         label={isEditing ? "Kampanyayı güncelle" : "Kampanyayı oluştur"}
         icon="campaigns"
-        onPress={() => mutation.mutate()}
+        onPress={submitCampaign}
         loading={mutation.isPending}
       />
     </AppShell>
@@ -296,6 +347,7 @@ export default function AdminCampaignCreateScreen() {
 }
 
 const styles = StyleSheet.create({
+  formError: { color: tokens.colors.danger, fontSize: tokens.font.xs, fontFamily: tokens.fontFamily.medium },
   sectionTitle: {
     color: tokens.colors.text,
     fontSize: tokens.font.sm,

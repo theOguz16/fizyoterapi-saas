@@ -1,6 +1,6 @@
 // Bu provider mobil uygulamada app flow ile ilgili ortak state veya servis erisimini merkezilestirir.
 // Ekranlar arasi tekrar eden baglam ihtiyaci bu dosya uzerinden yonetilir.
-import { createContext, ReactNode, useContext, useMemo, useState } from "react";
+import { createContext, Dispatch, ReactNode, SetStateAction, useContext, useMemo, useState } from "react";
 import type { SignupOnboardingProfile } from "@/lib/signup-onboarding";
 import type { PurchaseDaySelection } from "@fitnes-saas/contracts";
 
@@ -84,7 +84,7 @@ type AppFlowContextValue = {
   memberIntent: MemberIntentProfile;
   setMemberIntent: (next: MemberIntentProfile) => void;
   memberBookingDraft: MemberBookingDraft;
-  setMemberBookingDraft: (next: MemberBookingDraft) => void;
+  setMemberBookingDraft: Dispatch<SetStateAction<MemberBookingDraft>>;
   resetMemberFlow: () => void;
 };
 

@@ -36,7 +36,7 @@ export function AppIcon({ name, active = false, size = "md", tone = "neutral", v
   if (variant === "plain") {
     const plainColor = active ? "#FFFFFF" : palette.color;
     return (
-      <View style={[styles.plainWrap, active ? styles.plainWrapActive : null]}>
+      <View accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.plainWrap, active ? styles.plainWrapActive : null]}>
         <Icon color={plainColor} size={iconSize.icon} strokeWidth={iconSize.stroke} />
       </View>
     );
@@ -44,6 +44,8 @@ export function AppIcon({ name, active = false, size = "md", tone = "neutral", v
 
   return (
     <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
       style={[
         styles.wrap,
         {

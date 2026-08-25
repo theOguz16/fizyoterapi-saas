@@ -795,6 +795,18 @@ async function main() {
       ends_at: now,
       capacity: 1,
     }),
+    sessionRepo.create({
+      tenant_id: tenant.id,
+      title: "E2E Gelecek PT Seansı",
+      type: SessionType.PT,
+      status: SessionStatus.SCHEDULED,
+      trainer_id: trainer.id,
+      related_package_id: ptPackage.id,
+      lesson_category: LessonCategory.PT,
+      starts_at: plusDays(now, 2),
+      ends_at: plusDays(now, 2),
+      capacity: 1,
+    }),
   ]);
 
   sessions[0].starts_at = isoAtLocal(sessions[0].starts_at, 10, 0);
@@ -803,6 +815,8 @@ async function main() {
   sessions[1].ends_at = isoAtLocal(sessions[1].ends_at, 19, 0);
   sessions[2].starts_at = isoAtLocal(sessions[2].starts_at, 14, 0);
   sessions[2].ends_at = isoAtLocal(sessions[2].ends_at, 15, 0);
+  sessions[3].starts_at = isoAtLocal(sessions[3].starts_at, 11, 0);
+  sessions[3].ends_at = isoAtLocal(sessions[3].ends_at, 12, 0);
   await sessionRepo.save(sessions);
 
   const bookingRepo = AppDataSource.getRepository(Booking);
@@ -840,6 +854,20 @@ async function main() {
       session_id: sessions[2].id,
       starts_at: sessions[2].starts_at,
       ends_at: sessions[2].ends_at,
+      status: BookingStatus.APPROVED,
+      payment_status: BookingPaymentStatus.APPROVED,
+      payment_requested_at: now,
+      payment_approved_at: now,
+      payment_approved_by_admin_id: admin.id,
+      meta: { package_id: ptPackage.id, package_display_price: ptPackage.display_price },
+    }),
+    bookingRepo.create({
+      tenant_id: tenant.id,
+      member_id: member.id,
+      trainer_id: trainer.id,
+      session_id: sessions[3].id,
+      starts_at: sessions[3].starts_at,
+      ends_at: sessions[3].ends_at,
       status: BookingStatus.APPROVED,
       payment_status: BookingPaymentStatus.APPROVED,
       payment_requested_at: now,
@@ -914,6 +942,14 @@ async function main() {
   const nextMonday = plusDays(now, (8 - (now.getDay() || 7)) % 7 || 7);
 
   await availabilityRepo.save([
+    availabilityRepo.create({
+      tenant_id: tenant.id,
+      member_id: member.id,
+      package_id: ptPackage.id,
+      starts_at: isoAtLocal(nextMonday, 15, 0),
+      ends_at: isoAtLocal(nextMonday, 16, 0),
+      note: "E2E otomatik saat değişikliği tercihi",
+    }),
     availabilityRepo.create({
       tenant_id: tenant.id,
       member_id: extraMembers[0].id,

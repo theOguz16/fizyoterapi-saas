@@ -15,6 +15,7 @@ import { useRootDeepLinkRouting } from "@/providers/root-deep-link-routing";
 import { useRootNotificationRouting } from "@/providers/root-notification-routing";
 import { useMemberRealtimeSync } from "@/providers/member-realtime-sync";
 import { ConnectivityBanner } from "@/components/connectivity-banner";
+import { InAppNoticeHost } from "@/components/in-app-notice-host";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
 import { resolveRootNavigation } from "@/lib/navigation";
 import { detourConfig, isDetourConfigured } from "@/lib/detour";
@@ -107,6 +108,7 @@ function RootGate() {
 
       <Slot />
       <ConnectivityBanner />
+      <InAppNoticeHost />
     </>
   );
 }

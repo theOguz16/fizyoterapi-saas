@@ -49,12 +49,25 @@ test2_id=$(db_value "SELECT id FROM users WHERE tenant_id='$tenant_id' AND email
 test3_id=$(db_value "SELECT id FROM users WHERE tenant_id='$tenant_id' AND email='test3.user@demo.local'")
 package_id=$(db_value "SELECT id FROM packages WHERE tenant_id='$tenant_id' AND title='PT Bireysel Ders'")
 
+planned_booking_count=$(db_value "
+  SELECT count(*)
+  FROM bookings
+  WHERE tenant_id='$tenant_id' AND member_id='$member_id'
+    AND status IN ('APPROVED','RESCHEDULED')
+")
+[ "$planned_booking_count" -ge 2 ] || {
+  echo "Eğitmenin talebi takvime eklediği ikinci booking doğrulanamadı: $planned_booking_count" >&2
+  exit 1
+}
+
 core_row=$(db_value "
   SELECT id || '|' || status || '|' || starts_at::text || '|' ||
     COALESCE(jsonb_array_length(COALESCE(meta->'reschedule_history','[]'::jsonb)),0)::text
   FROM bookings
   WHERE tenant_id='$tenant_id' AND member_id='$member_id'
-  ORDER BY created_at DESC LIMIT 1
+    AND status='RESCHEDULED'
+    AND COALESCE(jsonb_array_length(COALESCE(meta->'reschedule_history','[]'::jsonb)),0) >= 1
+  ORDER BY updated_at DESC LIMIT 1
 ")
 IFS='|' read -r core_booking_id core_status core_starts_at core_history <<EOF
 $core_row

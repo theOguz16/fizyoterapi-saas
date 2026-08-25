@@ -29,4 +29,13 @@ describe("committed mutation feedback", () => {
     await expect(refreshSessionAfterCommittedAction(async () => undefined, "Klinik oluşturma")).resolves.toBe(true);
     expect(alert).not.toHaveBeenCalled();
   });
+
+  it("uses normalized safe copy for API failures", async () => {
+    const { alert, showErrorAlert } = await loadUserFeedback();
+    const { ApiClientError } = await import("@/lib/api-error");
+
+    showErrorAlert("Kaydedilemedi", new ApiClientError("database connection refused", 503), "Tekrar dene.");
+
+    expect(alert).toHaveBeenCalledWith("Kaydedilemedi", "Sunucu şu anda yanıt veremiyor. Biraz sonra tekrar dene.");
+  });
 });

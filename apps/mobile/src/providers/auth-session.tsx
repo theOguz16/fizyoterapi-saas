@@ -114,7 +114,7 @@ type SessionContextType = {
   refreshNotificationPermissionStatus: () => Promise<PushPermissionStatus>;
   login: (input: LoginInput) => Promise<void>;
   loginWithBiometrics: () => Promise<void>;
-  switchRole: (role: SessionRole) => Promise<void>;
+  switchRole: (role: SessionRole) => Promise<SessionEnvelope>;
   register: (input: RegisterInput) => Promise<void>;
   registerClinicMember: (input: ClinicMemberRegisterInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -409,6 +409,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     await activateAuthenticatedSession({ ...data, accessToken: data.accessToken });
+    return data;
   }, [activateAuthenticatedSession]);
 
   const register = useCallback(async (input: RegisterInput) => {

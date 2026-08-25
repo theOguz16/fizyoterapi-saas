@@ -1,0 +1,55 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fsubscription%3Fe2eState%3DREAD_ONLY"
+- extendedWaitUntil:
+    visible:
+      id: "admin-subscription-value-proof"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-purchase"
+    direction: DOWN
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "admin-subscription-purchase"
+    timeout: 20000
+- tapOn:
+    id: "admin-subscription-plan-yearly"
+- tapOn:
+    id: "admin-subscription-purchase"
+- extendedWaitUntil:
+    visible: "Plan aktif"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-manage-store"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "admin-subscription-manage-store"
+- extendedWaitUntil:
+    visible: "Kapalı"
+    timeout: 20000
+- assertVisible:
+    id: "admin-subscription-renewal-status"
+- scrollUntilVisible:
+    element:
+      id: "admin-subscription-restore"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "admin-subscription-restore"
+- extendedWaitUntil:
+    visible: "Açık"
+    timeout: 20000
+- assertVisible:
+    id: "admin-subscription-renewal-status"

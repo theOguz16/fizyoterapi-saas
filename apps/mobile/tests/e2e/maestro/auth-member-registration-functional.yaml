@@ -1,6 +1,14 @@
 appId: com.fizyoflow.mobile
 name: auth-member-registration-functional
 ---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
@@ -8,11 +16,7 @@ name: auth-member-registration-functional
 - openLink: "fizyoflow://member-register?slug=demo-salon"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
       id: "clinic-member-register-submit"
@@ -21,11 +25,10 @@ name: auth-member-registration-functional
     id: "clinic-member-register-submit"
 - scrollUntilVisible:
     element:
-      id: "member-register-error"
+      id: "member-register-first-name-error"
     direction: DOWN
     timeout: 10000
-- assertVisible:
-    id: "member-register-error"
+- assertVisible: "Ad zorunludur."
 - scrollUntilVisible:
     element:
       id: "member-register-first-name"
@@ -33,7 +36,22 @@ name: auth-member-registration-functional
     timeout: 10000
 - tapOn:
     id: "member-register-first-name"
+    point: "50%,50%"
+    retryTapIfNoChange: true
+- eraseText
 - inputText: "Danisan"
+- runFlow:
+    when:
+      notVisible: "Danisan"
+    commands:
+      - tapOn:
+          id: "member-register-first-name"
+          point: "50%,50%"
+      - eraseText
+      - inputText: "Danisan"
+- extendedWaitUntil:
+    visible: "Danisan"
+    timeout: 5000
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -67,9 +85,50 @@ name: auth-member-registration-functional
       id: "member-register-password"
     direction: DOWN
     timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "member-register-password"
+          timeout: 5000
 - tapOn:
     id: "member-register-password"
-- inputText: "member-register123"
+- inputText: "memberregister123"
+- waitForAnimationToEnd
+- runFlow: _assert-valid-password.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-toggle"
+- scrollUntilVisible:
+    element:
+      id: "member-register-repeat"
+    direction: DOWN
+    centerElement: true
+    timeout: 10000
+- swipe:
+    direction: UP
+    duration: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-confirm-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "member-register-repeat"
+          timeout: 5000
+- tapOn:
+    id: "member-register-repeat"
+- inputText: "memberregister123"
+- waitForAnimationToEnd
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -80,8 +139,19 @@ name: auth-member-registration-functional
     id: "legal-terms-checkbox"
 - tapOn:
     id: "legal-notice-checkbox"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "clinic-member-register-submit"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "clinic-member-register-submit"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "salon-detail-screen"

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 import { getTrainerMembersApi, sendTrainerBulkNotificationApi } from "@/lib/mobile-api";
-import { showInfoAlert } from "@/lib/user-feedback";
+import { showSuccessNotice } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
@@ -25,7 +25,7 @@ export default function TrainerBulkNotificationScreen() {
   const members = useMemo(() => membersQuery.data || [], [membersQuery.data]);
   const mutation = useMutation({
     mutationFn: () => sendTrainerBulkNotificationApi({ member_ids: selected, title, body }),
-    onSuccess: (result: any) => showInfoAlert("Bildirim gönderildi", `${result?.delivered || 0} üyeye teslim edildi.`),
+    onSuccess: (result: any) => showSuccessNotice("Bildirim gönderildi", `${result?.delivered || 0} üyeye teslim edildi.`),
   });
   function toggle(id: string) { setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]); }
   return (

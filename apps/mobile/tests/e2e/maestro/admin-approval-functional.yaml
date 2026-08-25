@@ -23,8 +23,14 @@ appId: com.fizyoflow.mobile
     direction: DOWN
     timeout: 15000
     visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "admin-approval-open-application"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "admin-approval-detail-screen"
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "admin-approval-approve"
@@ -37,3 +43,5 @@ appId: com.fizyoflow.mobile
     visible:
       id: "admin-approvals-screen"
     timeout: 20000
+- assertNotVisible:
+    id: "admin-approval-open-application"

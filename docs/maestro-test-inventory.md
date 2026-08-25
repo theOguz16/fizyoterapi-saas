@@ -1,8 +1,8 @@
 # Maestro Test Envanteri
 
-Son güncelleme: 22 Temmuz 2026
+Son güncelleme: 27 Temmuz 2026
 
-Bu belge `apps/mobile/tests/e2e/maestro` altındaki 78 YAML dosyasını
+Bu belge `apps/mobile/tests/e2e/maestro` altındaki 90 YAML dosyasını
 dosya adına göre değil, gerçekte doğruladığı davranışa göre sınıflandırır.
 Geçmişteki 68 dosyalık envanter güncel değildir.
 
@@ -40,23 +40,23 @@ Geçmişteki 68 dosyalık envanter güncel değildir.
 | `admin-campaign-notification-functional.yaml` | Kampanya oluşturur, pasifleştirir ve bildirim şablonu gönderir | Kampanya ve bildirim event DB kanıtı |
 | `admin-entry-scan-functional.yaml` | Manuel salon giriş kodunu kaydeder | Check-in/attendance DB kanıtı |
 | `admin-group-class-approval-functional.yaml` | Grup dersi talebini onaylar | Tek başına fixture ve DB kanıtı |
-| `admin-package-create-smoke.yaml` | Paket oluşturur, düzenler, pasifleştirir ve siler | Her ara durumun API/DB kanıtı |
+| `admin-package-crud-functional.yaml` | Paket oluşturur, düzenler, pasifleştirir ve siler | Matris verifier’ı eklendi; güncel koşu gerekli |
 | `admin-salon-settings-functional.yaml` | Salon profilini ve çalışma gününü günceller | Settings DB kanıtı |
 | `clinic-owner-activation-flow.yaml` | Klinik aktivasyonunun 1/4–4/4 adımlarını tamamlar | API doğrulama scripti mevcut; güncel regresyon gerekli |
 | `duo-package-flow.yaml` | Keşiften duo paket başvurusu gönderir | Başvuru/paket/partner DB kanıtı |
 | `login-role-routing.yaml` | Danışan gerçek giriş formunu tamamlar | Oturum API kanıtı yeterli; güncel koşu gerekli |
 | `member-clinic-connection-functional.yaml` | Manuel QR, klinik seçimi, başka klinik ve bağlantı iptalini kullanır | Kalıcı iş sonucu üretmeyen bölümler ayrı raporlanmalı |
 | `member-core-operations-functional.yaml` | Haklar, randevu iptali, grup katılımı, kampanya, bildirim tercihi ve klinikten ayrılma | DB doğrulama scripti mevcut |
-| `member-measurement-smoke.yaml` | Ölçüm oluşturur ve geçmişte notuyla görür | DB kaydı son koşuda ayrıca doğrulandı |
+| `member-measurement-functional.yaml` | Ölçüm oluşturur ve geçmişte notuyla görür | Matris verifier’ı eklendi; güncel koşu gerekli |
 | `member-multi-package-time-selection-authenticated.yaml` | Gerçek çoklu paket başvurusu gönderir | Başvuru ve slot DB kanıtı |
 | `member-referral-functional.yaml` | Referans oluşturur ve listede görür | DB kaydı son koşuda ayrıca doğrulandı |
 | `release-admin-login.yaml` | Yönetici gerçek giriş formunu tamamlar | Güncel koşu gerekli |
 | `release-edge-cases.yaml` | Ek paket, rol koruması, yönetici ret ve hatalı giriş | Senaryolar ayrı fixture/API/DB kanıtına ayrılmalı |
 | `release-trainer-login.yaml` | Eğitmen gerçek giriş formunu tamamlar | Güncel koşu gerekli |
 | `trainer-daily-operations.yaml` | Not oluşturur/düzenler ve saat değişikliği talebi gönderir | Not ve talep DB kanıtı |
-| `trainer-group-classes-full-smoke.yaml` | Grup dersi oluşturma/düzenleme/silme talebi zinciri | Her kararın DB kanıtı |
-| `trainer-group-classes-smoke.yaml` | Grup dersi talebi oluşturur | Talep DB kanıtı |
-| `trainer-manual-checkin-smoke.yaml` | Manuel check-in gerçekleştirir | Attendance ve hak düşümü DB kanıtı |
+| `trainer-group-classes-functional.yaml` | Grup dersi oluşturma/düzenleme/silme talebi zinciri | Matris verifier’ı eklendi; güncel koşu gerekli |
+| `trainer-group-class-create-functional.yaml` | Grup dersi talebi oluşturur | Matris verifier’ı eklendi; güncel koşu gerekli |
+| `trainer-manual-checkin-functional.yaml` | Manuel check-in gerçekleştirir | Matris verifier’ı eklendi; güncel koşu gerekli |
 | `trainer-operations-functional.yaml` | Paket/kazanç/risk yüzeyleri, toplu bildirim ve çıkış | Okuma yüzeyleri smoke; bildirim event DB kanıtı gerekli |
 
 `trainer-operations-functional.yaml` tek dosyada hem smoke hem mutasyon içerir.
@@ -146,9 +146,30 @@ push/role-login-and-register.yaml
 
 ## Güncel kanıt durumu
 
+27 Temmuz koşusunda yeni yüzey akışları eklendi:
+
+- `admin-risk-functional.yaml`: yönetici risk havuzu ve anlamlı boş durum.
+- `admin-clinic-qr-functional.yaml`: QR preview, salon kodu ve native paylaşım
+  açılışı. Native paylaşım geri dönüşü fiziksel cihaz kapsamındadır.
+- `trainer-surface-functional.yaml`: eğitmen paket, kazanç, risk, talep,
+  QR ve danışan yüzeyleri.
+- `member-surface-functional.yaml`: danışan takvim, randevu segmentleri,
+  grup dersleri, kampanyalar ve bildirim tercihi.
+
+Bu dört akış iOS 18.2 iPhone 16 Pro simülatöründe çalıştırıldı; yeni yüzeylerde
+bulunan cold-start ve görünürlük sorunları düzeltildikten sonra akışlar başarılı
+oldu. Native paylaşım ekranının geri dönüşü ve dosya hedefi fiziksel cihaz
+paketinde doğrulanmalıdır.
+
+- 23 Temmuz statik revizyonunda izole fonksiyonel matris 31 flow olarak
+  doğrulandı. Kritik mutasyon adaylarına fixture ve API/DB verifier bağlandı;
+  bu revizyonlar güncel cihaz koşusu tamamlanana kadar `passed` sayılmaz.
+- Release ve fonksiyonel runner'larda alt süreçlerin matris stdin'ini tüketerek
+  koşuyu ilk flow'dan sonra bitirebilmesi düzeltildi. Release syntax matrisi
+  düzeltme sonrasında 36/36 dosyayı gerçekten kontrol etti.
 - `member-core-operations-functional.yaml`: 20 Temmuz 2026 son koşusu geçti;
   hak, iptal, grup talebi, bildirim tercihi ve üyelik DB doğrulaması geçti.
-- `member-measurement-smoke.yaml`: ilk koşuda ölçüm notu UI'da yoktu; ürün
+- `member-measurement-functional.yaml`: ilk koşuda ölçüm notu UI'da yoktu; ürün
   düzeltmesinden sonraki koşu geçti ve DB kaydı doğrulandı.
 - `member-referral-functional.yaml`: ilk koşular form/kaydırma nedeniyle
   başarısız oldu; son düzeltilmiş koşu 38 saniyede geçti ve DB kaydı görüldü.

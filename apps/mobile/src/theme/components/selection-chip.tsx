@@ -8,20 +8,22 @@ type Props = {
   active?: boolean;
   onPress: () => void;
   testID?: string;
+  disabled?: boolean;
 };
 
-export function SelectionChip({ label, active = false, onPress, testID }: Props) {
+export function SelectionChip({ label, active = false, onPress, testID, disabled = false }: Props) {
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
+      accessibilityState={{ selected: active, disabled }}
       hitSlop={4}
       onPress={onPress}
-      style={({ pressed }) => [styles.base, active ? styles.active : null, pressed ? styles.pressed : null]}
+      disabled={disabled}
+      style={({ pressed }) => [styles.base, active ? styles.active : null, disabled ? styles.disabled : null, pressed ? styles.pressed : null]}
     >
-      <Text style={[styles.label, active ? styles.labelActive : null]} maxFontSizeMultiplier={1.4}>{label}</Text>
+      <Text style={[styles.label, active ? styles.labelActive : null]} maxFontSizeMultiplier={1.6}>{label}</Text>
     </Pressable>
   );
 }
@@ -29,6 +31,7 @@ export function SelectionChip({ label, active = false, onPress, testID }: Props)
 const styles = StyleSheet.create({
   base: {
     minHeight: tokens.touch.min,
+    minWidth: tokens.touch.min,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: tokens.radius.pill,
@@ -38,8 +41,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  disabled: { opacity: 0.62 },
   active: {
-    backgroundColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primaryStrong,
     borderColor: tokens.colors.primaryStrong,
     ...tokens.shadow.focus,
   },

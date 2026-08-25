@@ -63,6 +63,11 @@ type ClinicMemberRegisterInput = {
   legal_consent?: RegistrationLegalConsent;
 };
 
+type ChangePasswordInput = {
+  current_password: string;
+  new_password: string;
+};
+
 // AuthController sadece login/register degil,
 // kullanicinin hangi role ve onboarding asamasina dusecegini de belirler.
 export class AuthController {
@@ -589,6 +594,59 @@ export class AuthController {
       path: "/",
     });
     return res.json({ data: { deleted: true } });
+  }
+
+  static async changePassword(req: Request, res: Response) {
+    const auth = (req as any).auth as JwtPayload | undefined;
+    if (!auth?.accountId || auth.loginScope !== "ACCOUNT") {
+      throw new AppError("ACCOUNT_SESSION_REQUIRED", 403, "Hesap oturumu gerekli");
+    }
+
+    const { current_password, new_password } = req.body as ChangePasswordInput;
+    if (!current_password || !new_password) {
+      throw new AppError("VALIDATION_ERROR", 422, "Mevcut şifre ve yeni şifre zorunludur");
+    }
+    if (String(new_password).length < 8) {
+      throw new AppError("WEAK_PASSWORD", 422, "Yeni şifre en az 8 karakter olmalıdır");
+    }
+    if (current_password === new_password) {
+      throw new AppError("PASSWORD_UNCHANGED", 422, "Yeni şifre mevcut şifreden farklı olmalıdır");
+    }
+
+    const accountRepo = AppDataSource.getRepository(Account);
+    const account = await accountRepo.findOne({ where: { id: auth.accountId, is_active: true } });
+    if (!account || !(await verifyPassword(current_password, account.password_hash))) {
+      throw new AppError("INVALID_CURRENT_PASSWORD", 401, "Mevcut şifre hatalı");
+    }
+
+    account.password_hash = await hashPassword(new_password);
+    account.auth_version = Number(account.auth_version || 1) + 1;
+    await accountRepo.save(account);
+
+    await AuditLogService.log({
+      tenant_id: auth.tenantId || null,
+      actor_user_id: auth.linkedUserId || null,
+      actor_account_id: auth.accountId,
+      actor_role: auth.role || null,
+      event_type: "AUTH_PASSWORD_CHANGED",
+      action: "UPDATE",
+      method: req.method,
+      path: req.originalUrl,
+      status_code: 200,
+      success: true,
+      request_id: (req as any).requestId || null,
+      ip_address: req.ip || null,
+      user_agent: typeof req.headers?.["user-agent"] === "string" ? req.headers["user-agent"] : null,
+      metadata: { auth_version: account.auth_version },
+    });
+
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+    return res.json({ data: true });
   }
 
   static async switchRole(req: Request, res: Response) {

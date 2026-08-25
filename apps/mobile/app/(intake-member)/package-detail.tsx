@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { StyleSheet, Text, View } from "react-native";
@@ -23,9 +24,73 @@ export default function PackageDetailScreen() {
   const duoPartnerName = memberBookingDraft.duoPartnerName || "";
   const duoPartnerContact = memberBookingDraft.duoPartnerContact || "";
   const canContinue = !isDuoFlow || (duoPartnerName.trim().length >= 2 && duoPartnerContact.trim().length >= 5);
+  const [pendingNavigation, setPendingNavigation] = useState<
+    "/(intake-member)/time-selection" | "/(intake-member)/trainer-selection" | null
+  >(null);
+
+  useEffect(() => {
+    if (!pendingNavigation || String(memberBookingDraft.currentPackageId || "") !== String(params.id)) return;
+
+    setPendingNavigation(null);
+    router.push({ pathname: pendingNavigation, params: { slug: String(params.slug) } } as never);
+  }, [memberBookingDraft.currentPackageId, params.id, params.slug, pendingNavigation, router]);
+
+  function handleContinue() {
+    const selectedSubLesson = selectedGroupLesson;
+    const nextDraft = {
+      ...memberBookingDraft,
+      packageId: String(params.id),
+      currentPackageId: String(params.id),
+      packageTitle: String(params.title),
+      packagePrice: String(params.price),
+      packageSummary: String(params.summary),
+      weeklyClassHours: Number(params.weeklyClassHours || 0),
+      requiredPreferenceSlots: Number(params.requiredPreferenceSlots || 0),
+      requiredTrainerFreeSlots: Number(params.requiredTrainerFreeSlots || 0),
+      selectedSubLesson,
+      duoPartnerName,
+      duoPartnerContact,
+      selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
+        ...pkg,
+        selected_sub_lesson: selectedSubLesson,
+        duo_partner_name: duoPartnerName,
+        duo_partner_contact: duoPartnerContact,
+      })),
+      groupClassFlow: directToTimeSelection
+        ? {
+            selectedLessonName: selectedSubLesson,
+            selectedGroupClassId: memberBookingDraft.groupClassFlow?.selectedGroupClassId || "",
+            notificationScope: memberBookingDraft.groupClassFlow?.notificationScope || "SALON_MEMBERS",
+            requiresAdminApproval: true,
+          }
+        : undefined,
+    };
+    // Hedef ekran booking draft'i mount anında okuyor. Yönlendirmeyi state'in
+    // gerçekten commit edildiği effect'e bırakmak, hızlı klavye kapatma/dokunma
+    // zincirlerinde requestAnimationFrame callback'inin kaybolmasını önler.
+    setPendingNavigation(directToTimeSelection
+      ? "/(intake-member)/time-selection"
+      : "/(intake-member)/trainer-selection");
+    setMemberBookingDraft(nextDraft);
+  }
 
   return (
-    <AppShell testID="intake-package-detail-screen" title={String(params.title || "Paket detayı")} subtitle="Paket kapsamını inceleyip senin için uygun akışla devam et." icon="package">
+    <AppShell
+      testID="intake-package-detail-screen"
+      title={String(params.title || "Paket detayı")}
+      subtitle="Paket kapsamını inceleyip senin için uygun akışla devam et."
+      icon="package"
+      footer={
+        <ActionButton
+          testID="package-detail-continue"
+          label={directToTimeSelection ? "Saat seçimine geç" : "Eğitmen seçimine geç"}
+          icon="spark"
+          disabled={!canContinue}
+          loading={pendingNavigation !== null}
+          onPress={handleContinue}
+        />
+      }
+    >
       <IntakeProgressCard
         step={3}
         total={6}
@@ -70,14 +135,14 @@ export default function PackageDetailScreen() {
               label="Partner adı"
               value={duoPartnerName}
               onChangeText={(value) =>
-                setMemberBookingDraft({
-                  ...memberBookingDraft,
+                setMemberBookingDraft((currentDraft) => ({
+                  ...currentDraft,
                   duoPartnerName: value,
-                  selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
+                  selectedPackages: updateSelectedPackage(currentDraft, String(params.id), (pkg) => ({
                     ...pkg,
                     duo_partner_name: value,
                   })),
-                })
+                }))
               }
               placeholder="Örn. Ayşe Yılmaz"
               helper="Partner değişimi dersler başladıktan sonra salon onayıyla yapılır."
@@ -88,14 +153,14 @@ export default function PackageDetailScreen() {
               label="Partner telefon veya e-posta"
               value={duoPartnerContact}
               onChangeText={(value) =>
-                setMemberBookingDraft({
-                  ...memberBookingDraft,
+                setMemberBookingDraft((currentDraft) => ({
+                  ...currentDraft,
                   duoPartnerContact: value,
-                  selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
+                  selectedPackages: updateSelectedPackage(currentDraft, String(params.id), (pkg) => ({
                     ...pkg,
                     duo_partner_contact: value,
                   })),
-                })
+                }))
               }
               placeholder="Telefon veya e-posta"
               autoCapitalize="none"
@@ -134,44 +199,6 @@ export default function PackageDetailScreen() {
         ) : null}
       </SurfaceCard>
 
-      <ActionButton
-        testID="package-detail-continue"
-        label={directToTimeSelection ? "Saat seçimine geç" : "Eğitmen seçimine geç"}
-        icon="spark"
-        disabled={!canContinue}
-        onPress={() => {
-          const selectedSubLesson = selectedGroupLesson;
-          setMemberBookingDraft({
-            ...memberBookingDraft,
-            packageId: String(params.id),
-            currentPackageId: String(params.id),
-            packageTitle: String(params.title),
-            packagePrice: String(params.price),
-            packageSummary: String(params.summary),
-            weeklyClassHours: Number(params.weeklyClassHours || 0),
-            requiredPreferenceSlots: Number(params.requiredPreferenceSlots || 0),
-            requiredTrainerFreeSlots: Number(params.requiredTrainerFreeSlots || 0),
-            selectedSubLesson,
-            duoPartnerName,
-            duoPartnerContact,
-            selectedPackages: updateSelectedPackage(memberBookingDraft, String(params.id), (pkg) => ({
-              ...pkg,
-              selected_sub_lesson: selectedSubLesson,
-              duo_partner_name: duoPartnerName,
-              duo_partner_contact: duoPartnerContact,
-            })),
-            groupClassFlow: directToTimeSelection
-              ? {
-                  selectedLessonName: selectedSubLesson,
-                  selectedGroupClassId: memberBookingDraft.groupClassFlow?.selectedGroupClassId || "",
-                  notificationScope: memberBookingDraft.groupClassFlow?.notificationScope || "SALON_MEMBERS",
-                  requiresAdminApproval: true,
-                }
-              : undefined,
-          });
-          router.push({ pathname: directToTimeSelection ? "/(intake-member)/time-selection" : "/(intake-member)/trainer-selection", params: { slug: String(params.slug) } } as never);
-        }}
-      />
     </AppShell>
   );
 }

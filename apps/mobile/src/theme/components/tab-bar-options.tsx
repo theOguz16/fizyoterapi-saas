@@ -63,7 +63,7 @@ export function createResponsiveTabOptions({ routeName, width, bottomInset, icon
       ...tokens.shadow.float,
     },
     tabBarItemStyle: {
-      minHeight: isFeatured ? (compact ? 50 : 54) : compact ? 42 : 46,
+      minHeight: isFeatured ? (compact ? 52 : 56) : compact ? 44 : 48,
       paddingHorizontal: 0,
       borderRadius: tokens.radius.pill,
       marginHorizontal: compact ? 2 : 3,
@@ -78,7 +78,7 @@ export function createResponsiveTabOptions({ routeName, width, bottomInset, icon
         style={[
           {
             minWidth: isFeatured ? (compact ? 62 : 70) : compact ? 42 : 48,
-            minHeight: isFeatured ? (compact ? 54 : 60) : compact ? 42 : 48,
+            minHeight: isFeatured ? (compact ? 54 : 60) : compact ? 44 : 48,
             borderRadius: tokens.radius.pill,
             alignItems: "center",
             justifyContent: "center",
@@ -86,7 +86,7 @@ export function createResponsiveTabOptions({ routeName, width, bottomInset, icon
             backgroundColor: isFeatured
               ? tokens.colors.primaryStrong
               : focused
-                ? tokens.colors.primary
+                ? tokens.colors.primaryStrong
                 : "transparent",
             borderWidth: isFeatured || focused ? 1 : 0,
             borderColor: isFeatured ? "rgba(255,255,255,0.18)" : focused ? "rgba(151,187,156,0.22)" : "transparent",

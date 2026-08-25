@@ -1,0 +1,280 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+
+# Admin profilinden merkezi ayarlar ve güvenlik zinciri.
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "admin-profile-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-profile-account-settings"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-profile-account-settings"
+- extendedWaitUntil:
+    visible:
+      id: "account-settings-screen"
+    timeout: 15000
+- assertVisible:
+    id: "account-settings-notifications"
+- assertVisible:
+    id: "account-settings-security"
+- assertVisible:
+    id: "account-settings-account-actions"
+- tapOn:
+    id: "account-settings-security"
+- extendedWaitUntil:
+    visible:
+      id: "security-settings-screen"
+    timeout: 15000
+- assertVisible:
+    id: "security-settings-password-reset"
+- assertVisible:
+    id: "security-settings-privacy"
+- tapOn:
+    id: "security-current-password"
+- inputText: "admin123"
+- pressKey: ENTER
+- tapOn:
+    id: "security-new-password"
+- inputText: "admin123-new"
+- pressKey: ENTER
+- tapOn:
+    id: "security-confirm-password"
+- inputText: "admin123-new"
+- pressKey: ENTER
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "security-settings-change-password"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "security-settings-change-password"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123-new&redirect=%2F%28admin%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "admin-profile-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-profile-account-settings"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-profile-account-settings"
+- tapOn:
+    id: "account-settings-account-actions"
+- tapOn:
+    id: "account-actions-logout"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+
+# Eğitmen profilinde çalışma bilgileri kalır, bildirimler merkezi ekrandan açılır.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-profile-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-packages"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "trainer-profile-packages"
+- assertVisible:
+    id: "trainer-profile-qr"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "trainer-profile-account-settings"
+          direction: DOWN
+          timeout: 10000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "trainer-profile-account-settings"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - swipe:
+          direction: UP
+          duration: 800
+      - tapOn:
+          id: "trainer-profile-account-settings"
+          point: "50%,50%"
+          retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "account-settings-screen"
+    timeout: 15000
+- tapOn:
+    id: "account-settings-security"
+- extendedWaitUntil:
+    visible:
+      id: "security-settings-screen"
+    timeout: 20000
+- tapOn:
+    id: "security-current-password"
+- inputText: "trainer123"
+- pressKey: ENTER
+- tapOn:
+    id: "security-new-password"
+- inputText: "trainer123-new"
+- pressKey: ENTER
+- tapOn:
+    id: "security-confirm-password"
+- inputText: "trainer123-new"
+- pressKey: ENTER
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "security-settings-change-password"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "security-settings-change-password"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123-new&redirect=%2F%28shared%29%2Faccount-settings"
+- extendedWaitUntil:
+    visible:
+      id: "account-settings-screen"
+    timeout: 20000
+- tapOn:
+    id: "account-settings-account-actions"
+- assertNotVisible:
+    id: "account-actions-leave-salon"
+- tapOn:
+    id: "account-actions-logout"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+
+# Üye profilinde salon üyeliği tehlikeli işlemi iki seviye geriye taşınır.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-profile-open-qr"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "member-profile-account-settings"
+          direction: DOWN
+          timeout: 10000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "member-profile-account-settings"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - swipe:
+          direction: UP
+          duration: 900
+      - swipe:
+          direction: UP
+          duration: 900
+      - tapOn:
+          id: "member-profile-account-settings"
+          point: "50%,50%"
+          retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "account-settings-screen"
+    timeout: 15000
+- tapOn:
+    id: "account-settings-security"
+- extendedWaitUntil:
+    visible:
+      id: "security-settings-screen"
+    timeout: 15000
+- tapOn:
+    id: "security-current-password"
+- inputText: "member123"
+- pressKey: ENTER
+- tapOn:
+    id: "security-new-password"
+- inputText: "member123-new"
+- pressKey: ENTER
+- tapOn:
+    id: "security-confirm-password"
+- inputText: "member123-new"
+- pressKey: ENTER
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "security-settings-change-password"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "security-settings-change-password"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123-new&redirect=%2F%28shared%29%2Faccount-settings"
+- extendedWaitUntil:
+    visible:
+      id: "account-settings-screen"
+    timeout: 20000
+- tapOn:
+    id: "account-settings-account-actions"
+- assertVisible:
+    id: "account-actions-leave-salon"
+- tapOn:
+    id: "account-actions-logout"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000

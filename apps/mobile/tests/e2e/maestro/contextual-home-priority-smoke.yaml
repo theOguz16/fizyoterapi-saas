@@ -1,0 +1,69 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+
+# Yönetici: fixture'daki bugünkü ders doğrudan operasyon takvimine gider.
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- extendedWaitUntil:
+    visible:
+      id: "admin-home-priority-section"
+    timeout: 20000
+- assertVisible:
+    id: "admin-home-priority-today"
+- tapOn:
+    id: "admin-home-priority-today"
+- extendedWaitUntil:
+    visible:
+      id: "admin-calendar-screen"
+    timeout: 15000
+
+# Eğitmen: bugünkü açık seans doğrudan check-in akışına gider.
+- openLink: "fizyoflow://e2e-reset?step=trainer"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-priority-section"
+    timeout: 20000
+- assertVisible:
+    id: "trainer-home-priority-checkin"
+- tapOn:
+    id: "trainer-home-priority-checkin"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-checkin-screen"
+    timeout: 15000
+
+# Üye: sonraki ders önceliği gerçek booking detayına gider.
+- openLink: "fizyoflow://e2e-reset?step=member"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-priority-section"
+    timeout: 20000
+- assertVisible:
+    id: "member-home-priority-next-booking"
+- tapOn:
+    id: "member-home-priority-next-booking"
+- extendedWaitUntil:
+    visible:
+      id: "member-booking-detail-screen"
+    timeout: 20000

@@ -3,37 +3,46 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
     timeout: 60000
-- openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
-- waitForAnimationToEnd:
-    timeout: 8000
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
       id: "admin-dashboard-screen"
     timeout: 20000
-- swipe:
-    start: 50%, 82%
-    end: 50%, 28%
 - tapOn:
-    id: "admin-dashboard-packages"
+    id: "admin-tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "admin-profile-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-profile-open-salon-management"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-profile-open-salon-management"
+- extendedWaitUntil:
+    visible:
+      id: "admin-salon-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "admin-salon-packages"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-salon-packages"
 - extendedWaitUntil:
     visible:
       id: "admin-packages-screen"
@@ -65,7 +74,6 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "admin-package-save-button"
 - assertVisible: "Paket oluşturuldu"
-- tapOn: "OK"
 - waitForAnimationToEnd:
     timeout: 3000
 - scrollUntilVisible:
@@ -86,7 +94,6 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Paket güncellendi"
     timeout: 15000
-- tapOn: "OK"
 - scrollUntilVisible:
     element:
       id: "admin-package-toggle-status-e2e-crud-paket"
@@ -95,9 +102,30 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "admin-package-toggle-status-e2e-crud-paket"
 - assertVisible: "Paket pasife alındı"
-- tapOn: "OK"
 - tapOn: "Pasif"
 - extendedWaitUntil:
     visible:
       id: "admin-package-edit-e2e-crud-paket"
     timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-package-delete-e2e-crud-paket"
+    direction: DOWN
+    timeout: 15000
+    centerElement: true
+- tapOn:
+    id: "admin-package-delete-e2e-crud-paket"
+- extendedWaitUntil:
+    visible:
+      id: "admin-package-delete-confirmation"
+    timeout: 10000
+- tapOn:
+    id: "admin-package-delete-confirm"
+- extendedWaitUntil:
+    visible: "Paket silindi"
+    timeout: 15000
+# DELETE endpointi veri bütünlüğü için hard-delete yerine arşivler. Kayıt
+# Pasif filtresinde kalır; API/DB doğrulayıcısı görünür/public bayraklarının
+# kapandığını ve dört audit olayının oluştuğunu kanıtlar.
+- assertVisible:
+    id: "admin-package-edit-e2e-crud-paket"

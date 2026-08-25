@@ -1,0 +1,149 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fgroup-classes"
+- extendedWaitUntil:
+    visible: "Grup dersleri"
+    timeout: 20000
+- assertVisible:
+    id: "trainer-group-classes-list-view"
+- tapOn:
+    id: "trainer-group-classes-open-create"
+- assertVisible:
+    id: "trainer-group-classes-form-view"
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "Kaydedilmeyecek Taslak"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-form-back"
+    direction: UP
+    timeout: 10000
+    centerElement: true
+- tapOn:
+    id: "trainer-group-classes-form-back"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "trainer-group-classes-discard-confirmation"
+    timeout: 10000
+- tapOn:
+    id: "trainer-group-classes-discard-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-group-classes-list-view"
+    timeout: 10000
+- tapOn:
+    id: "trainer-group-classes-open-create"
+- assertVisible:
+    id: "trainer-group-classes-form-view"
+
+# Special + public create
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates"
+- pressKey: ENTER
+- swipe:
+    start: 50%, 78%
+    end: 50%, 52%
+- tapOn:
+    id: "trainer-group-classes-date-picker"
+- tapOn:
+    id: "trainer-group-classes-date-option-5"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-time-picker"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+- tapOn:
+    id: "trainer-group-classes-time-picker"
+- tapOn:
+    id: "trainer-group-classes-time-option-0"
+- swipe:
+    start: 50%, 78%
+    end: 50%, 22%
+- tapOn:
+    id: "trainer-group-classes-submit"
+- assertVisible: "Grup dersi onaya gönderildi"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-group-classes-list-view"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-edit-e2e-aksam-pilates"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "trainer-group-classes-edit-e2e-aksam-pilates"
+- assertVisible:
+    id: "trainer-group-classes-form-view"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-name-input"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "trainer-group-classes-name-input"
+- eraseText
+- inputText: "E2E Aksam Pilates Guncel"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-submit"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "trainer-group-classes-submit"
+- extendedWaitUntil:
+    visible: "Güncelleme onaya gönderildi"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "trainer-group-classes-list-view"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "trainer-group-classes-delete-e2e-aksam-pilates-guncel"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          point: "50%,66%"
+          retryTapIfNoChange: true
+- runFlow:
+    when:
+      visible: "Silme talebi gönder"
+    commands:
+      - tapOn: "Silme talebi gönder"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "trainer-group-classes-list-view"

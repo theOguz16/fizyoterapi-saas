@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   getMemberHomeApi,
   getMemberGroupClassesApi,
@@ -14,15 +14,19 @@ import {
 import { formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassDisplayName, getGroupClassScheduleLabel } from "@/lib/group-classes";
 import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
-import { AppIcon, type AppIconName } from "@/theme/components/app-icon";
+import { AppIcon } from "@/theme/components/app-icon";
 import { AppShell } from "@/theme/components/app-shell";
 import { EmptyState } from "@/theme/components/empty-state";
 import { MetricCard } from "@/theme/components/metric-card";
 import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { QUERY_TIMING } from "@/lib/query-performance";
 import { ScheduleCard } from "@/theme/components/schedule-card";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
+import { buildMemberHomePriorities, type HomePriorityItem } from "@/lib/home-priority";
+import { HomePriorityCard } from "@/theme/components/home-priority-card";
+import { QueryState } from "@/theme/components/query-state";
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -117,21 +121,25 @@ export default function MemberHomeScreen() {
   const query = useQuery({
     queryKey: ["member-home"],
     queryFn: getMemberHomeApi,
+    staleTime: QUERY_TIMING.home,
   });
 
   const attendanceHistoryQuery = useQuery({
     queryKey: ["member-attendance-history"],
     queryFn: getMemberAttendanceHistoryApi,
+    staleTime: QUERY_TIMING.reference,
   });
 
   const scheduleRequestsQuery = useQuery({
     queryKey: ["member-schedule-change-requests"],
     queryFn: getMemberScheduleChangeRequestsApi,
+    staleTime: QUERY_TIMING.live,
   });
   const groupClassesQuery = useQuery({
     queryKey: ["member-home-group-classes"],
     queryFn: getMemberGroupClassesApi,
     enabled: Boolean(activeMembership?.tenant_slug),
+    staleTime: QUERY_TIMING.home,
   });
 
   const data = query.data;
@@ -253,10 +261,21 @@ export default function MemberHomeScreen() {
     previousMeasurement?.muscle_kg ?? previousMeasurement?.muscle_percent
   );
   const heightDiff = calculateDiff(latestMeasurement?.height_cm, previousMeasurement?.height_cm);
-  const focusItems = [
-    { label: "Aktif paket", value: data?.packages?.active_package_count ?? 0, tone: "warning" as const, icon: "package" as const },
-    { label: "Onay bekleyen", value: pendingScheduleRequests.length, tone: "warning" as const, icon: "approvals" as const },
-  ];
+  const priorities = buildMemberHomePriorities({
+    pendingScheduleRequestCount: pendingScheduleRequests.length,
+    hasPendingApplication: hasPending,
+    nextBooking,
+    remainingCredits: usage.remaining_total_credits,
+    groupClassCount: homeGroupClasses.length,
+  });
+
+  function openPriority(item: HomePriorityItem) {
+    if (!item.route) return;
+    router.push({
+      pathname: item.route,
+      params: { ...item.params, backTo: "/(member)/home" },
+    } as never);
+  }
 
   return (
     <AppShell
@@ -264,21 +283,42 @@ export default function MemberHomeScreen() {
       title={firstName ? `Merhaba ${firstName}` : "Merhaba"}
       subtitle="Sonraki dersin, kalan hakların, taleplerin ve günlük ilerleme özetin tek ekranda."
       icon="home"
-      refreshing={query.isRefetching || attendanceHistoryQuery.isRefetching}
-        onRefresh={() => {
-          void Promise.all([query.refetch(), attendanceHistoryQuery.refetch()]);
-        }}
-      rightAction={
-        <ActionButton
-          testID="member-home-profile-button"
-          label="Profil"
-          icon="profile"
-          variant="ghost"
-          fullWidth={false}
-          onPress={() => router.push("/(member)/profile" as never)}
-        />
+      refreshing={
+        query.isRefetching ||
+        attendanceHistoryQuery.isRefetching ||
+        scheduleRequestsQuery.isRefetching ||
+        groupClassesQuery.isRefetching
       }
+        onRefresh={() => {
+          void Promise.all([
+            query.refetch(),
+            attendanceHistoryQuery.refetch(),
+            scheduleRequestsQuery.refetch(),
+            groupClassesQuery.refetch(),
+          ]);
+        }}
     >
+      <View testID="member-home-priority-section" style={styles.prioritySection}>
+        <View style={styles.priorityHeader}>
+          <Text style={styles.sectionTitle}>Senin için sıradaki adım</Text>
+          <Text style={styles.copy}>Ders, üyelik ve paket durumuna göre en önemli adımlar burada.</Text>
+        </View>
+        {query.isLoading && !query.data ? (
+          <QueryState mode="loading" title="Önceliklerin hazırlanıyor" />
+        ) : query.isError && !query.data ? (
+          <QueryState mode="error" error={query.error} title="Önceliklerin alınamadı" onRetry={() => void query.refetch()} />
+        ) : (
+          priorities.map((item, index) => (
+            <HomePriorityCard
+              key={item.key}
+              item={item}
+              primary={index === 0}
+              onPress={item.route ? () => openPriority(item) : undefined}
+            />
+          ))
+        )}
+      </View>
+
       {pendingScheduleRequests.length > 0 ? (
         <ScrollPanel maxHeight={320}>
           {pendingScheduleRequests.map((request, index) => (
@@ -311,22 +351,6 @@ export default function MemberHomeScreen() {
         <MetricCard label="Bu ay katılım" value={monthlyCount} hint="Ay içi ders ritmi" icon="calendar" />
       </View>
 
-      <SurfaceCard tone="primary">
-        <Text style={styles.sectionTitle}>Bugünün odağı</Text>
-        <Text style={styles.copy}>İlk bakışta aksiyon gerektiren üyelik başlıklarını gösterir.</Text>
-        <View style={styles.focusList}>
-          {focusItems.map((item) => (
-            <View key={item.label} style={styles.focusItem}>
-              <AppIcon name={item.icon} size="sm" tone={item.tone} />
-              <View style={styles.focusCopy}>
-                <Text style={styles.focusLabel}>{item.label}</Text>
-                <Text style={styles.focusValue}>{item.value}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </SurfaceCard>
-
       {nextBooking ? (
         <ScheduleCard
           testID="member-home-next-booking"
@@ -356,7 +380,14 @@ export default function MemberHomeScreen() {
         {homeGroupClasses.length === 0 ? (
           <EmptyState title="Aktif grup dersi yok" description="Trainer yeni grup dersi açtığında burada slider olarak göreceksin." icon="calendar" />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.groupSlider}>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled
+            directionalLockEnabled
+            alwaysBounceVertical={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.groupSlider}
+          >
             {homeGroupClasses.map((row: any, index: number) => (
               <SurfaceCard key={`${row.group_class_id || row.starts_at}-${index}`} tone="primary" style={styles.groupSlide}>
                 <Text style={styles.groupTitle}>{getGroupClassDisplayName(row) || row.label || "Grup dersi"}</Text>
@@ -376,17 +407,6 @@ export default function MemberHomeScreen() {
             ))}
           </ScrollView>
         )}
-      </SurfaceCard>
-
-      <SurfaceCard>
-        <Text style={styles.sectionTitle}>Günlük operasyon</Text>
-        <Text style={styles.copy}>İhtiyacın olan menülere buradan hızlıca ulaş.</Text>
-        <View style={styles.quickGrid}>
-          <QuickAction testID="member-home-package" title="Paketim" icon="package" onPress={() => router.push("/(member)/package" as never)} />
-          <QuickAction testID="member-home-calendar" title="Takvim" icon="calendar" onPress={() => router.push("/(member)/calendar" as never)} />
-          <QuickAction testID="member-home-measurements" title="Ölçümler" icon="measurements" onPress={() => router.push("/(member)/measurements" as never)} />
-          <QuickAction testID="member-home-profile" title="Profil" icon="profile" onPress={() => router.push("/(member)/profile" as never)} />
-        </View>
       </SurfaceCard>
 
       <SurfaceCard>
@@ -473,56 +493,16 @@ export default function MemberHomeScreen() {
   );
 }
 
-function QuickAction({ title, icon, onPress, testID }: { title: string; icon: AppIconName; onPress: () => void; testID?: string }) {
-  return (
-    <Pressable testID={testID} accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.quickCard, pressed ? styles.quickCardPressed : null]}>
-      <View style={styles.quickHeader}>
-        <View style={styles.quickIconWrap}>
-          <AppIcon name={icon} size="md" tone="primary" />
-        </View>
-        <AppIcon name="arrow-right" size="sm" tone="neutral" />
-      </View>
-      <Text style={styles.quickTitle}>{title}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   metricsRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.sm },
+  prioritySection: { gap: tokens.spacing.sm },
+  priorityHeader: { gap: 2 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.spacing.sm, marginBottom: 4 },
   sectionTitle: { color: tokens.colors.text, fontSize: tokens.font.lg, fontFamily: tokens.fontFamily.semibold, flex: 1 },
   actionRow: { flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.sm, marginTop: tokens.spacing.sm },
   copy: { color: tokens.colors.textMuted, fontSize: tokens.font.sm, lineHeight: tokens.lineHeight.normal, fontFamily: tokens.fontFamily.regular },
   hint: { color: tokens.colors.primaryStrong, fontSize: tokens.font.xs, fontFamily: tokens.fontFamily.medium, marginTop: 8 },
   grow: { flex: 1, gap: 4 },
-  focusList: { gap: tokens.spacing.sm, marginTop: tokens.spacing.sm },
-  focusItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: tokens.spacing.sm,
-    padding: tokens.spacing.sm,
-    borderRadius: tokens.radius.lg,
-    borderWidth: 1,
-    borderColor: "rgba(151,187,156,0.16)",
-    backgroundColor: "rgba(255,255,255,0.72)",
-  },
-  focusCopy: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: tokens.spacing.sm,
-  },
-  focusLabel: {
-    color: tokens.colors.text,
-    fontSize: tokens.font.sm,
-    fontFamily: tokens.fontFamily.medium,
-  },
-  focusValue: {
-    color: tokens.colors.text,
-    fontSize: tokens.font.md,
-    fontFamily: tokens.fontFamily.bold,
-  },
   sparkGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -551,12 +531,6 @@ const styles = StyleSheet.create({
   groupSlider: { gap: tokens.spacing.sm, paddingTop: tokens.spacing.sm },
   groupSlide: { width: 272, gap: tokens.spacing.xs },
   groupTitle: { color: tokens.colors.text, fontSize: tokens.font.md, fontFamily: tokens.fontFamily.bold },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: tokens.spacing.sm, marginTop: tokens.spacing.sm },
-  quickCard: { flexGrow: 1, flexBasis: "47%", minHeight: 104, borderRadius: tokens.radius.lg, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.88)", borderColor: "rgba(151,187,156,0.18)", padding: tokens.spacing.md, gap: tokens.spacing.sm, justifyContent: "center", ...tokens.shadow.soft },
-  quickCardPressed: { transform: [{ scale: 0.98 }] },
-  quickHeader: { width: "100%", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  quickIconWrap: { width: 50, height: 50, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(151,187,156,0.14)" },
-  quickTitle: { color: tokens.colors.text, fontSize: tokens.font.sm, lineHeight: 20, fontFamily: tokens.fontFamily.semibold },
   referralHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: tokens.spacing.md, marginBottom: tokens.spacing.sm },
   giftIconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(245,158,11,0.15)", justifyContent: "center", alignItems: "center" },
 });

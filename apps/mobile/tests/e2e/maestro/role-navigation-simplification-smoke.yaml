@@ -1,0 +1,125 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+
+# Admin: ana sayfa yalnızca bağlamsal işlemleri gösterir; yönetim alanları Profil > Salon yönetimi altındadır.
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fdashboard"
+- extendedWaitUntil:
+    visible:
+      id: "admin-dashboard-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "admin-dashboard-entry-scan"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "admin-dashboard-entry-scan"
+- assertVisible:
+    id: "admin-dashboard-clinic-qr"
+- assertVisible:
+    id: "admin-dashboard-campaigns"
+- tapOn:
+    id: "admin-tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "admin-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "admin-profile-open-salon-management"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "admin-profile-open-salon-management"
+- extendedWaitUntil:
+    visible:
+      id: "admin-salon-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "admin-salon-packages"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "admin-salon-packages"
+- assertVisible:
+    id: "admin-salon-subscription"
+
+# Eğitmen: ana sayfa günlük araçlara, profil çalışma bilgilerine ayrılmıştır.
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-home-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-home-daily-tools"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "trainer-home-daily-tools"
+- assertVisible:
+    id: "trainer-home-group-classes"
+- assertVisible:
+    id: "trainer-home-request-center"
+- tapOn:
+    id: "trainer-tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-packages"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "trainer-profile-packages"
+- assertVisible:
+    id: "trainer-profile-qr"
+
+# Üye: Paket, Takvim, Ölçümler ve Profil yalnızca alt menüden açılır.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "member-home-screen"
+    timeout: 20000
+- assertVisible:
+    id: "member-tab-calendar"
+- assertVisible:
+    id: "member-tab-package"
+- assertVisible:
+    id: "member-tab-measurements"
+- assertVisible:
+    id: "member-tab-profile"
+- tapOn:
+    id: "member-tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-profile-open-qr"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "member-profile-open-qr"
+- scrollUntilVisible:
+    element:
+      id: "member-profile-account-settings"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "member-profile-open-campaigns"
+- assertVisible:
+    id: "member-profile-open-referrals"
+- assertVisible:
+    id: "member-profile-account-settings"

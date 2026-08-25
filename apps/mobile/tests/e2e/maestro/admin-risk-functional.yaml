@@ -1,0 +1,131 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Frisk-members"
+- extendedWaitUntil:
+    visible:
+      id: "admin-risk-members-screen"
+    timeout: 20000
+- assertVisible: "Riskli üyeler"
+- assertVisible:
+    id: "admin-risk-pool-metric"
+- assertVisible:
+    id: "admin-risk-renewal-metric"
+# Gerçek risk API sonucu ya listeyi ya da anlamlı boş durumunu üretmelidir.
+- assertVisible: "Risk kaydı yok|Bu kayıt kampanya, arama veya paket yenileme aksiyonu için uygundur."
+- scrollUntilVisible:
+    element:
+      id: "admin-risk-member-detail-0"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-risk-member-detail-0"
+- extendedWaitUntil:
+    visible:
+      id: "admin-member-detail-screen"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "admin-member-risk-score"
+    timeout: 15000
+- tapOn:
+    id: "app-shell-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "admin-risk-members-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "admin-risk-member-action-0"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-risk-member-action-0"
+- extendedWaitUntil:
+    visible:
+      id: "admin-campaign-editor-screen"
+    timeout: 20000
+- assertVisible:
+    id: "admin-campaign-audience-risk"
+- tapOn:
+    id: "admin-campaign-name-input"
+- inputText: "E2E Risk Takip Kampanyasi"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-trigger-attendance"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-campaign-trigger-attendance"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-trigger-count-input"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-campaign-trigger-count-input"
+- inputText: "2"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-reward-value-input"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-campaign-reward-value-input"
+- inputText: "1"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-status-active"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-campaign-status-active"
+- scrollUntilVisible:
+    element:
+      id: "admin-campaign-submit"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "admin-campaign-submit"
+- extendedWaitUntil:
+    visible: "Kampanya oluşturuldu"
+    timeout: 20000

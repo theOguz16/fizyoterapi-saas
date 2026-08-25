@@ -10,11 +10,7 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
@@ -24,7 +20,7 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-identity-input"
 - inputText: "oguzhanuyar531@gmail.com"
-- hideKeyboard
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
       id: "login-password-input"
@@ -33,8 +29,7 @@ appId: com.fizyoflow.mobile
     id: "login-password-input"
     retryTapIfNoChange: true
 - inputText: "admin123"
-- tapOn:
-    id: "login-submit-button"
+- runFlow: _submit-login.yaml
 - runFlow:
     when:
       visible: "Sonra"
@@ -46,8 +41,8 @@ appId: com.fizyoflow.mobile
     timeout: 20000
 - scrollUntilVisible:
     element:
-      id: "admin-dashboard-packages"
+      id: "admin-dashboard-entry-scan"
     direction: DOWN
     timeout: 10000
 - assertVisible:
-    id: "admin-dashboard-packages"
+    id: "admin-dashboard-entry-scan"

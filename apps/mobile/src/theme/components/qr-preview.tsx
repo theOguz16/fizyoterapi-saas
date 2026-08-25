@@ -1,6 +1,6 @@
 // Bu paylaşılan UI component'i mobil tasarım sistemindeki QR preview parçası için standart görünüm sağlar.
 // React Native'de QR önizleme için dataURL yerine react-native-qrcode-svg kullanılır.
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { tokens } from "../tokens";
 
@@ -11,23 +11,25 @@ type Props = {
 };
 
 export function QrPreview({ value, size = 192, showCode = true }: Props) {
+  const { width } = useWindowDimensions();
   const normalizedValue = String(value || "").trim();
-  const qrSize = Math.max(120, size - 24);
+  const renderedSize = Math.max(160, Math.min(size, width - 88));
+  const qrSize = Math.max(120, renderedSize - 24);
 
   if (!normalizedValue) {
     return (
-      <View style={styles.wrap}>
-        <View style={[styles.frame, { width: size, height: size }]}>
-          <Text style={styles.fallbackTitle}>QR hazırlanıyor</Text>
-          <Text style={styles.fallbackText}>Kod bilgisi bekleniyor.</Text>
+      <View accessible accessibilityRole="progressbar" accessibilityLabel="QR kod hazırlanıyor" style={styles.wrap}>
+        <View style={[styles.frame, { width: renderedSize, height: renderedSize }]}>
+          <Text maxFontSizeMultiplier={1.8} style={styles.fallbackTitle}>QR hazırlanıyor</Text>
+          <Text maxFontSizeMultiplier={2} style={styles.fallbackText}>Kod bilgisi bekleniyor.</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.wrap}>
-      <View style={[styles.frame, { width: size, height: size }]}>
+    <View accessible accessibilityRole="image" accessibilityLabel={showCode ? `Taranmaya hazır QR kod. Kod: ${normalizedValue}` : "Taranmaya hazır QR kod"} style={styles.wrap}>
+      <View style={[styles.frame, { width: renderedSize, height: renderedSize }]}>
         <QRCode
           value={normalizedValue}
           size={qrSize}
@@ -38,7 +40,7 @@ export function QrPreview({ value, size = 192, showCode = true }: Props) {
       </View>
 
       {showCode ? (
-        <Text style={styles.codeText} selectable numberOfLines={3}>
+        <Text accessibilityLabel={`Kod: ${normalizedValue}`} maxFontSizeMultiplier={1.6} style={styles.codeText} selectable numberOfLines={3}>
           {normalizedValue}
         </Text>
       ) : null}

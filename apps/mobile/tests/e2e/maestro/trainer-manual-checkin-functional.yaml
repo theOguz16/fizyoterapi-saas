@@ -13,15 +13,18 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
       id: "trainer-home-screen"
     timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-home-qr-button"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "trainer-home-qr-button"
 - waitForAnimationToEnd
@@ -30,11 +33,7 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcheckin%3Fmode%3Dmanual%26backTo%3D%2F%28trainer%29%2Fhome"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
       id: "trainer-checkin-screen"
@@ -47,16 +46,18 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "trainer-checkin-manual-input"
 - inputText: "MEM-DEMO001"
-- scrollUntilVisible:
-    element:
-      id: "trainer-checkin-submit"
-    direction: DOWN
-    timeout: 10000
-- tapOn:
-    text: "Ders girişini onayla"
-    retryTapIfNoChange: true
+- pressKey: ENTER
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
 - scrollUntilVisible:
     element:
       id: "trainer-checkin-result"
     direction: DOWN
     timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- assertVisible: "Durum: Başarılı"
+- assertVisible: "Check-in tamamlandı. Paket hakkından 1 ders düşüldü."

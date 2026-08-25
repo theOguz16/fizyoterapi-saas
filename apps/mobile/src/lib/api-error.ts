@@ -4,17 +4,42 @@ export type ApiErrorPayload = {
   error?: {
     code?: string;
     message?: string;
+    fields?: Record<string, string | string[]>;
   };
+};
+
+export type AppErrorKind =
+  | "offline"
+  | "timeout"
+  | "unauthorized"
+  | "forbidden"
+  | "not-found"
+  | "validation"
+  | "conflict"
+  | "rate-limit"
+  | "server"
+  | "unknown";
+
+export type NormalizedAppError = {
+  kind: AppErrorKind;
+  title: string;
+  message: string;
+  retryable: boolean;
+  status?: number;
+  code?: string;
+  fieldErrors?: Record<string, string | string[]>;
 };
 
 export class ApiClientError extends Error {
   status: number;
   code?: string;
+  payload?: ApiErrorPayload;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, payload?: ApiErrorPayload) {
     super(message);
     this.status = status;
     this.code = code;
+    this.payload = payload;
   }
 }
 
@@ -74,4 +99,109 @@ export function resolveHttpStatusMessage(status: number, fallback: string) {
   if (status === 429) return "Çok hızlı işlem yaptın. Kısa bir süre bekleyip tekrar dene.";
   if (status >= 500) return "Sunucuda geçici bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.";
   return fallback;
+}
+
+const ERROR_COPY: Record<AppErrorKind, Pick<NormalizedAppError, "title" | "message" | "retryable">> = {
+  offline: {
+    title: "İnternet bağlantısı yok",
+    message: "Son kayıtlı verileri gösteriyoruz. Bağlantını kontrol edip tekrar deneyebilirsin.",
+    retryable: true,
+  },
+  timeout: {
+    title: "İstek zaman aşımına uğradı",
+    message: "Sunucu beklenenden geç yanıt verdi. Lütfen tekrar dene.",
+    retryable: true,
+  },
+  unauthorized: {
+    title: "Oturumun sona erdi",
+    message: "Devam etmek için tekrar giriş yapman gerekiyor.",
+    retryable: false,
+  },
+  forbidden: {
+    title: "Bu işlem için yetkin yok",
+    message: "Bu içeriğe erişmek için gerekli yetkiye sahip değilsin.",
+    retryable: false,
+  },
+  "not-found": {
+    title: "Kayıt bulunamadı",
+    message: "Aradığın kayıt silinmiş veya artık erişilebilir olmayabilir.",
+    retryable: false,
+  },
+  validation: {
+    title: "Bilgileri kontrol et",
+    message: "Bazı alanlar doğrulanamadı. İşaretli alanları kontrol edip tekrar dene.",
+    retryable: false,
+  },
+  conflict: {
+    title: "İşlem çakıştı",
+    message: "Kayıt başka bir işlemle değişmiş olabilir. Ekranı yenileyip tekrar dene.",
+    retryable: true,
+  },
+  "rate-limit": {
+    title: "Biraz yavaşlayalım",
+    message: "Kısa sürede çok fazla istek gönderildi. Biraz bekleyip tekrar dene.",
+    retryable: true,
+  },
+  server: {
+    title: "Geçici bir sorun oluştu",
+    message: "Sunucu şu anda yanıt veremiyor. Biraz sonra tekrar dene.",
+    retryable: true,
+  },
+  unknown: {
+    title: "Bir sorun oluştu",
+    message: "İşlem tamamlanamadı. Lütfen tekrar dene.",
+    retryable: true,
+  },
+};
+
+function errorKind(status: number, code?: string): AppErrorKind {
+  if (status === 0 || code === "NETWORK_REQUEST_FAILED") return "offline";
+  if (status === 408 || status === 504 || code === "REQUEST_TIMEOUT") return "timeout";
+  if (status === 401) return "unauthorized";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not-found";
+  if (status === 400 || status === 422 || code === "VALIDATION_ERROR") return "validation";
+  if (status === 409) return "conflict";
+  if (status === 429) return "rate-limit";
+  if (status >= 500) return "server";
+  return "unknown";
+}
+
+/** Converts transport/API errors into safe, consistent copy for every screen. */
+export function normalizeApiError(error: unknown, fallbackMessage?: string): NormalizedAppError {
+  const candidate = error && typeof error === "object" ? error as {
+    status?: unknown;
+    code?: unknown;
+    payload?: ApiErrorPayload;
+    response?: { status?: unknown; data?: ApiErrorPayload };
+  } : null;
+  const statusValue = candidate?.status ?? candidate?.response?.status;
+  const status = typeof statusValue === "number" ? statusValue : undefined;
+  const codeValue = candidate?.code ?? candidate?.payload?.error?.code ?? candidate?.response?.data?.error?.code;
+  const code = typeof codeValue === "string" ? codeValue : undefined;
+  const kind = errorKind(status ?? -1, code);
+  const copy = ERROR_COPY[kind];
+  const payload = candidate?.payload ?? candidate?.response?.data;
+  const mappedMessage = code && UI_ERROR_MAP[code];
+
+  return {
+    kind,
+    title: copy.title,
+    message: mappedMessage || (kind === "unknown" && fallbackMessage ? fallbackMessage : copy.message),
+    retryable: copy.retryable,
+    status,
+    code,
+    fieldErrors: payload?.error?.fields,
+  };
+}
+
+export function shouldRetryQuery(failureCount: number, error: unknown) {
+  const normalized = normalizeApiError(error);
+  if (!normalized.retryable || normalized.kind === "offline") return false;
+  if (normalized.kind === "rate-limit") return failureCount < 1;
+  return failureCount < 2;
+}
+
+export function queryRetryDelay(attemptIndex: number) {
+  return Math.min(8_000, 750 * 2 ** Math.max(0, attemptIndex));
 }

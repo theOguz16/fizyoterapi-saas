@@ -1,27 +1,40 @@
 appId: com.fizyoflow.mobile
 ---
-- runFlow: trainer-group-classes-smoke.yaml
+- runFlow: trainer-group-class-create-functional.yaml
 - launchApp:
     clearState: true
     clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
-    timeout: 20000
-- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
+    timeout: 120000
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
+      id: "welcome-login-button"
+    timeout: 30000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
+- scrollUntilVisible:
+    element:
       id: "admin-approval-open-group-class-create"
+    direction: DOWN
     timeout: 20000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "admin-approval-open-group-class-create"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "admin-approval-approve"
+    direction: DOWN
     timeout: 15000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "admin-approval-approve"
 - extendedWaitUntil:
     visible:
       id: "admin-approvals-screen"
     timeout: 20000
+- assertNotVisible:
+    id: "admin-approval-open-group-class-create"

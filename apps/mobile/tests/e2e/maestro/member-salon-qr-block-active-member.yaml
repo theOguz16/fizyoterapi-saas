@@ -4,29 +4,18 @@ appId: com.fizyoflow.mobile
     clearState: true
     clearKeychain: true
 
-- tapOn:
-    text: "Aç"
-    optional: true
+- runFlow: _dismiss-ios-open-prompt.yaml
 
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 3000
 - assertVisible:
     id: "welcome-login-button"
-- tapOn:
-    id: "welcome-login-button"
-- tapOn:
-    id: "login-identity-input"
-- inputText: "member@gmail.com"
-- tapOn: "Hesabına giriş yap"
-- tapOn:
-    id: "login-password-input"
-- inputText: "member123"
-- tapOn:
-    id: "login-submit-button"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- runFlow: _dismiss-ios-open-prompt.yaml
 - extendedWaitUntil:
     visible:
-      id: "member-home-profile-button"
+      id: "member-tab-profile"
     timeout: 20000
 
 # Member aktif demo-salon'a bağlıyken farklı salon QR simülasyonu.
@@ -37,4 +26,4 @@ appId: com.fizyoflow.mobile
 
 # Yeni salon onboarding açılmamalı, member ana akışta kalmalı.
 - assertVisible:
-    id: "member-home-profile-button"
+    id: "member-tab-profile"

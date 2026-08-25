@@ -12,20 +12,12 @@ appId: com.fizyoflow.mobile
 - openLink: "fizyoflow://e2e-reset"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
 - waitForAnimationToEnd:
     timeout: 2000
-- runFlow:
-    when:
-      visible: "Aç"
-    commands:
-      - tapOn: "Aç"
+- runFlow: _dismiss-ios-open-prompt.yaml
 
 - extendedWaitUntil:
     visible:
@@ -35,18 +27,19 @@ appId: com.fizyoflow.mobile
 
 - scrollUntilVisible:
     element:
-      id: "trainer-home-session-0"
+      id: "trainer-home-session-0-note"
     direction: DOWN
     timeout: 15000
-- assertVisible: "Bugünkü Reformer Seansı"
+    visibilityPercentage: 50
+    centerElement: true
+- assertVisible:
+    id: "trainer-home-session-0"
 - assertVisible:
     id: "trainer-home-session-0-checkin"
 - assertVisible:
     id: "trainer-home-session-0-member"
 - assertVisible:
     id: "trainer-home-session-0-note"
-- assertVisible:
-    id: "trainer-home-session-0-schedule"
 
 - tapOn:
     id: "trainer-home-session-0-note"
@@ -56,9 +49,18 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "trainer-note-title-input"
 - inputText: "E2E Seans Notu"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-body-input"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "trainer-note-body-input"
 - inputText: "Danisanin seans sonrasi takip notu."
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
       id: "trainer-note-submit"
@@ -66,51 +68,56 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - tapOn:
     id: "trainer-note-submit"
-- extendedWaitUntil:
-    visible: "E2E Seans Notu"
-    timeout: 15000
+- tapOn:
+    id: "trainer-note-title-input"
+- eraseText
+- inputText: "E2E Seans Notu Guncel"
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
-      id: "trainer-note-edit-0"
+      id: "trainer-note-body-input"
     direction: DOWN
     timeout: 10000
 - tapOn:
-    id: "trainer-note-edit-0"
-- extendedWaitUntil:
-    visible:
-      id: "trainer-note-edit-body-input"
-    timeout: 15000
-- tapOn:
-    id: "trainer-note-edit-body-input"
+    id: "trainer-note-body-input"
 - eraseText
 - inputText: "Danisanin guncellenmis E2E takip notu."
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
-      id: "trainer-note-edit-submit"
+      id: "trainer-note-submit"
     direction: DOWN
     timeout: 10000
 - tapOn:
-    id: "trainer-note-edit-submit"
-- extendedWaitUntil:
-    visible: "Danisanin guncellenmis E2E takip notu."
-    timeout: 15000
-
-- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
-- extendedWaitUntil:
-    visible:
-      id: "trainer-home-screen"
-    timeout: 20000
+    id: "trainer-note-submit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
 - scrollUntilVisible:
-    element:
-      id: "trainer-home-session-0-schedule"
+    element: "Danisanin guncellenmis E2E takip notu."
     direction: DOWN
     timeout: 15000
-- tapOn:
-    id: "trainer-home-session-0-schedule"
+    visibilityPercentage: 50
+    centerElement: true
 
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fcalendar"
 - extendedWaitUntil:
-    visible: "Ders özeti"
+    visible:
+      id: "trainer-calendar-screen"
     timeout: 20000
+- tapOn:
+    id: "trainer-calendar-day-with-events-1"
+- scrollUntilVisible:
+    element:
+      id: "trainer-calendar-selected-event-1"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "trainer-calendar-selected-event-1"
 - scrollUntilVisible:
     element:
       id: "trainer-calendar-open-reschedule"
@@ -124,17 +131,15 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "trainer-calendar-open-reschedule"
 - extendedWaitUntil:
-    visible: "Saat değişikliği öner"
+    visible: "Alternatif saat otomatik seçilecek"
     timeout: 15000
-- tapOn: "Yeni saat .*"
-- tapOn: "Öneriyi gönder"
+- tapOn: "Öneriyi oluştur"
 - extendedWaitUntil:
-    visible: "Saat değişikliği gönderildi"
+    visible: "Saat Onayı Bekliyor"
     timeout: 20000
-- tapOn: "Tamam|OK"
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Frequest-center"
 - extendedWaitUntil:
     visible:
       id: "trainer-request-center-screen"
     timeout: 20000
-- assertVisible: "Bekliyor"
+- assertVisible: "Durum: Bekliyor"

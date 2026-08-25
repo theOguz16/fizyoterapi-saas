@@ -8,7 +8,7 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { EmptyPanel } from "@/theme/components/empty-panel";
 import { AppIcon } from "@/theme/components/app-icon";
 import { MetricCard } from "@/theme/components/metric-card";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { tokens } from "@/theme/tokens";
 import { normalizeTrainerRiskRows } from "@/lib/trainer-risk";
 
@@ -29,12 +29,16 @@ export default function TrainerRiskScreen() {
   return (
     <AppShell testID="trainer-risk-screen" title="Riskli danışanlar" subtitle="Mobil hızlı takip için risk özet listesini tek ekranda topla." icon="risk" refreshing={isRefetching} onRefresh={() => { void refetch(); }} showBackButton>
       <View style={styles.metricsRow}>
-        <MetricCard label="Riskli kişi" value={rows.length} hint="Takip listesi" icon="risk" />
-        <MetricCard label="Yüksek risk" value={highRiskCount} hint="Öncelikli aksiyon" icon="shield" />
+        <MetricCard testID="trainer-risk-count-metric" label="Riskli kişi" value={rows.length} hint="Takip listesi" icon="risk" />
+        <MetricCard testID="trainer-high-risk-metric" label="Yüksek risk" value={highRiskCount} hint="Öncelikli aksiyon" icon="shield" />
       </View>
       {rows.length === 0 ? <EmptyPanel title="Risk görünmüyor" description="Şu an kritik danışan listesi boş." iconName="shield" iconTone="neutral" /> : (
-        <ScrollPanel maxHeight={500}>
-          {rows.map((row, index) => (
+        <VirtualListPanel
+          data={rows}
+          maxHeight={500}
+          minHeight={320}
+          keyExtractor={(row) => row.key}
+          renderItem={(row, index) => (
             <SurfaceCard key={row.key} testID={`trainer-risk-item-${index}`}>
               <View style={styles.headerRow}>
                 <Text style={styles.title}>{row.name}</Text>
@@ -48,8 +52,8 @@ export default function TrainerRiskScreen() {
                 <Text style={styles.reason}>Neden: {row.reason || "Katılım düştü, paket azalıyor veya takip verisi eksik."}</Text>
               </View>
             </SurfaceCard>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       )}
     </AppShell>
   );

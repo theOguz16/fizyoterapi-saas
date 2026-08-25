@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import {
   createTrainerGroupClassApi,
   deleteTrainerGroupClassApi,
@@ -11,8 +11,8 @@ import {
   type TrainerAssignedPackage,
 } from "@/lib/mobile-api";
 import { buildSlotStartMinutes, normalizeBusinessHours } from "@/lib/scheduling/business-hours.normalize";
-import { formatGroupClassDateTime, formatGroupClassPrice, getGroupClassAudienceLabel, getGroupClassScheduleLabel } from "@/lib/group-classes";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { formatGroupClassDateTime, formatGroupClassPrice, getGroupClassAudienceLabel } from "@/lib/group-classes";
+import { showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { MetricCard } from "@/theme/components/metric-card";
@@ -26,6 +26,10 @@ import { ConnectivityBanner } from "@/components/connectivity-banner";
 import { tokens } from "@/theme/tokens";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { bookingStatusLabel } from "@/lib/labels";
+import { EmptyState } from "@/theme/components/empty-state";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 const AUDIENCE_OPTIONS = [
   { label: "Salondaki herkese açık", value: "SALON_MEMBERS" as const },
@@ -49,6 +53,7 @@ const DAY_OPTIONS = [
 
 type ScheduleMode = "SPECIAL" | "RECURRING";
 type PickerType = "date" | "time" | null;
+type GroupClassViewMode = "LIST" | "FORM";
 
 type DateOption = {
   value: string;
@@ -257,9 +262,13 @@ function packageDisplayName(pkg?: TrainerAssignedPackage | null) {
 }
 
 export default function TrainerGroupClassesScreen() {
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   const [form, setForm] = useState<GroupClassFormState>(buildEmptyForm());
   const [memberQuery, setMemberQuery] = useState("");
   const [activePicker, setActivePicker] = useState<PickerType>(null);
+  const [viewMode, setViewMode] = useState<GroupClassViewMode>("LIST");
+  const [showDiscardConfirmation, setShowDiscardConfirmation] = useState(false);
 
   const groupClassesQuery = useQuery({
     queryKey: ["trainer-group-classes"],
@@ -378,11 +387,47 @@ export default function TrainerGroupClassesScreen() {
     }
   }, [form.recurrence_days.length, workingDayOptions]);
 
-  const recurringCount = useMemo(
-    () => rows.filter((row) => String(row.recurrence_label || "").trim()).length,
+  const pendingCount = useMemo(
+    () => rows.filter((row) => String(row.status || "").toUpperCase() === "PENDING").length,
     [rows]
   );
-  const specialDateCount = rows.length - recurringCount;
+
+  function buildCreateForm() {
+    const fallbackPackage = packages[0] || null;
+    return {
+      ...buildEmptyForm(),
+      package_id: fallbackPackage?.id || "",
+      package_title: packageDisplayName(fallbackPackage),
+      lesson_name: packageDisplayName(fallbackPackage),
+      lesson_category: String(fallbackPackage?.lesson_category || "GRUP"),
+      price: fallbackPackage?.display_price ? String(fallbackPackage.display_price) : "",
+      capacity: String(fallbackPackage?.capacity || 12),
+      date: dateOptions[0]?.value || "",
+      time: timeOptions[0]?.value || "",
+      recurrence_days: workingDayOptions[0] ? [workingDayOptions[0].value] : [],
+    } satisfies GroupClassFormState;
+  }
+
+  function openCreateForm() {
+    const nextForm = buildCreateForm();
+    setForm(nextForm);
+    setMemberQuery("");
+    setActivePicker(null);
+    setShowDiscardConfirmation(false);
+    setViewMode("FORM");
+  }
+
+  function closeForm() {
+    setForm(buildEmptyForm());
+    setMemberQuery("");
+    setActivePicker(null);
+    setShowDiscardConfirmation(false);
+    setViewMode("LIST");
+  }
+
+  function requestCloseForm() {
+    setShowDiscardConfirmation(true);
+  }
 
   const saveMutation = useMutation({
   mutationFn: async () => {
@@ -493,25 +538,11 @@ export default function TrainerGroupClassesScreen() {
   },
 
   onSuccess: () => {
-    const fallbackPackage = selectedPackage || packages[0] || null;
-
-    setForm({
-      ...buildEmptyForm(),
-      package_id: fallbackPackage?.id || "",
-      package_title: packageDisplayName(fallbackPackage),
-      lesson_name: packageDisplayName(fallbackPackage),
-      lesson_category: String(fallbackPackage?.lesson_category || "GRUP"),
-      price: fallbackPackage?.display_price ? String(fallbackPackage.display_price) : "",
-      date: dateOptions[0]?.value || "",
-      time: timeOptions[0]?.value || "",
-      recurrence_days: workingDayOptions[0] ? [workingDayOptions[0].value] : [],
-    });
-
-    setMemberQuery("");
-
-    showInfoAlert(
-      form.id ? "Güncelleme onaya gönderildi" : "Grup dersi onaya gönderildi",
-      form.id
+    const wasEditing = Boolean(form.id);
+    closeForm();
+    showSuccessNotice(
+      wasEditing ? "Güncelleme onaya gönderildi" : "Grup dersi onaya gönderildi",
+      wasEditing
         ? "Değişiklikler admin onayından sonra takvime yansıyacak."
         : "Yeni grup dersi admin onayından sonra takvime yansıyacak."
     );
@@ -556,7 +587,7 @@ export default function TrainerGroupClassesScreen() {
   },
 
   onSuccess: () => {
-    showInfoAlert(
+    showSuccessNotice(
       "Silme talebi gönderildi",
       "Eğitmen silmek istiyor talebi admin onayına gönderildi. Admin onaylayana kadar ders aktif kalır."
     );
@@ -580,7 +611,7 @@ export default function TrainerGroupClassesScreen() {
       return nativeDay === 0 ? 7 : nativeDay;
     })();
 
-    setForm({
+    const nextForm: GroupClassFormState = {
       id: row.id,
       lesson_name: row.lesson_name || row.title || "",
       package_id: String(row.related_package_id || ""),
@@ -598,7 +629,11 @@ export default function TrainerGroupClassesScreen() {
       capacity: String(row.capacity || ""),
       notification_scope: row.notification_scope || "SALON_MEMBERS",
       invited_member_ids: Array.isArray(row.invited_member_ids) ? row.invited_member_ids : [],
-    });
+    };
+    setForm(nextForm);
+    setMemberQuery("");
+    setActivePicker(null);
+    setViewMode("FORM");
   }
 
 function confirmDelete(row: GroupClassSession) {
@@ -647,11 +682,35 @@ function confirmDelete(row: GroupClassSession) {
     });
   }
 
+  function submitGroupClass() {
+    if (saveMutation.isPending) return;
+    Keyboard.dismiss();
+    setActivePicker(null);
+    saveMutation.mutate();
+  }
+
+  if (groupClassesQuery.isLoading && !groupClassesQuery.data) {
+    return <AppShell testID="trainer-group-classes-list-view" title="Grup dersleri" subtitle="Yaklaşan ve onay bekleyen grup derslerini tek yerden yönet." icon="calendar"><QueryState mode="loading" title="Grup dersleri hazırlanıyor" /></AppShell>;
+  }
+
+  if (groupClassesQuery.isError && !groupClassesQuery.data) {
+    return <AppShell testID="trainer-group-classes-list-view" title="Grup dersleri" subtitle="Yaklaşan ve onay bekleyen grup derslerini tek yerden yönet." icon="calendar"><QueryState mode="error" error={groupClassesQuery.error} onRetry={() => void groupClassesQuery.refetch()} /></AppShell>;
+  }
+
   return (
     <>
       <AppShell
-        title="Grup dersleri"
-        subtitle="Takvimi çalışma günlerine göre seç, uygun paketi bağla ve salon üyelerini davet panelinden yönet."
+        formMode={viewMode === "FORM"}
+        key={viewMode}
+        testID={viewMode === "LIST" ? "trainer-group-classes-list-view" : "trainer-group-classes-form-view"}
+        title={viewMode === "LIST" ? "Grup dersleri" : form.id ? "Grup dersini düzenle" : "Yeni grup dersi"}
+        subtitle={
+          viewMode === "LIST"
+            ? "Yaklaşan ve onay bekleyen grup derslerini tek yerden yönet."
+            : form.id
+              ? `${form.lesson_name || "Grup dersi"} bilgilerini güncelle ve yeniden onaya gönder.`
+              : "Paketi, takvimi ve görünürlük ayarlarını belirleyip yönetici onayına gönder."
+        }
         icon="calendar"
         refreshing={groupClassesQuery.isRefetching || formOptionsQuery.isRefetching}
         onRefresh={() => {
@@ -660,15 +719,84 @@ function confirmDelete(row: GroupClassSession) {
         }}
         showBackButton
       >
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCell}>
-            <MetricCard label="Tekrarlı" value={recurringCount} hint="Rutin plan" icon="clock" />
-          </View>
-          <View style={styles.metricCell}>
-            <MetricCard label="Özel tarih" value={specialDateCount} hint="Tek seferlik" icon="today" />
-          </View>
-        </View>
+        {groupClassesQuery.isError ? <InlineErrorState error={groupClassesQuery.error} onRetry={() => void groupClassesQuery.refetch()} /> : null}
+        {formOptionsQuery.isError ? <InlineErrorState error={formOptionsQuery.error} onRetry={() => void formOptionsQuery.refetch()} /> : null}
+        {viewMode === "LIST" ? (
+          <>
+            <View style={styles.metricsRow}>
+              <View style={styles.metricCell}>
+                <MetricCard label="Toplam ders" value={rows.length} hint="Aktif kayıtlar" icon="calendar" />
+              </View>
+              <View style={styles.metricCell}>
+                <MetricCard label="Onay bekleyen" value={pendingCount} hint="Yönetici işlemi" icon="clock" />
+              </View>
+            </View>
 
+            <SurfaceCard tone="primary">
+              <SectionTitle
+                title="Derslerini yönet"
+                subtitle="Yeni bir grup dersi oluşturabilir veya mevcut kayıtları aşağıdaki listeden düzenleyebilirsin."
+              />
+              <ActionButton
+                testID="trainer-group-classes-open-create"
+                label="Yeni grup dersi"
+                icon="calendar"
+                onPress={openCreateForm}
+                disabled={packages.length === 0}
+              />
+              {packages.length === 0 ? (
+                <Text style={styles.helperText}>
+                  Grup dersi açmaya uygun paket bulunmuyor. Önce yönetici panelinden grup paketi oluşturulmalı.
+                </Text>
+              ) : null}
+            </SurfaceCard>
+          </>
+        ) : (
+          <SurfaceCard tone="primary">
+            <Text testID="trainer-group-classes-form-title" style={styles.formViewTitle}>
+              {form.id ? "Grup dersini düzenle" : "Yeni grup dersi"}
+            </Text>
+            <Text style={styles.helperText}>
+              {form.id
+                ? "Değişiklikler yönetici onayından sonra yayınlanır."
+                : "Formu tamamladıktan sonra ders yönetici onayına gönderilir."}
+            </Text>
+            <ActionButton
+              testID="trainer-group-classes-form-back"
+              label="Derslerime dön"
+              icon="arrow-left"
+              variant="ghost"
+              onPress={requestCloseForm}
+            />
+          </SurfaceCard>
+        )}
+
+        {viewMode === "FORM" ? (
+          <>
+        {showDiscardConfirmation ? (
+          <SurfaceCard testID="trainer-group-classes-discard-confirmation" tone="warning">
+            <SectionTitle
+              title="Değişiklikler kaydedilmedi"
+              subtitle="Formdaki değişiklikleri bırakıp ders listesine dönmek istiyor musun?"
+            />
+            <View style={styles.actions}>
+              <ActionButton
+                testID="trainer-group-classes-discard-stay"
+                label="Formda kal"
+                icon="arrow-left"
+                variant="ghost"
+                onPress={() => setShowDiscardConfirmation(false)}
+              />
+              <ActionButton
+                testID="trainer-group-classes-discard-confirm"
+                label="Değişiklikleri bırak"
+                icon="risk"
+                variant="danger"
+                onPress={closeForm}
+              />
+            </View>
+          </SurfaceCard>
+        ) : null}
         <SurfaceCard>
           <SectionTitle
             title={form.id ? "Grup dersini güncelle" : "İçerik ve paket"}
@@ -687,7 +815,14 @@ function confirmDelete(row: GroupClassSession) {
             Grup dersi açmaya uygun paket bulunmuyor. Admin panelinden GROUP olan bir paket oluşturmalısın.
           </Text>
         ) : null}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled
+            directionalLockEnabled
+            alwaysBounceVertical={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chips}
+          >
             {packages.map((option) => {
               const active = form.package_id === option.id;
               return (
@@ -783,7 +918,7 @@ function confirmDelete(row: GroupClassSession) {
             onPress={() => setActivePicker("time")}
           />
 
-            <View style={styles.inline}>
+            <View style={[styles.inline, responsive.stackColumns ? styles.inlineStacked : null]}>
               <FormField
               label="Kişi başı ücret"
               value={form.price}
@@ -880,72 +1015,64 @@ function confirmDelete(row: GroupClassSession) {
           <View style={styles.actions}>
             <ActionButton
               testID="trainer-group-classes-submit"
-              label={form.id ? "Güncellemeyi kaydet" : "Grup dersini aç"}
+              label={form.id ? "Güncellemeyi kaydet" : "Onaya gönder"}
               icon="calendar"
-              onPress={() => saveMutation.mutate()}
+              onPress={submitGroupClass}
               loading={saveMutation.isPending}
             />
-            {form.id ? (
-              <ActionButton
-                label="Yeni kayıt başlat"
-                icon="notes"
-                variant="ghost"
-                onPress={() =>
-                  setForm({
-                    ...buildEmptyForm(),
-                    package_id: packages[0]?.id || "",
-                    package_title: packageDisplayName(packages[0] || null),
-                    lesson_name: packageDisplayName(packages[0] || null),
-                    lesson_category: String(packages[0]?.lesson_category || "GRUP"),
-                    price: packages[0]?.display_price ? String(packages[0].display_price) : "",
-                    date: dateOptions[0]?.value || "",
-                    time: timeOptions[0]?.value || "",
-                    recurrence_days: workingDayOptions[0] ? [workingDayOptions[0].value] : [],
-                  })
-                }
-              />
-            ) : null}
           </View>
         </SurfaceCard>
+          </>
+        ) : null}
 
+        {viewMode === "LIST" ? (
         <SurfaceCard>
           <SectionTitle title="Aktif kayıtlar" subtitle="Gerçek grup ders kayıtlarını düzenle, yayını ve davet kurgusunu güncelle." />
           {sortedRows.length === 0 ? (
-            <Text style={styles.empty}>Henüz açılmış grup dersi görünmüyor.</Text>
+            <View style={styles.emptyStateWrap}>
+              <EmptyState
+                title="Henüz grup dersi yok"
+                description="İlk grup dersini oluşturup yönetici onayına gönderebilirsin."
+                icon="calendar"
+              />
+              <ActionButton
+                testID="trainer-group-classes-empty-create"
+                label="İlk grup dersini oluştur"
+                icon="calendar"
+                onPress={openCreateForm}
+                disabled={packages.length === 0}
+              />
+            </View>
           ) : (
-            <ScrollPanel testID="trainer-group-classes-list" maxHeight={460}>
+            <View testID="trainer-group-classes-list" style={styles.recordList}>
               {sortedRows.map((row) => (
                 <SurfaceCard key={row.id} tone="default">
-                  {/* BAŞLIK VE DURUM ROZETİ YAN YANA */}
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                   <Text 
-                    testID={`trainer-group-classes-item-${toTestIdSegment(row.lesson_name || row.title || row.id)}`}
-                    style={[styles.title, { flex: 1 }]}
-                  >
-                    {row.lesson_name || row.title || "Grup dersi"}
-                  </Text>
-                    <StatusBadge 
-                     label={
-                      row.status === "PENDING"
-                        ? "Onay bekliyor"
-                        : row.status === "SCHEDULED"
-                          ? "Yayında"
-                          : bookingStatusLabel(row.status)
-                    }
-                      tone={row.status === "PENDING" ? "warning" : row.status === "SCHEDULED" ? "success" : "danger"} 
+                  <View style={styles.recordHeader}>
+                    <Text
+                      testID={`trainer-group-classes-item-${toTestIdSegment(row.lesson_name || row.title || row.id)}`}
+                      style={styles.recordTitle}
+                    >
+                      {row.lesson_name || row.title || "Grup dersi"}
+                    </Text>
+                    <StatusBadge
+                      label={
+                        row.status === "PENDING"
+                          ? "Onay bekliyor"
+                          : row.status === "SCHEDULED"
+                            ? "Yayında"
+                            : bookingStatusLabel(row.status)
+                      }
+                      tone={row.status === "PENDING" ? "warning" : row.status === "SCHEDULED" ? "success" : "danger"}
                     />
-                  </View>      
-                  <Text style={styles.copy}>{formatGroupClassDateTime(row.starts_at)}</Text>
-                  <Text style={styles.copy}>Plan: {getGroupClassScheduleLabel(row)}</Text>
-                  <Text style={styles.copy}>Paket: {row.package_title || packages.find((item) => item.id === row.related_package_id)?.title || "Bağlı paket yok"}</Text>
-                  <Text style={styles.copy}>Bildirim: {getGroupClassAudienceLabel(row.notification_scope)}</Text>
-                  <Text style={styles.copy}>Kişi başı ücret: {formatGroupClassPrice(row.price)}</Text>
-                  <Text style={styles.copy}>Toplam tahsilat: {formatCurrencyValue(Number(row.planned_total_revenue || 0))}</Text>
+                  </View>
+                  <Text style={styles.recordDate}>{formatGroupClassDateTime(row.starts_at)}</Text>
                   <Text style={styles.copy}>
-                    Eğitmen payı: {formatCurrencyValue(Number(row.trainer_planned_earning || 0))} • %{Number(row.trainer_commission_rate || 25).toFixed(0)}
+                    {row.package_title || packages.find((item) => item.id === row.related_package_id)?.title || "Bağlı paket yok"}
                   </Text>
-                  <Text style={styles.copy}>Davetli: {Number(row.invited_member_count || 0)} • Katılan: {Number(row.joined_member_count || 0)}</Text>
-                  <Text style={styles.hint}>Katılım ve ücret kesinleştirme admin onayıyla tamamlanır.</Text>
+                  <Text style={styles.copy}>
+                    {Number(row.capacity || 0)} kişilik • {Number(row.joined_member_count || 0)} katılımcı • {formatGroupClassPrice(row.price)}
+                  </Text>
+                  <Text style={styles.hint}>{getGroupClassAudienceLabel(row.notification_scope)}</Text>
                   <View style={styles.actions}>
                     <ActionButton
                       testID={`trainer-group-classes-edit-${toTestIdSegment(row.lesson_name || row.title || row.id)}`}
@@ -965,9 +1092,10 @@ function confirmDelete(row: GroupClassSession) {
                   </View>
                 </SurfaceCard>
               ))}
-            </ScrollPanel>
+            </View>
           )}
         </SurfaceCard>
+        ) : null}
       </AppShell>
 
       <SelectionSheet
@@ -1024,15 +1152,18 @@ function PickerField({
 }) {
   return (
     <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+          <Text maxFontSizeMultiplier={1.8} style={styles.fieldLabel}>{label}</Text>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}, ${value}`}
+        accessibilityHint={helper}
         onPress={onPress}
         style={({ pressed }) => [styles.pickerField, pressed ? styles.pickerFieldPressed : null]}
       >
         <View style={styles.pickerFieldContent}>
-          <Text style={styles.pickerFieldValue}>{value}</Text>
-          <Text style={styles.pickerFieldHelper}>{helper}</Text>
+          <Text maxFontSizeMultiplier={1.6} style={styles.pickerFieldValue}>{value}</Text>
+          <Text maxFontSizeMultiplier={1.8} style={styles.pickerFieldHelper}>{helper}</Text>
         </View>
         <AppIcon name="arrow-right" size="sm" tone="neutral" variant="plain" />
       </Pressable>
@@ -1059,28 +1190,37 @@ function SelectionSheet({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={styles.sheetSafe}>
         <View style={styles.sheetHeader}>
-          <Pressable onPress={onClose} style={styles.sheetClose}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Seçim ekranını kapat" onPress={onClose} style={styles.sheetClose}>
             <AppIcon name="arrow-left" size="sm" tone="neutral" variant="plain" />
           </Pressable>
           <View style={styles.sheetTitleWrap}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            <Text style={styles.sheetSubtitle}>{subtitle}</Text>
+            <Text maxFontSizeMultiplier={1.4} style={styles.sheetTitle}>{title}</Text>
+            <Text maxFontSizeMultiplier={1.6} style={styles.sheetSubtitle}>{subtitle}</Text>
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.sheetList}>
+        <ScrollView
+          contentContainerStyle={styles.sheetList}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
+        >
           {rows.map((row, index) => (
             <Pressable
               key={row.key}
               testID={`${testIDPrefix}-${index}`}
+              accessibilityRole="button"
+              accessibilityLabel={[row.label, row.helper].filter(Boolean).join(". ")}
+              accessibilityState={{ selected: row.active }}
               onPress={row.onPress}
               style={({ pressed }) => [styles.sheetRow, row.active ? styles.sheetRowActive : null, pressed ? styles.sheetRowPressed : null]}
             >
               <View style={styles.sheetRowContent}>
-                <Text style={[styles.sheetRowLabel, row.active ? styles.sheetRowLabelActive : null]}>{row.label}</Text>
-                {row.helper ? <Text style={[styles.sheetRowHelper, row.active ? styles.sheetRowHelperActive : null]}>{row.helper}</Text> : null}
+                <Text maxFontSizeMultiplier={1.4} style={[styles.sheetRowLabel, row.active ? styles.sheetRowLabelActive : null]}>{row.label}</Text>
+                {row.helper ? <Text maxFontSizeMultiplier={1.5} style={[styles.sheetRowHelper, row.active ? styles.sheetRowHelperActive : null]}>{row.helper}</Text> : null}
               </View>
-              <Text style={[styles.sheetRowCheck, row.active ? styles.sheetRowCheckActive : null]}>{row.active ? "Seçili" : "Seç"}</Text>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.sheetRowCheck, row.active ? styles.sheetRowCheckActive : null]}>{row.active ? "Seçili" : "Seç"}</Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -1091,6 +1231,34 @@ function SelectionSheet({
 }
 
 const styles = StyleSheet.create({
+  formViewTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.lg,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  emptyStateWrap: {
+    gap: tokens.spacing.sm,
+  },
+  recordList: {
+    gap: tokens.spacing.sm,
+  },
+  recordHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+  },
+  recordTitle: {
+    flex: 1,
+    color: tokens.colors.text,
+    fontSize: tokens.font.lg,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  recordDate: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+  },
   metricsRow: {
     flexDirection: "row",
     gap: tokens.spacing.xs,
@@ -1126,6 +1294,7 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.sm,
     alignItems: "flex-start",
   },
+  inlineStacked: { flexDirection: "column" },
   label: {
     color: tokens.colors.primaryStrong,
     fontSize: tokens.font.xs,
@@ -1247,8 +1416,8 @@ const styles = StyleSheet.create({
     fontFamily: tokens.fontFamily.regular,
   },
   memberAction: {
-    width: 40,
-    height: 40,
+    width: tokens.touch.min,
+    height: tokens.touch.min,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: tokens.colors.border,
@@ -1304,9 +1473,9 @@ const styles = StyleSheet.create({
     paddingBottom: tokens.spacing.md,
   },
   sheetClose: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: tokens.touch.min,
+    height: tokens.touch.min,
+    borderRadius: tokens.touch.min / 2,
     borderWidth: 1,
     borderColor: tokens.colors.border,
     alignItems: "center",

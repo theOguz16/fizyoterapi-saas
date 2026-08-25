@@ -4,11 +4,14 @@ appId: com.fizyoflow.mobile
 - launchApp:
     clearState: true
     clearKeychain: true
-- extendedWaitUntil:
-    visible:
-      id: "welcome-login-button"
-    timeout: 60000
 - openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
@@ -22,22 +25,20 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-password-input"
 - inputText: "member123"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
+- runFlow: _submit-login.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
-      id: "member-home-profile-button"
+      id: "member-tab-profile"
     timeout: 20000
-- scrollUntilVisible:
-    element:
-      id: "member-home-package"
-    direction: DOWN
-    timeout: 15000
-    visibilityPercentage: 50
-    centerElement: true
 - tapOn:
-    id: "member-home-package"
+    id: "member-tab-package"
 - extendedWaitUntil:
     visible:
       id: "member-package-screen"
@@ -47,12 +48,16 @@ appId: com.fizyoflow.mobile
       id: "member-buy-additional-package-0"
     direction: DOWN
     timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
     id: "member-buy-additional-package-0"
 - extendedWaitUntil:
     visible:
       id: "intake-package-detail-screen"
     timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - runFlow:
     when:
       visible: "Duo partner bilgisi"
@@ -82,6 +87,13 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - tapOn:
     id: "package-detail-continue"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - scrollUntilVisible:
     element:
       id: "time-slot-toggle-0-0"
@@ -99,39 +111,59 @@ appId: com.fizyoflow.mobile
     visible:
       id: "intake-booking-summary-screen"
     timeout: 20000
-- scrollUntilVisible:
-    element:
-      id: "intake-booking-summary-submit"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn:
-    id: "intake-booking-summary-submit"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "intake-booking-summary-submit"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "intake-booking-summary-submit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - tapOn:
+          text: "Onaya gönder"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Başvurun alındı|Başvurun incelemeye alındı|Başvurun inceleniyor|Onay bekleniyor|Başvuru gönderildi|Paketlerim"
     timeout: 30000
 
 # Gerçek rol koruması: eğitmen üye ekranına geçirilemez.
-- launchApp:
-    clearState: true
-    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
-    timeout: 120000
-- tapOn:
-    id: "welcome-login-button"
-- tapOn:
-    id: "login-identity-input"
-- inputText: "elisauyar@gmail.com"
-- pressKey: ENTER
-- tapOn:
-    id: "login-password-input"
-- inputText: "trainer123"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fhome"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "trainer-home-screen"
@@ -143,38 +175,26 @@ appId: com.fizyoflow.mobile
     timeout: 15000
 
 # Gerçek admin kararı: oluşturulan ödeme/ek paket talebi reddedilir.
-- launchApp:
-    clearState: true
-    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
-    timeout: 120000
-- tapOn:
-    id: "welcome-login-button"
-- tapOn:
-    id: "login-identity-input"
-- inputText: "oguzhanuyar531@gmail.com"
-- pressKey: ENTER
-- tapOn:
-    id: "login-password-input"
-- inputText: "admin123"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
-- extendedWaitUntil:
-    visible:
-      id: "admin-dashboard-screen"
-    timeout: 20000
-- scrollUntilVisible:
-    element:
-      id: "admin-dashboard-approvals"
-    direction: DOWN
-    timeout: 15000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn:
-    id: "admin-dashboard-approvals"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-login?email=oguzhanuyar531%40gmail.com&password=admin123&redirect=%2F%28admin%29%2Fapprovals"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "admin-approvals-screen"
@@ -201,13 +221,18 @@ appId: com.fizyoflow.mobile
     timeout: 20000
 
 # Gerçek 401 yanıtının kullanıcı mesajına çevrilmesi.
-- launchApp:
-    clearState: true
-    clearKeychain: true
+- openLink: "fizyoflow://e2e-reset"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          clearState: true
+          clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
-    timeout: 120000
+    timeout: 60000
 - tapOn:
     id: "welcome-login-button"
 - tapOn:
@@ -217,9 +242,19 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-password-input"
 - inputText: "yanlis-sifre"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
+- runFlow:
+    when:
+      visible: "Kaydet"
+    commands:
+      - tapOn: "Sonra"
+- runFlow:
+    when:
+      visible:
+        id: "salon-qr-screen"
+    commands:
+      - tapOn:
+          id: "app-shell-back-button"
+- runFlow: _submit-login.yaml
 - extendedWaitUntil:
     visible: "E-posta veya şifre hatalı."
     timeout: 15000

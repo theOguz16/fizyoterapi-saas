@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Keyboard, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getPendingSalonJoinIntent, type SalonJoinIntentSource } from "@/lib/local-preferences";
 import { getUserFacingMessage } from "@/lib/user-feedback";
@@ -16,8 +16,8 @@ import {
   getLegalConsentValidationMessage,
 } from "@/lib/legal-consent";
 import { LegalConsentGroup } from "@/theme/components/legal-consent-group";
-
-const isE2EMode = process.env.EXPO_PUBLIC_E2E_MODE === "1";
+import { SecurePasswordField } from "@/theme/components/secure-password-field";
+import { firstFieldError, getApiFieldErrors, validateRegistrationFields, type FieldErrors, type RegistrationField } from "@/lib/form-validation";
 
 export default function ClinicMemberRegisterScreen() {
   const router = useRouter();
@@ -37,6 +37,10 @@ export default function ClinicMemberRegisterScreen() {
     password: "",
     repeat: "",
   });
+  const repeatPasswordRef = useRef<TextInput>(null);
+  const firstNameRef = useRef<TextInput>(null);
+  const submittingRef = useRef(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<RegistrationField>>({});
 
   useEffect(() => {
     void getPendingSalonJoinIntent().then((intent) => {
@@ -45,12 +49,17 @@ export default function ClinicMemberRegisterScreen() {
   }, [slug]);
 
   async function handleRegister() {
+    if (submittingRef.current) return;
+    Keyboard.dismiss();
     if (!slug) {
       setError("Klinik bağlantısı bulunamadı. QR veya salon bağlantısını yeniden aç.");
       return;
     }
-    if (form.password !== form.repeat) {
-      setError("Şifreler eşleşmiyor.");
+    const validationErrors = validateRegistrationFields(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setFieldErrors(validationErrors);
+      setError("İşaretli alanları kontrol et.");
+      if (firstFieldError(validationErrors, ["first_name", "last_name", "email", "phone", "password", "repeat"]) === "first_name") firstNameRef.current?.focus();
       return;
     }
     const legalError = getLegalConsentValidationMessage(legalConsent);
@@ -60,6 +69,7 @@ export default function ClinicMemberRegisterScreen() {
     }
 
     try {
+      submittingRef.current = true;
       setLoading(true);
       setError("");
       await registerClinicMember({
@@ -72,6 +82,7 @@ export default function ClinicMemberRegisterScreen() {
         join_source: joinSource,
         legal_consent: createRegistrationLegalConsent(legalConsent),
       });
+      setForm((current) => ({ ...current, password: "", repeat: "" }));
       router.replace({
         pathname: memberBookingDraft.packageId
           ? "/(intake-member)/booking-summary"
@@ -79,10 +90,18 @@ export default function ClinicMemberRegisterScreen() {
         params: { slug },
       } as never);
     } catch (err) {
+      setFieldErrors(getApiFieldErrors<RegistrationField>(err));
       setError(getUserFacingMessage(err, "Danışan hesabı oluşturulamadı. Bilgilerini kontrol edip tekrar dene."));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
+  }
+
+  function updateField(field: RegistrationField, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    setError("");
   }
 
   return (
@@ -113,13 +132,41 @@ export default function ClinicMemberRegisterScreen() {
         <Text style={styles.clinic}>{memberBookingDraft.salonName || slug || "Klinik bağlantısı eksik"}</Text>
         <Text style={styles.helper}>QR veya bağlantı hesabını otomatik üye yapmaz; paket ve saatlerin klinik onayına gönderilir.</Text>
       </SurfaceCard>
-      <SurfaceCard>
-        <FormField inputId="member-register-first-name" label="Ad" value={form.first_name} onChangeText={(value) => setForm((prev) => ({ ...prev, first_name: value }))} placeholder="Adın" />
-        <FormField inputId="member-register-last-name" label="Soyad" value={form.last_name} onChangeText={(value) => setForm((prev) => ({ ...prev, last_name: value }))} placeholder="Soyadın" />
-        <FormField inputId="member-register-email" label="E-posta" value={form.email} onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))} placeholder="ornek@mail.com" keyboardType="email-address" autoCapitalize="none" />
-        <FormField inputId="member-register-phone" label="Telefon" value={form.phone} onChangeText={(value) => setForm((prev) => ({ ...prev, phone: value }))} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
-        <FormField inputId="member-register-password" label="Şifre" value={form.password} onChangeText={(value) => setForm((prev) => ({ ...prev, password: value, ...(isE2EMode ? { repeat: value } : {}) }))} placeholder="En az 8 karakter" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
-        <FormField inputId="member-register-repeat" label="Şifre tekrar" value={form.repeat} onChangeText={(value) => setForm((prev) => ({ ...prev, repeat: value }))} placeholder="Şifreni tekrar et" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
+      <SurfaceCard testID="member-register-screen">
+        <FormField ref={firstNameRef} inputId="member-register-first-name" errorTestID="member-register-first-name-error" required error={fieldErrors.first_name} label="Ad" value={form.first_name} onChangeText={(value) => updateField("first_name", value)} placeholder="Adın" />
+        <FormField inputId="member-register-last-name" errorTestID="member-register-last-name-error" required error={fieldErrors.last_name} label="Soyad" value={form.last_name} onChangeText={(value) => updateField("last_name", value)} placeholder="Soyadın" />
+        <FormField inputId="member-register-email" errorTestID="member-register-email-error" required error={fieldErrors.email} label="E-posta" value={form.email} onChangeText={(value) => updateField("email", value)} placeholder="ornek@mail.com" keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress" autoComplete="email" />
+        <FormField inputId="member-register-phone" errorTestID="member-register-phone-error" required error={fieldErrors.phone} label="Telefon" value={form.phone} onChangeText={(value) => updateField("phone", value)} placeholder="05xx xxx xx xx" keyboardType="phone-pad" textContentType="telephoneNumber" autoComplete="tel" />
+        <SecurePasswordField
+          inputId="member-register-password"
+          toggleTestID="member-register-password-toggle"
+          label="Şifre"
+          value={form.password}
+          onChangeText={(value) => updateField("password", value)}
+          placeholder="En az 8 karakter"
+          intent="new"
+          returnKeyType="next"
+          onSubmitEditing={() => repeatPasswordRef.current?.focus()}
+          showRequirement
+          required
+          error={fieldErrors.password}
+          errorTestID="member-register-password-error"
+        />
+        <SecurePasswordField
+          ref={repeatPasswordRef}
+          inputId="member-register-repeat"
+          toggleTestID="member-register-password-confirm-toggle"
+          label="Şifre tekrar"
+          value={form.repeat}
+          onChangeText={(value) => updateField("repeat", value)}
+          placeholder="Şifreni tekrar et"
+          intent="confirmation"
+          returnKeyType="done"
+          onSubmitEditing={() => Keyboard.dismiss()}
+          required
+          error={fieldErrors.repeat || (form.repeat && form.password !== form.repeat ? "Şifreler eşleşmiyor." : undefined)}
+          errorTestID="member-register-repeat-error"
+        />
         <LegalConsentGroup value={legalConsent} onChange={setLegalConsent} context="CLINIC_MEMBER" />
         {error ? <Text testID="member-register-error" style={styles.error}>{error}</Text> : null}
       </SurfaceCard>

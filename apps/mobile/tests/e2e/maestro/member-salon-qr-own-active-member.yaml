@@ -30,7 +30,7 @@ name: member-salon-qr-own-active-member
 
 - extendedWaitUntil:
     visible:
-      id: "member-home-profile-button"
+      id: "member-tab-profile"
     timeout: 20000
 
 # Member zaten demo-salon'a bağlıyken kendi salon QR'ını açıyor.
@@ -38,9 +38,9 @@ name: member-salon-qr-own-active-member
 
 - extendedWaitUntil:
     visible:
-      id: "member-home-profile-button"
+      id: "member-tab-profile"
     timeout: 20000
 
 # Aktif üye kendi salon QR'ını açınca intake kayıt ekranına düşmeden güvenli akışta kalır.
 - assertVisible:
-    id: "member-home-profile-button"
+    id: "member-tab-profile"

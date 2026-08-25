@@ -1,4 +1,6 @@
 import { Alert } from "react-native";
+import { publishInAppNotice } from "@/lib/in-app-notice";
+import { normalizeApiError } from "@/lib/api-error";
 
 const TECHNICAL_ERROR_PATTERNS = [
   /RevenueCat/i,
@@ -25,7 +27,15 @@ export function showInfoAlert(title: string, message: string) {
 }
 
 export function showErrorAlert(title: string, error: unknown, fallback: string) {
-  Alert.alert(title, getUserFacingMessage(error, fallback));
+  Alert.alert(title, normalizeApiError(error, fallback).message);
+}
+
+export function showSuccessNotice(title: string, message: string) {
+  publishInAppNotice(title, message, "success");
+}
+
+export function showInfoNotice(title: string, message: string) {
+  publishInAppNotice(title, message, "info", 4200);
 }
 
 /** A committed server action must not look failed merely because session refresh is unavailable. */

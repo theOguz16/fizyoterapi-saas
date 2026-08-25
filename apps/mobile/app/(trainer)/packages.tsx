@@ -5,6 +5,8 @@ import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { EmptyState } from "@/theme/components/empty-state";
 import { tokens } from "@/theme/tokens";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
 
 export default function TrainerPackagesScreen() {
   const query = useQuery({
@@ -16,17 +18,21 @@ export default function TrainerPackagesScreen() {
 
   return (
     <AppShell testID="trainer-packages-screen" title="Verdiğim paketler" subtitle="Bu alanda yalnızca sana atanmış paketleri ve verdiğin ders türlerini görürsün. Komisyon bilgisi burada gösterilmez." icon="package" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
-      {packages.length === 0 ? (
+      {query.isLoading && !query.data ? (
+        <QueryState mode="loading" title="Paketler hazırlanıyor" />
+      ) : query.isError && !query.data ? (
+        <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} />
+      ) : packages.length === 0 ? (
         <EmptyState title="Atanmış paket görünmüyor" description="Salondaki admin henüz sana bir paket bağlamamış olabilir." icon="package" />
       ) : (
-        packages.map((pkg, index) => (
+        <>{query.isError ? <InlineErrorState error={query.error} onRetry={() => void query.refetch()} /> : null}{packages.map((pkg, index) => (
           <SurfaceCard key={pkg.id} testID={`trainer-package-${index}`} tone="primary">
             <Text style={styles.title}>{pkg.title}</Text>
             <Text style={styles.meta}>{pkg.service_name || pkg.lesson_category_label || "Ders türü tanımlanmadı"}</Text>
             <Text style={styles.copy}>Paket tipi: {pkg.package_type || "-"} • Paket adı: {pkg.package_name || pkg.title}</Text>
             <Text style={styles.copy}>Bu paket üzerinden açılan ders ve rezervasyonlar takviminde kullanılabilir.</Text>
           </SurfaceCard>
-        ))
+        ))}</>
       )}
     </AppShell>
   );

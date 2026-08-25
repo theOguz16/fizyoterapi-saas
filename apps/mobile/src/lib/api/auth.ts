@@ -62,6 +62,13 @@ export async function switchRoleApi(role: SessionRole) {
   });
 }
 
+export async function changePasswordApi(input: { current_password: string; new_password: string }) {
+  return httpRequest<boolean>("/auth/change-password", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export async function meApi() {
   return httpRequest<{
     sub: string;

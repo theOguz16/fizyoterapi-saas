@@ -38,7 +38,7 @@ export default function AdminRevenueReportScreen() {
 
   return (
     <AppShell testID="admin-revenue-report-screen" title="Gelir raporu" subtitle="Tarih ve paket filtresiyle satışlarını karşılaştır, raporu CSV olarak paylaş." icon="earnings" showBackButton refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
-      {query.isLoading && !query.data ? <QueryState mode="loading" title="Gelir raporu hazırlanıyor" /> : query.isError && !query.data ? <QueryState mode="error" onRetry={() => void query.refetch()} /> : null}
+      {query.isLoading && !query.data ? <QueryState mode="loading" title="Gelir raporu hazırlanıyor" /> : query.isError && !query.data ? <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} /> : null}
       <View style={styles.metrics}>
         <MetricCard label="Toplam gelir" value={formatCurrency(report?.total_revenue || 0)} hint={`${report?.sale_count || 0} satış`} icon="money" />
         <MetricCard label="Satış ortalaması" value={formatCurrency(report?.average_sale || 0)} hint="Paket başına" icon="package" />

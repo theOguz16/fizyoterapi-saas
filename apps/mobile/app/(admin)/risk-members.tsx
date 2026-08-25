@@ -1,26 +1,30 @@
 // Bu sayfa mobil uygulamada admin akisindaki risk members ekranini temsil eder.
 // Ekranin amaci ilgili roldeki kullaniciya bu adimda gereken veri, karar veya aksiyonu sunmaktir.
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { getAdminRiskMembersApi, type AdminRiskMemberItem } from "@/lib/mobile-api";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { EmptyState } from "@/theme/components/empty-state";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { AppIcon } from "@/theme/components/app-icon";
+import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";
 
 export default function AdminRiskMembersScreen() {
+  const router = useRouter();
   const query = useQuery({ queryKey: ["admin-risk-members"], queryFn: getAdminRiskMembersApi });
   const items = Array.isArray(query.data) ? query.data : [];
 
   return (
     <AppShell testID="admin-risk-members-screen" title="Riskli üyeler" subtitle="Backend risk havuzundaki aktif üyeleri, ana nedenleri ve önerilen aksiyonu tek listede incele." icon="risk" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={styles.metricsRow}>
-        <MetricCard label="Risk havuzu" value={items.length} hint="Takip edilecek üye" icon="risk" />
+        <MetricCard testID="admin-risk-pool-metric" label="Risk havuzu" value={items.length} hint="Takip edilecek üye" icon="risk" />
         <MetricCard
+          testID="admin-risk-renewal-metric"
           label="Yenileme adayı"
           value={items.filter((item: AdminRiskMemberItem) => resolveRiskReason(item).toLowerCase().includes("paket")).length}
           hint="Paketi bitişe yakın"
@@ -30,8 +34,12 @@ export default function AdminRiskMembersScreen() {
       {items.length === 0 ? (
         <EmptyState title="Risk kaydı yok" description="Aktif risk kriterlerini karşılayan üye bulunursa burada listelenecek." icon="risk" />
       ) : (
-        <ScrollPanel maxHeight={500}>
-          {items.map((item: AdminRiskMemberItem, index: number) => (
+        <VirtualListPanel
+          data={items}
+          maxHeight={500}
+          minHeight={320}
+          keyExtractor={(item, index) => String(item.member_id || index)}
+          renderItem={(item: AdminRiskMemberItem, index: number) => (
             <SurfaceCard key={`${item.member_id || index}`} testID={`admin-risk-member-${index}`}>
               <View style={styles.headerRow}>
                 <View style={styles.identityRow}>
@@ -50,9 +58,34 @@ export default function AdminRiskMembersScreen() {
                 <AppIcon name="campaigns" size="sm" tone="warning" />
                 <Text style={styles.hint}>Bu kayıt kampanya, arama veya paket yenileme aksiyonu için uygundur.</Text>
               </View>
+              <View style={styles.actions}>
+                <ActionButton
+                  testID={`admin-risk-member-detail-${index}`}
+                  label="Üye detayını incele"
+                  icon="members"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(admin)/members/[id]",
+                      params: { id: String(item.member_id), role: "MEMBER", backTo: "/(admin)/risk-members" },
+                    } as never)
+                  }
+                />
+                <ActionButton
+                  testID={`admin-risk-member-action-${index}`}
+                  label="Riskli üyelere aksiyon oluştur"
+                  icon="campaigns"
+                  variant="ghost"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(admin)/campaign-create",
+                      params: { audience: "RISK", source: "risk-members" },
+                    } as never)
+                  }
+                />
+              </View>
             </SurfaceCard>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       )}
     </AppShell>
   );
@@ -116,6 +149,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surfaceSoft,
     borderWidth: 1,
     borderColor: tokens.colors.border,
+  },
+  actions: {
+    gap: tokens.spacing.sm,
   },
   hint: {
     flex: 1,

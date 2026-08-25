@@ -8,6 +8,11 @@ appId: com.fizyoflow.mobile
     visible:
       id: "welcome-scan-salon-qr-button"
     timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-scan-salon-qr-button"
+    timeout: 20000
 - tapOn:
     id: "welcome-scan-salon-qr-button"
 - extendedWaitUntil:
@@ -19,6 +24,12 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "salon-qr-manual-input"
 - inputText: "gecersiz-klinik-kodu"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "salon-qr-manual-submit"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "salon-qr-manual-submit"
 - extendedWaitUntil:
@@ -28,6 +39,12 @@ appId: com.fizyoflow.mobile
     id: "salon-qr-manual-input"
 - eraseText
 - inputText: "https://fizyoflow.com/join/demo-salon?code=FYF-DEMO-SALON-001"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "salon-qr-manual-submit"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
     id: "salon-qr-manual-submit"
 - extendedWaitUntil:
@@ -35,8 +52,13 @@ appId: com.fizyoflow.mobile
       id: "intake-packages-screen"
     timeout: 30000
 - assertVisible: "Klinik paketleri"
-- assertVisible:
-    id: "intake-package-card-0"
+- scrollUntilVisible:
+    element:
+      id: "intake-package-card-0"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 80
+    centerElement: true
 
 # Keşif listesinden gerçek klinik detayına girilir; seçim değiştirme ve bağlantı iptali UI ile yapılır.
 - launchApp:

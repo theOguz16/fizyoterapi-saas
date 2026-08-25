@@ -4,6 +4,10 @@ set -eu
 MODE="test"
 ROLE="all"
 MATRIX="tests/e2e/release-role-matrix.txt"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MOBILE_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+ROOT_DIR=$(cd "$MOBILE_DIR/../.." && pwd)
+ENV_RUNNER="$ROOT_DIR/scripts/mobile-e2e-env.sh"
 
 usage() {
   echo "Kullanim: $0 [--check-syntax | --list] [--role all|shared|admin|trainer|member]" >&2
@@ -55,6 +59,13 @@ if [ "$MODE" != "list" ]; then
   fi
 fi
 
+if [ "$MODE" = "test" ]; then
+  # Release matrisi gerçek API/DB mutasyonları içerir. Her flow ve retry aynı
+  # başlangıç verisini görmezse önceki akışın başvurusu/iptali bir sonrakini
+  # kirletir ve sonuç deterministik olmaz.
+  sh "$ENV_RUNNER" up </dev/null
+fi
+
 selected=0
 passed=0
 failed=0
@@ -63,7 +74,7 @@ MAX_ATTEMPTS="${MAESTRO_MAX_ATTEMPTS:-2}"
 echo "Mobile release role matrix"
 echo "mode=$MODE role=$ROLE"
 
-while IFS='|' read -r flow_role capability flow; do
+while IFS='|' read -r flow_role capability flow setup_command; do
   case "$flow_role" in
     ''|'#'*) continue ;;
   esac
@@ -87,7 +98,18 @@ while IFS='|' read -r flow_role capability flow; do
     attempt=1
     flow_passed=0
     while [ "$attempt" -le "$MAX_ATTEMPTS" ]; do
-      if "$MAESTRO_BIN" "$MODE" "$flow"; then
+      # Matris while-read döngüsü stdin üzerinden ilerler. Maestro aynı stdin'i
+      # miras alırsa kalan satırları tüketip koşuyu ilk flow'dan sonra bitirebilir.
+      if { [ "$MODE" != "test" ] || E2E_SKIP_BUILD=1 sh "$ENV_RUNNER" reset </dev/null; } &&
+        { [ "$MODE" != "test" ] || [ -z "${setup_command:-}" ] || {
+            set -- $setup_command
+            (cd "$ROOT_DIR" && sh "$@" </dev/null)
+          }; } &&
+        { if [ -n "${MAESTRO_UDID:-}" ]; then
+            "$MAESTRO_BIN" "$MODE" -p ios --udid "$MAESTRO_UDID" "$flow" </dev/null
+          else
+            "$MAESTRO_BIN" "$MODE" "$flow" </dev/null
+          fi; }; then
         flow_passed=1
         break
       fi

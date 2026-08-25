@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { getAdminSettingsApi, updateAdminSettingsApi } from "@/lib/mobile-api";
 import { TURKEY_CITIES, TURKEY_DISTRICTS_BY_CITY } from "@/lib/turkey-locations";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
@@ -86,7 +86,7 @@ export default function AdminSalonProfileScreen() {
   },
 
   onSuccess: () => {
-    showInfoAlert(
+    showSuccessNotice(
       "Salon profili güncellendi",
       "Salon bilgileri kayıt edildi."
     );
@@ -163,7 +163,13 @@ export default function AdminSalonProfileScreen() {
           <View style={styles.searchWrap}>
             <TextInput value={search} onChangeText={setSearch} placeholder={pickerMode === "city" ? "Şehir ara" : "İlçe ara"} placeholderTextColor={tokens.colors.textMuted} style={styles.searchInput} />
           </View>
-          <ScrollView contentContainerStyle={styles.optionList}>
+          <ScrollView
+            contentContainerStyle={styles.optionList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
+            contentInsetAdjustmentBehavior="automatic"
+          >
             {visibleOptions.map((item) => (
               <Pressable key={item} onPress={() => handleSelect(item)} style={({ pressed }) => [styles.optionRow, pressed ? styles.optionRowPressed : null]}>
                 <Text style={styles.optionLabel}>{toDisplayLabel(item)}</Text>
@@ -264,8 +270,8 @@ const styles = StyleSheet.create({
     paddingBottom: tokens.spacing.md,
   },
   sheetClose: {
-    width: 40,
-    height: 40,
+    width: tokens.touch.min,
+    height: tokens.touch.min,
     borderRadius: tokens.radius.pill,
     alignItems: "center",
     justifyContent: "center",

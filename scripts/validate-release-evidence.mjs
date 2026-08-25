@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 export const REQUIRED_CRITICAL_FLOWS = [
   "release-admin-login",
-  "admin-package-create-smoke",
+  "admin-package-crud-functional",
   "admin-calendar-smoke",
   "release-trainer-login",
-  "trainer-manual-checkin-smoke",
+  "trainer-manual-checkin-functional",
   "trainer-calendar-smoke",
   "login-role-routing",
   "member-salon-qr-deeplink-smoke",

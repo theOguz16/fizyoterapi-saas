@@ -1,0 +1,196 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+
+# Aktif üye mevcut grup paketini gerçek ödeme/onay zincirinden yeniler.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
+- extendedWaitUntil:
+    visible:
+      id: "member-package-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-renew-package-grup-dersi-8-kisi"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-renew-package-grup-dersi-8-kisi"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    id: "package-detail-continue"
+    retryTapIfNoChange: true
+- waitForAnimationToEnd:
+    timeout: 1000
+- runFlow:
+    when:
+      visible:
+        id: "intake-package-detail-screen"
+    commands:
+      - tapOn:
+          id: "package-detail-continue"
+          retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- extendedWaitUntil:
+    visible: "Özete geç"
+    timeout: 10000
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          text: ".*Open debugger to view warnings.*"
+          point: "95%,50%"
+- waitForAnimationToEnd:
+    timeout: 1000
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible:
+      id: "intake-approval-pending-screen"
+    timeout: 30000
+
+# Aynı hesapla paket ekranına dönüp katalogdaki ilk satın alınabilir paketi
+# mevcut üyeliğe add-on olarak ekler.
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fpackage"
+- extendedWaitUntil:
+    visible:
+      id: "member-package-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-buy-additional-package-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-buy-additional-package-0"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Duo partner bilgisi"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "duo-partner-name-input"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "duo-partner-name-input"
+      - inputText: "Yenileme Addon Partner"
+      - pressKey: ENTER
+      - scrollUntilVisible:
+          element:
+            id: "duo-partner-contact-input"
+          direction: DOWN
+          timeout: 10000
+      - tapOn:
+          id: "duo-partner-contact-input"
+      - inputText: "renewal.addon.partner@example.com"
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "package-detail-continue"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "package-detail-continue"
+    retryTapIfNoChange: true
+- waitForAnimationToEnd:
+    timeout: 1000
+- runFlow:
+    when:
+      visible:
+        id: "intake-package-detail-screen"
+    commands:
+      - tapOn:
+          id: "package-detail-continue"
+          retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- extendedWaitUntil:
+    visible: "Özete geç"
+    timeout: 10000
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          text: ".*Open debugger to view warnings.*"
+          point: "95%,50%"
+- waitForAnimationToEnd:
+    timeout: 1000
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible:
+      id: "intake-approval-pending-screen"
+    timeout: 30000

@@ -6,6 +6,7 @@ import {
   filterAdminPackages,
   sanitizeDecimalInput,
   toTestIdSegment,
+  validateAdminPackageForm,
 } from "@/lib/admin-packages";
 
 describe("admin package helpers", () => {
@@ -55,5 +56,24 @@ describe("admin package helpers", () => {
   it("builds deterministic test ids from Turkish labels", () => {
     expect(toTestIdSegment("Kişisel Antrenman")).toBe("kisisel-antrenman");
     expect(toTestIdSegment("Ücretsiz Ders")).toBe("ucretsiz-ders");
+  });
+
+  it("returns field-specific errors for invalid package numbers", () => {
+    expect(validateAdminPackageForm({
+      title: "",
+      total_credits: "0",
+      weekly_class_hours: "8",
+      duration_days: "",
+      display_price: "-1",
+      trainer_commission_rate: "101",
+      capacity: "0",
+    })).toMatchObject({
+      title: expect.any(String),
+      total_credits: expect.any(String),
+      weekly_class_hours: expect.any(String),
+      display_price: expect.any(String),
+      trainer_commission_rate: expect.any(String),
+      capacity: expect.any(String),
+    });
   });
 });

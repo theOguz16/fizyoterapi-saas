@@ -120,7 +120,7 @@ export default function AdminSalonSetupScreen() {
     <>
       <AppShell testID="admin-clinic-activation-step-1" title="Klinik bilgileri" subtitle="Dört adımlı kurulumun ilk adımında kliniğinin temel bilgilerini oluştur." icon="clinic" showBackButton={false}>
         <View style={styles.metricsRow}>
-          <MetricCard label="Kurulum" value="1 / 4" hint="Klinik bilgileri" icon="clinic" />
+          <MetricCard testID="admin-clinic-activation-progress-1" label="Kurulum" value="1 / 4" hint="Klinik bilgileri" icon="clinic" />
           <MetricCard label="Süre" value="2 dk" hint="Hızlı tamamlanır" icon="clock" />
         </View>
 
@@ -214,7 +214,13 @@ export default function AdminSalonSetupScreen() {
             />
           </View>
 
-          <ScrollView contentContainerStyle={styles.optionList} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.optionList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
+            contentInsetAdjustmentBehavior="automatic"
+          >
             {visibleOptions.map((item) => (
               <Pressable key={item} onPress={() => handleSelect(item)} style={({ pressed }) => [styles.optionRow, pressed ? styles.optionRowPressed : null]}>
                 <Text style={styles.optionLabel}>{toDisplayLabel(item)}</Text>

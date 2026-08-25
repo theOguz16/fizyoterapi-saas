@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { AppIconName } from "@/theme/components/app-icon";
 import { AppIcon } from "@/theme/components/app-icon";
@@ -7,6 +7,7 @@ import { AnimatedEntrance } from "@/theme/components/animated-entrance";
 import { ProgressStepper } from "@/theme/components/progress-stepper";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 export type OnboardingOption = {
   value: string;
@@ -63,6 +64,8 @@ export function OnboardingQuestionStage({
   backTestId,
   optionTestIdPrefix,
 }: Props) {
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentTranslate = useRef(new Animated.Value(0)).current;
   const cardGlow = useRef(new Animated.Value(0)).current;
@@ -95,9 +98,9 @@ export function OnboardingQuestionStage({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingHorizontal: responsive.horizontalPadding }]}>
         <View style={styles.topBar}>
-          <Pressable testID={backTestId} onPress={onBack} style={({ pressed }) => [styles.backButton, pressed ? styles.backButtonPressed : null]}>
+          <Pressable testID={backTestId} accessibilityRole="button" accessibilityLabel="Önceki adıma dön" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed ? styles.backButtonPressed : null]}>
             <AppIcon name="arrow-left" size="sm" tone="neutral" variant="plain" />
           </Pressable>
         <View style={styles.progressWrap}>
@@ -110,15 +113,19 @@ export function OnboardingQuestionStage({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentInsetAdjustmentBehavior="automatic"
+          nestedScrollEnabled
         >
           <Animated.View style={[styles.content, { opacity: contentOpacity, transform: [{ translateY: contentTranslate }] }]}>
             <AnimatedEntrance distance={10}>
               <SurfaceCard tone="primary" padding="hero" style={styles.heroCard}>
-                <View style={styles.heroTop}>
+                <View style={[styles.heroTop, responsive.stackColumns ? styles.heroTopStacked : null]}>
                   <View style={styles.heroHeader}>
-                    <Text style={styles.eyebrow}>{eyebrow}</Text>
-                    <Text style={styles.title}>{title}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
+                    <Text maxFontSizeMultiplier={1.8} style={styles.eyebrow}>{eyebrow}</Text>
+                    <Text maxFontSizeMultiplier={1.4} style={styles.title}>{title}</Text>
+                    <Text maxFontSizeMultiplier={2} style={styles.subtitle}>{subtitle}</Text>
                   </View>
                   {badgeLabel ? (
                     <View style={styles.badge}>
@@ -127,11 +134,11 @@ export function OnboardingQuestionStage({
                   ) : null}
                 </View>
 
-                <View style={styles.helperRow}>
+                <View style={[styles.helperRow, responsive.stackColumns ? styles.helperRowStacked : null]}>
                   <View style={styles.helperIconWrap}>
                     <AppIcon name={icon} active size="md" />
                   </View>
-                  <Text style={styles.helperText}>{helperText}</Text>
+                  <Text maxFontSizeMultiplier={2} style={styles.helperText}>{helperText}</Text>
                 </View>
               </SurfaceCard>
             </AnimatedEntrance>
@@ -156,16 +163,25 @@ export function OnboardingQuestionStage({
                     >
                       <Pressable
                         testID={optionTestIdPrefix ? `${optionTestIdPrefix}-${toOptionTestIdSegment(option.value)}` : undefined}
+                        accessibilityRole="button"
+                        accessibilityLabel={[option.label, option.description].filter(Boolean).join(". ")}
+                        accessibilityState={{ selected: active }}
                         onPress={() => onSelect(option.value)}
-                        style={({ pressed }) => [styles.answerCard, active ? styles.answerCardActive : null, pressed ? styles.answerPressed : null]}
+                        style={({ pressed }) => [styles.answerCard, responsive.stackColumns ? styles.answerCardStacked : null, active ? styles.answerCardActive : null, pressed ? styles.answerPressed : null]}
                       >
                         <View style={[styles.iconWrap, active ? styles.iconWrapActive : null]}>
                           <AppIcon name={option.icon} size="md" tone={active ? "primary" : "neutral"} variant="plain" active={active} />
                         </View>
                         <View style={styles.answerCopy}>
-                          <Text style={[styles.answerLabel, active ? styles.answerLabelActive : null]}>{option.label}</Text>
+                          <Text
+                            testID={optionTestIdPrefix ? `${optionTestIdPrefix}-${toOptionTestIdSegment(option.value)}-label` : undefined}
+                            maxFontSizeMultiplier={1.6}
+                            style={[styles.answerLabel, active ? styles.answerLabelActive : null]}
+                          >
+                            {option.label}
+                          </Text>
                           {option.description ? (
-                            <Text style={[styles.answerDescription, active ? styles.answerDescriptionActive : null]}>{option.description}</Text>
+                            <Text maxFontSizeMultiplier={2} style={[styles.answerDescription, active ? styles.answerDescriptionActive : null]}>{option.description}</Text>
                           ) : null}
                         </View>
                         {active ? <Text style={styles.answerBadge}>Seçildi</Text> : <View style={[styles.answerDot, active ? styles.answerDotActive : null]} />}
@@ -200,8 +216,8 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.md,
   },
   backButton: {
-    width: 42,
-    height: 42,
+    width: tokens.touch.min,
+    height: tokens.touch.min,
     borderRadius: tokens.radius.pill,
     alignItems: "center",
     justifyContent: "center",
@@ -236,6 +252,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: tokens.spacing.sm,
   },
+  heroTopStacked: { flexDirection: "column" },
   heroHeader: {
     flex: 1,
     gap: 4,
@@ -283,6 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm + 2,
   },
+  helperRowStacked: { alignItems: "flex-start" },
   helperIconWrap: {
     width: 40,
     height: 40,
@@ -320,6 +338,7 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.md,
     ...tokens.shadow.soft,
   },
+  answerCardStacked: { flexDirection: "column", alignItems: "flex-start" },
   answerCardActive: {
     backgroundColor: "#F2FAF4",
     borderColor: tokens.colors.primaryStrong,

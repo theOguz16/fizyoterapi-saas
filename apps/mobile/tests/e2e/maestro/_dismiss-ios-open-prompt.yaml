@@ -1,0 +1,12 @@
+appId: com.fizyoflow.mobile
+name: dismiss-ios-open-prompt-helper
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible: "Aç"
+          commands:
+            - tapOn: "Aç"

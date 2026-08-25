@@ -16,6 +16,8 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { ActionButton } from "@/theme/components/action-button";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { tokens } from "@/theme/tokens";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
 
 function getJoinTone(state?: string | null) {
   const normalized = String(state || "").toUpperCase();
@@ -138,10 +140,14 @@ export default function MemberGroupClassesScreen() {
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
     >
-      {rows.length === 0 ? (
+      {query.isLoading && !query.data ? (
+        <QueryState mode="loading" title="Grup dersleri hazırlanıyor" />
+      ) : query.isError && !query.data ? (
+        <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} />
+      ) : rows.length === 0 ? (
         <EmptyState title="Uygun grup dersi yok" description="Sahip olduğun paketlere uygun yeni grup dersleri açıldığında burada listelenecek." icon="calendar" />
       ) : (
-        <ScrollPanel maxHeight={620} contentContainerStyle={styles.stack}>
+        <><>{query.isError ? <InlineErrorState error={query.error} onRetry={() => void query.refetch()} /> : null}</><ScrollPanel maxHeight={620} contentContainerStyle={styles.stack}>
           {rows.map((row: any, index: number) => {
             const joinState = String(row.member_join_state || "OPEN").toUpperCase();
             const isBusy =
@@ -184,7 +190,7 @@ export default function MemberGroupClassesScreen() {
               </SurfaceCard>
             );
           })}
-        </ScrollPanel>
+        </ScrollPanel></>
       )}
     </AppShell>
   );

@@ -35,6 +35,17 @@ export async function syncAdminClinicSubscriptionApi() {
   });
 }
 
+export async function runE2ESubscriptionEventApi(
+  tenantId: string,
+  action: "RESET" | "PURCHASE" | "CANCEL" | "RESTORE",
+  billingCycle: "monthly" | "yearly" = "monthly"
+) {
+  return httpRequest<{ ok: boolean; action?: string }>("/internal/e2e/subscription-event", {
+    method: "POST",
+    body: { tenant_id: tenantId, action, billing_cycle: billingCycle },
+  });
+}
+
 export async function getAdminSubscriptionHistoryApi() {
   return httpRequest<AdminSubscriptionHistoryItem[]>("/admin/clinic/subscription/history");
 }

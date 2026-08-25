@@ -1,8 +1,9 @@
 // Bu paylasilan UI component'i mobil tasarim sistemindeki metric card parcasi icin standart gorunum saglar.
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 type Props = {
   testID?: string;
@@ -13,14 +14,22 @@ type Props = {
 };
 
 export function MetricCard({ testID, label, value, hint, icon }: Props) {
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   return (
-    <View testID={testID} style={styles.card}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityRole="summary"
+      accessibilityLabel={`${label}: ${value}${hint ? `. ${hint}` : ""}`}
+      style={[styles.card, responsive.stackColumns ? styles.cardStacked : { minWidth: responsive.metricMinWidth }]}
+    >
       <View style={styles.header}>
         <AppIcon name={icon} size="sm" tone="primary" />
-        <Text style={styles.label}>{label}</Text>
+        <Text maxFontSizeMultiplier={1.8} style={styles.label}>{label}</Text>
       </View>
-      <Text style={styles.value}>{value}</Text>
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      <Text maxFontSizeMultiplier={1.5} style={styles.value}>{value}</Text>
+      {hint ? <Text maxFontSizeMultiplier={1.8} style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -36,6 +45,7 @@ const styles = StyleSheet.create({
     padding: tokens.spacing.md,
     gap: tokens.spacing.sm,
   },
+  cardStacked: { flexBasis: "100%", width: "100%", minWidth: 0 },
   header: {
     flexDirection: "row",
     alignItems: "center",

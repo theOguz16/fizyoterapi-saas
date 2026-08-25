@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { StyleSheet, Text } from "react-native";
+import { Keyboard, StyleSheet, Text, TextInput } from "react-native";
 import { confirmPasswordResetApi, requestPasswordResetApi } from "@/lib/mobile-api";
 import { getUserFacingMessage } from "@/lib/user-feedback";
 import { MarketingShell } from "@/theme/components/marketing-shell";
@@ -8,9 +8,12 @@ import { SurfaceCard } from "@/theme/components/surface-card";
 import { FormField } from "@/theme/components/form-field";
 import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";
+import { SecurePasswordField } from "@/theme/components/secure-password-field";
+import { getPasswordConfirmationMessage, getPasswordValidationMessage } from "@/lib/password-validation";
+import { getApiFieldErrors, validateEmail, type FieldErrors } from "@/lib/form-validation";
 
 type Stage = "REQUEST" | "CONFIRM" | "DONE";
-const isE2EMode = process.env.EXPO_PUBLIC_E2E_MODE === "1";
+type ResetField = "email" | "token" | "password" | "repeat";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -23,38 +26,58 @@ export default function ResetPasswordScreen() {
   const [repeatPassword, setRepeatPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const repeatPasswordRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const tokenRef = useRef<TextInput>(null);
+  const submittingRef = useRef(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<ResetField>>({});
 
   async function requestReset() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Geçerli bir e-posta adresi gir.");
+    if (submittingRef.current) return;
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setFieldErrors({ email: emailError });
+      setError("İşaretli alanı kontrol et.");
+      emailRef.current?.focus();
       return;
     }
     try {
+      submittingRef.current = true;
       setLoading(true);
       setError("");
       await requestPasswordResetApi(email.trim().toLowerCase());
       setStage("CONFIRM");
     } catch (err) {
+      setFieldErrors(getApiFieldErrors<ResetField>(err));
       setError(getUserFacingMessage(err, "Şifre sıfırlama isteği gönderilemedi. Tekrar dene."));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   }
 
   async function confirmReset() {
+    if (submittingRef.current) return;
     if (!token.trim()) {
-      setError("E-postana gönderilen doğrulama kodunu gir.");
+      setFieldErrors({ token: "E-postana gönderilen doğrulama kodunu gir." });
+      setError("İşaretli alanı kontrol et.");
+      tokenRef.current?.focus();
       return;
     }
-    if (password.length < 8) {
-      setError("Yeni şifren en az 8 karakter olmalıdır.");
+    const passwordError = getPasswordValidationMessage(password);
+    if (passwordError) {
+      setFieldErrors({ password: passwordError.replace("Şifren", "Yeni şifren") });
+      setError("İşaretli alanı kontrol et.");
       return;
     }
-    if (password !== repeatPassword) {
-      setError("Yeni şifreler birbiriyle eşleşmiyor.");
+    const confirmationError = getPasswordConfirmationMessage(password, repeatPassword);
+    if (confirmationError) {
+      setFieldErrors({ repeat: "Yeni şifreler birbiriyle eşleşmiyor." });
+      setError("İşaretli alanı kontrol et.");
       return;
     }
     try {
+      submittingRef.current = true;
       setLoading(true);
       setError("");
       await confirmPasswordResetApi({ token: token.trim(), password });
@@ -62,10 +85,21 @@ export default function ResetPasswordScreen() {
       setRepeatPassword("");
       setStage("DONE");
     } catch (err) {
+      setFieldErrors(getApiFieldErrors<ResetField>(err));
       setError(getUserFacingMessage(err, "Şifre değiştirilemedi. Kodunu kontrol edip tekrar dene."));
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
+  }
+
+  function updateField(field: ResetField, value: string) {
+    if (field === "email") setEmail(value);
+    if (field === "token") setToken(value);
+    if (field === "password") setPassword(value);
+    if (field === "repeat") setRepeatPassword(value);
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    setError("");
   }
 
   if (stage === "DONE") {
@@ -99,25 +133,60 @@ export default function ResetPasswordScreen() {
         />
       }
     >
-      <SurfaceCard>
+      <SurfaceCard testID={requesting ? "password-reset-request-screen" : "password-reset-confirm-screen"}>
         {requesting ? (
           <FormField
+            ref={emailRef}
             inputId="password-reset-email-input"
             label="E-posta"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => updateField("email", value)}
             placeholder="ornek@mail.com"
             autoCapitalize="none"
             keyboardType="email-address"
             textContentType="emailAddress"
             autoComplete="email"
+            required
+            error={fieldErrors.email}
+            errorTestID="password-reset-email-error"
           />
         ) : (
           <>
-            <FormField inputId="password-reset-token-input" label="Doğrulama kodu" value={token} onChangeText={setToken} placeholder="E-postandaki kod" autoCapitalize="none" autoCorrect={false} />
-            <FormField inputId="password-reset-password-input" label="Yeni şifre" value={password} onChangeText={(value) => { setPassword(value); if (isE2EMode) setRepeatPassword(value); }} placeholder="En az 8 karakter" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
-            <FormField inputId="password-reset-repeat-input" label="Yeni şifre tekrar" value={repeatPassword} onChangeText={setRepeatPassword} placeholder="Yeni şifreni tekrar gir" secureTextEntry={!isE2EMode} textContentType={isE2EMode ? "oneTimeCode" : "newPassword"} autoComplete={isE2EMode ? "off" : "new-password"} />
-            <ActionButton testID="password-reset-request-again" label="Yeni bağlantı iste" onPress={() => { setError(""); setStage("REQUEST"); }} variant="ghost" />
+            <FormField ref={tokenRef} inputId="password-reset-token-input" errorTestID="password-reset-token-error" required error={fieldErrors.token} label="Doğrulama kodu" value={token} onChangeText={(value) => updateField("token", value)} placeholder="E-postandaki kod" autoCapitalize="none" autoCorrect={false} />
+            <SecurePasswordField
+              inputId="password-reset-password-input"
+              toggleTestID="password-reset-password-toggle"
+              label="Yeni şifre"
+              value={password}
+              onChangeText={(value) => updateField("password", value)}
+              placeholder="En az 8 karakter"
+              intent="new"
+              returnKeyType="next"
+              onSubmitEditing={() => repeatPasswordRef.current?.focus()}
+              showRequirement
+              required
+              error={fieldErrors.password}
+              errorTestID="password-reset-password-error"
+            />
+            <SecurePasswordField
+              ref={repeatPasswordRef}
+              inputId="password-reset-repeat-input"
+              toggleTestID="password-reset-password-confirm-toggle"
+              label="Yeni şifre tekrar"
+              value={repeatPassword}
+              onChangeText={(value) => updateField("repeat", value)}
+              placeholder="Yeni şifreni tekrar gir"
+              intent="confirmation"
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              required
+              error={fieldErrors.repeat || (repeatPassword && password !== repeatPassword ? "Yeni şifreler birbiriyle eşleşmiyor." : undefined)}
+              errorTestID="password-reset-repeat-error"
+            />
+            {repeatPassword && password === repeatPassword ? (
+              <Text testID="password-reset-repeat-valid" style={styles.valid}>✓ Yeni şifreler eşleşiyor</Text>
+            ) : null}
+            <ActionButton testID="password-reset-request-again" label="Yeni bağlantı iste" onPress={() => { setError(""); setFieldErrors({}); setStage("REQUEST"); }} variant="ghost" />
           </>
         )}
         {error ? <Text testID="password-reset-error" style={styles.error}>{error}</Text> : null}
@@ -136,6 +205,11 @@ const styles = StyleSheet.create({
   },
   error: {
     color: tokens.colors.danger,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
+  valid: {
+    color: tokens.colors.success,
     fontSize: tokens.font.xs,
     fontFamily: tokens.fontFamily.medium,
   },

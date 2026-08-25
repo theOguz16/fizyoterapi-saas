@@ -16,7 +16,7 @@ import {
   getAdminTrainersApi,
   updateAdminPackageApi,
 } from "@/lib/mobile-api";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
 import {
   DEFAULT_SESSION_DURATION,
   LESSON_CATEGORIES,
@@ -37,6 +37,8 @@ import {
   templateLooksLikeTrial,
   templateTypeLabel,
   toTestIdSegment,
+  validateAdminPackageForm,
+  type AdminPackageFormField,
 } from "@/lib/admin-packages";
 import { AppShell } from "@/theme/components/app-shell";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -45,10 +47,13 @@ import { ActionButton } from "@/theme/components/action-button";
 import { EmptyState } from "@/theme/components/empty-state";
 import { SelectionChip } from "@/theme/components/selection-chip";
 import { DetailSheet } from "@/theme/components/detail-sheet";
-import { StyleSheet, Text, TextInput, View, Pressable, Alert } from "react-native";
+import { StyleSheet, Text, TextInput, View, Pressable } from "react-native";
 import { tokens } from "@/theme/tokens";
 import { resolvePackagesEmptyState } from "@/lib/admin-empty-states";
 import { getClinicActivationNextRoute, isClinicActivationFlow } from "@/lib/clinic-activation";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
+import { getApiFieldErrors, type FieldErrors } from "@/lib/form-validation";
 
 export default function AdminPackagesScreen() {
   const router = useRouter();
@@ -87,6 +92,7 @@ export default function AdminPackagesScreen() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "PASSIVE">("ALL");
   const [serviceSheetVisible, setServiceSheetVisible] = useState(false);
   const [trainerSheetVisible, setTrainerSheetVisible] = useState(false);
+  const [packagePendingDeletion, setPackagePendingDeletion] = useState<AdminPackage | null>(null);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("");
   const [selectedVariantKey, setSelectedVariantKey] = useState<string>("");
   const [form, setForm] = useState({
@@ -102,6 +108,8 @@ export default function AdminPackagesScreen() {
     is_visible: true,
     is_public: true,
   });
+  const [formErrors, setFormErrors] = useState<FieldErrors<AdminPackageFormField>>({});
+  const [formError, setFormError] = useState("");
 
   const selectedTemplate = useMemo(() => templates.find((item: AdminPackageFormTemplate) => item.service_key === selectedService) || null, [selectedService, templates]);
   const selectedVariant = LESSON_VARIANTS.find((item) => item.key === selectedVariantKey) || null;
@@ -195,6 +203,14 @@ export default function AdminPackagesScreen() {
       is_visible: true,
       is_public: true,
     });
+    setFormErrors({});
+    setFormError("");
+  }
+
+  function updateFormField(field: AdminPackageFormField, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+    setFormError("");
   }
 
   function applyTemplateSelection(template: AdminPackageFormTemplate) {
@@ -335,7 +351,7 @@ export default function AdminPackagesScreen() {
       return;
     }
 
-    showInfoAlert(
+    showSuccessNotice(
       editingPackageId ? "Paket güncellendi" : "Paket oluşturuldu",
       editingPackageId
         ? "Paket bilgileri güncellendi."
@@ -348,6 +364,8 @@ export default function AdminPackagesScreen() {
   },
 
   onError: (error) => {
+    setFormErrors(getApiFieldErrors<AdminPackageFormField>(error));
+    setFormError("Paket kaydedilemedi. İşaretli alanları kontrol et.");
     showErrorAlert(
       editingPackageId ? "Paket güncellenemedi" : "Paket oluşturulamadı",
       error,
@@ -355,6 +373,23 @@ export default function AdminPackagesScreen() {
     );
   },
 });
+
+  function submitPackage() {
+    if (saveMutation.isPending) return;
+    if (!selectedService) {
+      setFormError("Önce kategori ve alt tür seçmelisin.");
+      return;
+    }
+    const validationErrors = validateAdminPackageForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setFormErrors(validationErrors);
+      setFormError("İşaretli alanları kontrol et.");
+      return;
+    }
+    setFormErrors({});
+    setFormError("");
+    saveMutation.mutate();
+  }
 
   const statusMutation = useMutation({
   mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -378,7 +413,7 @@ export default function AdminPackagesScreen() {
 },
 
   onSuccess: (_response, variables) => {
-    showInfoAlert(
+    showSuccessNotice(
       variables.is_active ? "Paket aktifleştirildi" : "Paket pasife alındı",
       "Paket durumu güncellendi."
     );
@@ -427,7 +462,7 @@ export default function AdminPackagesScreen() {
 },
 
   onSuccess: () => {
-    showInfoAlert(
+    showSuccessNotice(
       "Eğitmen ataması güncellendi",
       "Paketin eğitmen bağlantısı güncellendi."
     );
@@ -464,7 +499,7 @@ export default function AdminPackagesScreen() {
 },
 
   onSuccess: () => {
-    showInfoAlert("Paket silindi", "Paket kaydı kaldırıldı.");
+    showSuccessNotice("Paket silindi", "Paket kaydı kaldırıldı.");
 
     if (editingPackageId) {
       resetForm();
@@ -509,19 +544,21 @@ export default function AdminPackagesScreen() {
   }
 
   function confirmDeletePackage(pkg: AdminPackage) {
-    Alert.alert("Paketi sil", `"${pkg.title}" kalıcı olarak silinecek.`, [
-      { text: "Vazgeç", style: "cancel" },
-      {
-        text: "Sil",
-        style: "destructive",
-        onPress: () => deleteMutation.mutate(pkg.id),
-      },
-    ]);
+    setPackagePendingDeletion(pkg);
+  }
+
+  if (packagesQuery.isLoading && !packagesQuery.data) {
+    return <AppShell testID="admin-packages-screen" title={activation ? "İlk hizmet veya paket" : "Paketler"} subtitle="Paket oluştur, fiyat ve komisyon belirle." icon="package"><QueryState mode="loading" title="Paketler hazırlanıyor" /></AppShell>;
+  }
+
+  if (packagesQuery.isError && !packagesQuery.data) {
+    return <AppShell testID="admin-packages-screen" title={activation ? "İlk hizmet veya paket" : "Paketler"} subtitle="Paket oluştur, fiyat ve komisyon belirle." icon="package"><QueryState mode="error" error={packagesQuery.error} onRetry={() => void packagesQuery.refetch()} /></AppShell>;
   }
 
   return (
     <AppShell
       testID="admin-packages-screen"
+      formMode
       title={activation ? "İlk hizmet veya paket" : "Paketler"}
       subtitle="Paket oluştur, fiyat ve komisyon belirle, ardından paketi eğitmene bağla. Ücretsiz deneme dersi paketi de buradan açılır."
       icon="package"
@@ -533,7 +570,7 @@ export default function AdminPackagesScreen() {
             testID="admin-package-save-button"
             label={editingPackageId ? "Değişiklikleri kaydet" : "Paketi oluştur ve saatlere geç"}
             icon="package"
-            onPress={() => saveMutation.mutate()}
+            onPress={submitPackage}
             loading={saveMutation.isPending}
           />
         ) : undefined
@@ -548,6 +585,7 @@ export default function AdminPackagesScreen() {
           : undefined
       }
     >
+      {packagesQuery.isError ? <InlineErrorState error={packagesQuery.error} onRetry={() => void packagesQuery.refetch()} /> : null}
       {activation ? (
         <SurfaceCard tone="primary">
           <Text style={styles.title}>2 / 4 · İlk hizmetini oluştur</Text>
@@ -587,12 +625,12 @@ export default function AdminPackagesScreen() {
         <View style={styles.formSection}>
           <Text style={styles.formSectionTitle}>Paket bilgileri</Text>
           <View style={styles.formCard}>
-            <FormField inputId="admin-package-title-input" label="Paket adı" value={form.title} onChangeText={(value) => setForm((prev) => ({ ...prev, title: value }))} placeholder="Paket adını gir" />
-            <FormField inputId="admin-package-credits-input" label="Ders hakkı" value={form.total_credits} onChangeText={(value) => setForm((prev) => ({ ...prev, total_credits: sanitizeIntegerInput(value) }))} placeholder="Ders hakkı" keyboardType="number-pad" />
-            <FormField inputId="admin-package-weekly-hours-input" label="Haftalık ders sayısı (1–7)" value={form.weekly_class_hours} onChangeText={(value) => setForm((prev) => ({ ...prev, weekly_class_hours: sanitizeIntegerInput(value) }))} placeholder="Haftalık ders sayısı" keyboardType="number-pad" />
-            <FormField inputId="admin-package-duration-input" label="Geçerlilik süresi" value={form.duration_days} onChangeText={(value) => setForm((prev) => ({ ...prev, duration_days: sanitizeIntegerInput(value) }))} placeholder="Gün sayısı" keyboardType="number-pad" />
-            <FormField inputId="admin-package-price-input" label="Paket fiyatı" value={form.display_price} onChangeText={(value) => setForm((prev) => ({ ...prev, display_price: sanitizeDecimalInput(value) }))} placeholder="Fiyat" keyboardType="decimal-pad" />
-            <FormField inputId="admin-package-commission-input" label="Komisyon (%)" value={form.trainer_commission_rate} onChangeText={(value) => setForm((prev) => ({ ...prev, trainer_commission_rate: sanitizeDecimalInput(value) }))} placeholder="Komisyon oranı" keyboardType="decimal-pad" />
+            <FormField inputId="admin-package-title-input" errorTestID="admin-package-title-error" required error={formErrors.title} label="Paket adı" value={form.title} onChangeText={(value) => updateFormField("title", value)} placeholder="Paket adını gir" />
+            <FormField inputId="admin-package-credits-input" errorTestID="admin-package-credits-error" required error={formErrors.total_credits} label="Ders hakkı" value={form.total_credits} onChangeText={(value) => updateFormField("total_credits", sanitizeIntegerInput(value))} placeholder="Ders hakkı" keyboardType="number-pad" />
+            <FormField inputId="admin-package-weekly-hours-input" errorTestID="admin-package-weekly-hours-error" required error={formErrors.weekly_class_hours} label="Haftalık ders sayısı (1–7)" value={form.weekly_class_hours} onChangeText={(value) => updateFormField("weekly_class_hours", sanitizeIntegerInput(value))} placeholder="Haftalık ders sayısı" keyboardType="number-pad" />
+            <FormField inputId="admin-package-duration-input" errorTestID="admin-package-duration-error" required error={formErrors.duration_days} label="Geçerlilik süresi" value={form.duration_days} onChangeText={(value) => updateFormField("duration_days", sanitizeIntegerInput(value))} placeholder="Gün sayısı" keyboardType="number-pad" />
+            <FormField inputId="admin-package-price-input" errorTestID="admin-package-price-error" required error={formErrors.display_price} label="Paket fiyatı" value={form.display_price} onChangeText={(value) => updateFormField("display_price", sanitizeDecimalInput(value))} placeholder="Fiyat" keyboardType="decimal-pad" />
+            <FormField inputId="admin-package-commission-input" errorTestID="admin-package-commission-error" required error={formErrors.trainer_commission_rate} label="Komisyon (%)" value={form.trainer_commission_rate} onChangeText={(value) => updateFormField("trainer_commission_rate", sanitizeDecimalInput(value))} placeholder="Komisyon oranı" keyboardType="decimal-pad" />
             <View style={styles.modePanel}>
               <Text style={styles.selectorLabel}>Kapasite tipi</Text>
               <View style={styles.chipRow}>
@@ -616,7 +654,7 @@ export default function AdminPackagesScreen() {
                 ))}
               </View>
             </View>
-            <FormField inputId="admin-package-capacity-input" label="Kişi kapasitesi" value={form.capacity} onChangeText={(value) => setForm((prev) => ({ ...prev, capacity: sanitizeIntegerInput(value) }))} placeholder="Kapasite" keyboardType="number-pad" />
+            <FormField inputId="admin-package-capacity-input" errorTestID="admin-package-capacity-error" required error={formErrors.capacity} label="Kişi kapasitesi" value={form.capacity} onChangeText={(value) => updateFormField("capacity", sanitizeIntegerInput(value))} placeholder="Kapasite" keyboardType="number-pad" />
             <View style={styles.previewCard}>
               <Text style={styles.previewTitle}>Planlama özeti</Text>
               <Text style={styles.previewText}>
@@ -706,7 +744,7 @@ export default function AdminPackagesScreen() {
         ) : null}
 
         {!activation ? (
-          <ActionButton testID="admin-package-save-button" label={editingPackageId ? "Değişiklikleri kaydet" : isTrialPackage ? "Deneme paketini oluştur" : "Paketi oluştur"} icon="package" onPress={() => saveMutation.mutate()} loading={saveMutation.isPending} />
+          <>{formError ? <Text testID="admin-package-form-error" accessibilityRole="alert" style={styles.errorText}>{formError}</Text> : null}<ActionButton testID="admin-package-save-button" label={editingPackageId ? "Değişiklikleri kaydet" : isTrialPackage ? "Deneme paketini oluştur" : "Paketi oluştur"} icon="package" onPress={submitPackage} loading={saveMutation.isPending} /></>
         ) : null}
         {editingPackageId ? <ActionButton testID="admin-package-cancel-button" label="Düzenlemeyi iptal et" icon="arrow-left" variant="ghost" onPress={resetForm} /> : null}
       </SurfaceCard>
@@ -886,11 +924,54 @@ export default function AdminPackagesScreen() {
           );
         })}
       </DetailSheet>
+
+      <DetailSheet
+        visible={Boolean(packagePendingDeletion)}
+        onClose={() => {
+          if (!deleteMutation.isPending) setPackagePendingDeletion(null);
+        }}
+        title="Paketi sil"
+        subtitle={packagePendingDeletion ? `“${packagePendingDeletion.title}” paket kaydı kaldırılacak.` : undefined}
+        contentTestID="admin-package-delete-confirmation"
+        scrollEnabled={false}
+      >
+        <Text style={styles.sheetOptionMeta}>Bu işlem paketi yeni başvurulara kapatır. Mevcut kayıtların geçmişi korunur.</Text>
+        <View style={styles.actionRow}>
+          <ActionButton
+            testID="admin-package-delete-cancel"
+            label="Vazgeç"
+            icon="arrow-left"
+            variant="ghost"
+            fullWidth={false}
+            disabled={deleteMutation.isPending}
+            onPress={() => setPackagePendingDeletion(null)}
+          />
+          <ActionButton
+            testID="admin-package-delete-confirm"
+            label="Paketi sil"
+            icon="risk"
+            variant="danger"
+            fullWidth={false}
+            loading={deleteMutation.isPending}
+            onPress={() => {
+              if (!packagePendingDeletion || deleteMutation.isPending) return;
+              const packageId = packagePendingDeletion.id;
+              setPackagePendingDeletion(null);
+              deleteMutation.mutate(packageId);
+            }}
+          />
+        </View>
+      </DetailSheet>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
+  errorText: {
+    color: tokens.colors.danger,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.medium,
+  },
   title: {
     color: tokens.colors.text,
     fontSize: tokens.font.lg,

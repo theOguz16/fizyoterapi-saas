@@ -1,0 +1,105 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: "member-tab-measurements"
+    timeout: 20000
+- tapOn:
+    id: "member-tab-measurements"
+- assertVisible: "Ölçümlerim"
+- scrollUntilVisible:
+    element:
+      id: "member-measurements-add"
+    direction: DOWN
+    visibilityPercentage: 30
+    timeout: 15000
+- tapOn:
+    id: "member-measurements-add"
+- scrollUntilVisible:
+    element:
+      id: "measurement-height-input"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
+- tapOn:
+    id: "measurement-height-input"
+- inputText: "178"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "measurement-weight-input"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
+- tapOn:
+    id: "measurement-weight-input"
+- inputText: "74"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "measurement-fat-input"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
+- tapOn:
+    id: "measurement-fat-input"
+- inputText: "18"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "measurement-muscle-input"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
+- tapOn:
+    id: "measurement-muscle-input"
+- inputText: "31"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "measurement-note-input"
+    direction: DOWN
+    visibilityPercentage: 70
+    timeout: 15000
+- tapOn:
+    id: "measurement-note-input"
+- inputText: "Smoke test measurement"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "measurement-save-button"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "measurement-save-button"
+- extendedWaitUntil:
+    visible: "Ölçümlerim"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Özet & Grafik"
+    direction: DOWN
+    visibilityPercentage: 30
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-measurements-tab-HISTORY"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
+- tapOn:
+    id: "member-measurements-tab-HISTORY"
+- assertVisible: "Geçmiş Ölçümler"
+- scrollUntilVisible:
+    element: "Smoke test measurement"
+    direction: DOWN
+    visibilityPercentage: 30
+    timeout: 15000

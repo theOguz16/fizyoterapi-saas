@@ -5,6 +5,11 @@ name: member-salon-qr-invalid-salon
     clearState: true
     clearKeychain: true
 
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 120000
+
 - openLink: "fizyoflow://e2e-reset"
 
 - waitForAnimationToEnd:

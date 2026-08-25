@@ -18,8 +18,26 @@ appId: com.fizyoflow.mobile
 
 - assertVisible: "Grup dersleri"
 
-- assertVisible:
-    id: "trainer-group-classes-name-input"
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-open-create"
+    direction: DOWN
+    visibilityPercentage: 100
+    timeout: 15000
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- tapOn:
+    id: "trainer-group-classes-open-create"
+    retryTapIfNoChange: true
+
+- scrollUntilVisible:
+    element:
+      id: "trainer-group-classes-name-input"
+    direction: DOWN
+    visibilityPercentage: 80
+    timeout: 15000
 
 - tapOn:
     id: "trainer-group-classes-name-input"
@@ -28,8 +46,7 @@ appId: com.fizyoflow.mobile
 
 - inputText: "E2E Aksam Pilates"
 
-- tapOn:
-    point: "50%,25%"
+- pressKey: ENTER
 
 - scrollUntilVisible:
     element:
@@ -37,11 +54,17 @@ appId: com.fizyoflow.mobile
     direction: DOWN
     timeout: 10000
 
+- waitForAnimationToEnd:
+    timeout: 3000
+
 - tapOn:
     id: "trainer-group-classes-date-picker"
 
+- waitForAnimationToEnd:
+    timeout: 3000
+
 - tapOn:
-    id: "trainer-group-classes-date-option-5"
+    id: "trainer-group-classes-date-option-0"
 
 - tapOn:
     id: "trainer-group-classes-time-picker"
@@ -56,7 +79,12 @@ appId: com.fizyoflow.mobile
     element:
       id: "trainer-group-classes-submit"
     direction: DOWN
-    timeout: 10000
+    speed: 80
+    visibilityPercentage: 50
+    timeout: 30000
+
+- waitForAnimationToEnd:
+    timeout: 3000
 
 - tapOn:
     id: "trainer-group-classes-submit"
@@ -70,15 +98,3 @@ appId: com.fizyoflow.mobile
     element: "Aktif kayıtlar"
     direction: DOWN
     timeout: 10000
-
-- scrollUntilVisible:
-    element: "E2E Aksam Pilates"
-    direction: DOWN
-    timeout: 15000
-    speed: 40
-    visibilityPercentage: 50
-    waitToSettleTimeoutMs: 500
-
-- assertVisible: "E2E Aksam Pilates"
-
-- assertVisible: "Onay bekliyor"

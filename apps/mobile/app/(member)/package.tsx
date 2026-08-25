@@ -22,6 +22,8 @@ import { StatusBadge } from "@/theme/components/status-badge";
 import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
+import { InlineErrorState } from "@/theme/components/data-states";
+import { QueryState } from "@/theme/components/query-state";
 
 type PackageTab = "PACKAGES" | "HISTORY" | "PAYMENTS";
 
@@ -428,21 +430,23 @@ export default function MemberPackageScreen() {
           : undefined,
     });
 
-    router.push({
-      pathname: "/(intake-member)/package-detail",
-      params: {
-        slug: String(activeMembership.tenant_slug),
-        id: String(matchedPackage.id),
-        title: String(matchedPackage.title || ""),
-        price: String(matchedPackage.display_price || ""),
-        summary: String(matchedPackage.summary || ""),
-        credits: String(matchedPackage.total_credits || ""),
-        weeklyClassHours: String(matchedPackage.weekly_class_hours || ""),
-        requiredPreferenceSlots: String(matchedPackage.required_preference_slots || ""),
-        requiredTrainerFreeSlots: String(matchedPackage.required_trainer_free_slots || ""),
-        subLessons: Array.isArray(matchedPackage.sub_lessons) ? matchedPackage.sub_lessons.join("||") : "",
-      },
-    } as never);
+    requestAnimationFrame(() => {
+      router.push({
+        pathname: "/(intake-member)/package-detail",
+        params: {
+          slug: String(activeMembership.tenant_slug),
+          id: String(matchedPackage.id),
+          title: String(matchedPackage.title || ""),
+          price: String(matchedPackage.display_price || ""),
+          summary: String(matchedPackage.summary || ""),
+          credits: String(matchedPackage.total_credits || ""),
+          weeklyClassHours: String(matchedPackage.weekly_class_hours || ""),
+          requiredPreferenceSlots: String(matchedPackage.required_preference_slots || ""),
+          requiredTrainerFreeSlots: String(matchedPackage.required_trainer_free_slots || ""),
+          subLessons: Array.isArray(matchedPackage.sub_lessons) ? matchedPackage.sub_lessons.join("||") : "",
+        },
+      } as never);
+    });
   }
 
   function handleBuyAnotherPackage(pkg: PublicPackageRow) {
@@ -501,21 +505,23 @@ export default function MemberPackageScreen() {
           : undefined,
     });
 
-    router.push({
-      pathname: "/(intake-member)/package-detail",
-      params: {
-        slug: String(activeMembership.tenant_slug),
-        id: String(pkg.id),
-        title: String(pkg.title || ""),
-        price: String(pkg.display_price || ""),
-        summary: String(pkg.summary || ""),
-        credits: String(pkg.total_credits || ""),
-        weeklyClassHours: String(pkg.weekly_class_hours || ""),
-        requiredPreferenceSlots: String(pkg.required_preference_slots || ""),
-        requiredTrainerFreeSlots: String(pkg.required_trainer_free_slots || ""),
-        subLessons: Array.isArray(pkg.sub_lessons) ? pkg.sub_lessons.join("||") : "",
-      },
-    } as never);
+    requestAnimationFrame(() => {
+      router.push({
+        pathname: "/(intake-member)/package-detail",
+        params: {
+          slug: String(activeMembership.tenant_slug),
+          id: String(pkg.id),
+          title: String(pkg.title || ""),
+          price: String(pkg.display_price || ""),
+          summary: String(pkg.summary || ""),
+          credits: String(pkg.total_credits || ""),
+          weeklyClassHours: String(pkg.weekly_class_hours || ""),
+          requiredPreferenceSlots: String(pkg.required_preference_slots || ""),
+          requiredTrainerFreeSlots: String(pkg.required_trainer_free_slots || ""),
+          subLessons: Array.isArray(pkg.sub_lessons) ? pkg.sub_lessons.join("||") : "",
+        },
+      } as never);
+    });
   }
 
   const renderUsageProgress = (pkg: MemberOwnedPackage) => {
@@ -548,6 +554,14 @@ export default function MemberPackageScreen() {
     );
   };
 
+  if (packagesListQuery.isLoading && !packagesListQuery.data) {
+    return <AppShell testID="member-package-screen" title="Paket ve Geçmiş" subtitle="Paketlerini, kullanım durumunu ve ödeme geçmişini tek ekranda takip et." icon="package"><QueryState mode="loading" title="Paketlerin hazırlanıyor" /></AppShell>;
+  }
+
+  if (packagesListQuery.isError && !packagesListQuery.data) {
+    return <AppShell testID="member-package-screen" title="Paket ve Geçmiş" subtitle="Paketlerini, kullanım durumunu ve ödeme geçmişini tek ekranda takip et." icon="package"><QueryState mode="error" error={packagesListQuery.error} onRetry={() => void packagesListQuery.refetch()} /></AppShell>;
+  }
+
   return (
     <AppShell
       testID="member-package-screen"
@@ -559,6 +573,7 @@ export default function MemberPackageScreen() {
         handleRefresh().catch(() => null);
       }}
     >
+      {packagesListQuery.isError ? <InlineErrorState error={packagesListQuery.error} onRetry={() => void packagesListQuery.refetch()} /> : null}
       <View style={styles.metricsRow}>
         <MetricCard label="Aktif Paket" value={activePackages.length} icon="package" />
         <MetricCard testID={`member-package-total-remaining-${totalRemaining}`} label="Toplam Hak" value={totalRemaining} icon="ticket" />

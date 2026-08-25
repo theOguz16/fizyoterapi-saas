@@ -136,7 +136,6 @@ export default function AdminClinicQrScreen() {
       await MediaLibrary.saveToLibraryAsync(fileUri);
 
       setFeedback("QR görseli galeriye kaydedildi.");
-      Alert.alert("QR kaydedildi", "Salon QR görseli galeriye kaydedildi.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "QR görseli kaydedilemedi. Lütfen tekrar dene.";
       setFeedback(message);
@@ -320,7 +319,7 @@ export default function AdminClinicQrScreen() {
           disabled={!qrPayload || query.isLoading || query.isError || isSaving}
         />
 
-        {feedback ? <Text style={styles.feedback}>{feedback}</Text> : null}
+        {feedback ? <Text testID="clinic-qr-feedback" style={styles.feedback}>{feedback}</Text> : null}
       </SurfaceCard>
 
       {activation && qrPayload ? (

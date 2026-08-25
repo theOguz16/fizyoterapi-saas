@@ -20,6 +20,7 @@ export default function TrainerQrScreen() {
 
   return (
     <AppShell
+      testID="trainer-qr-screen"
       title="Eğitmen kimlik QR’ı"
       subtitle="Bu kod ders check-in için kullanılmaz. Admin gerektiğinde eğitmen kimliğini ve salon içi yetkini doğrulamak için okutur."
       icon="qr"

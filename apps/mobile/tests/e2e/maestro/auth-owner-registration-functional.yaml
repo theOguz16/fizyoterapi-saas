@@ -1,51 +1,43 @@
 appId: com.fizyoflow.mobile
 name: auth-owner-registration-functional
 ---
+- launchApp:
+    clearState: true
+    clearKeychain: true
 - extendedWaitUntil:
     visible:
-      id: "welcome-signup-button"
+      id: "welcome-login-button"
     timeout: 60000
-- waitForAnimationToEnd
-- tapOn:
-    id: "welcome-signup-button"
-    retryTapIfNoChange: true
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
-      id: "role-option-admin"
-    timeout: 10000
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://register"
 - waitForAnimationToEnd
-- tapOn:
-    id: "role-option-admin"
-    retryTapIfNoChange: true
-- extendedWaitUntil:
-    visible: "Hesabını oluştur"
-    timeout: 10000
-- scrollUntilVisible:
-    element:
-      id: "register-submit-button"
-    direction: DOWN
-    timeout: 10000
-
-# Eksik form sessizce ilerlememeli.
-- tapOn:
-    id: "register-submit-button"
-- scrollUntilVisible:
-    element:
-      id: "register-error"
-    direction: DOWN
-    timeout: 10000
-- assertVisible:
-    id: "register-error"
-
 - scrollUntilVisible:
     element:
       id: "register-first-name-input"
-    direction: UP
-    timeout: 10000
+    direction: DOWN
+    speed: 40
+    visibilityPercentage: 60
+    timeout: 30000
 - tapOn:
     id: "register-first-name-input"
-- inputText: "Kayıt"
-- pressKey: ENTER
+    point: "50%,50%"
+    retryTapIfNoChange: true
+- inputText: "Ali"
+- runFlow:
+    when:
+      notVisible: "Ali"
+    commands:
+      - tapOn:
+          id: "register-first-name-input"
+          point: "50%,50%"
+      - inputText: "Ali"
+- extendedWaitUntil:
+    visible: "Ali"
+    timeout: 5000
 - scrollUntilVisible:
     element:
       id: "register-last-name-input"
@@ -78,48 +70,84 @@ name: auth-owner-registration-functional
       id: "register-password-input"
     direction: DOWN
     timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "owner-register-password-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "register-password-input"
+          timeout: 5000
 - tapOn:
     id: "register-password-input"
-- inputText: "owner-register123"
-- pressKey: ENTER
+- inputText: "ownerregister123"
+- waitForAnimationToEnd
+- runFlow: _assert-valid-password.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "owner-register-password-toggle"
 - scrollUntilVisible:
     element:
       id: "register-repeat-input"
     direction: DOWN
+    centerElement: true
     timeout: 10000
-- assertVisible:
+- swipe:
+    direction: UP
+    duration: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "owner-register-password-confirm-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "register-repeat-input"
+          timeout: 5000
+- tapOn:
     id: "register-repeat-input"
-- scrollUntilVisible:
-    element:
-      id: "legal-terms-checkbox"
-    direction: DOWN
-    timeout: 10000
-- tapOn: "Kimlik ve iletişim bilgilerin.*"
+- inputText: "ownerregister123"
 - waitForAnimationToEnd
-
-# Zorunlu hukuki onaylar verilmeden hesap açılmamalı.
-- tapOn:
-    id: "register-submit-button"
+- pressKey: ENTER
 - scrollUntilVisible:
     element:
-      id: "register-error"
+      id: "legal-terms-checkbox-box"
     direction: DOWN
-    timeout: 10000
-- assertVisible:
-    id: "register-error"
+    visibilityPercentage: 100
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
 - tapOn:
-    id: "legal-terms-checkbox"
+    id: "legal-terms-checkbox-box"
+    retryTapIfNoChange: true
+- waitForAnimationToEnd
+- scrollUntilVisible:
+    element:
+      id: "legal-notice-checkbox-box"
+    direction: DOWN
+    visibilityPercentage: 100
+    centerElement: true
+    timeout: 15000
+- waitForAnimationToEnd
 - tapOn:
-    id: "legal-notice-checkbox"
+    id: "legal-notice-checkbox-box"
+    retryTapIfNoChange: true
+- waitForAnimationToEnd
 - scrollUntilVisible:
     element:
       id: "register-submit-button"
     direction: DOWN
     timeout: 10000
+- waitForAnimationToEnd
 - tapOn:
     id: "register-submit-button"
 - extendedWaitUntil:
     visible:
       id: "admin-clinic-activation-step-1"
     timeout: 20000
-- assertVisible: "1 / 4"

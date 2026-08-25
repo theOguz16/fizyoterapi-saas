@@ -15,6 +15,7 @@ authRoutes.post("/login", authLoginRateLimit, AuthController.login);
 authRoutes.post("/password-reset/request", passwordResetRateLimit, PasswordResetController.request);
 authRoutes.post("/password-reset/confirm", passwordResetRateLimit, PasswordResetController.confirm);
 authRoutes.post("/logout", authMiddleware, AuthController.logout);
+authRoutes.post("/change-password", authMiddleware, AuthController.changePassword);
 authRoutes.post("/switch-role", authMiddleware, AuthController.switchRole);
 authRoutes.get("/me", authMiddleware, AuthController.me);
 authRoutes.delete("/account", authMiddleware, AuthController.deleteAccount);

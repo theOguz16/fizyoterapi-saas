@@ -1,0 +1,15 @@
+appId: com.fizyoflow.mobile
+name: submit-login-platform-helper
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "login-submit-button"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+      - tapOn: "Giriş yap"

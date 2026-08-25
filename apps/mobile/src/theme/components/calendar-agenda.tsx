@@ -187,6 +187,9 @@ export function CalendarAgenda({
       {stats.length > 0 ? (
         <ScrollView
           horizontal
+          nestedScrollEnabled
+          directionalLockEnabled
+          alwaysBounceVertical={false}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.statsRow}
         >
@@ -217,6 +220,9 @@ export function CalendarAgenda({
         <>
           <ScrollView
             horizontal
+            nestedScrollEnabled
+            directionalLockEnabled
+            alwaysBounceVertical={false}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipsRow}
           >

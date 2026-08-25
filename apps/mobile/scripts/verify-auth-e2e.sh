@@ -30,7 +30,7 @@ case "$CASE_NAME" in
       "ADMIN|true|MOBILE_CLINIC_OWNER_REGISTER|"*) ;;
       *) echo "Kayıt DB doğrulaması başarısız: $row" >&2; exit 1 ;;
     esac
-    assert_login "$email" 'owner-register123' 200
+    assert_login "$email" 'ownerregister123' 200
     echo "owner-registration: account, legal consent and login verified"
     ;;
   member-registration)
@@ -40,7 +40,7 @@ case "$CASE_NAME" in
       "MEMBER|true|MOBILE_CLINIC_MEMBER_REGISTER|"*) ;;
       *) echo "Danışan kayıt DB doğrulaması başarısız: $row" >&2; exit 1 ;;
     esac
-    assert_login "$email" 'member-register123' 200
+    assert_login "$email" 'memberregister123' 200
     echo "member-registration: account, legal consent and login verified"
     ;;
   trainer-invite)
@@ -50,7 +50,7 @@ case "$CASE_NAME" in
       echo "Eğitmen davet DB doğrulaması başarısız: $row" >&2
       exit 1
     }
-    assert_login "$email" 'trainer-invite123' 200
+    assert_login "$email" 'trainerinvite123' 200
     echo "trainer-invite: invite acceptance, legal consent, trainer user and login verified"
     ;;
   role-switch-logout)
@@ -87,7 +87,7 @@ case "$CASE_NAME" in
       *) echo "Reset confirm DB doğrulaması başarısız: $row" >&2; exit 1 ;;
     esac
     assert_login "$email" 'password-old123' 401
-    assert_login "$email" 'password-new123' 200
+    assert_login "$email" 'passwordnew123' 200
     echo "password-reset-confirm: token consumed, auth version incremented, old/new login verified"
     ;;
   *)

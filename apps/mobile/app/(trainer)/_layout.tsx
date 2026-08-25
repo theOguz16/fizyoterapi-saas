@@ -27,7 +27,9 @@ export default function TrainerLayout() {
         <Tabs.Screen
           key={route.name}
           name={route.name}
-          options={route.visibility === "tab" ? { title: route.title || undefined } : { href: null }}
+          options={route.visibility === "tab"
+            ? { title: route.title || undefined, tabBarButtonTestID: `trainer-tab-${route.name}` }
+            : { href: null }}
         />
       ))}
     </Tabs>

@@ -18,11 +18,14 @@ appId: com.fizyoflow.mobile
       id: "trainer-home-screen"
     timeout: 20000
 - tapOn:
-    id: "trainer-home-more-actions"
-- assertVisible:
-    id: "trainer-home-secondary-actions"
+    id: "trainer-tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-packages"
+    direction: DOWN
+    timeout: 10000
 - tapOn:
-    id: "trainer-home-packages"
+    id: "trainer-profile-packages"
 - extendedWaitUntil:
     visible:
       id: "trainer-packages-screen"
@@ -40,27 +43,31 @@ appId: com.fizyoflow.mobile
     visible:
       id: "trainer-risk-screen"
     timeout: 15000
-- assertVisible: "Riskli kişi"
-- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
+- assertVisible:
+    id: "trainer-risk-count-metric"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fclients"
 - extendedWaitUntil:
     visible:
-      id: "trainer-profile-screen"
+      id: "trainer-clients-screen"
     timeout: 15000
-- scrollUntilVisible:
-    element:
-      id: "trainer-profile-bulk-notification"
-    direction: DOWN
-    timeout: 10000
 - tapOn:
-    id: "trainer-profile-bulk-notification"
+    id: "trainer-clients-bulk-notification"
 - extendedWaitUntil:
     visible:
       id: "trainer-bulk-notification-screen"
     timeout: 15000
 - tapOn:
     id: "trainer-bulk-notification-template-1"
+- scrollUntilVisible:
+    element:
+      id: "trainer-bulk-notification-member-0"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 80
+    centerElement: true
 - tapOn:
     id: "trainer-bulk-notification-member-0"
+- assertVisible: "Durum: 1 seçili"
 - scrollUntilVisible:
     element:
       id: "trainer-bulk-notification-submit"
@@ -71,14 +78,21 @@ appId: com.fizyoflow.mobile
 - extendedWaitUntil:
     visible: "Bildirim gönderildi"
     timeout: 20000
-- tapOn: "Tamam|OK"
 - openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fprofile"
 - extendedWaitUntil:
     visible:
-      id: "trainer-profile-logout"
+      id: "trainer-profile-screen"
     timeout: 15000
-- tapOn:
-    id: "trainer-profile-logout"
+- swipe:
+    start: 50%, 82%
+    end: 50%, 22%
+- swipe:
+    start: 50%, 82%
+    end: 50%, 22%
+- swipe:
+    start: 50%, 82%
+    end: 50%, 22%
+- tapOn: "Çıkış yap"
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"

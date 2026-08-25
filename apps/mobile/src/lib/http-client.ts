@@ -184,7 +184,7 @@ async function requestEnvelope<T, TMeta extends Record<string, unknown> = Record
   if (!response.ok) {
     const message = resolveApiError(payload, resolveHttpStatusMessage(response.status, "İşlem tamamlanamadı. Lütfen tekrar deneyin."));
     const code = payload?.error?.code;
-    throw new ApiClientError(message, response.status, code);
+    throw new ApiClientError(message, response.status, code, payload || undefined);
   }
 
   if (!isSuccessEnvelope(payload)) {
@@ -250,7 +250,7 @@ export async function httpRequestText(path: string, options: RequestOptions = {}
       payload = null;
     }
     const fallback = resolveHttpStatusMessage(response.status, "İşlem tamamlanamadı. Lütfen tekrar deneyin.");
-    throw new ApiClientError(resolveApiError(payload, fallback), response.status, payload?.error?.code);
+    throw new ApiClientError(resolveApiError(payload, fallback), response.status, payload?.error?.code, payload || undefined);
   }
   return response.text();
 }

@@ -15,7 +15,9 @@ import { FormField } from "@/theme/components/form-field";
 import { EmptyState } from "@/theme/components/empty-state";
 import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { QueryState } from "@/theme/components/query-state";
+import { ActionButton } from "@/theme/components/action-button";
 import { tokens } from "@/theme/tokens";
+import { buildRoleActionHref, getRoleAction } from "@/lib/role-actions";
 
 export default function TrainerClientsScreen() {
   const router = useRouter();
@@ -29,12 +31,15 @@ export default function TrainerClientsScreen() {
   const source = useMemo(() => result.data || [], [result.data]);
   const items = useMemo(() => filterTrainerClients(source, { query, filter }), [filter, query, source]);
   const metrics = useMemo(() => getTrainerClientMetrics(source), [source]);
+  const bulkNotificationAction = getRoleAction("TRAINER_BULK_NOTIFICATION");
 
   return (
     <AppShell
+      testID="trainer-clients-screen"
       title="Danışanlarım"
       subtitle="Portföyündeki danışanları ara, filtrele ve detaylarına hızlıca ulaş."
       icon="clients"
+      rightAction={<ActionButton testID="trainer-clients-bulk-notification" label={bulkNotificationAction.label} icon={bulkNotificationAction.icon} variant="ghost" fullWidth={false} onPress={() => router.push(buildRoleActionHref("TRAINER_BULK_NOTIFICATION", "/(trainer)/clients") as never)} />}
       refreshing={result.isRefetching}
       onRefresh={() => {
         void result.refetch();
@@ -68,7 +73,7 @@ export default function TrainerClientsScreen() {
       {result.isLoading && !result.data ? (
         <QueryState mode="loading" title="Danışanlar hazırlanıyor" />
       ) : result.isError && !result.data ? (
-        <QueryState mode="error" onRetry={() => void result.refetch()} />
+        <QueryState mode="error" error={result.error} onRetry={() => void result.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState title="Danışan bulunamadı" description="Arama veya filtreyi değiştirerek listeyi yeniden daraltabilirsin." icon="clients" />
       ) : (
@@ -76,9 +81,9 @@ export default function TrainerClientsScreen() {
           data={items}
           maxHeight={520}
           keyExtractor={(item: TrainerMemberListItem) => String(item.id)}
-          renderItem={(item: TrainerMemberListItem) => (
+          renderItem={(item: TrainerMemberListItem, index: number) => (
             <Pressable
-              testID={`trainer-client-open-${item.id}`}
+              testID={`trainer-client-open-${index}`}
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.full_name || "Danışan"} detayını aç`}

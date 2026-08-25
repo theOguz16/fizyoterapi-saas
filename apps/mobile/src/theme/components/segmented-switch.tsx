@@ -41,7 +41,7 @@ export function SegmentedSwitch({ value, options, onChange, testID }: Props) {
             onPress={() => handleChange(option.value)}
             style={({ pressed }) => [styles.item, selected ? styles.selected : null, pressed ? styles.pressed : null]}
           >
-            <Text style={[styles.label, selected ? styles.selectedLabel : null]}>{option.label}</Text>
+            <Text maxFontSizeMultiplier={1.6} style={[styles.label, selected ? styles.selectedLabel : null]}>{option.label}</Text>
           </Pressable>
         );
       })}
@@ -62,14 +62,14 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    minHeight: 40,
+    minHeight: tokens.touch.min,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 999,
     paddingHorizontal: tokens.spacing.sm,
   },
   selected: {
-    backgroundColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primaryStrong,
     ...tokens.shadow.focus,
   },
   pressed: {

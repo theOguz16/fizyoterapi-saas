@@ -12,6 +12,7 @@ type Props = {
   actionLabel?: string;
   actionIcon?: AppIconName;
   actionTestID?: string;
+  testID?: string;
   onAction?: () => void;
 };
 
@@ -22,15 +23,16 @@ export function EmptyState({
   actionLabel,
   actionIcon = "arrow-right",
   actionTestID,
+  testID = "empty-state",
   onAction,
 }: Props) {
   return (
-    <View style={styles.card} accessibilityRole="summary" accessibilityLabel={`${title}. ${description}`}>
+    <View testID={testID} style={styles.card} accessibilityRole="summary" accessibilityLabel={`${title}. ${description}`}>
       <AppIcon name={icon} size="lg" />
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text maxFontSizeMultiplier={1.8} style={styles.title}>{title}</Text>
+      <Text maxFontSizeMultiplier={2} style={styles.description}>{description}</Text>
       {actionLabel && onAction ? (
-        <ActionButton testID={actionTestID} label={actionLabel} icon={actionIcon} onPress={onAction} />
+        <ActionButton testID={actionTestID || "empty-state-action"} label={actionLabel} icon={actionIcon} onPress={onAction} />
       ) : null}
     </View>
   );

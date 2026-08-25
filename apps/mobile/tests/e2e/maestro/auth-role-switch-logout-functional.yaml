@@ -1,6 +1,14 @@
 appId: com.fizyoflow.mobile
 name: auth-role-switch-logout-functional
 ---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
@@ -20,11 +28,11 @@ name: auth-role-switch-logout-functional
       id: "login-password-input"
     direction: DOWN
     timeout: 10000
+    centerElement: true
 - tapOn:
     id: "login-password-input"
 - inputText: "clinic-owner123"
-- tapOn:
-    id: "login-submit-button"
+- runFlow: _submit-login.yaml
 - runFlow:
     when:
       visible: "Sonra"
@@ -34,7 +42,8 @@ name: auth-role-switch-logout-functional
     visible:
       id: "admin-dashboard-screen"
     timeout: 20000
-- tapOn: "Profil, tab.*"
+- tapOn:
+    id: "admin-tab-profile"
 - extendedWaitUntil:
     visible:
       id: "admin-profile-screen"
@@ -44,31 +53,19 @@ name: auth-role-switch-logout-functional
       id: "role-switch-trainer"
     direction: DOWN
     timeout: 10000
+    centerElement: true
 - tapOn:
     id: "role-switch-trainer"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "trainer-home-screen"
     timeout: 20000
-- tapOn: "Profil, tab.*"
+- tapOn:
+    id: "trainer-tab-profile"
 - extendedWaitUntil:
     visible:
       id: "trainer-profile-screen"
-    timeout: 10000
-- scrollUntilVisible:
-    element:
-      text: "Hesap özeti"
-    direction: DOWN
-    timeout: 10000
-- scrollUntilVisible:
-    element:
-      id: "trainer-profile-request-center"
-    direction: DOWN
-    timeout: 10000
-- scrollUntilVisible:
-    element:
-      text: "Bildirim tercihleri"
-    direction: DOWN
     timeout: 10000
 - scrollUntilVisible:
     element:
@@ -77,12 +74,21 @@ name: auth-role-switch-logout-functional
     timeout: 10000
 - scrollUntilVisible:
     element:
-      id: "trainer-profile-logout"
+      id: "trainer-profile-account-settings"
     direction: DOWN
     timeout: 10000
+- assertVisible:
+    id: "trainer-profile-account-settings"
+- scrollUntilVisible:
+    element:
+      id: "trainer-profile-logout"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 100
     centerElement: true
 - tapOn:
     id: "trainer-profile-logout"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"

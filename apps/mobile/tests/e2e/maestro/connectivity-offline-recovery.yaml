@@ -8,20 +8,37 @@ name: Connectivity banner safe-area and recovery
     visible:
       id: welcome-login-button
     timeout: 60000
-- openLink: "fizyoflow://e2e-connectivity?status=offline&returnTo=%2F%28auth%29%2Fwelcome"
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: member-home-screen
+    timeout: 20000
+- assertVisible:
+    id: member-home-priority-section
+- openLink: "fizyoflow://e2e-connectivity?status=offline&returnTo=%2F%28member%29%2Fhome"
 - extendedWaitUntil:
     visible:
       id: connectivity-banner
     timeout: 8000
 - assertVisible: "Çevrimdışısın"
 - assertVisible:
+    id: offline-banner
+- assertVisible:
     id: connectivity-banner-retry
 - tapOn:
     id: connectivity-banner-retry
-- openLink: "fizyoflow://e2e-connectivity?status=online&returnTo=%2F%28auth%29%2Fwelcome"
+- openLink: "fizyoflow://e2e-connectivity?status=online&returnTo=%2F%28member%29%2Fhome"
+- extendedWaitUntil:
+    visible:
+      id: connectivity-restored-notice
+    timeout: 5000
+- assertVisible: "Bağlantı yeniden kuruldu"
 - extendedWaitUntil:
     notVisible:
       id: connectivity-banner
     timeout: 8000
 - assertVisible:
-    id: welcome-login-button
+    id: member-home-screen
+- assertVisible:
+    id: member-home-priority-section

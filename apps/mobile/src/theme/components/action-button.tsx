@@ -1,8 +1,10 @@
 // Bu paylasilan UI component'i mobil tasarim sistemindeki action button parcasi icin standart gorunum saglar.
 // Farkli ekranlarda ayni stil ve etkileşim dilini korumak icin bu katmanda tutulur.
+import { useRef } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 import { tokens } from "../tokens";
 import { AppIcon, type AppIconName } from "./app-icon";
+import { createTapGuard } from "@/lib/submission-guard";
 
 type Props = {
   label: string;
@@ -13,6 +15,8 @@ type Props = {
   variant?: "primary" | "ghost" | "danger";
   icon?: AppIconName;
   fullWidth?: boolean;
+  preventDoubleTap?: boolean;
+  accessibilityHint?: string;
 };
 
 export function ActionButton({
@@ -24,8 +28,12 @@ export function ActionButton({
   variant = "primary",
   icon,
   fullWidth = true,
+  preventDoubleTap = true,
+  accessibilityHint,
 }: Props) {
   const locked = disabled || loading;
+  const tapGuardRef = useRef<ReturnType<typeof createTapGuard> | null>(null);
+  if (!tapGuardRef.current) tapGuardRef.current = createTapGuard();
   const labelColor = variant === "ghost" ? tokens.colors.text : "#fff";
   const iconTone = variant === "danger" ? "danger" : variant === "ghost" ? "neutral" : "primary";
 
@@ -34,9 +42,13 @@ export function ActionButton({
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: locked, busy: loading }}
       hitSlop={4}
-      onPress={onPress}
+      onPress={() => {
+        if (preventDoubleTap && !tapGuardRef.current?.tryAcquire()) return;
+        onPress();
+      }}
       disabled={locked}
       style={({ pressed }) => [
         styles.base,
@@ -103,7 +115,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.72,
   },
   pressed: {
     transform: [{ scale: 0.985 }, { translateY: 1 }],

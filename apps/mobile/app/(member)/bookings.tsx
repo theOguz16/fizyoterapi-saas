@@ -8,7 +8,7 @@ import { getMemberBookingsApi } from "@/lib/mobile-api";
 import { formatGroupClassPrice, getGroupClassDisplayName } from "@/lib/group-classes";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { SectionTitle } from "@/theme/components/section-title";
 import { SegmentedSwitch } from "@/theme/components/segmented-switch";
@@ -56,8 +56,12 @@ export default function MemberBookingsScreen() {
       ) : null}
 
       {filteredRows.length > 0 ? (
-        <ScrollPanel maxHeight={480}>
-          {filteredRows.map((row: any, index: number) => (
+        <VirtualListPanel
+          data={filteredRows}
+          maxHeight={480}
+          minHeight={320}
+          keyExtractor={(row: any, index) => String(row.id || index)}
+          renderItem={(row: any, index: number) => (
             <Pressable
               testID={`member-booking-card-${index}`}
               key={row.id}
@@ -82,8 +86,8 @@ export default function MemberBookingsScreen() {
               {row.is_group_class ? <Text style={styles.item}>Katılım: {row.status === "PENDING" ? "Admin onayı bekliyor" : "Onaylandı"}</Text> : null}
               <Text style={styles.hint}>Kartı açarak check-in ve iptal detayını görebilirsin.</Text>
             </Pressable>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       ) : null}
     </AppShell>
   );

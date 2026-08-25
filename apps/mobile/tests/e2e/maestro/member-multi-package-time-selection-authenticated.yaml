@@ -61,30 +61,68 @@ appId: com.fizyoflow.mobile
     timeout: 10000
 - tapOn:
     id: "member-location-skip"
-- scrollUntilVisible:
-    element:
-      id: "member-salon-open-demo-salon"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn:
-    id: "member-salon-open-demo-salon"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "member-salon-open-demo-salon"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "member-salon-open-demo-salon"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scrollUntilVisible:
+          element: "Salonu incele"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          text: "Salonu incele"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "salon-detail-screen"
     timeout: 20000
-- scrollUntilVisible:
-    element:
-      id: "salon-view-packages-button"
-    direction: DOWN
-    timeout: 15000
-- tapOn:
-    id: "salon-view-packages-button"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "salon-view-packages-button"
+          direction: DOWN
+          timeout: 15000
+      - tapOn:
+          id: "salon-view-packages-button"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scrollUntilVisible:
+          element: "Paketleri gör"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          text: "Paketleri gör"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "intake-packages-screen"
     timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - scrollUntilVisible:
     element:
       id: "intake-package-mode-filter-duo"
@@ -118,25 +156,55 @@ appId: com.fizyoflow.mobile
     visibilityPercentage: 50
     centerElement: true
 - tapOn: "Grup Dersi (8 Kişi)"
-- scrollUntilVisible:
-    element: "2 paketle devam et"
-    direction: DOWN
-    timeout: 15000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn: "2 paketle devam et"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "intake-package-continue"
+          direction: DOWN
+          timeout: 15000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "intake-package-continue"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scrollUntilVisible:
+          element: "2 paketle devam et"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          text: "2 paketle devam et"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "intake-package-detail-screen"
     timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - assertVisible: "Grup Dersi (8 Kişi)"
 - scrollUntilVisible:
     element:
       id: "package-detail-continue"
     direction: DOWN
     timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
 - tapOn:
     id: "package-detail-continue"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - scrollUntilVisible:
     element:
       id: "time-slot-toggle-0-0"
@@ -171,26 +239,59 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-password-input"
 - inputText: "member-intake123"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
+- runFlow: _submit-login.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "intake-booking-summary-screen"
     timeout: 30000
-- scrollUntilVisible:
-    element:
-      id: "intake-booking-summary-submit"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn:
-    id: "intake-booking-summary-submit"
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          text: ".*Open debugger to view warnings.*"
+          point: "95%,50%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "intake-booking-summary-submit"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "intake-booking-summary-submit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - tapOn:
+          text: "Onaya gönder"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible:
       id: "intake-package-detail-screen"
     timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 3000
 - assertVisible: "Duo Reformer Paketi"
 - scrollUntilVisible:
     element:
@@ -202,7 +303,20 @@ appId: com.fizyoflow.mobile
 - assertVisible: "Duo partner bilgisi"
 - tapOn:
     id: "duo-partner-name-input"
+- eraseText
 - inputText: "Coklu Partner E2E"
+- runFlow:
+    when:
+      notVisible: "Coklu Partner E2E"
+    commands:
+      - tapOn:
+          id: "duo-partner-name-input"
+          point: "50%,50%"
+      - eraseText
+      - inputText: "Coklu Partner E2E"
+- extendedWaitUntil:
+    visible: "Coklu Partner E2E"
+    timeout: 5000
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -213,15 +327,33 @@ appId: com.fizyoflow.mobile
     centerElement: true
 - tapOn:
     id: "duo-partner-contact-input"
+- eraseText
 - inputText: "multi.partner@example.com"
-- pressKey: ENTER
-- scrollUntilVisible:
-    element:
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: "multi.partner@example.com"
+          timeout: 5000
+- hideKeyboard
+- waitForAnimationToEnd:
+    timeout: 1000
+- extendedWaitUntil:
+    visible:
       id: "package-detail-continue"
-    direction: DOWN
     timeout: 10000
 - tapOn:
     id: "package-detail-continue"
+    point: "50%,50%"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "intake-trainer-selection-screen"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
 - scrollUntilVisible:
     element:
       id: "intake-trainer-select-0"
@@ -264,21 +396,49 @@ appId: com.fizyoflow.mobile
     visible:
       id: "intake-booking-summary-screen"
     timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          text: ".*Open debugger to view warnings.*"
+          point: "95%,50%"
+- waitForAnimationToEnd:
+    timeout: 1000
 - scrollUntilVisible:
     element: ".*Coklu Partner E2E.*"
     direction: DOWN
     timeout: 15000
     visibilityPercentage: 50
     centerElement: true
-- scrollUntilVisible:
-    element:
-      id: "intake-booking-summary-submit"
-    direction: DOWN
-    timeout: 20000
-    visibilityPercentage: 50
-    centerElement: true
-- tapOn:
-    id: "intake-booking-summary-submit"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "intake-booking-summary-submit"
+          direction: DOWN
+          timeout: 20000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "intake-booking-summary-submit"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - scroll
+      - tapOn:
+          text: "Onaya gönder"
+          retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: "Başvurun alındı|Başvurun incelemeye alındı|Başvurun inceleniyor|Onay bekleniyor|Başvuru gönderildi"
     timeout: 30000

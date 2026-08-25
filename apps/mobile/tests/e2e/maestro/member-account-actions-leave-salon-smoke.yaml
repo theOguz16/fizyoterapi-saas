@@ -1,0 +1,51 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 20000
+- openLink: "fizyoflow://e2e-login?email=member%40gmail.com&password=member123&redirect=%2F%28member%29%2Fprofile"
+- extendedWaitUntil:
+    visible:
+      id: "member-profile-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "member-profile-account-settings"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "member-profile-account-settings"
+- tapOn:
+    id: "account-settings-account-actions"
+- extendedWaitUntil:
+    visible:
+      id: "account-actions-screen"
+    timeout: 15000
+- tapOn:
+    id: "account-actions-leave-salon"
+- extendedWaitUntil:
+    visible:
+      id: "member-leave-salon-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "member-leave-salon-confirm"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 80
+    centerElement: true
+- tapOn:
+    id: "member-leave-salon-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "member-salons-screen"
+    timeout: 30000

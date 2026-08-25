@@ -124,8 +124,14 @@ appId: com.fizyoflow.mobile
     centerElement: true
 - tapOn:
     id: "duo-partner-name-input"
+- eraseText
 - inputText: "Duo Partner E2E"
-- pressKey: ENTER
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
 - scrollUntilVisible:
     element:
       id: "duo-partner-contact-input"
@@ -135,15 +141,39 @@ appId: com.fizyoflow.mobile
     centerElement: true
 - tapOn:
     id: "duo-partner-contact-input"
+- eraseText
 - inputText: "duo.partner@example.com"
-- pressKey: ENTER
-- scrollUntilVisible:
-    element:
-      id: "package-detail-continue"
-    direction: DOWN
-    timeout: 10000
-- tapOn:
-    id: "package-detail-continue"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- waitForAnimationToEnd:
+    timeout: 1000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "package-detail-continue"
+          direction: DOWN
+          timeout: 10000
+          visibilityPercentage: 50
+          centerElement: true
+      - tapOn:
+          id: "package-detail-continue"
+          point: "50%,50%"
+          retryTapIfNoChange: true
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - swipe:
+          direction: UP
+          duration: 800
+      - tapOn:
+          point: "50%,92%"
+- extendedWaitUntil:
+    visible:
+      id: "intake-trainer-selection-screen"
+    timeout: 20000
 - scrollUntilVisible:
     element:
       id: "intake-trainer-select-0"
@@ -211,9 +241,14 @@ appId: com.fizyoflow.mobile
 - tapOn:
     id: "login-password-input"
 - inputText: "member-intake123"
-- pressKey: ENTER
-- tapOn:
-    id: "login-submit-button"
+- runFlow: _submit-login.yaml
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "intake-booking-summary-screen"

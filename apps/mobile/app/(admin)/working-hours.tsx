@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { WorkingHours, WorkingHoursInput } from "@fitnes-saas/contracts";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   BUSINESS_HOUR_BREAK_OPTIONS,
   BUSINESS_HOUR_SLOT_OPTIONS,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/scheduling/business-hours.normalize";
 import { businessHoursInvalidates, calendarKeys } from "@/lib/scheduling/calendar-query-keys";
 import { getAdminSettingsApi, updateAdminSettingsApi } from "@/lib/mobile-api";
-import { showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
+import { showErrorAlert, showInfoAlert, showSuccessNotice } from "@/lib/user-feedback";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -34,8 +34,13 @@ const DAY_OPTIONS = [
 const TIME_OPTIONS = buildTimeOptions();
 
 type TimeFieldKey = "start_time" | "end_time" | "lunch_break_start" | "lunch_break_end";
+type WorkingHoursViewMode = "LIST" | "FORM";
 
 type WorkingHoursForm = WorkingHoursInput;
+type WorkingHoursBaseline = {
+  form: WorkingHoursForm;
+  useLunchBreak: boolean;
+};
 
 function createEmptyForm(timezone?: string | null): WorkingHoursForm {
   return {
@@ -59,9 +64,22 @@ function formatTime(value: number) {
   return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
 }
 
+function formatDuration(value: number) {
+  if (!value) return "0 saat";
+  const hours = Math.floor(value / 60);
+  const minutes = value % 60;
+  return minutes ? `${hours} sa ${minutes} dk` : `${hours} saat`;
+}
+
+function resolveDayName(value: number) {
+  return ["", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"][value] || "Gün";
+}
+
 export default function AdminWorkingHoursScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ backTo?: string | string[]; activation?: string | string[] }>();
+  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const activation = isClinicActivationFlow(params.activation);
 
   const query = useQuery({
     queryKey: calendarKeys.admin.workingHours(),
@@ -71,10 +89,11 @@ export default function AdminWorkingHoursScreen() {
   const [activeField, setActiveField] = useState<TimeFieldKey | null>(null);
   const [useLunchBreak, setUseLunchBreak] = useState(false);
   const [form, setForm] = useState<WorkingHoursForm>(() => createEmptyForm());
+  const [viewMode, setViewMode] = useState<WorkingHoursViewMode>(activation ? "FORM" : "LIST");
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [formBaseline, setFormBaseline] = useState<WorkingHoursBaseline | null>(null);
 
   const settings = query.data || {};
-  const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
-  const activation = isClinicActivationFlow(params.activation);
   const profile = settings.profile || settings;
   const location = profile.location || {};
 
@@ -151,6 +170,66 @@ export default function AdminWorkingHoursScreen() {
     return `${form.lunch_break_start} - ${form.lunch_break_end} arası takvimde kapalı blok olarak değerlendirilir.`;
   }, [form.lunch_break_end, form.lunch_break_start, useLunchBreak]);
 
+  const activeDayCount = form.working_days.length;
+  const dailyMinutes =
+    form.start_time && form.end_time
+      ? Math.max(0, toMinutes(form.end_time) - toMinutes(form.start_time))
+      : 0;
+  const weeklyMinutes = dailyMinutes * activeDayCount;
+  const isSelectedDayActive = form.working_days.includes(selectedDay);
+
+  function openDayForm(day: number) {
+    setSelectedDay(day);
+    setFormBaseline({
+      form: {
+        ...form,
+        working_days: [...form.working_days],
+      },
+      useLunchBreak,
+    });
+    setActiveField(null);
+    setViewMode("FORM");
+  }
+
+  function closeForm() {
+    setActiveField(null);
+    setFormBaseline(null);
+    setViewMode("LIST");
+  }
+
+  function requestCloseForm() {
+    if (activation) {
+      router.replace((backTo || "/(admin)/salon") as never);
+      return;
+    }
+
+    const current: WorkingHoursBaseline = { form, useLunchBreak };
+    if (!formBaseline || JSON.stringify(current) === JSON.stringify(formBaseline)) {
+      closeForm();
+      return;
+    }
+
+    Alert.alert(
+      "Değişiklikler kaydedilmedi",
+      "Yaptığınız değişiklikleri bırakmak istediğinize emin misiniz?",
+      [
+        { text: "Düzenlemeye devam et", style: "cancel" },
+        {
+          text: "Değişiklikleri bırak",
+          style: "destructive",
+          onPress: () => {
+            setForm({
+              ...formBaseline.form,
+              working_days: [...formBaseline.form.working_days],
+            });
+            setUseLunchBreak(formBaseline.useLunchBreak);
+            closeForm();
+          },
+        },
+      ]
+    );
+  }
+
   const mutation = useMutation({
     mutationFn: () => {
       const currentProfile = query.data?.profile || query.data || {};
@@ -191,7 +270,8 @@ export default function AdminWorkingHoursScreen() {
       }
 
       void query.refetch();
-      showInfoAlert(
+      closeForm();
+      showSuccessNotice(
         "Çalışma saatleri güncellendi",
         "Salon takvimi ve bağlı kullanıcı ekranları yeni çalışma düzenine göre yenilendi."
       );
@@ -228,6 +308,7 @@ export default function AdminWorkingHoursScreen() {
   }
 
   function handleSave() {
+    if (mutation.isPending) return;
     if (!form.start_time || !form.end_time) {
       showInfoAlert("Saat seçimi eksik", "Açılış ve kapanış saatlerini seçmeden kaydedemezsiniz.");
       return;
@@ -277,13 +358,31 @@ export default function AdminWorkingHoursScreen() {
   return (
     <>
       <AppShell
-        testID="admin-clinic-activation-step-3"
-        title={activation ? "Çalışma saatleri" : "Çalışma saatlerini düzenle"}
-        subtitle="Açılış, kapanış, öğle arası ve slot süresi salon takvimini doğrudan belirler."
+        formMode={viewMode === "FORM"}
+        key={viewMode}
+        testID={
+          activation
+            ? "admin-clinic-activation-step-3"
+            : viewMode === "LIST"
+              ? "admin-working-hours-list-view"
+              : "admin-working-hours-edit-view"
+        }
+        title={
+          activation
+            ? "Çalışma saatleri"
+            : viewMode === "LIST"
+              ? "Haftalık çalışma programı"
+              : `${resolveDayName(selectedDay)} çalışma düzeni`
+        }
+        subtitle={
+          viewMode === "LIST" && !activation
+            ? "Açık ve kapalı günleri tek bakışta kontrol et."
+            : "Saat düzeni tüm açık günlerde takvim slotlarını doğrudan belirler."
+        }
         icon="clock"
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}
-        onBack={() => router.replace((backTo || "/(admin)/salon") as never)}
+        onBack={viewMode === "FORM" && !activation ? requestCloseForm : () => router.replace((backTo || "/(admin)/salon") as never)}
         footer={
           activation ? (
             <ActionButton testID="admin-working-hours-save" label="Saatleri kaydet ve QR'a geç" icon="clock" onPress={handleSave} loading={mutation.isPending} />
@@ -296,151 +395,263 @@ export default function AdminWorkingHoursScreen() {
             <Text style={styles.copy}>Saatleri kaydettiğinde paylaşılabilir klinik QR'ın açılır.</Text>
           </SurfaceCard>
         ) : null}
-        <View style={styles.metricsRow}>
-          <MetricCard label="Açılış" value={form.start_time || "Seçilmedi"} hint="Gün başlangıcı" icon="clock" />
-          <MetricCard label="Kapanış" value={form.end_time || "Seçilmedi"} hint="Gün sonu" icon="calendar" />
-          <MetricCard label="Ders" value={`${form.slot_minutes} dk`} hint="Takvime yansır" icon="calendar" />
-          <MetricCard label="Mola" value={form.break_duration_minutes ? `${form.break_duration_minutes} dk` : "Yok"} hint="Blok sonu" icon="clock" />
-        </View>
 
-        <SurfaceCard tone="primary">
-          <Text style={styles.cardTitle}>Takvim görünümü bu ayarlara göre oluşturulur</Text>
-          <Text style={styles.copy}>
-            {hasSavedBusinessHours
-              ? "Üye, eğitmen ve yönetici takvimlerinde görünen müsait saatler bu çalışma düzenine göre hesaplanır."
-              : "Hazır örnek saatler göstermiyoruz. Saatleri ve çalışma günlerini salon düzeninize göre siz belirleyin."}
-          </Text>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Saat dilimi</Text>
-            <Text style={styles.infoValue}>{form.timezone || location.timezone || "Salon lokasyonundan belirlenemedi"}</Text>
-          </View>
-        </SurfaceCard>
-
-        <SurfaceCard>
-          <Text style={styles.section}>Saat aralıkları</Text>
-          <TimeField
-            testID="admin-working-hours-start-time"
-            label="Açılış saati"
-            value={form.start_time}
-            placeholder="Açılış saatini seç"
-            onPress={() => setActiveField("start_time")}
-          />
-          <TimeField
-            testID="admin-working-hours-end-time"
-            label="Kapanış saati"
-            value={form.end_time}
-            placeholder="Kapanış saatini seç"
-            onPress={() => setActiveField("end_time")}
-          />
-        </SurfaceCard>
-
-        <SurfaceCard>
-          <Text style={styles.section}>Öğle arası</Text>
-          <Text style={styles.copy}>
-            Öğle arası kullanmak istemiyorsan kapalı bırak. Kapalı olduğunda takvim slotlarını ve çalışma saati hesaplamalarını etkilemez.
-          </Text>
-
-          <View style={styles.chipRow}>
-            <SelectionChip
-              label={useLunchBreak ? "Öğle arası aktif" : "Öğle arası yok"}
-              active={useLunchBreak}
-              onPress={() => {
-                setUseLunchBreak((prev) => {
-                  const next = !prev;
-
-                  if (!next) {
-                    setForm((current) => ({
-                      ...current,
-                      lunch_break_start: "",
-                      lunch_break_end: "",
-                    }));
-                  }
-
-                  return next;
-                });
-              }}
-            />
-          </View>
-
-          <Text style={styles.previewText}>{lunchPreview}</Text>
-
-          {useLunchBreak ? (
-            <View style={styles.lunchFields}>
-              <TimeField
-                label="Öğle arası başlangıcı"
-                value={form.lunch_break_start}
-                placeholder="Başlangıç saatini seç"
-                onPress={() => setActiveField("lunch_break_start")}
-              />
-              <TimeField
-                label="Öğle arası bitişi"
-                value={form.lunch_break_end}
-                placeholder="Bitiş saatini seç"
-                onPress={() => setActiveField("lunch_break_end")}
+        {!activation && viewMode === "LIST" ? (
+          <>
+            <View style={styles.metricsRow}>
+              <MetricCard label="Açık gün" value={activeDayCount} hint="Haftalık program" icon="calendar" />
+              <MetricCard label="Haftalık süre" value={formatDuration(weeklyMinutes)} hint="Mola hariç" icon="clock" />
+              <MetricCard
+                label="Saat düzeni"
+                value={form.start_time && form.end_time ? `${form.start_time}–${form.end_time}` : "Ayarlanmadı"}
+                hint={`${form.slot_minutes} dk ders`}
+                icon="clock"
               />
             </View>
-          ) : null}
-        </SurfaceCard>
 
-        <SurfaceCard testID="admin-working-hours-days-section">
-          <Text style={styles.section}>Çalışma günleri</Text>
-          <Text style={styles.copy}>Seçili günler: {summary || "Henüz seçilmedi"}</Text>
-          <View style={styles.chipRow}>
-            {DAY_OPTIONS.map((item) => (
-              <SelectionChip
-                key={item.value}
-                testID={`admin-working-hours-day-${item.value}`}
-                label={item.label}
-                active={form.working_days.includes(item.value)}
-                onPress={() => toggleWorkingDay(item.value)}
+            <SurfaceCard tone="primary">
+              <Text style={styles.cardTitle}>Ortak saat düzeni</Text>
+              <Text style={styles.copy}>
+                Açılış, kapanış, öğle arası ve ders süresi tüm açık günlerde ortaktır. Bir gün üzerinden yaptığın saat değişikliği diğer açık günlere de uygulanır.
+              </Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Saat dilimi</Text>
+                <Text style={styles.infoValue}>{form.timezone || location.timezone || "Salon lokasyonundan belirlenemedi"}</Text>
+              </View>
+            </SurfaceCard>
+
+            <View style={styles.dayList} testID="admin-working-hours-days-section">
+              {DAY_OPTIONS.map((item) => {
+                const active = form.working_days.includes(item.value);
+
+                return (
+                  <SurfaceCard key={item.value} testID={`admin-working-hours-day-card-${item.value}`} padding="compact">
+                    <View style={styles.dayHeader}>
+                      <View style={styles.dayTitleWrap}>
+                        <Text style={styles.dayTitle}>{resolveDayName(item.value)}</Text>
+                        <Text style={[styles.dayStatus, active ? styles.dayStatusActive : styles.dayStatusClosed]}>
+                          {active ? "Çalışıyor" : "Kapalı"}
+                        </Text>
+                      </View>
+                      <Text style={styles.dayHours}>
+                        {active && form.start_time && form.end_time ? `${form.start_time} – ${form.end_time}` : "Çalışma saati yok"}
+                      </Text>
+                    </View>
+                    {active && useLunchBreak && form.lunch_break_start && form.lunch_break_end ? (
+                      <Text style={styles.copy}>Öğle arası: {form.lunch_break_start} – {form.lunch_break_end}</Text>
+                    ) : null}
+                    <ActionButton
+                      testID={`admin-working-hours-edit-${item.value}`}
+                      label="Düzenle"
+                      icon="clock"
+                      variant="ghost"
+                      fullWidth={false}
+                      onPress={() => openDayForm(item.value)}
+                    />
+                  </SurfaceCard>
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <>
+            {!activation ? (
+              <SurfaceCard tone="primary">
+                <View style={styles.formHeader}>
+                  <View style={styles.formHeaderCopy}>
+                    <Text testID="admin-working-hours-form-title" style={styles.cardTitle}>{resolveDayName(selectedDay)} çalışma düzeni</Text>
+                    <Text style={styles.copy}>Saat alanlarında yapılan değişiklikler tüm açık günlere uygulanır.</Text>
+                  </View>
+                  <ActionButton
+                    testID="admin-working-hours-back"
+                    label="Programa dön"
+                    icon="arrow-left"
+                    variant="ghost"
+                    onPress={requestCloseForm}
+                  />
+                </View>
+                <SelectionChip
+                  testID={`admin-working-hours-day-${selectedDay}`}
+                  label={isSelectedDayActive ? "Bu gün çalışıyor" : "Bu gün kapalı"}
+                  active={isSelectedDayActive}
+                  onPress={() => toggleWorkingDay(selectedDay)}
+                />
+              </SurfaceCard>
+            ) : null}
+
+            {activation ? (
+              <View style={styles.metricsRow}>
+                <MetricCard label="Açılış" value={form.start_time || "Seçilmedi"} hint="Gün başlangıcı" icon="clock" />
+                <MetricCard label="Kapanış" value={form.end_time || "Seçilmedi"} hint="Gün sonu" icon="calendar" />
+                <MetricCard label="Ders" value={`${form.slot_minutes} dk`} hint="Takvime yansır" icon="calendar" />
+                <MetricCard label="Mola" value={form.break_duration_minutes ? `${form.break_duration_minutes} dk` : "Yok"} hint="Blok sonu" icon="clock" />
+              </View>
+            ) : null}
+
+            <SurfaceCard tone="primary">
+              <Text style={styles.cardTitle}>Takvim görünümü bu ayarlara göre oluşturulur</Text>
+              <Text style={styles.copy}>
+                {hasSavedBusinessHours
+                  ? "Üye, eğitmen ve yönetici takvimlerinde görünen müsait saatler bu çalışma düzenine göre hesaplanır."
+                  : "Hazır örnek saatler göstermiyoruz. Saatleri ve çalışma günlerini salon düzeninize göre siz belirleyin."}
+              </Text>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Saat dilimi</Text>
+                <Text style={styles.infoValue}>{form.timezone || location.timezone || "Salon lokasyonundan belirlenemedi"}</Text>
+              </View>
+            </SurfaceCard>
+
+            {activation || isSelectedDayActive ? (
+              <>
+                <SurfaceCard>
+                  <Text style={styles.section}>Saat aralıkları</Text>
+                  <TimeField
+                    testID="admin-working-hours-start-time"
+                    label="Açılış saati"
+                    value={form.start_time}
+                    placeholder="Açılış saatini seç"
+                    onPress={() => setActiveField("start_time")}
+                  />
+                  <TimeField
+                    testID="admin-working-hours-end-time"
+                    label="Kapanış saati"
+                    value={form.end_time}
+                    placeholder="Kapanış saatini seç"
+                    onPress={() => setActiveField("end_time")}
+                  />
+                </SurfaceCard>
+
+                <SurfaceCard>
+                  <Text style={styles.section}>Öğle arası</Text>
+                  <Text style={styles.copy}>
+                    Öğle arası kullanmak istemiyorsan kapalı bırak. Kapalı olduğunda takvim slotlarını ve çalışma saati hesaplamalarını etkilemez.
+                  </Text>
+
+                  <View style={styles.chipRow}>
+                    <SelectionChip
+                      testID="admin-working-hours-lunch-enabled"
+                      label={useLunchBreak ? "Öğle arası aktif" : "Öğle arası yok"}
+                      active={useLunchBreak}
+                      onPress={() => {
+                        setUseLunchBreak((prev) => {
+                          const next = !prev;
+
+                          if (!next) {
+                            setForm((current) => ({
+                              ...current,
+                              lunch_break_start: "",
+                              lunch_break_end: "",
+                            }));
+                          }
+
+                          return next;
+                        });
+                      }}
+                    />
+                  </View>
+
+                  <Text style={styles.previewText}>{lunchPreview}</Text>
+
+                  {useLunchBreak ? (
+                    <View style={styles.lunchFields}>
+                      <TimeField
+                        testID="admin-working-hours-lunch-start"
+                        label="Öğle arası başlangıcı"
+                        value={form.lunch_break_start}
+                        placeholder="Başlangıç saatini seç"
+                        onPress={() => setActiveField("lunch_break_start")}
+                      />
+                      <TimeField
+                        testID="admin-working-hours-lunch-end"
+                        label="Öğle arası bitişi"
+                        value={form.lunch_break_end}
+                        placeholder="Bitiş saatini seç"
+                        onPress={() => setActiveField("lunch_break_end")}
+                      />
+                    </View>
+                  ) : null}
+                </SurfaceCard>
+              </>
+            ) : (
+              <SurfaceCard>
+                <Text style={styles.section}>{resolveDayName(selectedDay)} kapalı</Text>
+                <Text style={styles.copy}>Bu gün için takvim slotu üretilmeyecek. Yeniden açmak için yukarıdaki durum seçeneğine dokun.</Text>
+              </SurfaceCard>
+            )}
+
+            {activation ? (
+              <SurfaceCard testID="admin-working-hours-days-section">
+                <Text style={styles.section}>Çalışma günleri</Text>
+                <Text style={styles.copy}>Seçili günler: {summary || "Henüz seçilmedi"}</Text>
+                <View style={styles.chipRow}>
+                  {DAY_OPTIONS.map((item) => (
+                    <SelectionChip
+                      key={item.value}
+                      testID={`admin-working-hours-day-${item.value}`}
+                      label={item.label}
+                      active={form.working_days.includes(item.value)}
+                      onPress={() => toggleWorkingDay(item.value)}
+                    />
+                  ))}
+                </View>
+              </SurfaceCard>
+            ) : null}
+
+            {(activation || isSelectedDayActive) ? (
+              <>
+                <SurfaceCard>
+                  <Text style={styles.section}>Ders süresi</Text>
+                  <Text style={styles.copy}>Takvimde görünen her ders bloğu aşağıdaki süreyle oluşturulur.</Text>
+                  <View style={styles.chipRow}>
+                    {BUSINESS_HOUR_SLOT_OPTIONS.map((value) => (
+                      <SelectionChip
+                        key={value}
+                        label={`${value} dk`}
+                        active={form.slot_minutes === value}
+                        onPress={() => setForm((prev) => ({ ...prev, slot_minutes: value }))}
+                      />
+                    ))}
+                  </View>
+                </SurfaceCard>
+
+                <SurfaceCard>
+                  <Text style={styles.section}>Ders arası mola</Text>
+                  <Text style={styles.copy}>
+                    Mola süresi eklenirse takvimde dersler arasında otomatik boşluk bırakılır. Örn: 09:00-09:45, sonraki ders 10:00.
+                  </Text>
+                  <Text style={styles.fieldLabel}>Mola süresi</Text>
+                  <View style={styles.chipRow}>
+                    {BUSINESS_HOUR_BREAK_OPTIONS.map((value) => (
+                      <SelectionChip
+                        key={value}
+                        label={value === 0 ? "Molasız" : `${value} dk`}
+                        active={form.break_duration_minutes === value}
+                        onPress={() => setForm((prev) => ({ ...prev, break_duration_minutes: value }))}
+                      />
+                    ))}
+                  </View>
+                  <View style={styles.previewCard}>
+                    <Text style={styles.previewTitle}>Örnek akış</Text>
+                    <Text style={styles.previewText}>{flowPreview.lessonLine}</Text>
+                    <Text style={styles.previewText}>{flowPreview.breakLine}</Text>
+                    <Text style={styles.previewText}>Bir sonraki ders başlangıcı: +{flowPreview.totalBlock} dk</Text>
+                  </View>
+                </SurfaceCard>
+              </>
+            ) : null}
+
+            {!activation ? (
+              <ActionButton
+                testID="admin-working-hours-save"
+                label="Değişiklikleri kaydet"
+                icon="clock"
+                onPress={handleSave}
+                loading={mutation.isPending}
               />
-            ))}
-          </View>
-        </SurfaceCard>
-
-        <SurfaceCard>
-          <Text style={styles.section}>Ders süresi</Text>
-          <Text style={styles.copy}>Takvimde görünen her ders bloğu aşağıdaki süreyle oluşturulur.</Text>
-          <View style={styles.chipRow}>
-            {BUSINESS_HOUR_SLOT_OPTIONS.map((value) => (
-              <SelectionChip
-                key={value}
-                label={`${value} dk`}
-                active={form.slot_minutes === value}
-                onPress={() => setForm((prev) => ({ ...prev, slot_minutes: value }))}
-              />
-            ))}
-          </View>
-        </SurfaceCard>
-
-        <SurfaceCard>
-          <Text style={styles.section}>Ders arası mola</Text>
-          <Text style={styles.copy}>
-            Mola süresi eklenirse takvimde dersler arasında otomatik boşluk bırakılır. Örn: 09:00-09:45, sonraki ders 10:00.
-          </Text>
-          <Text style={styles.fieldLabel}>Mola süresi</Text>
-          <View style={styles.chipRow}>
-            {BUSINESS_HOUR_BREAK_OPTIONS.map((value) => (
-              <SelectionChip
-                key={value}
-                label={value === 0 ? "Molasız" : `${value} dk`}
-                active={form.break_duration_minutes === value}
-                onPress={() => setForm((prev) => ({ ...prev, break_duration_minutes: value }))}
-              />
-            ))}
-          </View>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>Örnek akış</Text>
-            <Text style={styles.previewText}>{flowPreview.lessonLine}</Text>
-            <Text style={styles.previewText}>{flowPreview.breakLine}</Text>
-            <Text style={styles.previewText}>Bir sonraki ders başlangıcı: +{flowPreview.totalBlock} dk</Text>
-          </View>
-        </SurfaceCard>
-
-        {!activation ? (
-          <ActionButton testID="admin-working-hours-save" label="Değişiklikleri kaydet" icon="clock" onPress={handleSave} loading={mutation.isPending} />
-        ) : null}
+            ) : null}
+          </>
+        )}
       </AppShell>
 
       <Modal visible={activeField !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setActiveField(null)}>
@@ -455,7 +666,13 @@ export default function AdminWorkingHoursScreen() {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.timeList}>
+          <ScrollView
+            contentContainerStyle={styles.timeList}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled
+            contentInsetAdjustmentBehavior="automatic"
+          >
             {TIME_OPTIONS.map((value) => (
               <Pressable
                 key={value}
@@ -555,6 +772,51 @@ const styles = StyleSheet.create({
     fontSize: tokens.font.sm,
     fontFamily: tokens.fontFamily.semibold,
   },
+  dayList: {
+    gap: tokens.spacing.sm,
+  },
+  dayHeader: {
+    gap: tokens.spacing.sm,
+  },
+  dayTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: tokens.spacing.sm,
+  },
+  dayTitle: {
+    flex: 1,
+    color: tokens.colors.text,
+    fontSize: tokens.font.md,
+    fontFamily: tokens.fontFamily.bold,
+  },
+  dayStatus: {
+    overflow: "hidden",
+    borderRadius: tokens.radius.pill,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: 4,
+    fontSize: tokens.font.xs,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  dayStatusActive: {
+    color: tokens.colors.success,
+    backgroundColor: tokens.colors.successSoft,
+  },
+  dayStatusClosed: {
+    color: tokens.colors.textMuted,
+    backgroundColor: tokens.colors.surfaceSoft,
+  },
+  dayHours: {
+    color: tokens.colors.text,
+    fontSize: tokens.font.sm,
+    fontFamily: tokens.fontFamily.semibold,
+  },
+  formHeader: {
+    gap: tokens.spacing.md,
+  },
+  formHeaderCopy: {
+    gap: tokens.spacing.xs,
+  },
   fieldWrap: {
     gap: 6,
   },
@@ -626,8 +888,8 @@ const styles = StyleSheet.create({
     paddingBottom: tokens.spacing.md,
   },
   sheetClose: {
-    width: 40,
-    height: 40,
+    width: tokens.touch.min,
+    height: tokens.touch.min,
     borderRadius: tokens.radius.pill,
     alignItems: "center",
     justifyContent: "center",

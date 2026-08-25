@@ -16,6 +16,7 @@ import { WeeklyScheduler } from "@/theme/components/weekly-scheduler";
 import { EmptyState } from "@/theme/components/empty-state";
 import { tokens } from "@/theme/tokens";
 import { resolveCalendarEmptyState } from "@/lib/admin-empty-states";
+import { QueryState } from "@/theme/components/query-state";
 
 function formatDateTimeRange(startsAt?: string | null, endsAt?: string | null, timezone = "Europe/Istanbul") {
   if (!startsAt) return "-";
@@ -118,6 +119,14 @@ export default function AdminCalendarScreen() {
     });
   }, [calendarQuery.data?.business_hours, calendarQuery.data?.timezone]);
   const calendarEmptyState = resolveCalendarEmptyState(businessHours.is_configured);
+
+  if (calendarQuery.isLoading && !calendarQuery.data) {
+    return <AppShell testID="admin-calendar-screen" title="Salon Takvimi" subtitle="Ders akışını, eğitmen programını ve grup derslerini takip edin." icon="calendar"><QueryState mode="loading" title="Takvim hazırlanıyor" /></AppShell>;
+  }
+
+  if (calendarQuery.isError && !calendarQuery.data) {
+    return <AppShell testID="admin-calendar-screen" title="Salon Takvimi" subtitle="Ders akışını, eğitmen programını ve grup derslerini takip edin." icon="calendar"><QueryState mode="error" error={calendarQuery.error} onRetry={() => void calendarQuery.refetch()} /></AppShell>;
+  }
 
   return (
     <AppShell

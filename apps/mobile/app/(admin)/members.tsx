@@ -153,7 +153,7 @@ export default function AdminMembersScreen() {
       {query.isLoading && !query.data ? (
         <QueryState mode="loading" title="Kişiler hazırlanıyor" />
       ) : query.isError && !query.data ? (
-        <QueryState mode="error" onRetry={() => void query.refetch()} />
+        <QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState
           title={membersEmptyState.title}

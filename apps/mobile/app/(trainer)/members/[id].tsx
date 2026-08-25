@@ -204,6 +204,7 @@ export default function TrainerClientDetailScreen() {
 
   return (
     <AppShell
+      testID="trainer-client-detail-screen"
       title={detail?.full_name || "Danışan detayı"}
       subtitle="Aktif paket, katılım, notlar ve ölçümleri mobilde tek ekranda takip et."
       icon="clients"
@@ -211,6 +212,22 @@ export default function TrainerClientDetailScreen() {
       onRefresh={() => {
         handleRefresh().catch(() => null);
       }}
+      footer={
+        <View style={styles.footerActions}>
+          <ActionButton
+            testID="trainer-client-open-notes"
+            label="Koç Notları"
+            icon="notes"
+            onPress={() =>
+              router.push({
+                pathname: "/(trainer)/notes",
+                params: { memberId: String(params.id), memberName: detail?.full_name || "", backTo: backTo || "/(trainer)/clients" },
+              } as never)
+            }
+          />
+          <ActionButton testID="trainer-client-open-checkin" label="QR ile check-in" icon="qr" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: `/(trainer)/members/${params.id}` } } as never)} />
+        </View>
+      }
     >
       <SurfaceCard tone="primary" padding="hero">
         <View style={styles.heroHeader}>
@@ -265,8 +282,8 @@ export default function TrainerClientDetailScreen() {
       </SurfaceCard>
 
       <View style={styles.metricsRow}>
-        <MetricCard label="Aktif paket" value={activePackageCount} hint="Kullanılabilir paketler" icon="package" />
-        <MetricCard label="Toplam kalan hak" value={totalRemainingCredits} hint="Tüm paketlerden kalan" icon="ticket" />
+        <MetricCard testID="trainer-client-active-packages" label="Aktif paket" value={activePackageCount} hint="Kullanılabilir paketler" icon="package" />
+        <MetricCard testID="trainer-client-remaining-credits" label="Toplam kalan hak" value={totalRemainingCredits} hint="Tüm paketlerden kalan" icon="ticket" />
       </View>
       <View style={styles.metricsRow}>
         <MetricCard label="Son katılım" value={latestAttendance ? formatDate(latestAttendance.created_at) : "-"} hint="En güncel check-in" icon="calendar" />
@@ -281,6 +298,7 @@ export default function TrainerClientDetailScreen() {
       </SurfaceCard>
 
       <SegmentedSwitch
+        testID="trainer-client-detail-tabs"
         value={tab}
         options={[
           { label: "Özet", value: "SUMMARY" },
@@ -456,7 +474,7 @@ export default function TrainerClientDetailScreen() {
 
       {tab === "PROGRESS" ? (
         <>
-          <SurfaceCard>
+          <SurfaceCard testID="trainer-client-progress-panel">
             <Text style={styles.section}>Boy, kilo, yağ ve kas takibi</Text>
             <Text style={styles.copy}>Danışanın ölçüm trendini grafikle takip et.</Text>
             <SegmentedSwitch
@@ -481,24 +499,14 @@ export default function TrainerClientDetailScreen() {
         </>
       ) : null}
 
-      <SurfaceCard>
-        <ActionButton
-          label="Koç Notları"
-          icon="notes"
-          onPress={() =>
-            router.push({
-              pathname: "/(trainer)/notes",
-              params: { memberId: String(params.id), memberName: detail?.full_name || "", backTo: backTo || "/(trainer)/clients" },
-            } as never)
-          }
-        />
-        <ActionButton label="QR ile check-in" icon="qr" variant="ghost" onPress={() => router.push({ pathname: "/(trainer)/checkin", params: { backTo: `/(trainer)/members/${params.id}` } } as never)} />
-      </SurfaceCard>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
+  footerActions: {
+    gap: tokens.spacing.sm,
+  },
   metricsRow: {
     flexDirection: "row",
     flexWrap: "wrap",

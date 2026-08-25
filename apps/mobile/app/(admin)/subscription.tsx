@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getAdminClinicSubscriptionApi, startAdminClinicTrialApi, syncAdminClinicSubscriptionApi, type AdminClinicSubscription } from "@/lib/mobile-api";
 import { buildSubscriptionHeadline, CLINIC_TRIAL_DAYS, formatSubscriptionStatus } from "@/lib/admin-subscription";
-import { refreshSessionAfterCommittedAction, showErrorAlert, showInfoAlert } from "@/lib/user-feedback";
-import { configureRevenueCat, getRevenueCatPlanPackages, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
+import { refreshSessionAfterCommittedAction, showErrorAlert, showSuccessNotice } from "@/lib/user-feedback";
+import { configureRevenueCat, getRevenueCatPlanPackages, manageRevenueCatSubscription, purchaseRevenueCatPackage, restoreRevenueCatPurchases } from "@/lib/revenuecat";
 import { SUBSCRIPTION_PRICING, SUBSCRIPTION_VALUE_PROOFS, type BillingCycle } from "@/lib/subscription-pricing";
 import { useSession } from "@/providers/auth-session";
 import { ActionButton } from "@/theme/components/action-button";
@@ -16,6 +16,8 @@ import { StatusBadge } from "@/theme/components/status-badge";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
 import { trackProductEvent } from "@/lib/product-analytics";
+import { isE2EModeEnabled } from "@/lib/e2e-mode";
+import { runE2ESubscriptionEventApi } from "@/lib/api/subscription";
 
 const PRIVACY_POLICY_URL = "https://fizyoflow.com/privacy-policy";
 const TERMS_OF_USE_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
@@ -53,11 +55,15 @@ function resolveStatusTone(status?: string): "success" | "warning" | "info" {
 
 export default function AdminSubscriptionScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ backTo?: string | string[] }>();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; e2eState?: string | string[] }>();
   const { refreshMe, managedClinic } = useSession();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const billingCycleRef = useRef<BillingCycle>("monthly");
   const [purchaseSyncStartedAt, setPurchaseSyncStartedAt] = useState<number | null>(null);
+  const e2eStateAppliedRef = useRef(false);
   const backTo = Array.isArray(params.backTo) ? params.backTo[0] : params.backTo;
+  const e2eState = Array.isArray(params.e2eState) ? params.e2eState[0] : params.e2eState;
+  const useE2ESubscriptionAdapter = e2eState === "READ_ONLY" && isE2EModeEnabled();
 
   const query = useQuery({
     queryKey: ["admin-clinic-subscription"],
@@ -71,7 +77,7 @@ export default function AdminSubscriptionScreen() {
   const packageQuery = useQuery({
     queryKey: ["admin-clinic-revenuecat-packages", revenueCatAppUserId],
     enabled: Boolean(revenueCatAppUserId),
-    queryFn: async () => getRevenueCatPlanPackages(revenueCatAppUserId),
+    queryFn: async () => getRevenueCatPlanPackages(revenueCatAppUserId, useE2ESubscriptionAdapter),
     retry: false,
   });
 
@@ -85,8 +91,14 @@ export default function AdminSubscriptionScreen() {
 
   useEffect(() => {
     if (!revenueCatAppUserId) return;
-    configureRevenueCat(revenueCatAppUserId).catch(() => null);
-  }, [revenueCatAppUserId]);
+    configureRevenueCat(revenueCatAppUserId, useE2ESubscriptionAdapter).catch(() => null);
+  }, [revenueCatAppUserId, useE2ESubscriptionAdapter]);
+
+  useEffect(() => {
+    if (e2eStateAppliedRef.current || !revenueCatAppUserId || e2eState !== "READ_ONLY" || !isE2EModeEnabled()) return;
+    e2eStateAppliedRef.current = true;
+    void runE2ESubscriptionEventApi(revenueCatAppUserId, "RESET").then(() => query.refetch());
+  }, [e2eState, query, revenueCatAppUserId]);
 
   useEffect(() => {
     if (!purchaseSyncStartedAt) return;
@@ -122,7 +134,7 @@ export default function AdminSubscriptionScreen() {
   onSuccess: async () => {
     await refreshSessionAfterCommittedAction(refreshMe, "Deneme başlatma");
 
-    showInfoAlert(
+    showSuccessNotice(
       "Deneme başlatıldı",
       `${CLINIC_TRIAL_DAYS} günlük ücretsiz denemen aktif. Planını istediğin zaman bu ekrandan etkinleştirebilirsin.`
     );
@@ -160,11 +172,12 @@ export default function AdminSubscriptionScreen() {
       throw new Error("Salon bilgisi henüz hazır değil. Lütfen ekranı yenileyip tekrar dene.");
     }
 
+    const selectedBillingCycle = billingCycleRef.current;
     void trackProductEvent("purchase_started", {
       screen: "admin_subscription",
-      billing_cycle: billingCycle,
+      billing_cycle: selectedBillingCycle,
     });
-    return purchaseRevenueCatPackage(revenueCatAppUserId, billingCycle);
+    return purchaseRevenueCatPackage(revenueCatAppUserId, selectedBillingCycle, useE2ESubscriptionAdapter);
   },
 
   meta: {
@@ -177,13 +190,15 @@ export default function AdminSubscriptionScreen() {
 
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
-    await syncAdminClinicSubscriptionApi().catch(() => null);
-    await Promise.all([refreshSessionAfterCommittedAction(refreshMe, "Satın alma"), query.refetch()]);
-
-    showInfoAlert(
+    showSuccessNotice(
       "Satın alma tamamlandı",
       "Planın etkinleştiriliyor. Bu ekranda kalabilir veya daha sonra tekrar açabilirsin."
     );
+    await syncAdminClinicSubscriptionApi().catch(() => null);
+    await Promise.allSettled([
+      refreshSessionAfterCommittedAction(refreshMe, "Satın alma"),
+      query.refetch(),
+    ]);
   },
 
   onError: (error) => {
@@ -201,7 +216,7 @@ export default function AdminSubscriptionScreen() {
       throw new Error("Salon bilgisi henüz hazır değil. Lütfen ekranı yenileyip tekrar dene.");
     }
 
-    return restoreRevenueCatPurchases(revenueCatAppUserId);
+    return restoreRevenueCatPurchases(revenueCatAppUserId, useE2ESubscriptionAdapter);
   },
 
   meta: {
@@ -214,13 +229,15 @@ export default function AdminSubscriptionScreen() {
 
   onSuccess: async () => {
     setPurchaseSyncStartedAt(Date.now());
-    await syncAdminClinicSubscriptionApi().catch(() => null);
-    await Promise.all([refreshSessionAfterCommittedAction(refreshMe, "Geri yükleme"), query.refetch()]);
-
-    showInfoAlert(
+    showSuccessNotice(
       "Satın almalar yenilendi",
       "Satın alma bilgilerin yenilendi. Planın etkinleştiriliyor."
     );
+    await syncAdminClinicSubscriptionApi().catch(() => null);
+    await Promise.allSettled([
+      refreshSessionAfterCommittedAction(refreshMe, "Geri yükleme"),
+      query.refetch(),
+    ]);
   },
 
   onError: (error) => {
@@ -232,7 +249,24 @@ export default function AdminSubscriptionScreen() {
   },
 });
 
-  const isBusy = startTrialMutation.isPending || purchaseMutation.isPending || restoreMutation.isPending;
+  const manageMutation = useMutation({
+    mutationFn: async () => {
+      if (!revenueCatAppUserId) throw new Error("Salon bilgisi henüz hazır değil.");
+      return manageRevenueCatSubscription(revenueCatAppUserId, useE2ESubscriptionAdapter);
+    },
+    onSuccess: async (result) => {
+      await query.refetch();
+      showSuccessNotice(
+        result.cancellationRecorded ? "Otomatik yenileme kapatıldı" : "Abonelik yönetimi açıldı",
+        result.cancellationRecorded
+          ? "Planın mevcut dönem sonuna kadar aktif kalacak."
+          : "İptal veya plan değişikliğini mağaza hesabından tamamlayabilirsin."
+      );
+    },
+    onError: (error) => showErrorAlert("Abonelik yönetimi açılamadı", error, "Mağaza abonelik ekranı açılamadı."),
+  });
+
+  const isBusy = startTrialMutation.isPending || purchaseMutation.isPending || restoreMutation.isPending || manageMutation.isPending;
 
   return (
     <AppShell
@@ -294,7 +328,10 @@ export default function AdminSubscriptionScreen() {
                   testID={`admin-subscription-plan-${cycle}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  onPress={() => setBillingCycle(cycle)}
+                  onPress={() => {
+                    billingCycleRef.current = cycle;
+                    setBillingCycle(cycle);
+                  }}
                   style={[styles.planOption, selected ? styles.planOptionSelected : null]}
                 >
                   <View style={styles.planOptionTop}>
@@ -352,6 +389,7 @@ export default function AdminSubscriptionScreen() {
           <InfoRow
             label="Otomatik yenileme"
             value={subscription?.subscription_status === "ACTIVE" ? (subscription?.will_renew === false ? "Kapalı" : "Açık") : "Plan aktif değil"}
+            testID="admin-subscription-renewal-status"
           />
           <InfoRow label="Mevcut dönem bitişi" value={formatDate(subscription?.subscription_current_period_ends_at)} />
           <InfoRow label="Satın alma" value={subscription?.purchase_mode === "IN_APP_PURCHASE" ? "Uygulama içi" : "Hazırlanıyor"} />
@@ -389,6 +427,16 @@ export default function AdminSubscriptionScreen() {
           loading={restoreMutation.isPending}
           onPress={() => restoreMutation.mutate()}
         />
+        {subscription?.subscription_status === "ACTIVE" ? (
+          <ActionButton
+            testID="admin-subscription-manage-store"
+            label="Aboneliği yönet"
+            icon="settings"
+            variant="ghost"
+            loading={manageMutation.isPending}
+            onPress={() => manageMutation.mutate()}
+          />
+        ) : null}
         {visiblePrimaryAction.action !== "TRIAL" ? null : (
           <ActionButton
             testID="admin-subscription-purchase-secondary"
@@ -419,9 +467,9 @@ function FeatureRow({ icon, title, description }: { icon: AppIconName; title: st
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value, testID }: { label: string; value: string; testID?: string }) {
   return (
-    <View style={styles.infoRow}>
+    <View style={styles.infoRow} testID={testID}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
     </View>

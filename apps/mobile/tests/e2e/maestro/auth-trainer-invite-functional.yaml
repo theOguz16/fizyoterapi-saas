@@ -1,38 +1,23 @@
 appId: com.fizyoflow.mobile
 name: auth-trainer-invite-functional
 ---
+- launchApp:
+    clearState: true
+    clearKeychain: true
 - extendedWaitUntil:
     visible:
       id: "welcome-login-button"
     timeout: 60000
-- tapOn:
-    id: "welcome-signup-button"
+- openLink: "fizyoflow://e2e-reset"
 - extendedWaitUntil:
     visible:
-      id: "role-option-trainer"
-    timeout: 10000
-- scrollUntilVisible:
-    element:
-      id: "role-option-trainer"
-    direction: DOWN
-    timeout: 10000
-    centerElement: true
-- tapOn:
-    id: "role-option-trainer"
-- extendedWaitUntil:
-    visible:
-      id: "trainer-invite-guide-continue"
-    timeout: 10000
-- tapOn:
-    id: "trainer-invite-guide-continue"
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://invite-accept?token=${INVITE_TOKEN}"
 - extendedWaitUntil:
     visible:
       id: "invite-accept-token"
     timeout: 10000
-- tapOn:
-    id: "invite-accept-token"
-- inputText: "${INVITE_TOKEN}"
-- pressKey: ENTER
 - extendedWaitUntil:
     visible: "Salon daveti bulundu."
     timeout: 10000
@@ -40,10 +25,19 @@ name: auth-trainer-invite-functional
     element:
       id: "invite-accept-first-name"
     direction: DOWN
+    centerElement: true
     timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - swipe:
+          direction: UP
+          duration: 500
 - tapOn:
     id: "invite-accept-first-name"
 - inputText: "Egitmen"
+- waitForAnimationToEnd
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -53,6 +47,7 @@ name: auth-trainer-invite-functional
 - tapOn:
     id: "invite-accept-last-name"
 - inputText: "Davet"
+- waitForAnimationToEnd
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -62,15 +57,48 @@ name: auth-trainer-invite-functional
 - tapOn:
     id: "invite-accept-phone"
 - inputText: "05550009977"
+- waitForAnimationToEnd
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
       id: "invite-accept-password"
     direction: DOWN
     timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "trainer-invite-password-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "invite-accept-password"
+          timeout: 5000
 - tapOn:
     id: "invite-accept-password"
-- inputText: "trainer-invite123"
+- inputText: "trainerinvite123"
+- waitForAnimationToEnd
+- runFlow: _assert-valid-password.yaml
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "invite-accept-repeat-password"
+    direction: DOWN
+    timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "trainer-invite-password-confirm-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "invite-accept-repeat-password"
+          timeout: 5000
+- tapOn:
+    id: "invite-accept-repeat-password"
+- inputText: "trainerinvite123"
+- waitForAnimationToEnd
 - pressKey: ENTER
 - tapOn:
     id: "invite-accept-submit"
@@ -81,6 +109,7 @@ name: auth-trainer-invite-functional
     timeout: 10000
 - assertVisible:
     id: "invite-accept-error"
+- assertVisible: "Devam etmek için Kullanım Şartları'nı kabul etmelisin."
 - scrollUntilVisible:
     element:
       id: "legal-terms-checkbox"
@@ -92,14 +121,29 @@ name: auth-trainer-invite-functional
     id: "legal-notice-checkbox"
 - tapOn:
     id: "invite-accept-submit"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - extendedWaitUntil:
     visible:
       id: "login-identity-input"
     timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "login-identity-input"
+    timeout: 10000
 - tapOn:
     id: "login-identity-input"
 - inputText: "trainer.registration.e2e@demo.local"
 - pressKey: ENTER
+- runFlow:
+    when:
+      visible: "Sonra"
+    commands:
+      - tapOn: "Sonra"
 - scrollUntilVisible:
     element:
       id: "login-password-input"
@@ -107,9 +151,8 @@ name: auth-trainer-invite-functional
     timeout: 10000
 - tapOn:
     id: "login-password-input"
-- inputText: "trainer-invite123"
-- tapOn:
-    id: "login-submit-button"
+- inputText: "trainerinvite123"
+- runFlow: _submit-login.yaml
 - runFlow:
     when:
       visible: "Sonra"

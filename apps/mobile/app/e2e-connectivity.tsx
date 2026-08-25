@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { isE2EModeEnabled } from "@/lib/e2e-mode";
-import { markNetworkFailure, markNetworkSuccess } from "@/lib/connectivity";
+import { forceConnectivityStatusForE2E } from "@/lib/connectivity";
 import { tokens } from "@/theme/tokens";
 
 /** Lets Maestro exercise the real app-wide banner without altering device networking. */
@@ -19,9 +19,9 @@ export default function E2EConnectivityScreen() {
     const status = Array.isArray(params.status) ? params.status[0] : params.status;
     const returnTo = Array.isArray(params.returnTo) ? params.returnTo[0] : params.returnTo;
     if (status === "offline") {
-      markNetworkFailure("Bağlantı kurulamadı. İnternetini kontrol edip tekrar deneyebilirsin.");
+      forceConnectivityStatusForE2E("offline");
     } else {
-      markNetworkSuccess();
+      forceConnectivityStatusForE2E("online");
     }
     router.replace((returnTo || "/(auth)/welcome") as never);
   }, [e2eEnabled, params.returnTo, params.status, router]);

@@ -24,6 +24,7 @@ type BadgeTone = NonNullable<CalendarAgendaItem["badgeTone"]>;
 export type WeeklySchedulerEvent = {
   id: string;
   testID?: string;
+  testCategory?: string;
   title: string;
   subtitle: string;
   startsAt: string;
@@ -442,6 +443,10 @@ export function WeeklyScheduler({
     () => weekEvents.filter((event) => toDateKey(event.startsAt, timezone) === selectedDateKey),
     [selectedDateKey, timezone, weekEvents]
   );
+  const eventfulDayKeys = useMemo(
+    () => weekDays.map((day) => day.key).filter((dayKey) => weekEvents.some((event) => toDateKey(event.startsAt, timezone) === dayKey)),
+    [timezone, weekDays, weekEvents]
+  );
 
   const weekRequests = useMemo(
     () =>
@@ -476,11 +481,13 @@ export function WeeklyScheduler({
 
         <View style={styles.daysRow}>
           {weekDays.map((day) => {
+            const eventsOnDay = weekEvents.filter((event) => toDateKey(event.startsAt, timezone) === day.key);
             const count =
-              weekEvents.filter((event) => toDateKey(event.startsAt, timezone) === day.key).length +
+              eventsOnDay.length +
               weekRequests.filter((request) => toDateKey(request.startsAt, timezone) === day.key).length;
             const selected = day.key === selectedDateKey;
             const isWorkingDay = workingDays.includes(isoDayNumber(day.date));
+            const eventfulDayIndex = eventfulDayKeys.indexOf(day.key);
             return (
               <Pressable
                 key={day.key}
@@ -488,6 +495,29 @@ export function WeeklyScheduler({
                 onPress={() => setSelectedDateKey(day.key)}
                 style={[styles.dayPill, !isWorkingDay ? styles.dayPillDisabled : null, selected ? styles.dayPillActive : null]}
               >
+                {eventfulDayIndex >= 0 ? (
+                  <View
+                    pointerEvents="none"
+                    testID={`${mode}-calendar-day-with-events-${eventfulDayIndex}`}
+                    style={StyleSheet.absoluteFill}
+                  />
+                ) : null}
+                {Array.from(new Set(eventsOnDay.flatMap((event) => event.testCategory ? [event.testCategory] : []))).map((category) => {
+                  const categoryDayKeys = eventfulDayKeys.filter((key) =>
+                    weekEvents.some(
+                      (candidate) => candidate.testCategory === category && toDateKey(candidate.startsAt, timezone) === key
+                    )
+                  );
+                  const categoryDayIndex = categoryDayKeys.indexOf(day.key);
+                  return (
+                    <View
+                      key={`${category}-day-marker`}
+                      pointerEvents="none"
+                      testID={`${mode}-calendar-day-with-${category}-${categoryDayIndex}`}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  );
+                })}
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
@@ -526,6 +556,9 @@ export function WeeklyScheduler({
           ) : (
             <ScrollView
               horizontal
+              nestedScrollEnabled
+              directionalLockEnabled
+              alwaysBounceVertical={false}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.requestRow}
             >
@@ -571,7 +604,7 @@ export function WeeklyScheduler({
             </Text>
           </View>
 
-          {!selectedDayWorking ? (
+          {!selectedDayWorking && dayEvents.length === 0 ? (
             <EmptyState title="Salon bugün kapalı" description="Çalışma takvimi salon ayarlarına göre gösterilir." icon="calendar" />
           ) : dayEvents.length === 0 ? (
             hideEmptyState ? null : (
@@ -583,8 +616,18 @@ export function WeeklyScheduler({
               keyExtractor={(event) => event.id}
               maxHeight={520}
               testID={`${mode}-calendar-agenda`}
-              renderItem={(event) => (
-                <AgendaEventRow event={event} timezone={timezone} onPress={event.onPress} />
+              renderItem={(event, index) => (
+                <AgendaEventRow
+                  event={event}
+                  timezone={timezone}
+                  onPress={event.onPress}
+                  testID={`${mode}-calendar-selected-event-${index}`}
+                  categoryTestID={event.testCategory
+                    ? `${mode}-calendar-selected-${event.testCategory}-event-${dayEvents
+                        .slice(0, index)
+                        .filter((candidate) => candidate.testCategory === event.testCategory).length}`
+                    : undefined}
+                />
               )}
             />
           ) : (
@@ -689,14 +732,18 @@ function AgendaEventRow({
   event,
   timezone,
   onPress,
+  testID,
+  categoryTestID,
 }: {
   event: WeeklySchedulerEvent;
   timezone: string;
   onPress?: () => void;
+  testID?: string;
+  categoryTestID?: string;
 }) {
   return (
     <Pressable
-      testID={event.testID}
+      testID={testID || event.testID}
       accessibilityRole="button"
       accessibilityLabel={`${event.title}, ${formatTimeRange(event.startsAt, event.endsAt, timezone)}`}
       onPress={onPress}
@@ -706,6 +753,7 @@ function AgendaEventRow({
         pressed ? styles.agendaEventPressed : null,
       ]}
     >
+      {categoryTestID ? <View pointerEvents="none" testID={categoryTestID} style={StyleSheet.absoluteFill} /> : null}
       <View style={styles.agendaTimeRail}>
         <Text style={styles.agendaStartTime}>{formatTime(event.startsAt, timezone)}</Text>
         <Text style={styles.agendaEndTime}>{formatTime(event.endsAt, timezone)}</Text>

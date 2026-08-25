@@ -5,29 +5,58 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getConnectivitySnapshot, subscribeConnectivity } from "@/lib/connectivity";
 import { AppIcon } from "@/theme/components/app-icon";
 import { tokens } from "@/theme/tokens";
+import { shouldRefetchAfterReconnect } from "@/lib/query-performance";
 
 export function ConnectivityBanner() {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const [snapshot, setSnapshot] = useState(getConnectivitySnapshot);
-  const wasOfflineRef = useRef(false);
+  const [restoredVisible, setRestoredVisible] = useState(false);
+  const handledReconnectRef = useRef<number | null>(null);
 
   useEffect(() => subscribeConnectivity(setSnapshot), []);
 
   useEffect(() => {
-    if (snapshot.status === "offline") {
-      wasOfflineRef.current = true;
-      return;
+    if (
+      snapshot.status === "online"
+      && snapshot.reconnectedAt
+      && handledReconnectRef.current !== snapshot.reconnectedAt
+    ) {
+      handledReconnectRef.current = snapshot.reconnectedAt;
+      setRestoredVisible(true);
+      void queryClient.refetchQueries({
+        type: "active",
+        predicate: shouldRefetchAfterReconnect,
+      });
+      const timer = setTimeout(() => setRestoredVisible(false), 8_000);
+      return () => clearTimeout(timer);
     }
+  }, [queryClient, snapshot.status, snapshot.reconnectedAt]);
 
-    if (snapshot.status === "online" && wasOfflineRef.current) {
-      wasOfflineRef.current = false;
-      void queryClient.refetchQueries({ type: "active" });
-    }
-  }, [queryClient, snapshot.status, snapshot.lastChangedAt]);
-
-  if (snapshot.status !== "offline") {
+  if (snapshot.status !== "offline" && !restoredVisible) {
     return null;
+  }
+
+  if (snapshot.status === "online" && restoredVisible) {
+    return (
+      <View
+        testID="connectivity-restored-notice"
+        style={[styles.wrap, { top: Math.max(insets.top + tokens.spacing.sm, tokens.spacing.lg) }]}
+        pointerEvents="none"
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+      >
+        <View style={[styles.banner, styles.restoredBanner]}>
+          <View style={[styles.iconWrap, styles.restoredIconWrap]}>
+            <AppIcon name="checkin" size="sm" tone="success" />
+          </View>
+          <View style={styles.copyWrap}>
+            <Text style={styles.title}>Bağlantı yeniden kuruldu</Text>
+            <Text style={styles.message}>Ekrandaki bilgiler otomatik olarak yenileniyor.</Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -36,7 +65,7 @@ export function ConnectivityBanner() {
       style={[styles.wrap, { top: Math.max(insets.top + tokens.spacing.sm, tokens.spacing.lg) }]}
       pointerEvents="box-none"
     >
-      <View style={styles.banner}>
+      <View testID="offline-banner" style={styles.banner}>
         <View style={styles.iconWrap}>
           <AppIcon name="risk" size="sm" tone="danger" />
         </View>
@@ -84,6 +113,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
+  restoredBanner: {
+    borderColor: tokens.colors.success,
+    backgroundColor: "#F0FDF4",
+  },
   iconWrap: {
     width: 32,
     height: 32,
@@ -91,6 +124,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(239, 68, 68, 0.12)",
+  },
+  restoredIconWrap: {
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
   },
   copyWrap: {
     flex: 1,

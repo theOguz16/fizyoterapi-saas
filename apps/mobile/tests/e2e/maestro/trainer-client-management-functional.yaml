@@ -1,0 +1,113 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://e2e-login?email=elisauyar%40gmail.com&password=trainer123&redirect=%2F%28trainer%29%2Fclients"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-clients-screen"
+    timeout: 20000
+- tapOn:
+    id: "trainer-client-search-input"
+- inputText: "Member"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-client-open-0"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "trainer-client-open-0"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-client-detail-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "trainer-client-active-packages"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: "trainer-client-remaining-credits"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- scrollUntilVisible:
+    element:
+      id: "trainer-client-detail-tabs-HISTORY"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "trainer-client-detail-tabs-HISTORY"
+- assertVisible: "Koç Notları"
+- extendedWaitUntil:
+    visible:
+      id: "trainer-client-detail-tabs-PROGRESS"
+    timeout: 5000
+- tapOn:
+    id: "trainer-client-detail-tabs-PROGRESS"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible:
+      id: "trainer-client-progress-panel"
+    timeout: 10000
+- tapOn:
+    id: "trainer-client-open-notes"
+- extendedWaitUntil:
+    visible: "Koç notları"
+    timeout: 15000
+- tapOn:
+    id: "trainer-note-title-input"
+- inputText: "E2E Danisan Yonetimi"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-body-input"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "trainer-note-body-input"
+- inputText: "Danisan detayindan olusturulan takip aksiyonu."
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "trainer-note-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "trainer-note-submit"
+- scrollUntilVisible:
+    element: "Danisan detayindan olusturulan takip aksiyonu."
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true

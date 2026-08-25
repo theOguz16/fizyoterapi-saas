@@ -8,26 +8,33 @@ password reset request and enumeration-safe response|tests/e2e/maestro/auth-pass
 password reset token consumption and new login|tests/e2e/maestro/auth-password-reset-confirm-functional.yaml|apps/mobile/scripts/verify-auth-e2e.sh password-reset-confirm
 clinic activation|tests/e2e/maestro/clinic-owner-activation-flow.yaml|apps/mobile/scripts/verify-clinic-activation-api.sh
 admin-trainer-member appointment calendar chain|tests/e2e/maestro/appointment-calendar-cross-role-functional.yaml|apps/mobile/scripts/verify-appointment-calendar-chain-e2e.sh||apps/mobile/scripts/prepare-appointment-calendar-e2e.sh
-admin package create-edit-disable-delete|tests/e2e/maestro/admin-package-create-smoke.yaml
-admin campaign create-disable and notification send|tests/e2e/maestro/admin-campaign-notification-functional.yaml
-admin manual salon entry|tests/e2e/maestro/admin-entry-scan-functional.yaml
-admin salon profile and working-hours update|tests/e2e/maestro/admin-salon-settings-functional.yaml
-admin approval accept|tests/e2e/maestro/admin-approval-functional.yaml
-admin group-class request approval|tests/e2e/maestro/admin-group-class-approval-functional.yaml
-member authentication routing|tests/e2e/maestro/login-role-routing.yaml
-member measurement creation|tests/e2e/maestro/member-measurement-smoke.yaml
-member package rights, booking cancel, group join-leave, campaigns, notifications and leave-clinic|tests/e2e/maestro/member-core-operations-functional.yaml
-member referral creation|tests/e2e/maestro/member-referral-functional.yaml
-admin authentication routing|tests/e2e/maestro/release-admin-login.yaml
-trainer authentication routing|tests/e2e/maestro/release-trainer-login.yaml
-trainer note create-edit and schedule-change request|tests/e2e/maestro/trainer-daily-operations.yaml
-trainer group-class create-edit-delete request|tests/e2e/maestro/trainer-group-classes-full-smoke.yaml
-trainer group-class request|tests/e2e/maestro/trainer-group-classes-smoke.yaml
-trainer manual check-in|tests/e2e/maestro/trainer-manual-checkin-smoke.yaml
-trainer bulk notification and logout|tests/e2e/maestro/trainer-operations-functional.yaml
-member clinic discovery-to-duo application|tests/e2e/maestro/duo-package-flow.yaml
+admin package create-edit-disable-archive|tests/e2e/maestro/admin-package-crud-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-package-crud
+admin campaign create-disable and notification send|tests/e2e/maestro/admin-campaign-notification-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-campaign-notification||apps/mobile/scripts/prepare-functional-e2e-fixture.sh notification-delivery
+admin manual salon entry|tests/e2e/maestro/admin-entry-scan-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-entry-scan
+admin salon profile and working-hours update|tests/e2e/maestro/admin-salon-settings-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-salon-settings
+admin approval accept|tests/e2e/maestro/admin-approval-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-approval||apps/mobile/scripts/prepare-functional-e2e-fixture.sh admin-approval
+admin group-class request approval|tests/e2e/maestro/admin-group-class-approval-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-group-class-approval
+member authentication routing|tests/e2e/maestro/login-role-routing.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh auth-login-member
+member measurement creation|tests/e2e/maestro/member-measurement-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh member-measurement
+member package rights, booking cancel, group join-leave, campaigns, notifications and leave-clinic|tests/e2e/maestro/member-core-operations-functional.yaml|apps/mobile/scripts/verify-member-core-operations-e2e.sh
+member referral creation|tests/e2e/maestro/member-referral-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh member-referral
+admin authentication routing|tests/e2e/maestro/release-admin-login.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh auth-login-admin
+trainer authentication routing|tests/e2e/maestro/release-trainer-login.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh auth-login-trainer
+trainer note create-edit and schedule-change request|tests/e2e/maestro/trainer-daily-operations.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-daily-operations||apps/mobile/scripts/prepare-functional-e2e-fixture.sh trainer-daily-schedule
+trainer group-class create-edit-delete request|tests/e2e/maestro/trainer-group-classes-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-group-class-full
+trainer group-class request|tests/e2e/maestro/trainer-group-class-create-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-group-class-create
+trainer manual check-in|tests/e2e/maestro/trainer-manual-checkin-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-manual-checkin||apps/mobile/scripts/prepare-functional-e2e-fixture.sh trainer-manual-checkin
+trainer bulk notification and logout|tests/e2e/maestro/trainer-operations-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-operations||apps/mobile/scripts/prepare-functional-e2e-fixture.sh notification-delivery
+member clinic discovery-to-duo application|tests/e2e/maestro/duo-package-flow.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh duo-application
 member manual clinic code, invalid payload, choose-another and cancel-link|tests/e2e/maestro/member-clinic-connection-functional.yaml
 member unknown clinic recovery|tests/e2e/maestro/member-salon-qr-invalid-salon.yaml
 active member blocks another clinic context|tests/e2e/maestro/member-salon-qr-block-active-member.yaml
-member real multi-package application|tests/e2e/maestro/member-multi-package-time-selection-authenticated.yaml
-active-member add-on, role guard, admin rejection and 401|tests/e2e/maestro/release-edge-cases.yaml
+member real multi-package application|tests/e2e/maestro/member-multi-package-time-selection-authenticated.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh member-multi-package
+active-member add-on, role guard, admin rejection and 401|tests/e2e/maestro/release-edge-cases.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh release-edge-cases
+admin risky-member review and campaign action|tests/e2e/maestro/admin-risk-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-risk-action
+trainer client detail and follow-up management|tests/e2e/maestro/trainer-client-management-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh trainer-client-management
+three-role account settings password rotation and secure logout|tests/e2e/maestro/profile-account-settings-smoke.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh account-security-three-roles
+member home offline-to-online retry and data recovery|tests/e2e/maestro/connectivity-offline-recovery.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh connectivity-offline-recovery
+member registration-to-package onboarding full chain|tests/e2e/maestro/member-onboarding-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh member-onboarding-full
+active member package renewal and add-on full chain|tests/e2e/maestro/member-renewal-addon-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh member-renewal-addon
+admin subscription purchase-cancel-restore lifecycle|tests/e2e/maestro/admin-subscription-lifecycle-functional.yaml|apps/mobile/scripts/verify-functional-mutation-e2e.sh admin-subscription-lifecycle

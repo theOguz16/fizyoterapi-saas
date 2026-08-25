@@ -6,6 +6,7 @@ import type { SessionRole } from "@/lib/mobile-api";
 import { ActionButton } from "@/theme/components/action-button";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { tokens } from "@/theme/tokens";
+import { resolveIndexRedirect } from "@/lib/navigation";
 
 const ROLE_LABELS: Record<SessionRole, string> = {
   ADMIN: "Yönetici",
@@ -33,8 +34,14 @@ export function RoleSwitchActions() {
   async function handleSwitch(role: SessionRole) {
     try {
       setPendingRole(role);
-      await switchRole(role);
-      router.replace("/" as never);
+      const session = await switchRole(role);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      router.replace(resolveIndexRedirect(
+        session.user,
+        session.onboarding_state,
+        session.available_surfaces,
+        session.recommended_entry_surface
+      ) as never);
     } catch (error) {
       Alert.alert("Rol değiştirilemedi", error instanceof Error ? error.message : "Lütfen tekrar dene.");
     } finally {

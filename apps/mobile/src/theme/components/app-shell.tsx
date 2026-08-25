@@ -3,11 +3,12 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { useLocalSearchParams, useRouter, useSegments } from "expo-router";
 import { ArrowLeft, ChevronLeft } from "lucide-react-native";
-import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { resolveBackNavigation, resolveContextualBackHref } from "@/lib/navigation";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { tokens } from "../tokens";
+import { resolveResponsiveLayout } from "@/lib/accessibility";
 
 type Props = {
   testID?: string;
@@ -23,6 +24,7 @@ type Props = {
   backLabel?: string;
   backHref?: string;
   onBack?: () => void;
+  formMode?: boolean;
 };
 
 export function AppShell({
@@ -39,8 +41,11 @@ export function AppShell({
   backLabel = "Geri",
   backHref,
   onBack,
+  formMode = false,
 }: Props) {
   const router = useRouter();
+  const { width, fontScale } = useWindowDimensions();
+  const responsive = resolveResponsiveLayout(width, fontScale);
   const segments = useSegments();
   const params = useLocalSearchParams<{ backTo?: string | string[] }>();
   const canGoBack = typeof router.canGoBack === "function" ? router.canGoBack() : false;
@@ -120,25 +125,28 @@ export function AppShell({
         ) : null}
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingHorizontal: responsive.horizontalPadding }]}
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.colors.primary} /> : undefined}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          contentInsetAdjustmentBehavior="automatic"
+          nestedScrollEnabled={!formMode}
         >
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }}>
             <View style={styles.hero}>
               <View style={styles.heroGlowA} />
               <View style={styles.heroGlowB} />
-              <View style={styles.heroHeader}>
+              <View style={[styles.heroHeader, responsive.stackColumns ? styles.heroHeaderStacked : null]}>
                 <View style={styles.heroIdentity}>
                   <AppIcon name={icon} active size="lg" />
                   <Text style={styles.eyebrow}>FIZYOFLOW</Text>
                 </View>
-                {rightAction ? <View>{rightAction}</View> : <View style={styles.navSpacer} />}
+                {rightAction ? <View style={responsive.stackColumns ? styles.rightActionStacked : null}>{rightAction}</View> : <View style={styles.navSpacer} />}
               </View>
-              <Text style={styles.title}>{title}</Text>
-              {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+              <Text maxFontSizeMultiplier={1.4} style={styles.title}>{title}</Text>
+              {subtitle ? <Text maxFontSizeMultiplier={2} style={styles.subtitle}>{subtitle}</Text> : null}
             </View>
           </Animated.View>
           <Animated.View style={[styles.bodyContent, { opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}>
@@ -146,7 +154,7 @@ export function AppShell({
           </Animated.View>
         </ScrollView>
         {footer ? (
-          <Animated.View style={[styles.footer, { opacity: bodyOpacity, transform: [{ translateY: bodyTranslate }] }]}>
+          <Animated.View style={[styles.footer, { paddingHorizontal: responsive.horizontalPadding, opacity: bodyOpacity }]}>
             {footer}
           </Animated.View>
         ) : null}
@@ -214,6 +222,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  heroHeaderStacked: { alignItems: "stretch", flexWrap: "wrap", gap: tokens.spacing.sm },
+  rightActionStacked: { width: "100%" },
   navChip: {
     width: tokens.touch.min,
     height: tokens.touch.min,

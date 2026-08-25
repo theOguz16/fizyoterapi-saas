@@ -14,6 +14,7 @@ import { EmptyState } from "@/theme/components/empty-state";
 import { StatusBadge } from "@/theme/components/status-badge";
 import { SegmentedSwitch } from "@/theme/components/segmented-switch";
 import { tokens } from "@/theme/tokens";
+import { QueryState } from "@/theme/components/query-state";
 
 function formatAmount(value?: number | null) {
   if (typeof value !== "number") return "Tutar bekleniyor";
@@ -100,6 +101,14 @@ export default function AdminApprovalsScreen() {
     [items],
   );
   const hasFilters = statusFilter !== "PENDING" || typeFilter !== "ALL";
+
+  if (query.isLoading && !query.data) {
+    return <AppShell testID="admin-approvals-screen" title="Onaylar" subtitle="Başvuru, ödeme ve değişiklik taleplerini tek operasyonda yönet." icon="approvals"><QueryState mode="loading" title="Onaylar hazırlanıyor" /></AppShell>;
+  }
+
+  if (query.isError && !query.data) {
+    return <AppShell testID="admin-approvals-screen" title="Onaylar" subtitle="Başvuru, ödeme ve değişiklik taleplerini tek operasyonda yönet." icon="approvals"><QueryState mode="error" error={query.error} onRetry={() => void query.refetch()} /></AppShell>;
+  }
 
   return (
     <AppShell testID="admin-approvals-screen" title="Onaylar" subtitle="Başvuru, ödeme ve değişiklik taleplerini tek operasyonda yönet." icon="approvals" refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>

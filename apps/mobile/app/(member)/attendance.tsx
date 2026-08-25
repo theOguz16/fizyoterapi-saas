@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StyleSheet, Text, View } from "react-native";
 import { MetricCard } from "@/theme/components/metric-card";
 import { AppShell } from "@/theme/components/app-shell";
-import { ScrollPanel } from "@/theme/components/scroll-panel";
+import { VirtualListPanel } from "@/theme/components/virtual-list-panel";
 import { SurfaceCard } from "@/theme/components/surface-card";
 import { getMemberAttendanceApi } from "@/lib/mobile-api";
 import { tokens } from "@/theme/tokens";
@@ -41,8 +41,11 @@ export default function MemberAttendanceScreen() {
       </SurfaceCard>
 
       {packageBalances.length > 0 ? (
-        <ScrollPanel maxHeight={240}>
-          {packageBalances.map((row: any) => (
+        <VirtualListPanel
+          data={packageBalances}
+          maxHeight={240}
+          keyExtractor={(row: any, index) => String(row.user_package_id || row.package_id || index)}
+          renderItem={(row: any) => (
             <SurfaceCard key={row.user_package_id || row.package_id}>
               <Text style={styles.title}>{row.package_name || row.package_title || "Paket"}</Text>
               <Text style={styles.item}>Toplam hak: {row.total_credits ?? "-"}</Text>
@@ -50,13 +53,17 @@ export default function MemberAttendanceScreen() {
               <Text style={styles.item}>Kalan hak: {row.remaining_credits ?? "-"}</Text>
               <Text style={styles.hint}>Paket bazında devam ve yenileme sinyali burada izlenir.</Text>
             </SurfaceCard>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       ) : null}
 
       {history.length > 0 ? (
-        <ScrollPanel maxHeight={420}>
-          {history.map((row: any) => (
+        <VirtualListPanel
+          data={history}
+          maxHeight={420}
+          minHeight={280}
+          keyExtractor={(row: any, index) => String(row.id || index)}
+          renderItem={(row: any) => (
             <SurfaceCard key={row.id}>
               <Text style={styles.item}>{new Date(row.created_at).toLocaleString("tr-TR")}</Text>
               <Text style={styles.item}>Sonuç: {row.result === "CREDIT_DEDUCTED" ? "Derse katıldı (1 hak düştü)" : row.result}</Text>
@@ -67,8 +74,8 @@ export default function MemberAttendanceScreen() {
               <Text style={styles.item}>Kalan hak: {row.remaining_credits ?? "-"}</Text>
               <Text style={styles.hint}>Bu kayıt sadakat, risk ve ölçüm takibiyle birlikte yorumlanır.</Text>
             </SurfaceCard>
-          ))}
-        </ScrollPanel>
+          )}
+        />
       ) : null}
     </AppShell>
   );

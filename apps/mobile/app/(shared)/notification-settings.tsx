@@ -2,6 +2,7 @@
 // Sistem izni ile uygulama içi tercihleri birlikte göstererek kullanıcıya net durum sunar.
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Linking, StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/theme/components/app-shell";
 import { MetricCard } from "@/theme/components/metric-card";
 import { SurfaceCard } from "@/theme/components/surface-card";
@@ -73,12 +74,16 @@ function toApiPreferences(value: NotificationPreferences): MobileNotificationPre
 }
 
 export default function NotificationSettingsScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ backTo?: string | string[]; profileBackTo?: string | string[] }>();
   const { notificationPermissionStatus, requestNotificationPermission, refreshNotificationPermissionStatus } = useSession();
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [permissionLoading, setPermissionLoading] = useState(false);
   const [syncingPreferences, setSyncingPreferences] = useState(false);
   const [allowPreferenceEditing, setAllowPreferenceEditing] = useState(false);
   const [error, setError] = useState("");
+  const profileBackTo = Array.isArray(params.profileBackTo) ? params.profileBackTo[0] : params.profileBackTo;
+  const accountSettingsBackTo = (Array.isArray(params.backTo) ? params.backTo[0] : params.backTo) || "/(shared)/account-settings";
 
   useEffect(() => {
     let mounted = true;
@@ -160,7 +165,18 @@ export default function NotificationSettingsScreen() {
   }, [requestNotificationPermission]);
 
   return (
-    <AppShell testID="notification-settings-screen" title="Bildirim tercihleri" subtitle="Randevu, kampanya, ölçüm ve paket bitiş bildirimlerini cihazında yönet." icon="notifications" showBackButton>
+    <AppShell
+      testID="notification-settings-screen"
+      title="Bildirim tercihleri"
+      subtitle="Randevu, kampanya, ölçüm ve paket bitiş bildirimlerini cihazında yönet."
+      icon="notifications"
+      onBack={() =>
+        router.replace({
+          pathname: accountSettingsBackTo,
+          params: profileBackTo ? { backTo: profileBackTo } : undefined,
+        } as never)
+      }
+    >
       <View style={styles.metricsRow}>
         <MetricCard label="Sistem izni" value={pushEnabled ? "Açık" : notificationPermissionStatus === "denied" ? "Kapalı" : "Bekliyor"} hint="Cihaz düzeyi" icon="notifications" />
         <MetricCard label="Tercihler" value={Object.values(preferences).filter((item) => item === true).length + "/10"} hint={syncingPreferences ? "Eşitleniyor" : "Sunucu eşli"} icon="calendar" />

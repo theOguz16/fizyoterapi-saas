@@ -258,6 +258,7 @@ export default function AdminMemberDetailScreen() {
 
   return (
     <AppShell
+      testID="admin-member-detail-screen"
       title={personName}
       subtitle={entityRole === "TRAINER" ? "Kazanç, verilen dersler ve yetkinlikler tek ekranda doğrulanır." : "Paketler, katılım, ölçüm ve risk sinyalleri tek yerde."}
       icon={entityRole === "TRAINER" ? "trainer" : "members"}
@@ -287,7 +288,7 @@ export default function AdminMemberDetailScreen() {
               </Text>
             ) : (
               <>
-                <Text style={styles.copy}>Risk skoru: {retention.score ?? retention.level ?? "Belirsiz"}</Text>
+                <Text testID="admin-member-risk-score" style={styles.copy}>Risk skoru: {retention.score ?? retention.level ?? "Belirsiz"}</Text>
                 <Text style={styles.copy}>Son temas: {formatDateTime(person.last_attended_at || person.updated_at)}</Text>
                 <Text style={styles.copy}>Sebep: {riskReasons[0] || "Belirtilmedi"}</Text>
               </>

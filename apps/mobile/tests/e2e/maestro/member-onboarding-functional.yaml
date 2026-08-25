@@ -1,0 +1,249 @@
+appId: com.fizyoflow.mobile
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- extendedWaitUntil:
+    visible:
+      id: "welcome-login-button"
+    timeout: 60000
+- openLink: "fizyoflow://e2e-reset"
+- openLink: "fizyoflow://member-register?slug=demo-salon"
+- extendedWaitUntil:
+    visible:
+      id: "clinic-member-register-submit"
+    timeout: 20000
+- tapOn:
+    id: "member-register-first-name"
+- eraseText
+- inputText: "Onboarding"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-last-name"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-register-last-name"
+- eraseText
+- inputText: "E2E"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-email"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-register-email"
+- eraseText
+- inputText: "member.onboarding.e2e@demo.local"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-phone"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "member-register-phone"
+- eraseText
+- inputText: "05550007766"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "member-register-password"
+    direction: DOWN
+    timeout: 10000
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "member-register-password"
+          timeout: 5000
+- tapOn:
+    id: "member-register-password"
+- eraseText
+- inputText: "memberonboarding123"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- waitForAnimationToEnd
+- runFlow: _assert-valid-password.yaml
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-toggle"
+- scrollUntilVisible:
+    element:
+      id: "member-register-repeat"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- swipe:
+    direction: UP
+    duration: 500
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "member-register-password-confirm-toggle"
+      - extendedWaitUntil:
+          visible:
+            id: "member-register-repeat"
+          timeout: 5000
+- tapOn:
+    id: "member-register-repeat"
+- eraseText
+- inputText: "memberonboarding123"
+- runFlow: _dismiss-android-stylus-prompt.yaml
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "legal-terms-checkbox"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "legal-terms-checkbox"
+- tapOn:
+    id: "legal-notice-checkbox"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "clinic-member-register-submit"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "clinic-member-register-submit"
+- extendedWaitUntil:
+    visible:
+      id: "salon-detail-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "salon-view-packages-button"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "salon-view-packages-button"
+- extendedWaitUntil:
+    visible:
+      id: "intake-packages-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "intake-package-mode-filter-group"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "intake-package-mode-filter-group"
+- scrollUntilVisible:
+    element: "Grup Dersi (8 Kişi)"
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn: "Grup Dersi (8 Kişi)"
+- scrollUntilVisible:
+    element:
+      id: "intake-package-continue"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-package-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-package-detail-screen"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    id: "package-detail-continue"
+- runFlow:
+    when:
+      visible:
+        id: "intake-package-detail-screen"
+    commands:
+      - tapOn:
+          id: "package-detail-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-time-selection-screen"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: "time-slot-toggle-0-0"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "time-slot-toggle-0-0"
+- tapOn:
+    id: "time-selection-continue"
+- extendedWaitUntil:
+    visible:
+      id: "intake-booking-summary-screen"
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          text: ".*Open debugger to view warnings.*"
+          point: "95%,50%"
+- waitForAnimationToEnd:
+    timeout: 1000
+- scrollUntilVisible:
+    element:
+      id: "intake-booking-summary-submit"
+    direction: DOWN
+    timeout: 20000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: "intake-booking-summary-submit"
+- extendedWaitUntil:
+    visible: "Başvurun alındı|Başvurun incelemeye alındı|Başvurun inceleniyor|Onay bekleniyor|Başvuru gönderildi"
+    timeout: 30000
