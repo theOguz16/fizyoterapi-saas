@@ -14,6 +14,14 @@ FizyoFlow brings together scheduling, class/package tracking, trainer workflows,
 - **Subscriptions:** integration with RevenueCat for mobile subscription entitlements.
 - **Tenant-aware access:** role-based workflows and clinic-scoped application data.
 
+## Product preview
+
+Selected interface captures from the public product-tour assets. These are illustrative screenshots, not a claim of active customer usage.
+
+| Admin dashboard | Trainer check-in | Member overview |
+| --- | --- | --- |
+| ![FizyoFlow admin dashboard](apps/web/public/product-tour/admin-dashboard.png) | ![FizyoFlow trainer attendance check-in](apps/web/public/product-tour/trainer-checkin.png) | ![FizyoFlow member home](apps/web/public/product-tour/member-home.png) |
+
 ## Architecture
 
 The repository is a pnpm/Turborepo monorepo:
@@ -31,19 +39,17 @@ packages/
   tsconfig/
 ```
 
-```text
-React Native / Expo     Admin Web / Web
-         \                  /
-          \                /
-            Express REST API
-             |          |
-       Auth / RBAC   Business services
-             \          /
-            PostgreSQL + TypeORM
-
-RevenueCat: mobile subscription integration
-Docker Compose: local and deployment orchestration
+```mermaid
+flowchart LR
+    Member["Member · Expo"] --> API["Express REST API"]
+    Trainer["Trainer · Expo"] --> API
+    Admin["Admin Web"] --> API
+    API --> Auth["JWT / Role-based access"]
+    API --> Services["Clinic-scoped services"]
+    Services --> DB[("PostgreSQL · TypeORM")]
+    Member -. "Subscription access" .-> Billing["RevenueCat"]
 ```
+
 
 This is a high-level overview, not a complete production deployment or security diagram.
 
