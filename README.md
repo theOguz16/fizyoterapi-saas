@@ -18,7 +18,7 @@ FizyoFlow brings together scheduling, class/package tracking, trainer workflows,
 
 The repository is a pnpm/Turborepo monorepo:
 
-\`\`\`text
+```text
 apps/
   api/          Express.js backend and REST API
   admin-web/    Administration web client
@@ -29,9 +29,9 @@ packages/
   shared-types/ Shared types
   eslint-config/
   tsconfig/
-\`\`\`
+```
 
-\`\`\`text
+```text
 React Native / Expo     Admin Web / Web
          \                  /
           \                /
@@ -43,7 +43,7 @@ React Native / Expo     Admin Web / Web
 
 RevenueCat: mobile subscription integration
 Docker Compose: local and deployment orchestration
-\`\`\`
+```
 
 This is a high-level overview, not a complete production deployment or security diagram.
 
@@ -60,29 +60,29 @@ This is a high-level overview, not a complete production deployment or security 
 
 Prerequisites: Node.js, pnpm, Docker (for local infrastructure), and platform-specific development tools for mobile.
 
-\`\`\`bash
+```bash
 pnpm install
 cp .env.example .env
-\`\`\`
+```
 
-Review \`.env.example\` and the relevant app-specific configuration before starting services.
+Review `.env.example` and the relevant app-specific configuration before starting services.
 
 Useful workspace commands:
 
-\`\`\`bash
+```bash
 pnpm dev:api        # API
 pnpm dev:admin      # Admin web
 pnpm dev:web        # Web
 pnpm dev:mobile     # Expo
-\`\`\`
+```
 
 ## Testing and quality
 
-\`\`\`bash
+```bash
 pnpm test
 pnpm typecheck
 pnpm lint
-\`\`\`
+```
 
 There are separate end-to-end workflows for web and mobile. Their execution requires the corresponding browser, simulator or device setup.
 
