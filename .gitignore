@@ -23,3 +23,7 @@ apps/mobile/build/
 apps/mobile/*.ipa
 *.xcarchive/
 *.dSYM/
+
+# Local HTTP cookie jars (may contain session tokens)
+cookies.txt
+*.cookies.txt
